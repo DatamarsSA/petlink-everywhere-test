@@ -1,0 +1,41 @@
+overwrite: true
+
+generates:
+  src/lib/generated/graphql.ts:
+    schema: ./schema/graphql/core_schema.graphql
+   # documents: ./schema/operations/core/*.graphql
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-graphql-request
+
+  src/lib/generated/sm_graphql.ts:
+    schema: ./schema/graphql/cct_schema.graphql
+   # documents: ./schema/operations/subscriptionManager/*.graphql
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-graphql-request
+
+config:
+  documentMode: 'documentNode'
+  declarationKind:
+    type: 'interface'
+    input: 'interface'
+  scalars:
+    AWSDate: AWSDate
+    AWSTime: AWSTime
+    AWSDateTime: AWSDateTime
+    AWSTimestamp: AWSTimestamp
+    AWSEmail: AWSEmail
+    AWSJSON: AWSJSON
+    AWSURL: AWSURL
+    AWSPhone: AWSPhone
+    AWSIPAddress: AWSIPAddress
+    BigInt: BigInt
+    Double: Double
+  enumsAsTypes: true
+
+hooks:
+  afterOneFileWrite:
+    - prettier --write

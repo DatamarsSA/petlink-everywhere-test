@@ -1,0 +1,31 @@
+{
+  "name": "petlink-everywhere-test",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:core": "vitest run --grep=\"CORE Environment\"",
+    "test:cct": "vitest run --grep=\"CCT Environment\"",
+    "test:cross": "vitest run --grep=\"Cross-Environment\"",
+    "fetch:schema": "node scripts/fetchSchema.ts",
+    "fetch:core-schema": "node scripts/fetchSchema.ts CORE",
+    "fetch:cct-schema": "node scripts/fetchSchema.ts CCT",
+    "codegen": "graphql-codegen --config codegen.yml"
+  }
+,
+  "devDependencies": {
+    "@graphql-codegen/cli": "^6.0.0",
+    "@graphql-codegen/typescript": "^5.0.0",
+    "@graphql-codegen/typescript-graphql-request": "^6.3.0",
+    "@graphql-codegen/typescript-operations": "^5.0.0",
+    "@types/node": "^20.10.0",
+    "dotenv": "^17.2.2",
+    "get-graphql-schema": "^2.1.2",
+    "graphql": "^16.8.1",
+    "graphql-request": "^6.1.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.1.0"
+  }
+}
+
