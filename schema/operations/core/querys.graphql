@@ -1,0 +1,10 @@
+query getBreed(
+    $species: SpeciesEnum!,
+    $languageId: LanguageId
+) {
+    getBreed(species: $species, languageId: $languageId) {
+        code
+        message
+        translationCode
+    }
+}

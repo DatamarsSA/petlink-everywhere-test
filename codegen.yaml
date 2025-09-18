@@ -1,15 +1,15 @@
 overwrite: true
 
 generates:
-  src/lib/generated/graphql.ts:
+  src/lib/generated/core_schema.ts:
     schema: ./schema/graphql/core_schema.graphql
-   # documents: ./schema/operations/core/*.graphql
+    documents: ./schema/operations/core/*.graphql
     plugins:
       - typescript
       - typescript-operations
       - typescript-graphql-request
 
-  src/lib/generated/sm_graphql.ts:
+  src/lib/generated/cct_schema.ts:
     schema: ./schema/graphql/cct_schema.graphql
    # documents: ./schema/operations/subscriptionManager/*.graphql
     plugins:

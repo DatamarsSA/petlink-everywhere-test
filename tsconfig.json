@@ -1,14 +1,18 @@
 {
+  "extends": "@tsconfig/node16/tsconfig.json",
+  "display": "Node 20",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext", 
-    "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
-    "types": ["vitest/globals", "node"]
+    "lib": ["es2023"],
+    "moduleResolution": "Node16",
+    "target": "es2022",
   },
-  "include": ["src/**/*", "vitest.config.ts"]
+  "ts-node": {
+    "esm": true,
+    "experimentalResolver": true,
+    "experimentalSpecifierResolution": "node",
+    "files": true,
+    "transpileOnly": true
 }
-
+}
 
 
