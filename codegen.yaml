@@ -28,7 +28,6 @@ config:
     AWSDateTime: AWSDateTime
     AWSTimestamp: AWSTimestamp
     AWSEmail: AWSEmail
-    AWSJSON: AWSJSON
     AWSURL: AWSURL
     AWSPhone: AWSPhone
     AWSIPAddress: AWSIPAddress
