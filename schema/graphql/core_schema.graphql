@@ -1,29 +1,34 @@
 """This directive allows results to be deferred during execution"""
 directive @defer on FIELD
 
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
+"""
+Tells the service this field/object has access authorized by a Cognito User Pools token.
+"""
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
 
 """Directs the schema to enforce authorization on a field"""
 directive @aws_auth(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by sigv4 signing.
-"""
-directive @aws_iam on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service which subscriptions will be published to when this mutation is
@@ -37,22 +42,17 @@ directive @aws_publish(
 ) on FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by an OIDC token.
+Tells the service this field/object has access authorized by a Lambda Authorizer.
 """
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -786,6 +786,7 @@ type Pet {
   livingEnvironment: PetLivingEnvironment
   length: Float
   dateMarkedAsLost: String
+  petProtectionId: String
 }
 
 type PetCheckMicrochip {
@@ -950,14 +951,21 @@ type PetProtection {
   petId: String
   userId: String!
   chargebeeSubscriptionId: String
-  currentTermStart: String
-  currentTermEnd: String
+  currentTermStart: String!
+  currentTermEnd: String!
   status: PetProtectionStatus!
   petOwner: PetProtectionOwnerData
   pet: PetProtectionPetData
   petFlag: PetProtectionFlag!
   codiceTessera: String
   fileName: String
+  name: String!
+  price: Int!
+  period: Int!
+  periodUnit: String!
+  reservedCoupon: String!
+  reservedCouponPercent: Int!
+  customerServiceContact: String!
 }
 
 type PetProtectionFlag {
@@ -1122,12 +1130,13 @@ type Query {
   getProducts(petId: String!): ResponseProducts!
   getGpsPromotion(productId: String!): ResponseGetGpsPromotion!
   getSubscriptionPlans(productId: String, countryCode: String, serialNumber: String, appBrand: AppBrand): ResponseSubscriptionPlans!
+  getProtectionPlans(petId: String!): ResponseProtectionPlans!
   getSubscriptionPlanPricing(planPriceId: String!, careProtectionPlanId: String, addonPriceIds: [String!], countryCode: String!, productId: String!): ResponseSubscriptionPlanPricing!
   getPaymentSource: ResponseGetPaymentSource!
   getBillingInfo: ResponseBillingInfo!
   checkoutAddons(subscriptionId: String!, productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutAddons!
   checkoutNewSubscription(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutNewSubscription!
-  checkoutCareProtection(productId: String!, priceIds: [String!]!, countryCode: String, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutCareProtection!
+  checkoutCareProtection(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutCareProtection!
   checkoutPrepaid(orderId: String!, serialNumber: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput, appBrand: AppBrand): ResponseCheckoutNewSubscription!
   changeSubscriptionPlan(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseChangeSubscriptionPlan!
   getSubscriptions(productId: String!): ResponseGetSubscriptions!
@@ -1492,6 +1501,13 @@ type ResponseProducts {
   translationCode: String
   message: String!
   products: [Product!]
+}
+
+type ResponseProtectionPlans {
+  code: String!
+  translationCode: String
+  message: String!
+  careProtectionPlans: [CareProtectionPlan!]
 }
 
 type ResponseReplacement {

@@ -5,10 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Environment variables
-.env
-.env.local
-.env.development
-.env.production
+.env.*
+!env.example
 
 # Test coverage
 coverage/
@@ -36,3 +34,10 @@ logs/
 .zencoder/
 .cursor/
 .github/
+
+# Local test
+debug/
+
+# Runtime files
+src/infrastructure/schema/
+src/infrastructure/lib/generated

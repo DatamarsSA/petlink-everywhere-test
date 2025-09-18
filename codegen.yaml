@@ -1,13 +1,13 @@
 overwrite: true
 
 generates:
-  src/lib/generated/core_schema.ts:
-    schema: ./schema/graphql/core_schema.graphql
-    documents: ./schema/operations/core/*.graphql
+  src/lib/generated/core_schema.ts:  # File di output
+    schema: ./schema/graphql/core_schema.graphql  # Schema GraphQL di input
+    documents: ./schema/operations/core/*.graphql # Operazioni GraphQL definite manualmente
     plugins:
-      - typescript
-      - typescript-operations
-      - typescript-graphql-request
+      - typescript  # Genera tipi TypeScript
+      - typescript-operations  # Genera tipi per le operazioni
+      - typescript-graphql-request  # Genera l'SDK basato su graphql-request
 
   src/lib/generated/cct_schema.ts:
     schema: ./schema/graphql/cct_schema.graphql
