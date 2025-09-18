@@ -11,7 +11,7 @@ generates:
 
   src/lib/generated/cct_schema.ts:
     schema: ./schema/graphql/cct_schema.graphql
-   # documents: ./schema/operations/subscriptionManager/*.graphql
+   # documents: ./schema/operations/cct/*.graphql
     plugins:
       - typescript
       - typescript-operations
