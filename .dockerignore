@@ -1,0 +1,81 @@
+# ============================================================================
+# DOCKERIGNORE - PETLINK TEST SUITE
+# ============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.yarn
+
+# Environment files
+.env*
+!env.example
+
+# Development files
+debug/
+*.log
+*.pid
+*.seed
+*.pid.lock
+coverage/
+.nyc_output
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation and metadata
+README.md
+LICENSE
+CHANGELOG.md
+*.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Build artifacts that shouldn't be in build context
+dist/
+build/
+out/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# AI agents
+.cursor/
+.zencoder/
+
+
+
