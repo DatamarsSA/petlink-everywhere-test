@@ -14,14 +14,13 @@ import {
 import {
   AuthMode,
   HTTP_HEADERS,
+  RetryOptions,
   ServiceType,
 } from "../types/infrastructure-types.js";
 import { env } from "../env-schema-validation.js";
 
 // ===== Environment  =====
 class EnvConfig {
-  // private static env = getValidatedEnv();
-
   static getEndpoint(service: ServiceType): string {
     return env[`${service}_GRAPHQL_API_URL`];
   }
@@ -97,6 +96,67 @@ class AuthHelper {
 }
 
 // ===== Client Endpoints=
+
+type AugmentedSdk<T> = T & {
+  withRetry: (opts?: Partial<RetryOptions>) => AugmentedSdk<T>;
+};
+
+async function execWithRetry<T>(
+  fn: () => Promise<T>,
+  opts?: Partial<RetryOptions>,
+): Promise<T> {
+  const DEFAULT_RETRY: RetryOptions = {
+    retries: 3,
+    delayMs: [200, 400, 800],
+  };
+  const cfg: RetryOptions = { ...DEFAULT_RETRY, ...(opts ?? {}) };
+  let lastErr: unknown;
+
+  const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+  const isRetriableError = (err: unknown): boolean => {
+    // graphql-request throws ClientError for HTTP != 2xx
+    const anyErr = err as any;
+    const status: number | undefined = anyErr?.response?.status;
+
+    if (typeof status === "number") {
+      if (status === 429) return true;
+      if (status >= 500 && status < 600) return true;
+    }
+
+    // Network-like errors (no response) → often transient
+    if (
+      !status &&
+      (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const computeDelay = (attempt: number, o: RetryOptions): number => {
+    // attempt starts at 1 for first retry (after first failure)
+    const index = Math.min(attempt - 1, o.delayMs.length - 1);
+    return o.delayMs[index];
+  };
+
+  for (let attempt = 0; attempt <= cfg.retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const isLast = attempt === cfg.retries;
+      if (isLast || !isRetriableError(err)) break;
+
+      const delay = computeDelay(attempt + 1, cfg);
+      await sleep(delay);
+    }
+  }
+  // Re-throw last error preserving stack
+  throw lastErr;
+}
+
 abstract class BaseClient<TSdk extends object> {
   protected target: ServiceType;
   private sdkCache = new Map<string, { key: string; sdk: TSdk }>();
@@ -105,24 +165,41 @@ abstract class BaseClient<TSdk extends object> {
     this.target = target;
   }
 
-  // Pulisce le cache locali
   clearLocalCache(): void {
     this.sdkCache.clear();
   }
 
-  private makeSdkProxy(mode: AuthMode): TSdk {
-    return new Proxy({} as TSdk, {
-      get: (_, prop) => {
+  private makeSdkProxy(
+    mode: AuthMode,
+    retryCfg?: Partial<RetryOptions>,
+  ): AugmentedSdk<TSdk> {
+    // NOTE: we capture retryCfg in closure. Calling withRetry returns a new proxy with new retryCfg.
+    const self = this;
+
+    return new Proxy({} as AugmentedSdk<TSdk>, {
+      get: (_target, prop, _recv) => {
+        if (prop === "withRetry") {
+          // Return a function that creates a *new* proxy with retry enabled/customized
+          return (opts?: Partial<RetryOptions>) =>
+            self.makeSdkProxy(mode, { ...retryCfg, ...(opts ?? {}) });
+        }
+
+        // For actual SDK method/property access
         return async (...args: any[]) => {
-          const sdk = await this.getOrCreateSdk(mode);
+          const sdk = await self.getOrCreateSdk(mode);
           const member = (sdk as any)[prop];
+
           if (typeof member !== "function") {
+            // Non-callable property (e.g., fragments, constants)
             return member;
           }
-          return member(...args);
+
+          // Wrap the actual call with retry if configured, else call directly
+          const call = () => member(...args);
+          return retryCfg ? execWithRetry(call, retryCfg) : call();
         };
       },
-    });
+    }) as AugmentedSdk<TSdk>;
   }
 
   private async getOrCreateSdk(mode: AuthMode): Promise<TSdk> {
@@ -152,11 +229,11 @@ abstract class BaseClient<TSdk extends object> {
     return sdk;
   }
 
-  get authLogin(): { sdk: TSdk } {
+  get authLogin(): { sdk: AugmentedSdk<TSdk> } {
     return { sdk: this.makeSdkProxy(AuthMode.TOKEN) };
   }
 
-  get authApiKey(): { sdk: TSdk } {
+  get authApiKey(): { sdk: AugmentedSdk<TSdk> } {
     return { sdk: this.makeSdkProxy(AuthMode.API_KEY) };
   }
 
@@ -187,7 +264,6 @@ class PetLinkInfrastructure {
   readonly core = new CoreClient();
   readonly cct = new CctClient();
 
-  // Pulisce cache token + cache SDK
   reset(): void {
     AuthHelper.clearTokenCache();
     this.core.clearLocalCache();
@@ -196,4 +272,4 @@ class PetLinkInfrastructure {
   }
 }
 
-export const Infrastructure = new PetLinkInfrastructure();
+export const petlink = new PetLinkInfrastructure();

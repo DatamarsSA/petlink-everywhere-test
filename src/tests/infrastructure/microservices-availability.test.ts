@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { Infrastructure } from "../../infrastructure/clients/client.js";
+import { petlink } from "../../infrastructure/clients/petlink-infrastructure-client.js";
 
 describe("Infrastructure microservices must be available", () => {
   it("CORE - should response PUBLIC (apikey) ednpoint", async () => {
-    const result = await Infrastructure.core.authApiKey.sdk.getBreed({
+    const result = await petlink.core.authApiKey.sdk.getBreed({
       species: "DOG",
       languageId: "IT",
     });
@@ -14,7 +14,7 @@ describe("Infrastructure microservices must be available", () => {
   });
 
   it("CORE - should response PRIVATE (login) endpoint", async () => {
-    const result = await Infrastructure.core.authLogin.sdk.getUser();
+    const result = await petlink.core.authLogin.sdk.getUser();
 
     expect(result.getUser).toBeDefined();
     expect(result.getUser.user).toBeDefined();

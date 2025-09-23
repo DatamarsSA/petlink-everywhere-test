@@ -12,3 +12,8 @@ export enum AuthMode {
   TOKEN = "token",
   API_KEY = "apiKey",
 }
+
+export type RetryOptions = {
+  retries: number;
+  delayMs: number[];
+};
