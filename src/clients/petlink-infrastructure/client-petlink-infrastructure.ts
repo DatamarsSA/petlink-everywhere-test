@@ -54,8 +54,14 @@ class EnvConfig {
 }
 
 // ===== Auth =====
+export type CognitoCredentials = {
+  username: string;
+  password: string;
+};
+
 class AuthHelper {
   private static tokenCache: { token: string; expiry: Date } | null = null;
+  private static customTokenCache = new Map<string, { token: string; expiry: Date }>();
 
   static async getToken(): Promise<string> {
     if (this.tokenCache && this.tokenCache.expiry > new Date()) {
@@ -63,14 +69,36 @@ class AuthHelper {
     }
 
     const config = EnvConfig.getCognitoConfig();
+    const token = await this.authenticateWithCognito(config.username, config.password);
+    
+    this.tokenCache = this.createTokenCacheEntry(token);
+    return token;
+  }
+
+  static async getTokenWithCredentials(credentials: CognitoCredentials): Promise<string> {
+    const cacheKey = `${credentials.username}:${credentials.password}`;
+    const cached = this.customTokenCache.get(cacheKey);
+    
+    if (cached && cached.expiry > new Date()) {
+      return cached.token;
+    }
+
+    const token = await this.authenticateWithCognito(credentials.username, credentials.password);
+    
+    this.customTokenCache.set(cacheKey, this.createTokenCacheEntry(token));
+    return token;
+  }
+
+  private static async authenticateWithCognito(username: string, password: string): Promise<string> {
+    const config = EnvConfig.getCognitoConfig();
     const client = new CognitoIdentityProviderClient({ region: config.region });
 
     const command = new InitiateAuthCommand({
       ClientId: config.clientId,
       AuthFlow: "USER_PASSWORD_AUTH",
       AuthParameters: {
-        USERNAME: config.username,
-        PASSWORD: config.password,
+        USERNAME: username,
+        PASSWORD: password,
       },
     });
 
@@ -78,9 +106,13 @@ class AuthHelper {
     const token = response.AuthenticationResult?.IdToken;
 
     if (!token) {
-      throw new Error("Failed to get ID token from Cognito");
+      throw new Error(`Failed to get ID token from Cognito for user: ${username}`);
     }
 
+    return token;
+  }
+
+  private static createTokenCacheEntry(token: string): { token: string; expiry: Date } {
     // Cache until slightly before JWT expiry (fallback to 3 minutes if missing)
     const decodePayload = (jwt: string) => {
       const parts = jwt.split(".");
@@ -96,16 +128,15 @@ class AuthHelper {
     const skewMs = 60 * 1000; // 1 minute safety margin
     const expiryMs = exp ? exp * 1000 - skewMs : nowMs + 3 * 60 * 1000;
 
-    this.tokenCache = {
+    return {
       token,
       expiry: new Date(expiryMs),
     };
-
-    return token;
   }
 
   static clearTokenCache(): void {
     this.tokenCache = null;
+    this.customTokenCache.clear();
   }
 }
 
@@ -186,6 +217,7 @@ abstract class BaseClient<TSdk extends object> {
   private makeSdkProxy(
     mode: AuthMode,
     retryCfg?: Partial<RetryOptions>,
+    credentials?: CognitoCredentials,
   ): AugmentedSdk<TSdk> {
     // NOTE: we capture retryCfg in closure. Calling withRetry returns a new proxy with new retryCfg.
     const self = this;
@@ -195,12 +227,12 @@ abstract class BaseClient<TSdk extends object> {
         if (prop === "withRetry") {
           // Return a function that creates a *new* proxy with retry enabled/customized
           return (opts?: Partial<RetryOptions>) =>
-            self.makeSdkProxy(mode, { ...retryCfg, ...(opts ?? {}) });
+            self.makeSdkProxy(mode, { ...retryCfg, ...(opts ?? {}) }, credentials);
         }
 
         // For actual SDK method/property access
         return async (...args: any[]) => {
-          const sdk = await self.getOrCreateSdk(mode);
+          const sdk = await self.getOrCreateSdk(mode, credentials);
           const member = (sdk as any)[prop];
 
           if (typeof member !== "function") {
@@ -216,13 +248,15 @@ abstract class BaseClient<TSdk extends object> {
     }) as AugmentedSdk<TSdk>;
   }
 
-  private async getOrCreateSdk(mode: AuthMode): Promise<TSdk> {
+  private async getOrCreateSdk(mode: AuthMode, credentials?: CognitoCredentials): Promise<TSdk> {
     const endpoint = EnvConfig.getEndpoint(this.target);
     let cacheKey: string;
     let headers: Record<string, string>;
 
     if (mode === AuthMode.TOKEN) {
-      const token = await AuthHelper.getToken();
+      const token = credentials 
+        ? await AuthHelper.getTokenWithCredentials(credentials)
+        : await AuthHelper.getToken();
       cacheKey = token;
       headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
     } else {
@@ -249,6 +283,10 @@ abstract class BaseClient<TSdk extends object> {
 
   get authApiKey(): { sdk: AugmentedSdk<TSdk> } {
     return { sdk: this.makeSdkProxy(AuthMode.API_KEY) };
+  }
+
+  authLoginWith(credentials: CognitoCredentials): { sdk: AugmentedSdk<TSdk> } {
+    return { sdk: this.makeSdkProxy(AuthMode.TOKEN, undefined, credentials) };
   }
 
   protected abstract createSdk(client: GraphQLClient): TSdk;

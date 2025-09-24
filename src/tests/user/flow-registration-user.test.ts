@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { env } from "../../config/env-schema-validation.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
-import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import {
+  petlink,
+  type CognitoCredentials,
+} from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
 describe("User Registration Flow", () => {
   const myPhoneNumber = env.TWILIO_TEST_PHONE_NUMBER;
-  const testEmail = `test-${Date.now()}@example.com`; // Email unico per ogni esecuzione
+  const testEmail = `test-${Date.now()}@example.com`;
+  const testPassword = "Test123!";
 
   // Pulizia messaggi prima di tutti i test
   beforeAll(async () => {
@@ -108,8 +112,8 @@ describe("User Registration Flow", () => {
         zipCode: "20100",
         streetAddress: "Via Test 123",
         phone: myPhoneNumber,
-        password: "Test123!",
-        confirmPassword: "Test123!",
+        password: testPassword,
+        confirmPassword: testPassword,
         languageId: "IT",
       },
       otpData: {
@@ -127,8 +131,73 @@ describe("User Registration Flow", () => {
     expect(signUpResponse.signUpUser).toBeDefined();
     expect(signUpResponse.signUpUser.code).toBe("200");
     console.log("🎉 Utente registrato con successo!");
-    let newUser = petlink.core.authApiKey.sdk.getUser();
 
-    console.log("✅ TEST COMPLETATO: Flusso di registrazione utente funziona!");
+    // STEP 7: Verifica login con l'utente appena registrato
+    console.log(
+      "\n🔐 VERIFICA LOGIN: Testo login con l'utente appena registrato...",
+    );
+
+    const userCredentials: CognitoCredentials = {
+      username: testEmail, // In Cognito, l'username è l'email
+      password: testPassword,
+    };
+
+    try {
+      console.log(`🔑 Tentativo di login con email: ${testEmail}`);
+      const getUserResponse = await petlink.core
+        .authLoginWith(userCredentials)
+        .sdk.getUser();
+
+      console.log(
+        "📋 Risposta getUser (utente loggato):",
+        JSON.stringify(getUserResponse, null, 2),
+      );
+
+      // Verifica che il login sia andato a buon fine
+      expect(getUserResponse.getUser).toBeDefined();
+      expect(getUserResponse.getUser.code).toBe("200");
+      expect(getUserResponse.getUser.user).toBeDefined();
+
+      // Verifica che i dati dell'utente corrispondano a quelli registrati
+      const user = getUserResponse.getUser.user!;
+      expect(user.email).toBe(testEmail);
+      expect(user.name).toBe("Test");
+      expect(user.surname).toBe("User");
+      expect(user.phone).toBe(myPhoneNumber);
+      expect(user.city).toBe("Milano");
+      expect(user.countryCode).toBe("IT");
+
+      console.log(
+        "✅ LOGIN VERIFICATO: L'utente può fare login e i dati sono corretti!",
+      );
+      console.log(`👤 Utente ID: ${user.id}`);
+      console.log(`📧 Email: ${user.email}`);
+      console.log(`📱 Telefono: ${user.phone}`);
+      console.log(`📅 Data creazione: ${user.creationDate}`);
+    } catch (loginError) {
+      console.error("❌ ERRORE LOGIN:", loginError);
+      throw new Error(`Login fallito per l'utente registrato: ${loginError}`);
+    }
+
+    console.log(
+      "✅ TEST COMPLETATO: Flusso completo registrazione + login funziona!",
+    );
   }, 120000); // 2 minuti timeout per il test completo
+});
+
+describe("User Registration Flow", () => {
+  it("Should fail to register with an invalid email", async () => {
+    const userCredentials: CognitoCredentials = {
+      username: "+393484299437", // In Cognito, l'username è l'email
+      password: "Test123!",
+    };
+    const getUserResponse = await petlink.core
+      .authLoginWith(userCredentials)
+      .sdk.getUser();
+
+    console.log(
+      "📋 Risposta getUser (utente loggato):",
+      JSON.stringify(getUserResponse, null, 2),
+    );
+  }); // 2 minuti timeout per il test completo
 });
