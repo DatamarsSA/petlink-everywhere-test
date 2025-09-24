@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "fetch:schema": "node --loader ts-node/esm src/clients/petlink-infrastructure/endpoints/scripts/fetch-schema.ts",
+    "fetch:schema": "node --loader ts-node/esm src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts",
     "fetch:cct-schema:develop": "NODE_ENV=develop yarn fetch:schema CCT",
     "fetch:core-schema:develop": "NODE_ENV=develop yarn fetch:schema CORE",
-    "fetch:all-schemas:develop": "yarn fetch:cct-schema:develop && yarn fetch:core-schema:develop",
+    "fetch:graphql-schemas:develop": "yarn fetch:cct-schema:develop && yarn fetch:core-schema:develop",
     "test:develop": "vitest --mode develop",
     "test:develop:run": "vitest run --mode develop",
     "run:develop": "yarn fetch:all-schemas:develop && yarn test:develop:run",
-    "codegen": "graphql-codegen --config codegen.yaml",
+    "generate ts types & sdk": "graphql-codegen --config codegen.yaml",
     "prettier:write-src": "prettier --write ./src",
     "precommit": "yarn prettier:write-src && yarn run tsc --noEmit"
   },

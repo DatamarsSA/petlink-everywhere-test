@@ -3,51 +3,6 @@ import { env } from "../../config/env-schema-validation.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
-describe("Should Works Polling OTP", () => {
-  const myPhoneNumber = env.TWILIO_TEST_PHONE_NUMBER;
-
-  // Pulizia messaggi prima di tutti i test
-  beforeAll(async () => {
-    console.log(
-      "\n🧹 PULIZIA INIZIALE: Elimino tutti i messaggi precedenti...",
-    );
-    const deletedCount =
-      await twilioClient.deleteAllMessagesSentoToNumber(myPhoneNumber);
-    console.log(`🧹 PULIZIA COMPLETATA: ${deletedCount} messaggi eliminati`);
-  });
-
-  it("Should complete OTP flow", async () => {
-    console.log("\n🎯 TEST: Flusso completo OTP...");
-
-    // 1. Invia OTP tramite il tuo backend
-    console.log(`📱 Invio OTP al numero ${myPhoneNumber}...`);
-    const otpResponse = await petlink.core.authApiKey.sdk.sendOtp({
-      phone: myPhoneNumber,
-      languageId: "IT",
-    });
-
-    console.log("📋 Risposta OTP:", JSON.stringify(otpResponse, null, 2));
-    expect(otpResponse.sendOtp).toBeDefined();
-    expect(otpResponse.sendOtp.verificationId).toBeDefined();
-    console.log(
-      `✅ OTP inviato! VerificationId: ${otpResponse.sendOtp.verificationId}`,
-    );
-
-    // 2. Aspetta e leggi OTP da Twilio (con delay iniziale di 10 secondi)
-    console.log("📱 SMS inviato, aspetto l'OTP con delay iniziale...");
-    const receivedOtp = await twilioClient.waitForOtp(
-      myPhoneNumber,
-      60000, // 60 secondi timeout totale
-      5000, // 5 secondi tra i tentativi
-    );
-
-    console.log(`🎉 OTP ricevuto: ${receivedOtp}`);
-    expect(receivedOtp).toMatch(/^\d{4,6}$/);
-
-    console.log("✅ TEST COMPLETATO: Flusso OTP funziona!");
-  }, 90000); // 90 secondi timeout per il test
-});
-
 describe("User Registration Flow", () => {
   const myPhoneNumber = env.TWILIO_TEST_PHONE_NUMBER;
   const testEmail = `test-${Date.now()}@example.com`; // Email unico per ogni esecuzione
@@ -172,6 +127,7 @@ describe("User Registration Flow", () => {
     expect(signUpResponse.signUpUser).toBeDefined();
     expect(signUpResponse.signUpUser.code).toBe("200");
     console.log("🎉 Utente registrato con successo!");
+    let newUser = petlink.core.authApiKey.sdk.getUser();
 
     console.log("✅ TEST COMPLETATO: Flusso di registrazione utente funziona!");
   }, 120000); // 2 minuti timeout per il test completo

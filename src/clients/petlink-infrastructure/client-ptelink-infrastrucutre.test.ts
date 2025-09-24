@@ -20,4 +20,12 @@ describe("Infrastructure microservices must be available", () => {
     expect(result.getUser.user).toBeDefined();
     expect(result.getUser.user?.name).toBeDefined();
   });
+
+  it("CCT - should response PUBLI (apikey) endpoint", () => {
+    //todo: implements
+  });
+
+  it("CCT - should response PRIVATE (login) endpoint", () => {
+    //todo: implements
+  });
 });
