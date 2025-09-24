@@ -1,17 +1,17 @@
 overwrite: true
 
 generates:
-  src/lib/generated/core_schema.ts:  # File di output
-    schema: ./schema/graphql/core_schema.graphql  # Schema GraphQL di input
-    documents: ./schema/operations/core/*.graphql # Operazioni GraphQL definite manualmente
+  src/clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.ts: # File di output
+    schema: ./src/clients/petlink-infrastructure/endpoints/graphql/schema/core_schema.graphql # Schema GraphQL di input
+    documents: ./src/clients/petlink-infrastructure/endpoints/graphql/operations/core/*.graphql # Operazioni GraphQL definite manualmente
     plugins:
       - typescript  # Genera tipi TypeScript
       - typescript-operations  # Genera tipi per le operazioni
       - typescript-graphql-request  # Genera l'SDK basato su graphql-request
 
-  src/lib/generated/cct_schema.ts:
-    schema: ./schema/graphql/cct_schema.graphql
-   # documents: ./schema/operations/cct/*.graphql
+  src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts:
+    schema: ./src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql
+#    documents: ./src/clients/petlink-infrastructure/endpoints/graphql/operations/cct/*.graphql
     plugins:
       - typescript
       - typescript-operations

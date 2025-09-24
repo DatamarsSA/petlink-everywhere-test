@@ -3,20 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "fetch:schema": "node --loader ts-node/esm scripts/fetchSchema.ts",
+    "fetch:schema": "node --loader ts-node/esm src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts",
     "fetch:cct-schema:develop": "NODE_ENV=develop yarn fetch:schema CCT",
-    "fetch:cct-schema:test": "NODE_ENV=test yarn fetch:schema CCT",
     "fetch:core-schema:develop": "NODE_ENV=develop yarn fetch:schema CORE",
-    "fetch:core-schema:test": "NODE_ENV=test yarn fetch:schema CORE",
-    "fetch:all-schemas:develop": "yarn fetch:cct-schema:develop && yarn fetch:core-schema:develop",
-    "fetch:all-schemas:test": "yarn fetch:cct-schema:test && yarn fetch:core-schema:test",
+    "fetch:graphql-schemas:develop": "yarn fetch:cct-schema:develop && yarn fetch:core-schema:develop",
     "test:develop": "vitest --mode develop",
-    "test:test": "vitest --mode test",
     "test:develop:run": "vitest run --mode develop",
-    "test:test:run": "vitest run --mode test",
     "run:develop": "yarn fetch:all-schemas:develop && yarn test:develop:run",
-    "run:test": "yarn fetch:all-schemas:test && yarn test:test:run",
-    "codegen": "graphql-codegen --config codegen.yaml",
+    "generate ts types & sdk": "graphql-codegen --config codegen.yaml",
     "prettier:write-src": "prettier --write ./src",
     "precommit": "yarn prettier:write-src && yarn run tsc --noEmit"
   },
@@ -26,6 +20,7 @@
     "@graphql-codegen/typescript-graphql-request": "^6.2.0",
     "@graphql-codegen/typescript-operations": "^4.2.0",
     "@types/node": "20.14.2",
+    "@types/twilio": "^3.19.3",
     "dotenv": "^17.2.2",
     "get-graphql-schema": "^2.1.2",
     "graphql": "^16.9.0",
@@ -41,6 +36,7 @@
     "@aws-sdk/credential-provider-node": "^3.662.0",
     "@aws-sdk/protocol-http": "^3.374.0",
     "@aws-sdk/signature-v4": "^3.374.0",
+    "twilio": "^5.9.0",
     "zod": "^4.1.11"
   }
 }

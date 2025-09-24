@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { Infrastructure } from "../../infrastructure/clients/client.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
 describe("Infrastructure microservices must be available", () => {
   it("CORE - should response PUBLIC (apikey) ednpoint", async () => {
-    const result = await Infrastructure.core.authApiKey.sdk.getBreed({
+    const result = await petlink.core.authApiKey.sdk.getBreed({
       species: "DOG",
       languageId: "IT",
     });
@@ -14,10 +14,18 @@ describe("Infrastructure microservices must be available", () => {
   });
 
   it("CORE - should response PRIVATE (login) endpoint", async () => {
-    const result = await Infrastructure.core.authLogin.sdk.getUser();
+    const result = await petlink.core.authLogin.sdk.getUser();
 
     expect(result.getUser).toBeDefined();
     expect(result.getUser.user).toBeDefined();
     expect(result.getUser.user?.name).toBeDefined();
+  });
+
+  it("CCT - should response PUBLI (apikey) endpoint", () => {
+    //todo: implements
+  });
+
+  it("CCT - should response PRIVATE (login) endpoint", () => {
+    //todo: implements
   });
 });

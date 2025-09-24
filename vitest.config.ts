@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "node",
       env,
-      setupFiles: ["./src/test-setup.ts"], // Run once before worker
+      setupFiles: ["./src/config/test-setup.ts"], // Run once before worker
     },
   };
 });

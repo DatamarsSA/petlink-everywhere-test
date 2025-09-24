@@ -69,3 +69,11 @@ query getUser {
         }
     }
 }
+
+query checkContact($contact: String!, $contactType: ContactType!) {
+    checkContact(contact: $contact, contactType: $contactType) {
+        code
+        translationCode
+        message
+    }
+}
