@@ -26,6 +26,7 @@
     "@graphql-codegen/typescript-graphql-request": "^6.2.0",
     "@graphql-codegen/typescript-operations": "^4.2.0",
     "@types/node": "20.14.2",
+    "@types/twilio": "^3.19.3",
     "dotenv": "^17.2.2",
     "get-graphql-schema": "^2.1.2",
     "graphql": "^16.9.0",
@@ -41,6 +42,7 @@
     "@aws-sdk/credential-provider-node": "^3.662.0",
     "@aws-sdk/protocol-http": "^3.374.0",
     "@aws-sdk/signature-v4": "^3.374.0",
+    "twilio": "^5.9.0",
     "zod": "^4.1.11"
   }
 }

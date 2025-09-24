@@ -13,6 +13,11 @@ const envSchemaValidation = z.object({
   COGNITO_CLIENT_ID: z.string().min(1, "COGNITO_CLIENT_ID è richiesto"),
   COGNITO_USERNAME: z.email("COGNITO_USERNAME deve essere un email valida"),
   COGNITO_PASSWORD: z.string().min(1, "COGNITO_PASSWORD è richiesta"),
+  // Twilio
+  TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
+  TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
+  // Opzionale: numero di telefono di test predefinito
+  TWILIO_TEST_PHONE_NUMBER: z.string().min(1),
 });
 
 type EnvConfig = z.infer<typeof envSchemaValidation>;

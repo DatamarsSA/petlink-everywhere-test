@@ -1,37 +1,29 @@
-
-# Stage 1: Build dependencies (cached layer)
 FROM node:20-alpine3.19 AS builder
 
 WORKDIR /app
-
-# Copy dependency files first (for caching)
-COPY package.json yarn.lock* package-lock.json* ./
-
-# Install dependencies
+COPY package.json yarn.lock* ./
 RUN yarn install --frozen-lockfile
-
-# Copy source code
 COPY . .
 
-# Stage 2: Runtime
 FROM node:20-alpine3.19
 
-# Install minimal system dependencies
-RUN apk add --no-cache ca-certificates curl tini
+# Solo ca-certificates e tini (rimosso curl)
+RUN apk add --no-cache ca-certificates tini
 
-# Create non-root user
-RUN addgroup --system testrunner && adduser --system -G testrunner testrunner
+# Crea user e directory con permessi corretti
+RUN addgroup --system testrunner && \
+    adduser --system -G testrunner testrunner && \
+    mkdir -p /app && \
+    chown -R testrunner:testrunner /app
 
 WORKDIR /app
 
-# Copy everything from builder
+# Copia come root, poi cambia ownership
 COPY --from=builder /app .
+RUN chown -R testrunner:testrunner /app
 
-# Switch to non-root user
+# IMPORTANTE: Switch a user DOPO aver settato i permessi
 USER testrunner
 
-# Use tini for signal handling
 ENTRYPOINT ["/sbin/tini", "--"]
-
-# Default command
-CMD ["npm", "run", "test:develop:run"]
+CMD ["npm", "run", "test:develop"]

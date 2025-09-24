@@ -2,11 +2,11 @@ import { GraphQLClient } from "graphql-request";
 import {
   getSdk as getCoreSdk,
   Sdk as CoreSdk,
-} from "../lib/generated/core_schema.js";
+} from "../../lib/generated/core_schema.js";
 import {
   getSdk as getCctSdk,
   Sdk as CctSdk,
-} from "../lib/generated/cct_schema.js";
+} from "../../lib/generated/cct_schema.js";
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
