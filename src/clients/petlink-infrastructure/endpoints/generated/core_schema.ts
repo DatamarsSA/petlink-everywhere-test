@@ -1073,6 +1073,7 @@ export interface PetProtection {
   __typename?: "PetProtection";
   chargebeeSubscriptionId?: Maybe<Scalars["String"]["output"]>;
   codiceTessera?: Maybe<Scalars["String"]["output"]>;
+  currencyCode: Scalars["String"]["output"];
   currentTermEnd: Scalars["String"]["output"];
   currentTermStart: Scalars["String"]["output"];
   customerServiceContact: Scalars["String"]["output"];
@@ -1593,7 +1594,6 @@ export type QueryGetSubscriptionPlanPricingArgs = {
 };
 
 export type QueryGetSubscriptionPlansArgs = {
-  appBrand?: InputMaybe<AppBrand>;
   countryCode?: InputMaybe<Scalars["String"]["input"]>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
   serialNumber?: InputMaybe<Scalars["String"]["input"]>;

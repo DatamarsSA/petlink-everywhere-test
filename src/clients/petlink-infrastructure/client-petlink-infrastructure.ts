@@ -2,22 +2,36 @@ import { GraphQLClient } from "graphql-request";
 import {
   getSdk as getCoreSdk,
   Sdk as CoreSdk,
-} from "../../lib/generated/core_schema.js";
+} from "./endpoints/generated/core_schema.js";
 import {
   getSdk as getCctSdk,
   Sdk as CctSdk,
-} from "../../lib/generated/cct_schema.js";
+} from "./endpoints/generated/cct_schema.js";
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import {
-  AuthMode,
-  HTTP_HEADERS,
-  RetryOptions,
-  ServiceType,
-} from "../types/infrastructure-types.js";
-import { env } from "../env-schema-validation.js";
+import { env } from "../../config/env-schema-validation.js";
+
+export const HTTP_HEADERS = {
+  AUTHORIZATION: "Authorization",
+  API_KEY: "x-api-key",
+};
+
+export enum ServiceType {
+  CORE = "CORE",
+  CCT = "CCT",
+}
+
+export enum AuthMode {
+  TOKEN = "token",
+  API_KEY = "apiKey",
+}
+
+export type RetryOptions = {
+  retries: number;
+  delayMs: number[];
+};
 
 // ===== Environment  =====
 class EnvConfig {

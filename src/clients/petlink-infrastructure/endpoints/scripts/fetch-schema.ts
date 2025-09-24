@@ -50,7 +50,7 @@ if (!API_KEY || !API_URL) {
   process.exit(0);
 }
 
-const SCHEMA_GRAPHQL_PATH = `./schema/graphql/${serviceType.toLowerCase()}_schema.graphql`;
+const SCHEMA_GRAPHQL_PATH = `./src/clients/petlink-infrastructure/endpoints/graphql/${serviceType.toLowerCase()}_schema.graphql`;
 
 ensureDirExists(dirname(SCHEMA_GRAPHQL_PATH));
 

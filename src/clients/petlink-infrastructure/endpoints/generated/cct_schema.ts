@@ -196,6 +196,7 @@ export type CreditNoteStatusTypeEnum =
 
 export interface Customer {
   __typename?: "Customer";
+  appBrand?: Maybe<Scalars["String"]["output"]>;
   chargebeeId?: Maybe<Scalars["String"]["output"]>;
   countryCode: Scalars["String"]["output"];
   email: Scalars["String"]["output"];

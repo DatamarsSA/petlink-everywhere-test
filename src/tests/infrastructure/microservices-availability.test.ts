@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { petlink } from "../../infrastructure/clients/client-petlink-infrastructure.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
 describe("Infrastructure microservices must be available", () => {
   it("CORE - should response PUBLIC (apikey) ednpoint", async () => {

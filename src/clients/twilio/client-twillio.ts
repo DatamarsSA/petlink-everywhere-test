@@ -1,5 +1,5 @@
 import twilio from "twilio";
-import { env } from "../env-schema-validation.js";
+import { env } from "../../config/env-schema-validation.js";
 
 /**
  * Client Twilio per leggere messaggi inviati dal nostro account
