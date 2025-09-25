@@ -13,27 +13,41 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import { env } from "../../config/env-schema-validation.js";
 
+// Costanti per gli header HTTP
 export const HTTP_HEADERS = {
   AUTHORIZATION: "Authorization",
   API_KEY: "x-api-key",
+  X_AMZ_DATE: "X-Amz-Date",
+  X_AMZ_SECURITY_TOKEN: "X-Amz-Security-Token",
 };
 
+// Tipi di servizio supportati
 export enum ServiceType {
   CORE = "CORE",
   CCT = "CCT",
 }
 
-export enum AuthMode {
-  TOKEN = "token",
+// Tipi di autenticazione supportati
+export enum AuthType {
+  JWT = "jwt",
+  IAM = "iam",
   API_KEY = "apiKey",
 }
 
+// Opzioni per i tentativi di ripetizione delle richieste
 export type RetryOptions = {
   retries: number;
   delayMs: number[];
 };
 
-// ===== Environment  =====
+
+export type IamCredentials = {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken?: string;
+};
+
+// Classe per la gestione delle configurazioni di ambiente
 class EnvConfig {
   static getEndpoint(service: ServiceType): string {
     return env[`${service}_GRAPHQL_API_URL`];
@@ -47,49 +61,20 @@ class EnvConfig {
     return {
       region: env.COGNITO_REGION,
       clientId: env.COGNITO_CLIENT_ID,
-      username: env.COGNITO_USERNAME,
-      password: env.COGNITO_PASSWORD,
     };
   }
 }
 
-// ===== Auth =====
-export type CognitoCredentials = {
-  username: string;
-  password: string;
-};
+// Gestore dell'autenticazione
+class AuthManager {
+  // Token JWT attivo
+  private static jwtToken: { token: string; expiry: Date } | null = null;
 
-class AuthHelper {
-  private static tokenCache: { token: string; expiry: Date } | null = null;
-  private static customTokenCache = new Map<string, { token: string; expiry: Date }>();
+  // Credenziali IAM attive
+  private static iamCredentials: IamCredentials | null = null;
 
-  static async getToken(): Promise<string> {
-    if (this.tokenCache && this.tokenCache.expiry > new Date()) {
-      return this.tokenCache.token;
-    }
-
-    const config = EnvConfig.getCognitoConfig();
-    const token = await this.authenticateWithCognito(config.username, config.password);
-
-    this.tokenCache = this.createTokenCacheEntry(token);
-    return token;
-  }
-
-  static async getTokenWithCredentials(credentials: CognitoCredentials): Promise<string> {
-    const cacheKey = `${credentials.username}:${credentials.password}`;
-    const cached = this.customTokenCache.get(cacheKey);
-
-    if (cached && cached.expiry > new Date()) {
-      return cached.token;
-    }
-
-    const token = await this.authenticateWithCognito(credentials.username, credentials.password);
-
-    this.customTokenCache.set(cacheKey, this.createTokenCacheEntry(token));
-    return token;
-  }
-
-  private static async authenticateWithCognito(username: string, password: string): Promise<string> {
+  // Autenticazione JWT con Cognito
+  static async authenticateWithJwt(username: string, password: string, authMethod: "email"| "phone_number"): Promise<void> {
     const config = EnvConfig.getCognitoConfig();
     const client = new CognitoIdentityProviderClient({ region: config.region });
 
@@ -100,6 +85,10 @@ class AuthHelper {
         USERNAME: username,
         PASSWORD: password,
       },
+      ClientMetadata: {
+        method: authMethod,
+        username: username,
+      }
     });
 
     const response = await client.send(command);
@@ -109,11 +98,24 @@ class AuthHelper {
       throw new Error(`Failed to get ID token from Cognito for user: ${username}`);
     }
 
-    return token;
+    this.jwtToken = this.createTokenCacheEntry(token);
   }
 
+  // Verifica se abbiamo un token JWT valido
+  static hasValidJwtToken(): boolean {
+    return !!this.jwtToken && this.jwtToken.expiry > new Date();
+  }
+
+  // Ottiene il token JWT (se disponibile)
+  static getJwtToken(): string {
+    if (!this.hasValidJwtToken()) {
+      throw new Error("No valid JWT token available. Please login first.");
+    }
+    return this.jwtToken!.token;
+  }
+
+  // Crea una voce di cache per il token con scadenza
   private static createTokenCacheEntry(token: string): { token: string; expiry: Date } {
-    // Cache until slightly before JWT expiry (fallback to 3 minutes if missing)
     const decodePayload = (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length < 2) throw new Error("Invalid JWT");
@@ -125,7 +127,7 @@ class AuthHelper {
 
     const { exp } = decodePayload(token);
     const nowMs = Date.now();
-    const skewMs = 60 * 1000; // 1 minute safety margin
+    const skewMs = 60 * 1000; // 1 minuto di margine di sicurezza
     const expiryMs = exp ? exp * 1000 - skewMs : nowMs + 3 * 60 * 1000;
 
     return {
@@ -134,18 +136,56 @@ class AuthHelper {
     };
   }
 
-  static clearTokenCache(): void {
-    this.tokenCache = null;
-    this.customTokenCache.clear();
+  // Gestione credenziali IAM
+  static setIamCredentials(credentials: IamCredentials): void {
+    this.iamCredentials = credentials;
+  }
+
+  // Verifica se abbiamo credenziali IAM
+  static hasIamCredentials(): boolean {
+    return !!this.iamCredentials;
+  }
+
+  // Ottiene le credenziali IAM (se disponibili)
+  static getIamCredentials(): IamCredentials {
+    if (!this.hasIamCredentials()) {
+      throw new Error("IAM credentials not set. Please call loginWithIam first.");
+    }
+    return this.iamCredentials!;
+  }
+
+  // Genera gli header per l'autenticazione IAM
+  static generateIamAuthHeaders(): Record<string, string> {
+    const credentials = this.getIamCredentials();
+
+    // In una implementazione reale, qui genereresti la firma AWS SigV4
+    const headers: Record<string, string> = {
+      [HTTP_HEADERS.X_AMZ_DATE]: new Date().toISOString(),
+    };
+
+    if (credentials.sessionToken) {
+      headers[HTTP_HEADERS.X_AMZ_SECURITY_TOKEN] = credentials.sessionToken;
+    }
+
+    // Qui andrebbe aggiunta la firma vera e propria
+    // headers['Authorization'] = 'AWS4-HMAC-SHA256 Credential=...';
+
+    return headers;
+  }
+
+  // Pulisce tutte le cache
+  static clearCache(): void {
+    this.jwtToken = null;
+    this.iamCredentials = null;
   }
 }
 
-// ===== Client Endpoints=
-
+// Tipo per SDK con funzionalità di retry
 type AugmentedSdk<T> = T & {
   withRetry: (opts?: Partial<RetryOptions>) => AugmentedSdk<T>;
 };
 
+// Funzione per eseguire una chiamata con retry in caso di errore
 async function execWithRetry<T>(
     fn: () => Promise<T>,
     opts?: Partial<RetryOptions>,
@@ -160,7 +200,6 @@ async function execWithRetry<T>(
   const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
   const isRetriableError = (err: unknown): boolean => {
-    // graphql-request throws ClientError for HTTP != 2xx
     const anyErr = err as any;
     const status: number | undefined = anyErr?.response?.status;
 
@@ -169,7 +208,6 @@ async function execWithRetry<T>(
       if (status >= 500 && status < 600) return true;
     }
 
-    // Network-like errors (no response) → often transient
     if (
         !status &&
         (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
@@ -181,7 +219,6 @@ async function execWithRetry<T>(
   };
 
   const computeDelay = (attempt: number, o: RetryOptions): number => {
-    // attempt starts at 1 for first retry (after first failure)
     const index = Math.min(attempt - 1, o.delayMs.length - 1);
     return o.delayMs[index];
   };
@@ -198,10 +235,11 @@ async function execWithRetry<T>(
       await sleep(delay);
     }
   }
-  // Re-throw last error preserving stack
+
   throw lastErr;
 }
 
+// Classe base per i client
 abstract class BaseClient<TSdk extends object> {
   protected target: ServiceType;
   private sdkCache = new Map<string, { key: string; sdk: TSdk }>();
@@ -210,37 +248,32 @@ abstract class BaseClient<TSdk extends object> {
     this.target = target;
   }
 
-  clearLocalCache(): void {
+  clearCache(): void {
     this.sdkCache.clear();
   }
 
+  // Crea un proxy per l'SDK con supporto per retry
   private makeSdkProxy(
-      mode: AuthMode,
+      authType: AuthType,
       retryCfg?: Partial<RetryOptions>,
-      credentials?: CognitoCredentials,
   ): AugmentedSdk<TSdk> {
-    // NOTE: we capture retryCfg in closure. Calling withRetry returns a new proxy with new retryCfg.
     const self = this;
 
     return new Proxy({} as AugmentedSdk<TSdk>, {
       get: (_target, prop, _recv) => {
         if (prop === "withRetry") {
-          // Return a function that creates a *new* proxy with retry enabled/customized
           return (opts?: Partial<RetryOptions>) =>
-              self.makeSdkProxy(mode, { ...retryCfg, ...(opts ?? {}) }, credentials);
+              self.makeSdkProxy(authType, { ...retryCfg, ...(opts ?? {}) });
         }
 
-        // For actual SDK method/property access
         return async (...args: any[]) => {
-          const sdk = await self.getOrCreateSdk(mode, credentials);
+          const sdk = await self.getOrCreateSdk(authType);
           const member = (sdk as any)[prop];
 
           if (typeof member !== "function") {
-            // Non-callable property (e.g., fragments, constants)
             return member;
           }
 
-          // Wrap the actual call with retry if configured, else call directly
           const call = () => member(...args);
           return retryCfg ? execWithRetry(call, retryCfg) : call();
         };
@@ -248,53 +281,68 @@ abstract class BaseClient<TSdk extends object> {
     }) as AugmentedSdk<TSdk>;
   }
 
-  private async getOrCreateSdk(mode: AuthMode, credentials?: CognitoCredentials): Promise<TSdk> {
+  // Ottiene o crea un SDK con le impostazioni di autenticazione appropriate
+  private async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
     const endpoint = EnvConfig.getEndpoint(this.target);
     let cacheKey: string;
     let headers: Record<string, string>;
 
-    if (mode === AuthMode.TOKEN) {
-      const token = credentials
-          ? await AuthHelper.getTokenWithCredentials(credentials)
-          : await AuthHelper.getToken();
-      cacheKey = token;
-      headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
-    } else {
-      const apiKey = EnvConfig.getApiKey(this.target);
-      if (!apiKey) throw new Error(`[${this.target}] ❌ API Key not found`);
-      cacheKey = apiKey;
-      headers = { [HTTP_HEADERS.API_KEY]: apiKey };
+    switch (authType) {
+      case AuthType.JWT:
+        if (!AuthManager.hasValidJwtToken()) {
+          throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
+        }
+        const token = AuthManager.getJwtToken();
+        cacheKey = `jwt:${token}`;
+        headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
+        break;
+
+      case AuthType.IAM:
+        if (!AuthManager.hasIamCredentials()) {
+          throw new Error("No IAM credentials available. Please login first with loginWithIam.");
+        }
+        const iamCredentials = AuthManager.getIamCredentials();
+        cacheKey = `iam:${iamCredentials.accessKeyId}`;
+        headers = AuthManager.generateIamAuthHeaders();
+        break;
+
+      case AuthType.API_KEY:
+        const apiKey = EnvConfig.getApiKey(this.target);
+        if (!apiKey) throw new Error(`[${this.target}] API Key not found`);
+        cacheKey = `apiKey:${apiKey}`;
+        headers = { [HTTP_HEADERS.API_KEY]: apiKey };
+        break;
+
+      default:
+        throw new Error(`Unsupported auth type: ${authType}`);
     }
 
-    const cacheId = `${mode}:${cacheKey}`; // "TOKEN:<value_token>" or "API_KEY:<value_apiKey>"
-
-    const cached = this.sdkCache.get(cacheId);
+    const cached = this.sdkCache.get(cacheKey);
     if (cached) return cached.sdk;
 
     const client = new GraphQLClient(endpoint, { headers });
     const sdk = this.createSdk(client);
-    this.sdkCache.set(cacheId, { key: cacheKey, sdk });
+    this.sdkCache.set(cacheKey, { key: cacheKey, sdk });
     return sdk;
   }
 
-  // Modified to return the SDK directly instead of wrapping it in an object
-  get authLogin(): AugmentedSdk<TSdk> {
-    return this.makeSdkProxy(AuthMode.TOKEN);
+  // Proprietà per accedere ai diversi tipi di autenticazione
+  get authJwt(): AugmentedSdk<TSdk> {
+    return this.makeSdkProxy(AuthType.JWT);
   }
 
-  // Modified to return the SDK directly instead of wrapping it in an object
-  get authApiKey(): AugmentedSdk<TSdk> {
-    return this.makeSdkProxy(AuthMode.API_KEY);
+  get authIam(): AugmentedSdk<TSdk> {
+    return this.makeSdkProxy(AuthType.IAM);
   }
 
-  // Modified to return the SDK directly instead of wrapping it in an object
-  authLoginWith(credentials: CognitoCredentials): AugmentedSdk<TSdk> {
-    return this.makeSdkProxy(AuthMode.TOKEN, undefined, credentials);
+  get public(): AugmentedSdk<TSdk> {
+    return this.makeSdkProxy(AuthType.API_KEY);
   }
 
   protected abstract createSdk(client: GraphQLClient): TSdk;
 }
 
+// Client per il servizio Core
 export class CoreClient extends BaseClient<CoreSdk> {
   constructor() {
     super(ServiceType.CORE);
@@ -305,6 +353,7 @@ export class CoreClient extends BaseClient<CoreSdk> {
   }
 }
 
+// Client per il servizio CCT
 export class CctClient extends BaseClient<CctSdk> {
   constructor() {
     super(ServiceType.CCT);
@@ -315,15 +364,29 @@ export class CctClient extends BaseClient<CctSdk> {
   }
 }
 
-class PetLinkInfrastructure {
+// Classe principale per l'infrastruttura PetLink
+export class PetLinkInfrastructure {
   readonly core = new CoreClient();
   readonly cct = new CctClient();
 
+  // Metodi di autenticazione
+  async loginWithEmail(email: string, password: string): Promise<void> {
+    await AuthManager.authenticateWithJwt(email, password, "email");
+  }
+
+  async loginWithPhone(phone: string, password: string): Promise<void> {
+    await AuthManager.authenticateWithJwt(phone, password, "phone_number");
+  }
+
+  loginWithIam(accessKeyId: string, secretAccessKey: string, sessionToken?: string): void {
+    AuthManager.setIamCredentials({ accessKeyId, secretAccessKey, sessionToken });
+  }
+
+  // Resetta tutte le cache
   reset(): void {
-    AuthHelper.clearTokenCache();
-    this.core.clearLocalCache();
-    this.cct.clearLocalCache();
-    console.log("🔄 Token & SDK cache cleared");
+    AuthManager.clearCache();
+    this.core.clearCache();
+    this.cct.clearCache();
   }
 }
 

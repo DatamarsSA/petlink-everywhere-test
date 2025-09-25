@@ -1,31 +1,31 @@
 import { describe, it, expect } from "vitest";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
-describe("Infrastructure microservices must be available", () => {
-  it("CORE - should response PUBLIC (apikey) ednpoint", async () => {
-    const result = await petlink.core.authApiKey.getBreed({
+describe("PetLinkInfrastructure Client must work", () => {
+  it("Should response PUBLIC (apikey) ednpoint", async () => {
+    const result = await petlink.core.public.getBreed({
       species: "DOG",
       languageId: "IT",
     });
+    console.log("result",result)
 
     expect(result.getBreed).toBeDefined();
     expect(result.getBreed.items).toBeDefined();
     expect(Array.isArray(result.getBreed.items)).toBe(true);
   });
 
-  it("CORE - should response PRIVATE (login) endpoint", async () => {
-    const result = await petlink.core.authLogin.withRetry().getUser();
+  it("Should response PRIVATE (jwt) endpoint", async () => {
+    await petlink.loginWithEmail("marco@test.it", "Ciaokippy3!")
 
-    expect(result.getUser).toBeDefined();
-    expect(result.getUser.user).toBeDefined();
-    expect(result.getUser.user?.name).toBeDefined();
+    const user = await petlink.core.authJwt.withRetry().getUser();
+    console.log("user",user)
+
+    expect(user.getUser).toBeDefined();
+    expect(user.getUser.user).toBeDefined();
+    expect(user.getUser.user?.name).toBeDefined();
   });
 
-  it("CCT - should response PUBLI (apikey) endpoint", () => {
-    //todo: implements
-  });
-
-  it("CCT - should response PRIVATE (login) endpoint", () => {
+  it("Should response PRIVATE (IAM aws) endpoint", () => {
     //todo: implements
   });
 });

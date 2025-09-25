@@ -3,7 +3,7 @@ import { twilioClient } from "./client-twillio.js";
 import { petlink } from "../petlink-infrastructure/client-petlink-infrastructure.js";
 import { env } from "../../config/env-schema-validation.js";
 
-describe("Should works OTP flow (send OTP & retrieve it by suite test)", () => {
+describe("Twilio Client must work", () => {
   const myPhoneNumber = env.TWILIO_TEST_PHONE_NUMBER;
 
   // Pulizia messaggi prima di tutti i test
@@ -16,12 +16,12 @@ describe("Should works OTP flow (send OTP & retrieve it by suite test)", () => {
     console.log(`🧹 PULIZIA COMPLETATA: ${deletedCount} messaggi eliminati`);
   });
 
-  it("Should complete OTP flow", async () => {
+  it("Should works OTP flow (send OTP & read it by SMS)", async () => {
     console.log("\n🎯 TEST: Flusso completo OTP...");
 
     // 1. Invia OTP tramite il tuo backend
     console.log(`📱 Invio OTP al numero ${myPhoneNumber}...`);
-    const otpResponse = await petlink.core.authApiKey.sendOtp({
+    const otpResponse = await petlink.core.public.sendOtp({
       phone: myPhoneNumber,
       languageId: "IT",
     });
