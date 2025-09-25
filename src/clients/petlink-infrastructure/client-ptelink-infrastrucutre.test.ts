@@ -3,7 +3,7 @@ import { petlink } from "../../clients/petlink-infrastructure/client-petlink-inf
 
 describe("Infrastructure microservices must be available", () => {
   it("CORE - should response PUBLIC (apikey) ednpoint", async () => {
-    const result = await petlink.core.authApiKey.sdk.getBreed({
+    const result = await petlink.core.authApiKey.getBreed({
       species: "DOG",
       languageId: "IT",
     });
@@ -14,7 +14,7 @@ describe("Infrastructure microservices must be available", () => {
   });
 
   it("CORE - should response PRIVATE (login) endpoint", async () => {
-    const result = await petlink.core.authLogin.sdk.getUser();
+    const result = await petlink.core.authLogin.withRetry().getUser();
 
     expect(result.getUser).toBeDefined();
     expect(result.getUser.user).toBeDefined();

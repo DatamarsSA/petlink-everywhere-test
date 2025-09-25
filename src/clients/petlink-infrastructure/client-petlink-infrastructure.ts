@@ -70,7 +70,7 @@ class AuthHelper {
 
     const config = EnvConfig.getCognitoConfig();
     const token = await this.authenticateWithCognito(config.username, config.password);
-    
+
     this.tokenCache = this.createTokenCacheEntry(token);
     return token;
   }
@@ -78,13 +78,13 @@ class AuthHelper {
   static async getTokenWithCredentials(credentials: CognitoCredentials): Promise<string> {
     const cacheKey = `${credentials.username}:${credentials.password}`;
     const cached = this.customTokenCache.get(cacheKey);
-    
+
     if (cached && cached.expiry > new Date()) {
       return cached.token;
     }
 
     const token = await this.authenticateWithCognito(credentials.username, credentials.password);
-    
+
     this.customTokenCache.set(cacheKey, this.createTokenCacheEntry(token));
     return token;
   }
@@ -147,8 +147,8 @@ type AugmentedSdk<T> = T & {
 };
 
 async function execWithRetry<T>(
-  fn: () => Promise<T>,
-  opts?: Partial<RetryOptions>,
+    fn: () => Promise<T>,
+    opts?: Partial<RetryOptions>,
 ): Promise<T> {
   const DEFAULT_RETRY: RetryOptions = {
     retries: 3,
@@ -171,8 +171,8 @@ async function execWithRetry<T>(
 
     // Network-like errors (no response) → often transient
     if (
-      !status &&
-      (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
+        !status &&
+        (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
     ) {
       return true;
     }
@@ -215,9 +215,9 @@ abstract class BaseClient<TSdk extends object> {
   }
 
   private makeSdkProxy(
-    mode: AuthMode,
-    retryCfg?: Partial<RetryOptions>,
-    credentials?: CognitoCredentials,
+      mode: AuthMode,
+      retryCfg?: Partial<RetryOptions>,
+      credentials?: CognitoCredentials,
   ): AugmentedSdk<TSdk> {
     // NOTE: we capture retryCfg in closure. Calling withRetry returns a new proxy with new retryCfg.
     const self = this;
@@ -227,7 +227,7 @@ abstract class BaseClient<TSdk extends object> {
         if (prop === "withRetry") {
           // Return a function that creates a *new* proxy with retry enabled/customized
           return (opts?: Partial<RetryOptions>) =>
-            self.makeSdkProxy(mode, { ...retryCfg, ...(opts ?? {}) }, credentials);
+              self.makeSdkProxy(mode, { ...retryCfg, ...(opts ?? {}) }, credentials);
         }
 
         // For actual SDK method/property access
@@ -254,9 +254,9 @@ abstract class BaseClient<TSdk extends object> {
     let headers: Record<string, string>;
 
     if (mode === AuthMode.TOKEN) {
-      const token = credentials 
-        ? await AuthHelper.getTokenWithCredentials(credentials)
-        : await AuthHelper.getToken();
+      const token = credentials
+          ? await AuthHelper.getTokenWithCredentials(credentials)
+          : await AuthHelper.getToken();
       cacheKey = token;
       headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
     } else {
@@ -277,16 +277,19 @@ abstract class BaseClient<TSdk extends object> {
     return sdk;
   }
 
-  get authLogin(): { sdk: AugmentedSdk<TSdk> } {
-    return { sdk: this.makeSdkProxy(AuthMode.TOKEN) };
+  // Modified to return the SDK directly instead of wrapping it in an object
+  get authLogin(): AugmentedSdk<TSdk> {
+    return this.makeSdkProxy(AuthMode.TOKEN);
   }
 
-  get authApiKey(): { sdk: AugmentedSdk<TSdk> } {
-    return { sdk: this.makeSdkProxy(AuthMode.API_KEY) };
+  // Modified to return the SDK directly instead of wrapping it in an object
+  get authApiKey(): AugmentedSdk<TSdk> {
+    return this.makeSdkProxy(AuthMode.API_KEY);
   }
 
-  authLoginWith(credentials: CognitoCredentials): { sdk: AugmentedSdk<TSdk> } {
-    return { sdk: this.makeSdkProxy(AuthMode.TOKEN, undefined, credentials) };
+  // Modified to return the SDK directly instead of wrapping it in an object
+  authLoginWith(credentials: CognitoCredentials): AugmentedSdk<TSdk> {
+    return this.makeSdkProxy(AuthMode.TOKEN, undefined, credentials);
   }
 
   protected abstract createSdk(client: GraphQLClient): TSdk;

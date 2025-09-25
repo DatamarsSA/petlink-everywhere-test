@@ -21,7 +21,7 @@ describe("Should works OTP flow (send OTP & retrieve it by suite test)", () => {
 
     // 1. Invia OTP tramite il tuo backend
     console.log(`📱 Invio OTP al numero ${myPhoneNumber}...`);
-    const otpResponse = await petlink.core.authApiKey.sdk.sendOtp({
+    const otpResponse = await petlink.core.authApiKey.sendOtp({
       phone: myPhoneNumber,
       languageId: "IT",
     });
