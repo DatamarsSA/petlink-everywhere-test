@@ -36,6 +36,7 @@
     "@aws-sdk/credential-provider-node": "^3.662.0",
     "@aws-sdk/protocol-http": "^3.374.0",
     "@aws-sdk/signature-v4": "^3.374.0",
+    "googleapis": "^160.0.0",
     "twilio": "^5.9.0",
     "zod": "^4.1.11"
   }
