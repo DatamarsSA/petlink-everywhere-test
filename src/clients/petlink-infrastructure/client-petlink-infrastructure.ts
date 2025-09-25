@@ -1,4 +1,4 @@
-import { GraphQLClient } from "graphql-request";
+import { GraphQLClient, RequestMiddleware } from "graphql-request";
 import {
   getSdk as getCoreSdk,
   Sdk as CoreSdk,
@@ -11,6 +11,9 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { SignatureV4 } from "@aws-sdk/signature-v4";
+import { Sha256 } from "@aws-crypto/sha256-js";
+import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
 
 // Costanti per gli header HTTP
@@ -40,11 +43,9 @@ export type RetryOptions = {
   delayMs: number[];
 };
 
-
 export type IamCredentials = {
   accessKeyId: string;
   secretAccessKey: string;
-  sessionToken?: string;
 };
 
 // Classe per la gestione delle configurazioni di ambiente
@@ -63,6 +64,10 @@ class EnvConfig {
       clientId: env.COGNITO_CLIENT_ID,
     };
   }
+
+  static getAwsRegion(): string {
+    return env.AWS_REGION || "us-east-1";
+  }
 }
 
 // Gestore dell'autenticazione
@@ -74,7 +79,11 @@ class AuthManager {
   private static iamCredentials: IamCredentials | null = null;
 
   // Autenticazione JWT con Cognito
-  static async authenticateWithJwt(username: string, password: string, authMethod: "email"| "phone_number"): Promise<void> {
+  static async authenticateWithJwt(
+    username: string,
+    password: string,
+    authMethod: "email" | "phone_number",
+  ): Promise<void> {
     const config = EnvConfig.getCognitoConfig();
     const client = new CognitoIdentityProviderClient({ region: config.region });
 
@@ -88,14 +97,16 @@ class AuthManager {
       ClientMetadata: {
         method: authMethod,
         username: username,
-      }
+      },
     });
 
     const response = await client.send(command);
     const token = response.AuthenticationResult?.IdToken;
 
     if (!token) {
-      throw new Error(`Failed to get ID token from Cognito for user: ${username}`);
+      throw new Error(
+        `Failed to get ID token from Cognito for user: ${username}`,
+      );
     }
 
     this.jwtToken = this.createTokenCacheEntry(token);
@@ -115,7 +126,10 @@ class AuthManager {
   }
 
   // Crea una voce di cache per il token con scadenza
-  private static createTokenCacheEntry(token: string): { token: string; expiry: Date } {
+  private static createTokenCacheEntry(token: string): {
+    token: string;
+    expiry: Date;
+  } {
     const decodePayload = (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length < 2) throw new Error("Invalid JWT");
@@ -149,28 +163,49 @@ class AuthManager {
   // Ottiene le credenziali IAM (se disponibili)
   static getIamCredentials(): IamCredentials {
     if (!this.hasIamCredentials()) {
-      throw new Error("IAM credentials not set. Please call loginWithIam first.");
+      throw new Error(
+        "IAM credentials not set. Please call loginWithIam first.",
+      );
     }
     return this.iamCredentials!;
   }
 
-  // Genera gli header per l'autenticazione IAM
-  static generateIamAuthHeaders(): Record<string, string> {
+  // Genera gli header per l'autenticazione IAM con firma AWS SigV4
+  static async generateIamAuthHeaders(
+    endpoint: string,
+    body: string,
+  ): Promise<Record<string, string>> {
     const credentials = this.getIamCredentials();
 
-    // In una implementazione reale, qui genereresti la firma AWS SigV4
-    const headers: Record<string, string> = {
-      [HTTP_HEADERS.X_AMZ_DATE]: new Date().toISOString(),
+    // Solo modalità ACCESS_KEYS supportata
+    const awsCredentials = {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
     };
 
-    if (credentials.sessionToken) {
-      headers[HTTP_HEADERS.X_AMZ_SECURITY_TOKEN] = credentials.sessionToken;
-    }
+    const signer = new SignatureV4({
+      credentials: awsCredentials,
+      region: EnvConfig.getAwsRegion(),
+      service: "appsync",
+      sha256: Sha256,
+    });
 
-    // Qui andrebbe aggiunta la firma vera e propria
-    // headers['Authorization'] = 'AWS4-HMAC-SHA256 Credential=...';
+    const url = new URL(endpoint);
+    const httpRequest = new HttpRequest({
+      headers: {
+        "Content-Type": "application/json",
+        host: url.host,
+      },
+      body: body,
+      method: "POST",
+      protocol: url.protocol,
+      path: url.pathname,
+      hostname: url.hostname,
+    });
 
-    return headers;
+    const signedRequest = await signer.sign(httpRequest);
+
+    return signedRequest.headers as Record<string, string>;
   }
 
   // Pulisce tutte le cache
@@ -187,8 +222,8 @@ type AugmentedSdk<T> = T & {
 
 // Funzione per eseguire una chiamata con retry in caso di errore
 async function execWithRetry<T>(
-    fn: () => Promise<T>,
-    opts?: Partial<RetryOptions>,
+  fn: () => Promise<T>,
+  opts?: Partial<RetryOptions>,
 ): Promise<T> {
   const DEFAULT_RETRY: RetryOptions = {
     retries: 3,
@@ -209,8 +244,8 @@ async function execWithRetry<T>(
     }
 
     if (
-        !status &&
-        (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
+      !status &&
+      (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
     ) {
       return true;
     }
@@ -254,8 +289,8 @@ abstract class BaseClient<TSdk extends object> {
 
   // Crea un proxy per l'SDK con supporto per retry
   private makeSdkProxy(
-      authType: AuthType,
-      retryCfg?: Partial<RetryOptions>,
+    authType: AuthType,
+    retryCfg?: Partial<RetryOptions>,
   ): AugmentedSdk<TSdk> {
     const self = this;
 
@@ -263,7 +298,7 @@ abstract class BaseClient<TSdk extends object> {
       get: (_target, prop, _recv) => {
         if (prop === "withRetry") {
           return (opts?: Partial<RetryOptions>) =>
-              self.makeSdkProxy(authType, { ...retryCfg, ...(opts ?? {}) });
+            self.makeSdkProxy(authType, { ...retryCfg, ...(opts ?? {}) });
         }
 
         return async (...args: any[]) => {
@@ -290,7 +325,9 @@ abstract class BaseClient<TSdk extends object> {
     switch (authType) {
       case AuthType.JWT:
         if (!AuthManager.hasValidJwtToken()) {
-          throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
+          throw new Error(
+            "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
+          );
         }
         const token = AuthManager.getJwtToken();
         cacheKey = `jwt:${token}`;
@@ -299,11 +336,13 @@ abstract class BaseClient<TSdk extends object> {
 
       case AuthType.IAM:
         if (!AuthManager.hasIamCredentials()) {
-          throw new Error("No IAM credentials available. Please login first with loginWithIam.");
+          throw new Error(
+            "No IAM credentials available. Please login first with loginWithIam.",
+          );
         }
         const iamCredentials = AuthManager.getIamCredentials();
         cacheKey = `iam:${iamCredentials.accessKeyId}`;
-        headers = AuthManager.generateIamAuthHeaders();
+        headers = {}; // Gli header IAM vengono generati dal middleware
         break;
 
       case AuthType.API_KEY:
@@ -320,7 +359,33 @@ abstract class BaseClient<TSdk extends object> {
     const cached = this.sdkCache.get(cacheKey);
     if (cached) return cached.sdk;
 
-    const client = new GraphQLClient(endpoint, { headers });
+    // Crea il client con middleware per IAM se necessario
+    const clientOptions: {
+      headers: Record<string, string>;
+      requestMiddleware?: RequestMiddleware;
+    } = { headers };
+
+    if (authType === AuthType.IAM) {
+      clientOptions.requestMiddleware = async (request) => {
+        const body =
+          typeof request.body === "string"
+            ? request.body
+            : JSON.stringify(request.body) || "";
+        const signedHeaders = await AuthManager.generateIamAuthHeaders(
+          endpoint,
+          body,
+        );
+        return {
+          ...request,
+          headers: {
+            ...request.headers,
+            ...signedHeaders,
+          },
+        };
+      };
+    }
+
+    const client = new GraphQLClient(endpoint, clientOptions);
     const sdk = this.createSdk(client);
     this.sdkCache.set(cacheKey, { key: cacheKey, sdk });
     return sdk;
@@ -378,8 +443,12 @@ export class PetLinkInfrastructure {
     await AuthManager.authenticateWithJwt(phone, password, "phone_number");
   }
 
-  loginWithIam(accessKeyId: string, secretAccessKey: string, sessionToken?: string): void {
-    AuthManager.setIamCredentials({ accessKeyId, secretAccessKey, sessionToken });
+  // Login con credenziali IAM (Access Key + Secret Key)
+  loginWithIam(accessKeyId: string, secretAccessKey: string): void {
+    AuthManager.setIamCredentials({
+      accessKeyId,
+      secretAccessKey,
+    });
   }
 
   // Resetta tutte le cache
