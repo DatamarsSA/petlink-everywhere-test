@@ -242,11 +242,14 @@ describe("Claude - User Registration Flow", () => {
     await step("Delete user after tests", async () => {
       const user = await petlink.core.authJwt.getUser();
       petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-      const deletedUser = await petlink.core.authIam.deleteUser({
-        userId: user.getUser.user!.id,
+      const deletedUser = await petlink.core.authIam.utilityIntegrationTest({
+        input: {
+          userId: user.getUser.user!.id,
+          utilityType: "CLEAN_UP_USER",
+        },
       });
       expect(deletedUser).toBeDefined();
-      expect(deletedUser.deleteUser.code).toBe("200");
+      expect(deletedUser.utilityIntegrationTest.code).toBe("200");
 
       const checkUserDeleted = await petlink.core.authJwt.getUser();
       expect(checkUserDeleted.getUser.user).toBeNull();

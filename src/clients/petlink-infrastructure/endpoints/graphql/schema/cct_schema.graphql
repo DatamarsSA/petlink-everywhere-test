@@ -1,11 +1,15 @@
-"""This directive allows results to be deferred during execution"""
+"""
+This directive allows results to be deferred during execution
+"""
 directive @defer on FIELD
 
 """
 Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
 directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
+  """
+  List of cognito user pool groups which have access on this field
+  """
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
 
@@ -19,7 +23,9 @@ Tells the service this field/object has access authorized by an OIDC token.
 """
 directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
-"""Tells the service which mutation triggers this subscription."""
+"""
+Tells the service which mutation triggers this subscription.
+"""
 directive @aws_subscribe(
   """
   List of mutations which will trigger this subscription when they are called.
@@ -32,9 +38,13 @@ Tells the service this field/object has access authorized by a Lambda Authorizer
 """
 directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
-"""Directs the schema to enforce authorization on a field"""
+"""
+Directs the schema to enforce authorization on a field
+"""
 directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
+  """
+  List of cognito user pool groups which have access on this field
+  """
   cognito_groups: [String]
 ) on FIELD_DEFINITION
 
@@ -92,7 +102,9 @@ type AddTicketToIssueResponse {
   issue: Issue
 }
 
-""" Type"""
+"""
+Type
+"""
 type BaseResponse {
   code: String!
   message: String!
@@ -152,7 +164,9 @@ type Coupon {
   name: String!
 }
 
-""" Enum"""
+"""
+Enum
+"""
 enum CouponSetMode {
   apply
   simulate
@@ -276,11 +290,15 @@ type Device {
   testingDate: String
   group: String
 
-  """  non so se è un enum"""
+  """
+  non so se è un enum
+  """
   lat: Float
   lng: Float
 
-  """  check which object is this"""
+  """
+  check which object is this
+  """
   timezone: String
   updateFrequency: Float
   country: String!
@@ -741,21 +759,52 @@ type Mutation {
   @aws_cognito_user_pools (cognito_groups:["SUPERADMIN"])
   """
   updateUser(userInfo: UpdateUserInput!): UpdateUserResponse!
-  createSubscription(customerId: String!, productId: String!, planChangeNotAllowed: Boolean): BaseResponse!
-  refundInvoice(invoiceId: String!, reason: String!, refunds: [RefundItemInput!]!): BaseResponse
-  updateCurrentTermEnd(subscriptionId: String!, newTermEnd: String!): GetSubscriptionResponse!
+  createSubscription(
+    customerId: String!
+    productId: String!
+    planChangeNotAllowed: Boolean
+  ): BaseResponse!
+  refundInvoice(
+    invoiceId: String!
+    reason: String!
+    refunds: [RefundItemInput!]!
+  ): BaseResponse
+  updateCurrentTermEnd(
+    subscriptionId: String!
+    newTermEnd: String!
+  ): GetSubscriptionResponse!
   resetPetlinkGps(id: String!): BaseResponse!
-  addFreePeriod(freePeriod: AddFreePeriod!, productId: String, serialNumber: String): BaseResponse!
-  updateCustomer(customerId: String!, updateCustomer: UpdateCustomerInput!): UpdateCustomerResponse!
+  addFreePeriod(
+    freePeriod: AddFreePeriod!
+    productId: String
+    serialNumber: String
+  ): BaseResponse!
+  updateCustomer(
+    customerId: String!
+    updateCustomer: UpdateCustomerInput!
+  ): UpdateCustomerResponse!
   createIssue(issue: IssueInput!): CreateIssueResponse!
-  addTicketToIssue(issueId: String!, ticket: TicketInput): AddTicketToIssueResponse!
+  addTicketToIssue(
+    issueId: String!
+    ticket: TicketInput
+  ): AddTicketToIssueResponse!
   stopRenewingSubscription(subscriptionId: String!): BaseResponse
-  stopRenewingAddon(subscriptionId: String!, itemPriceIds: [String!]!): BaseResponse
+  stopRenewingAddon(
+    subscriptionId: String!
+    itemPriceIds: [String!]!
+  ): BaseResponse
   renewInsuranceSubscription(productId: String!, notes: String!): BaseResponse
   hidePet(petId: String!, hide: Boolean!): BaseResponse
   logEnabled(deviceId: String!, enable: Boolean!): BaseResponse
-  setPlanProfiles(serialNumbers: [String!]!, planProfileId: String!): setPlanProfilesResponse!
-  setCoupon(serialNumbers: [String!]!, couponId: String!, setMode: CouponSetMode): SetCouponResponse!
+  setPlanProfiles(
+    serialNumbers: [String!]!
+    planProfileId: String!
+  ): setPlanProfilesResponse!
+  setCoupon(
+    serialNumbers: [String!]!
+    couponId: String!
+    setMode: CouponSetMode
+  ): SetCouponResponse!
 }
 
 type Order {
@@ -1016,36 +1065,98 @@ type PreregistrationSubscription {
 
 type Query {
   getUser(userId: String!): GetUserResponse!
-  getUsers(filter: GetUsersInput, pagination: PaginationInput, order: OrderInput): GetUsersResponse!
+  getUsers(
+    filter: GetUsersInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetUsersResponse!
   getMyInfo: GetMyInfoResponse!
-  getDevices(filter: GetDevicesInput, pagination: PaginationInput, order: OrderInput): GetDevicesResponse!
-  getDevicesMap(filter: GetDevicesMapInput, pagination: PaginationInput): GetDevicesMapResponse!
+  getDevices(
+    filter: GetDevicesInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetDevicesResponse!
+  getDevicesMap(
+    filter: GetDevicesMapInput
+    pagination: PaginationInput
+  ): GetDevicesMapResponse!
   getDevice(deviceId: String!): GetDeviceResponse!
-  getConnectionsHistory(deviceId: String!, filter: GetConnectionsHistoryInput, pagination: PaginationInput, order: OrderInput): GetConnectionsHistoryResponse!
-  getInsuranceDevicesInfo(deviceList: [String!]!, pagination: PaginationInput): GetInsuranceDevicesInfoResponse!
-  getCustomers(filter: GetCustomersInput, pagination: PaginationInput, order: OrderInput): GetCustomersResponse!
+  getConnectionsHistory(
+    deviceId: String!
+    filter: GetConnectionsHistoryInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetConnectionsHistoryResponse!
+  getInsuranceDevicesInfo(
+    deviceList: [String!]!
+    pagination: PaginationInput
+  ): GetInsuranceDevicesInfoResponse!
+  getCustomers(
+    filter: GetCustomersInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetCustomersResponse!
   getCustomer(customerId: String!): GetCustomerResponse!
   getPet(petId: String!): GetPetResponse!
-  getActivities(deviceId: String!, date: DateFilterInput, pagination: PaginationInput, order: OrderInput): GetActivitiesResponse!
+  getActivities(
+    deviceId: String!
+    date: DateFilterInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetActivitiesResponse!
   getBreed(species: SpeciesEnum!, languageId: LanguageId): ResponseGetBreed!
   getColors(species: SpeciesEnum!, languageId: LanguageId): ResponseGetColors!
-  getIssues(deviceId: String!, pagination: PaginationInput, order: OrderInput): GetIssuesResponse!
-  getSubscriptions(deviceId: String!, pagination: PaginationInput, order: OrderInput): GetSubscriptionsResponse!
+  getIssues(
+    deviceId: String!
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetIssuesResponse!
+  getSubscriptions(
+    deviceId: String!
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsResponse!
   getSubscription(id: String!): GetSubscriptionResponse!
-  getSubscriptionsCancelled(filter: GetSubscriptionsCancelled, pagination: PaginationInput, order: OrderInput): GetSubscriptionsCancelledResponse!
-  getSubscriptionsPrepaid(filter: GetSubscriptionsPrepaidInput, pagination: PaginationInput, order: OrderInput): GetSubscriptionsResponse
-  getSubscriptionsPreregistration(pagination: PaginationInput, order: OrderInput): GetSubscriptionsPreregistrationResponse
+  getSubscriptionsCancelled(
+    filter: GetSubscriptionsCancelled
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsCancelledResponse!
+  getSubscriptionsPrepaid(
+    filter: GetSubscriptionsPrepaidInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsResponse
+  getSubscriptionsPreregistration(
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsPreregistrationResponse
   getPetProtection(petProtectionId: String!): ResponseGetPetProtection!
   getOrders(pagination: PaginationInput, order: OrderInput): GetOrdersResponse!
   getOrder(orderId: String): GetOrderResponse!
   getPlanProfiles: GetPlanProfilesResponse!
   getCoupons: GetCouponsResponse!
-  getDevicesWithCoupon(filter: GetDevicesWithCouponInput, pagination: PaginationInput, order: OrderInput): GetDevicesWithCouponResponse!
-  getReplacementPetlinkGpsHistory(productId: String!): ResponseGetReplacementHistory!
-  getDeviceProtectionReplacements(productId: String!): ResponseGetDeviceProtectionReplacements!
+  getDevicesWithCoupon(
+    filter: GetDevicesWithCouponInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetDevicesWithCouponResponse!
+  getReplacementPetlinkGpsHistory(
+    productId: String!
+  ): ResponseGetReplacementHistory!
+  getDeviceProtectionReplacements(
+    productId: String!
+  ): ResponseGetDeviceProtectionReplacements!
   getShelterOrder(dmosBpid: String!): ResponseGetShelterOrder!
-  getShelterOrders(filter: GetShelterOrdersInput, pagination: PaginationInput): ResponseGetShelterOrders!
-  getLogActivityUser(filter: GetLogActivityUserInput, pagination: PaginationInput, order: OrderInput): GetLogActivityUserResponse!
+  getShelterOrders(
+    filter: GetShelterOrdersInput
+    pagination: PaginationInput
+  ): ResponseGetShelterOrders!
+  getLogActivityUser(
+    filter: GetLogActivityUserInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetLogActivityUserResponse!
 }
 
 type RefundItem {
@@ -1053,7 +1164,9 @@ type RefundItem {
   chargebeeInvoiceItemId: String!
 }
 
-""" Input"""
+"""
+Input
+"""
 input RefundItemInput {
   chargebeeInvoiceItemId: String!
   amount: Int!
@@ -1248,7 +1361,9 @@ type Ticket {
   actionReason: [TicketActionReason!]!
   inspectionRequired: Boolean
 
-  """  Withdrawn for inspection"""
+  """
+  Withdrawn for inspection
+  """
   negativeReview: Boolean
   notes: String
   techNotes: String
@@ -1287,12 +1402,16 @@ input TicketInput {
   customerMood: CustomerMood!
   status: TicketStatus!
 
-  """  default OPEN"""
+  """
+  default OPEN
+  """
   action: TicketAction
   actionReason: [TicketActionReason!]!
   inspectionRequired: Boolean
 
-  """  Withdrawn for inspection"""
+  """
+  Withdrawn for inspection
+  """
   negativeReview: Boolean
   notes: String
   techNotes: String
@@ -1389,4 +1508,3 @@ enum VodafoneCountryVisibilityEnum {
   EU
   IE
 }
-

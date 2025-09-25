@@ -2410,13 +2410,17 @@ export type SignUpUserMutation = {
   };
 };
 
-export type DeleteUserMutationVariables = Exact<{
-  userId: Scalars["String"]["input"];
+export type UtilityIntegrationTestMutationVariables = Exact<{
+  input: UtilityIntegrationTestInput;
 }>;
 
-export type DeleteUserMutation = {
+export type UtilityIntegrationTestMutation = {
   __typename?: "Mutation";
-  deleteUser: { __typename?: "Response"; code: string; message: string };
+  utilityIntegrationTest: {
+    __typename?: "ResponseUtilityIntegrationTest";
+    code: string;
+    message: string;
+  };
 };
 
 export type GetBreedQueryVariables = Exact<{
@@ -2811,25 +2815,25 @@ export const SignUpUserDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export const DeleteUserDocument = {
+export const UtilityIntegrationTestDocument = {
   kind: "Document",
   definitions: [
     {
       kind: "OperationDefinition",
       operation: "mutation",
-      name: { kind: "Name", value: "deleteUser" },
+      name: { kind: "Name", value: "utilityIntegrationTest" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
           variable: {
             kind: "Variable",
-            name: { kind: "Name", value: "userId" },
+            name: { kind: "Name", value: "input" },
           },
           type: {
             kind: "NonNullType",
             type: {
               kind: "NamedType",
-              name: { kind: "Name", value: "String" },
+              name: { kind: "Name", value: "UtilityIntegrationTestInput" },
             },
           },
         },
@@ -2839,14 +2843,14 @@ export const DeleteUserDocument = {
         selections: [
           {
             kind: "Field",
-            name: { kind: "Name", value: "deleteUser" },
+            name: { kind: "Name", value: "utilityIntegrationTest" },
             arguments: [
               {
                 kind: "Argument",
-                name: { kind: "Name", value: "id" },
+                name: { kind: "Name", value: "input" },
                 value: {
                   kind: "Variable",
-                  name: { kind: "Name", value: "userId" },
+                  name: { kind: "Name", value: "input" },
                 },
               },
             ],
@@ -3325,20 +3329,20 @@ export function getSdk(
         variables,
       );
     },
-    deleteUser(
-      variables: { userId: any },
+    utilityIntegrationTest(
+      variables: UtilityIntegrationTestMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<DeleteUserMutation> {
+    ): Promise<UtilityIntegrationTestMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<DeleteUserMutation>({
-            document: DeleteUserDocument,
+          client.request<UtilityIntegrationTestMutation>({
+            document: UtilityIntegrationTestDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "deleteUser",
+        "utilityIntegrationTest",
         "mutation",
         variables,
       );

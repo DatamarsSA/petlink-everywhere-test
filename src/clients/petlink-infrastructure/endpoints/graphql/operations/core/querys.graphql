@@ -1,79 +1,76 @@
-query getBreed(
-    $species: SpeciesEnum!,
-    $languageId: LanguageId
-) {
-    getBreed(species: $species, languageId: $languageId) {
-        code
-        message
-        translationCode
-        items {
-            breedName
-            code
-            species
-        }
+query getBreed($species: SpeciesEnum!, $languageId: LanguageId) {
+  getBreed(species: $species, languageId: $languageId) {
+    code
+    message
+    translationCode
+    items {
+      breedName
+      code
+      species
     }
+  }
 }
 
 query getUser {
-    getUser{
-        code
-        message
-        translationCode
-        user {
-            birthDate
-            chargebeeId
-            city
-            contactVerified {
-                email
-                phone
-            }
-            countryCode
-            creationDate
-            email
-            entityType
-            haveMicrochip
-            gender
-            id
-            image {
-                id
-                url
-            }
-            languageId
-            name
-            mobileDevices {
-                os
-                registrationToken
-                serialNumber
-            }
-            notificationSettings {
-                email
-                energySavingZone {
-                    push
-                }
-                push
-                sms
-            }
-            phone
-            safetyTermsCat
-            settings {
-                liveDistance
-                liveSpeed
-                liveTrack
-            }
-            stateCode
-            streetAddress
-            surname
-            timezone
-            updateDate
-            zipCode
+  getUser {
+    code
+    message
+    translationCode
+    user {
+      birthDate
+      chargebeeId
+      city
+      contactVerified {
+        email
+        phone
+      }
+      countryCode
+      creationDate
+      email
+      entityType
+      haveMicrochip
+      gender
+      id
+      image {
+        id
+        url
+      }
+      languageId
+      name
+      mobileDevices {
+        os
+        registrationToken
+        serialNumber
+      }
+      notificationSettings {
+        email
+        energySavingZone {
+          push
         }
+        push
+        sms
+      }
+      phone
+      safetyTermsCat
+      settings {
+        liveDistance
+        liveSpeed
+        liveTrack
+      }
+      stateCode
+      streetAddress
+      surname
+      timezone
+      updateDate
+      zipCode
     }
+  }
 }
 
 query checkContact($contact: String!, $contactType: ContactType!) {
-    checkContact(contact: $contact, contactType: $contactType) {
-        code
-        translationCode
-        message
-    }
+  checkContact(contact: $contact, contactType: $contactType) {
+    code
+    translationCode
+    message
+  }
 }

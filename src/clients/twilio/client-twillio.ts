@@ -25,7 +25,7 @@ export class TwilioClient {
       });
 
       const sortedMessages = messages.sort(
-        (a, b) =>
+        (a: any, b: any) =>
           new Date(b.dateSent!).getTime() - new Date(a.dateSent!).getTime(),
       );
 

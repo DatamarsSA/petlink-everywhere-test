@@ -1,27 +1,42 @@
 #sendOtp(phone: String!, languageId: LanguageId): ResponseOtp!
 
 mutation sendOtp($phone: String!, $languageId: LanguageId) {
-    sendOtp(phone: $phone, languageId: $languageId) {
-        code
-        translationCode
-        message
-        verificationId
-    }
+  sendOtp(phone: $phone, languageId: $languageId) {
+    code
+    translationCode
+    message
+    verificationId
+  }
 }
 mutation checkOtp($verificationId: String!, $otp: String!, $contact: String!) {
-    checkOtp(verificationId: $verificationId, otp: $otp, contact: $contact) {
-        code
-        translationCode
-        message
-        verificationId
-    }
+  checkOtp(verificationId: $verificationId, otp: $otp, contact: $contact) {
+    code
+    translationCode
+    message
+    verificationId
+  }
 }
-mutation signUpUser($user: UserIn!, $otpData: OtpInput!, $languageId: LanguageId, $appBrand: AppBrand) {
-    signUpUser(user: $user, otpData: $otpData, languageId: $languageId, appBrand: $appBrand) {
-        code
-        translationCode
-        message
-    }
+mutation signUpUser(
+  $user: UserIn!
+  $otpData: OtpInput!
+  $languageId: LanguageId
+  $appBrand: AppBrand
+) {
+  signUpUser(
+    user: $user
+    otpData: $otpData
+    languageId: $languageId
+    appBrand: $appBrand
+  ) {
+    code
+    translationCode
+    message
+  }
 }
 
-#mutation utilityIntegrationTest()
+mutation utilityIntegrationTest($input: UtilityIntegrationTestInput!) {
+  utilityIntegrationTest(input: $input) {
+    code
+    message
+  }
+}
