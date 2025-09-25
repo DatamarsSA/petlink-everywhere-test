@@ -11,15 +11,17 @@ const envSchemaValidation = z.object({
   // AWS Cognito
   COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
   COGNITO_CLIENT_ID: z.string().min(1, "COGNITO_CLIENT_ID è richiesto"),
-  COGNITO_USERNAME: z.email("COGNITO_USERNAME deve essere un email valida"),
-  COGNITO_PASSWORD: z.string().min(1, "COGNITO_PASSWORD è richiesta"),
-  // AWS General
+  // AWS IAM
   AWS_REGION: z.string().min(1, "AWS_REGION è richiesta").optional(),
+  // USER
+  USER_PHONE_NUMBER: z
+    .string()
+    .min(10, "USER_PHONE_NUMBER deve essere un numero valida"),
+  USER_EMAIL: z.email("USER_EMAIL deve essere un email valida"),
+  USER_PASSWORD: z.string().min(1, "COGNITO_PASSWORD è richiesta"),
   // Twilio
   TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
-  // Opzionale: numero di telefono di test predefinito
-  TWILIO_TEST_PHONE_NUMBER: z.string().min(1),
 });
 
 type EnvConfig = z.infer<typeof envSchemaValidation>;

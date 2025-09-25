@@ -4,7 +4,7 @@ import { petlink } from "../petlink-infrastructure/client-petlink-infrastructure
 import { env } from "../../config/env-schema-validation.js";
 
 describe("Twilio Client must work", () => {
-  const myPhoneNumber = env.TWILIO_TEST_PHONE_NUMBER;
+  const myPhoneNumber = env.USER_PHONE_NUMBER;
 
   // Pulizia messaggi prima di tutti i test
   beforeAll(async () => {
