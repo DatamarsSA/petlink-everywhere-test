@@ -66,7 +66,7 @@ class EnvConfig {
   }
 
   static getAwsRegion(): string {
-    return env.AWS_REGION || "us-east-1";
+    return env.AWS_REGION;
   }
 }
 

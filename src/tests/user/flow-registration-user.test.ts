@@ -3,6 +3,7 @@ import { env } from "../../config/env-schema-validation.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { GetUserQuery } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { step } from "../../shared/utils.js";
 
 // describe("User Registration Flow", () => {
 //   const userPhoneNumber = env.USER_PHONE_NUMBER;
@@ -229,35 +230,26 @@ describe("Claude - User Registration Flow", () => {
     await step("Verify login with new user", async () => {
       await petlink.loginWithPhone(userPhoneNumber, userPassword);
       const user = await petlink.core.authJwt.getUser();
-
       expect(user.getUser.user).toBeDefined();
       expect(user.getUser.user?.email).toBe(userEmail);
       expect(user.getUser.user?.phone).toBe(userPhoneNumber);
       expect(user.getUser.user?.contactVerified?.phone).toBe(true);
       expect(user.getUser.user?.contactVerified?.email).toBe(false);
-
       return user;
     });
+
+    // Step 7: Delete user
+    await step("Delete user after tests", async () => {
+      const user = await petlink.core.authJwt.getUser();
+      petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
+      const deletedUser = await petlink.core.authIam.deleteUser({
+        userId: user.getUser.user!.id,
+      });
+      expect(deletedUser).toBeDefined();
+      expect(deletedUser.deleteUser.code).toBe("200");
+
+      const checkUserDeleted = await petlink.core.authJwt.getUser();
+      expect(checkUserDeleted.getUser.user).toBeNull();
+    });
   }, 120000);
-
-  // Helper function for step-based execution
-  async function step<T>(
-    description: string,
-    fn: () => Promise<T>,
-  ): Promise<T> {
-    const startTime = Date.now();
-
-    try {
-      console.log(`\n🔄 ${description}...`);
-      const result = await fn();
-      const duration = Date.now() - startTime;
-      console.log(`✅ ${description} completed (${duration}ms)`);
-      return result;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      console.log(`❌ ${description} failed (${duration}ms)`);
-      console.error(`Error details:`, error);
-      throw error;
-    }
-  }
 });

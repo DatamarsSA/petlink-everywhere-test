@@ -644,6 +644,8 @@ export interface Mutation {
   updateUser: ResponseUser;
   /**   cct */
   updateUserContact: Response;
+  /**   test suite */
+  utilityIntegrationTest: ResponseUtilityIntegrationTest;
   verifyEmail?: Maybe<Response>;
 }
 
@@ -887,6 +889,10 @@ export type MutationUpdateUserContactArgs = {
   contact: Scalars["String"]["input"];
   contactType: ContactType;
   userId: Scalars["String"]["input"];
+};
+
+export type MutationUtilityIntegrationTestArgs = {
+  input: UtilityIntegrationTestInput;
 };
 
 export type MutationVerifyEmailArgs = {
@@ -1135,7 +1141,7 @@ export interface PetProtectionPetData {
   gender: Scalars["String"]["output"];
   microchip?: Maybe<Scalars["String"]["output"]>;
   name: Scalars["String"]["output"];
-  specie: Scalars["String"]["output"];
+  species: Scalars["String"]["output"];
 }
 
 export interface PetProtectionPetIn {
@@ -1144,7 +1150,7 @@ export interface PetProtectionPetIn {
   gender: Scalars["String"]["input"];
   microchip?: InputMaybe<Scalars["String"]["input"]>;
   name: Scalars["String"]["input"];
-  specie: Scalars["String"]["input"];
+  species: Scalars["String"]["input"];
 }
 
 export type PetProtectionStatus =
@@ -1355,7 +1361,7 @@ export interface Query {
   getPetByQrTag: ResponsePetByQrTag;
   getPetHistory: ResponsePetHistory;
   getPetLostInfo: ResponseGetPetLostInfo;
-  getPetProtection: ResponseGetPetProtection;
+  getPetProtection: Response;
   getPetlinkGps: ResponsePetlinkGps;
   getPetlinkMicrochip: ResponsePetlinkMicrochip;
   getPetlinkQrTag: ResponsePetlinkQrTag;
@@ -2087,6 +2093,12 @@ export interface ResponseUser {
   user?: Maybe<User>;
 }
 
+export interface ResponseUtilityIntegrationTest {
+  __typename?: "ResponseUtilityIntegrationTest";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+}
+
 export interface Setting {
   createObject?: InputMaybe<Scalars["AWSJSON"]["input"]>;
   deviceId?: InputMaybe<Scalars["String"]["input"]>;
@@ -2333,6 +2345,15 @@ export interface UserSettingsIn {
   liveTrack: Scalars["Boolean"]["input"];
 }
 
+export interface UtilityIntegrationTestInput {
+  priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  productId?: InputMaybe<Scalars["String"]["input"]>;
+  userId?: InputMaybe<Scalars["String"]["input"]>;
+  utilityType: UtilityTestTypeEnum;
+}
+
+export type UtilityTestTypeEnum = "BUY_NEW_SUBSCRIPTION" | "CLEAN_UP_USER";
+
 export type ValidationStatusEnum =
   | "invalid"
   | "not_validated"
@@ -2387,6 +2408,15 @@ export type SignUpUserMutation = {
     translationCode?: string | null;
     message: string;
   };
+};
+
+export type DeleteUserMutationVariables = Exact<{
+  userId: Scalars["String"]["input"];
+}>;
+
+export type DeleteUserMutation = {
+  __typename?: "Mutation";
+  deleteUser: { __typename?: "Response"; code: string; message: string };
 };
 
 export type GetBreedQueryVariables = Exact<{
@@ -2772,6 +2802,58 @@ export const SignUpUserDocument = {
                   kind: "Field",
                   name: { kind: "Name", value: "translationCode" },
                 },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "userId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteUser" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "userId" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
               ],
             },
@@ -3239,6 +3321,24 @@ export function getSdk(
             signal,
           }),
         "signUpUser",
+        "mutation",
+        variables,
+      );
+    },
+    deleteUser(
+      variables: { userId: any },
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteUserMutation>({
+            document: DeleteUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteUser",
         "mutation",
         variables,
       );

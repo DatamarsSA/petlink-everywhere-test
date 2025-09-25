@@ -2,28 +2,19 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""
 Tells the service this field/object has access authorized by an OIDC token.
 """
 directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service which subscriptions will be published to when this mutation is
@@ -36,6 +27,25 @@ directive @aws_publish(
   subscriptions: [String]
 ) on FIELD_DEFINITION
 
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
+
 """
 Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
@@ -43,16 +53,6 @@ directive @aws_cognito_user_pools(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by sigv4 signing.
-"""
-directive @aws_iam on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -693,6 +693,9 @@ type Mutation {
   registerToNewsletter(email: String!): Response!
   logDisabled(deviceId: String!): Response
   updatePetProtectionData(petProtectionId: String!, owner: PetProtectionOwnerIn!, pet: PetProtectionPetIn!): ResponseUpdatePetProtectionData
+
+  """  test suite"""
+  utilityIntegrationTest(input: UtilityIntegrationTestInput!): ResponseUtilityIntegrationTest!
 }
 
 type NewFirmwareVersion {
@@ -1003,7 +1006,7 @@ input PetProtectionOwnerIn {
 }
 
 type PetProtectionPetData {
-  specie: String!
+  species: String!
   breed: String!
   gender: String!
   name: String!
@@ -1012,7 +1015,7 @@ type PetProtectionPetData {
 }
 
 input PetProtectionPetIn {
-  specie: String!
+  species: String!
   breed: String!
   gender: String!
   name: String!
@@ -1119,7 +1122,7 @@ type Query {
   getPet(id: String!): ResponsePet!
   getPetByQrTag(serialNumber: String!): ResponsePetByQrTag!
   getPets: ResponsePets!
-  getPetProtection(petProtectionId: String!): ResponseGetPetProtection!
+  getPetProtection(petProtectionId: String!): Response!
   getPetHistory(petId: String!): ResponsePetHistory!
   getPetLostInfo(petId: String!): ResponseGetPetLostInfo!
   getPetlinkMicrochip(id: String!): ResponsePetlinkMicrochip!
@@ -1603,6 +1606,11 @@ type ResponseUser {
   user: User
 }
 
+type ResponseUtilityIntegrationTest {
+  code: String!
+  message: String!
+}
+
 input Setting {
   operationType: SettingOperationEnum!
   settingType: SettingTypeEnum!
@@ -1836,6 +1844,18 @@ input UserSettingsIn {
   liveTrack: Boolean!
   liveSpeed: Boolean!
   liveDistance: Boolean!
+}
+
+input UtilityIntegrationTestInput {
+  utilityType: UtilityTestTypeEnum!
+  userId: String
+  productId: String
+  priceIds: [String!]
+}
+
+enum UtilityTestTypeEnum {
+  CLEAN_UP_USER
+  BUY_NEW_SUBSCRIPTION
 }
 
 enum ValidationStatusEnum {

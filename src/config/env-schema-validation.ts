@@ -12,7 +12,9 @@ const envSchemaValidation = z.object({
   COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
   COGNITO_CLIENT_ID: z.string().min(1, "COGNITO_CLIENT_ID è richiesto"),
   // AWS IAM
-  AWS_REGION: z.string().min(1, "AWS_REGION è richiesta").optional(),
+  AWS_REGION: z.string().min(1, "AWS_REGION è richiesta"),
+  AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID è richiesta"),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY è richiesta"),
   // USER
   USER_PHONE_NUMBER: z
     .string()

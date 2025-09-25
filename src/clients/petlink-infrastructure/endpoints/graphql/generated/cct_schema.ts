@@ -985,6 +985,72 @@ export interface Pet {
   weight?: Maybe<Scalars["Float"]["output"]>;
 }
 
+export interface PetProtection {
+  __typename?: "PetProtection";
+  chargebeeSubscriptionId?: Maybe<Scalars["String"]["output"]>;
+  codiceTessera?: Maybe<Scalars["String"]["output"]>;
+  currencyCode: Scalars["String"]["output"];
+  currentTermEnd: Scalars["String"]["output"];
+  currentTermStart: Scalars["String"]["output"];
+  customerId: Scalars["String"]["output"];
+  customerServiceContact: Scalars["String"]["output"];
+  fileName?: Maybe<Scalars["String"]["output"]>;
+  id: Scalars["String"]["output"];
+  name: Scalars["String"]["output"];
+  period: Scalars["Int"]["output"];
+  periodUnit: Scalars["String"]["output"];
+  pet?: Maybe<PetProtectionPetData>;
+  petFlag: PetProtectionFlag;
+  petId?: Maybe<Scalars["String"]["output"]>;
+  petOwner?: Maybe<PetProtectionOwnerData>;
+  price: Scalars["Int"]["output"];
+  reservedCoupon: Scalars["String"]["output"];
+  reservedCouponPercent: Scalars["Int"]["output"];
+  status: PetProtectionStatus;
+}
+
+export interface PetProtectionFlag {
+  __typename?: "PetProtectionFlag";
+  age: Scalars["Boolean"]["output"];
+  country: Scalars["Boolean"]["output"];
+}
+
+export interface PetProtectionOwnerData {
+  __typename?: "PetProtectionOwnerData";
+  city: Scalars["String"]["output"];
+  countryCode: Scalars["String"]["output"];
+  email: Scalars["String"]["output"];
+  fiscalCode: Scalars["String"]["output"];
+  homePhone: Scalars["String"]["output"];
+  mobilePhone: Scalars["String"]["output"];
+  name: Scalars["String"]["output"];
+  provinceCode: Scalars["String"]["output"];
+  streetAddress: Scalars["String"]["output"];
+  surname: Scalars["String"]["output"];
+  zipCode: Scalars["String"]["output"];
+}
+
+export interface PetProtectionPetData {
+  __typename?: "PetProtectionPetData";
+  birthDate?: Maybe<Scalars["String"]["output"]>;
+  breed: Scalars["String"]["output"];
+  gender: Scalars["String"]["output"];
+  microchip?: Maybe<Scalars["String"]["output"]>;
+  name: Scalars["String"]["output"];
+  species: Scalars["String"]["output"];
+}
+
+export type PetProtectionStatus =
+  | "ACTIVE"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "IN_PROGRESS"
+  | "IN_REVIEW"
+  | "OPEN"
+  | "REFUNDED"
+  | "REJECTED"
+  | "TO_UPDATE";
+
 export interface PetlinkSubscription {
   __typename?: "PetlinkSubscription";
   activatedAt?: Maybe<Scalars["String"]["output"]>;
@@ -1065,6 +1131,7 @@ export interface Query {
   getOrder: GetOrderResponse;
   getOrders: GetOrdersResponse;
   getPet: GetPetResponse;
+  getPetProtection: ResponseGetPetProtection;
   getPlanProfiles: GetPlanProfilesResponse;
   getReplacementPetlinkGpsHistory: ResponseGetReplacementHistory;
   getShelterOrder: ResponseGetShelterOrder;
@@ -1165,6 +1232,10 @@ export type QueryGetOrdersArgs = {
 
 export type QueryGetPetArgs = {
   petId: Scalars["String"]["input"];
+};
+
+export type QueryGetPetProtectionArgs = {
+  petProtectionId: Scalars["String"]["input"];
 };
 
 export type QueryGetReplacementPetlinkGpsHistoryArgs = {
@@ -1272,6 +1343,14 @@ export interface ResponseGetDeviceProtectionReplacements {
   message: Scalars["String"]["output"];
   replacementsDone?: Maybe<Scalars["Int"]["output"]>;
   replacementsLeft?: Maybe<Scalars["Int"]["output"]>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetPetProtection {
+  __typename?: "ResponseGetPetProtection";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  petProtection?: Maybe<PetProtection>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 

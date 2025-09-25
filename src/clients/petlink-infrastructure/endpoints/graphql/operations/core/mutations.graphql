@@ -1,3 +1,4 @@
+#sendOtp(phone: String!, languageId: LanguageId): ResponseOtp!
 
 mutation sendOtp($phone: String!, $languageId: LanguageId) {
     sendOtp(phone: $phone, languageId: $languageId) {
@@ -22,3 +23,5 @@ mutation signUpUser($user: UserIn!, $otpData: OtpInput!, $languageId: LanguageId
         message
     }
 }
+
+#mutation utilityIntegrationTest()
