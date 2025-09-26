@@ -2,14 +2,22 @@ import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
-  const rawEnv = loadEnv(mode ?? "develop", process.cwd(), "");
+  // 1. Usa il mode passato da riga di comando (--mode)
+  // 2. Altrimenti usa NODE_ENV
+  // 3. Se nessuno dei due è definito, usa "develop"
+  const environment = mode || process.env.NODE_ENV || "develop";
+
+  console.log(`Running tests in '${environment}' environment`);
+
+  // Carica le variabili d'ambiente dal file .env.{environment}
+  const rawEnv = loadEnv(environment, process.cwd(), "");
 
   return {
     test: {
       globals: true,
       environment: "node",
       env: rawEnv,
-      setupFiles: ["./src/config/test-setup.ts"], // Run once before worker
+      setupFiles: ["./src/config/test-setup.ts"],
     },
   };
 });
