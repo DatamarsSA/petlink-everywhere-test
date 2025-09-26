@@ -24,6 +24,13 @@ const envSchemaValidation = z.object({
   // Twilio
   TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
+  // Gmail
+  GMAIL_CLIENT_ID: z.string().min(1, "GMAIL_CLIENT_ID è richiesto"),
+  GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
+  GMAIL_REDIRECT_URI: z.string().min(1, "GMAIL_REDIRECT_URI è richiesto"),
+  GMAIL_ACCESS_TOKEN: z.string().min(1, "GMAIL_ACCESS_TOKEN è richiesto"),
+  GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
+  GMAIL_TOKEN_EXPIRY: z.string().optional(),
 });
 
 type EnvConfig = z.infer<typeof envSchemaValidation>;

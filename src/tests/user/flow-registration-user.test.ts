@@ -1,140 +1,9 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { env } from "../../config/env-schema-validation.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { GetUserQuery } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { step } from "../../shared/utils.js";
-
-// describe("User Registration Flow", () => {
-//   const userPhoneNumber = env.USER_PHONE_NUMBER;
-//   const userEmail = env.USER_EMAIL;
-//   const userPassword = env.USER_PASSWORD;
-//
-//   // Pulizia messaggi prima di tutti i test
-//   beforeAll(async () => {
-//     console.log(
-//       "\n🧹 PULIZIA INIZIALE: Elimino tutti i messaggi precedenti...",
-//     );
-//     const deletedCount =
-//       await twilioClient.deleteAllMessagesSentoToNumber(userPhoneNumber);
-//     console.log(`🧹 PULIZIA COMPLETATA: ${deletedCount} messaggi eliminati`);
-//   });
-//
-//   it("Should complete full registration flow", async () => {
-//     console.log("\n🎯 TEST: Flusso completo registrazione utente...");
-//
-//     // STEP 1: Verifica che il numero di telefono non sia già registrato
-//     console.log(
-//       `📱 Verifico che il numero ${userPhoneNumber} non sia già registrato...`,
-//     );
-//     const checkPhoneResponse = await petlink.core.public.checkContact({
-//       contact: userPhoneNumber,
-//       contactType: "PHONE",
-//     });
-//
-//     console.log(
-//       "📋 Risposta checkContact (phone):",
-//       JSON.stringify(checkPhoneResponse, null, 2),
-//     );
-//     expect(checkPhoneResponse.checkContact).toBeDefined();
-//     expect(checkPhoneResponse.checkContact.code).toBe("200");
-//     console.log("✅ Numero di telefono verificato con successo!");
-//
-//     // STEP 2: Invia OTP al numero di telefono
-//     console.log(`📱 Invio OTP al numero ${userPhoneNumber}...`);
-//     const otpResponse = await petlink.core.public.sendOtp({
-//       phone: userPhoneNumber,
-//       languageId: "IT",
-//     });
-//
-//     console.log("📋 Risposta sendOtp:", JSON.stringify(otpResponse, null, 2));
-//     expect(otpResponse.sendOtp).toBeDefined();
-//     expect(otpResponse.sendOtp.verificationId).toBeDefined();
-//     const verificationId = otpResponse.sendOtp.verificationId as string;
-//     console.log(`✅ OTP inviato! VerificationId: ${verificationId}`);
-//
-//     // STEP 3: Aspetta e recupera l'OTP da Twilio
-//     console.log("📱 SMS inviato, aspetto l'OTP con delay iniziale...");
-//     const receivedOtp = await twilioClient.waitForOtp(
-//       userPhoneNumber,
-//       60000, // 60 secondi timeout totale
-//       5000, // 5 secondi tra i tentativi
-//     );
-//
-//     console.log(`🎉 OTP ricevuto: ${receivedOtp}`);
-//     expect(receivedOtp).toMatch(/^\d{4,6}$/);
-//
-//     // STEP 4: Verifica l'OTP ricevuto
-//     console.log(
-//       `🔐 Invio l'OTP ${receivedOtp} con verificationId ${verificationId}...`,
-//     );
-//     const checkOtpResponse = await petlink.core.public.checkOtp({
-//       verificationId: verificationId,
-//       otp: receivedOtp,
-//       contact: userPhoneNumber,
-//     });
-//
-//     console.log(
-//       "📋 Risposta checkOtp:",
-//       JSON.stringify(checkOtpResponse, null, 2),
-//     );
-//     expect(checkOtpResponse.checkOtp).toBeDefined();
-//     expect(checkOtpResponse.checkOtp.code).toBe("200");
-//     console.log("✅ OTP verificato con successo!");
-//
-//     // STEP 6: Registrazione utente completa
-//     console.log("👤 Procedo con la registrazione completa dell'utente...");
-//     const signUpResponse = await petlink.core.public.signUpUser({
-//       user: {
-//         email: userEmail,
-//         name: "Test",
-//         surname: "User",
-//         city: "Milano",
-//         countryCode: "IT",
-//         zipCode: "20100",
-//         streetAddress: "Via Test 123",
-//         phone: userPhoneNumber,
-//         password: userPassword,
-//         confirmPassword: userPassword,
-//         languageId: "IT",
-//       },
-//       otpData: {
-//         otp: receivedOtp,
-//         verificationId: verificationId,
-//       },
-//       languageId: "IT",
-//       appBrand: "PETLINK",
-//     });
-//
-//     console.log(
-//       "📋 Risposta signUpUser:",
-//       JSON.stringify(signUpResponse, null, 2),
-//     );
-//     expect(signUpResponse.signUpUser).toBeDefined();
-//     expect(signUpResponse.signUpUser.code).toBe("200");
-//     console.log("🎉 Utente registrato con successo!");
-//
-//     // STEP 7: Verifica login con l'utente appena registrato
-//     console.log(
-//       "\n🔐 VERIFICA LOGIN: Testo login con l'utente appena registrato...",
-//     );
-//
-//     await petlink.loginWithPhone(userPhoneNumber, userPassword);
-//     const createduser = await petlink.core.authJwt.getUser();
-//     expect(createduser.getUser.user).toBeDefined();
-//     expect(createduser.getUser.user?.email).toBe(userEmail);
-//     expect(createduser.getUser.user?.phone).toBe(userPhoneNumber);
-//     expect(createduser.getUser.user?.contactVerified?.phone).toBe(true);
-//     expect(createduser.getUser.user?.contactVerified?.email).toBe(false);
-//
-//     //todo: implements email verification
-//
-//     console.log(
-//       "📋 Risposta getUser (utente loggato):",
-//       JSON.stringify(createduser, null, 2),
-//     );
-//   }, 120000); // 2 minuti timeout per il test completo
-// });
+import { gmailClient } from "../../clients/gmail/client-gmail.js";
 
 describe("Claude - User Registration Flow", () => {
   const userPhoneNumber = env.USER_PHONE_NUMBER;
@@ -144,7 +13,6 @@ describe("Claude - User Registration Flow", () => {
   beforeAll(async () => {
     const deletedCount =
       await twilioClient.deleteAllMessagesSentoToNumber(userPhoneNumber);
-    console.log(`🧹 Cleanup: ${deletedCount} messages deleted`);
   });
 
   it("should complete full registration flow", async () => {
@@ -227,7 +95,7 @@ describe("Claude - User Registration Flow", () => {
     });
 
     // Step 6: Login verification
-    await step("Verify login with new user", async () => {
+    await step("Verify login with new user (with PHONE)", async () => {
       await petlink.loginWithPhone(userPhoneNumber, userPassword);
       const user = await petlink.core.authJwt.getUser();
       expect(user.getUser.user).toBeDefined();
@@ -238,6 +106,34 @@ describe("Claude - User Registration Flow", () => {
       return user;
     });
 
+    await step("Verify Email", async () => {
+      const link = await gmailClient.waitForVerificationEmail();
+      const extractParamsFromUrl = (url: string) => {
+        const urlObj = new URL(url);
+        const uuid = urlObj.searchParams.get("uuid");
+        const otp = urlObj.searchParams.get("otp");
+        const verificationId = urlObj.searchParams.get("verificationId");
+        return { uuid, otp, verificationId };
+      };
+      const params = extractParamsFromUrl(link!);
+      await petlink.core.public.verifyEmail({
+        uuid: params.uuid!,
+        otp: params.otp!,
+        verificationId: params.verificationId!,
+      });
+      const user = await petlink.core.authJwt.getUser();
+      expect(user.getUser.user).toBeDefined();
+      expect(user.getUser.user?.email).toBe(userEmail);
+      expect(user.getUser.user?.phone).toBe(userPhoneNumber);
+      expect(user.getUser.user?.contactVerified?.phone).toBe(true);
+      expect(user.getUser.user?.contactVerified?.email).toBe(true);
+      return user;
+    });
+
+    await step("Verify login with new user (with EMAIL)", () => {
+      //todo: login with Email
+    });
+
     // Step 7: Delete user
     await step("Delete user after tests", async () => {
       const user = await petlink.core.authJwt.getUser();
@@ -245,13 +141,14 @@ describe("Claude - User Registration Flow", () => {
       const deletedUser = await petlink.core.authIam.utilityIntegrationTest({
         input: {
           userId: user.getUser.user!.id,
-          utilityType: "CLEAN_UP_USER",
+          utilityType: "CLEAN_UP_USER", //todo: put CLEAN_UP_USER and other actions in enum
         },
       });
       expect(deletedUser).toBeDefined();
       expect(deletedUser.utilityIntegrationTest.code).toBe("200");
 
       const checkUserDeleted = await petlink.core.authJwt.getUser();
+      expect(checkUserDeleted.getUser.code).toBe("401");
       expect(checkUserDeleted.getUser.user).toBeNull();
     });
   }, 120000);

@@ -68,7 +68,7 @@ export interface AddTicketToIssueResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-/**  Type */
+/** Type */
 export interface BaseResponse {
   __typename?: "BaseResponse";
   code: Scalars["String"]["output"];
@@ -133,7 +133,7 @@ export interface Coupon {
   name: Scalars["String"]["output"];
 }
 
-/**  Enum */
+/** Enum */
 export type CouponSetMode = "apply" | "simulate";
 
 export interface CreateIssueResponse {
@@ -247,7 +247,7 @@ export interface Device {
   lastOperationInAppDate?: Maybe<Scalars["String"]["output"]>;
   lastPurchasedSubscriptionExpiringDate?: Maybe<Scalars["String"]["output"]>;
   lastPurchasedSubscriptionId?: Maybe<Scalars["String"]["output"]>;
-  /**   non so se è un enum */
+  /** non so se è un enum */
   lat?: Maybe<Scalars["Float"]["output"]>;
   lng?: Maybe<Scalars["Float"]["output"]>;
   logEnabled?: Maybe<Scalars["Boolean"]["output"]>;
@@ -260,7 +260,7 @@ export interface Device {
   simManufacturer?: Maybe<Scalars["String"]["output"]>;
   simStatus: SimStatusEnum;
   testingDate?: Maybe<Scalars["String"]["output"]>;
-  /**   check which object is this */
+  /** check which object is this */
   timezone?: Maybe<Scalars["String"]["output"]>;
   updateFrequency?: Maybe<Scalars["Float"]["output"]>;
   vodafoneCountry?: Maybe<Scalars["String"]["output"]>;
@@ -1294,7 +1294,7 @@ export interface RefundItem {
   chargebeeInvoiceItemId: Scalars["String"]["output"];
 }
 
-/**  Input */
+/** Input */
 export interface RefundItemInput {
   amount: Scalars["Int"]["input"];
   chargebeeInvoiceItemId: Scalars["String"]["input"];
@@ -1482,7 +1482,7 @@ export interface Ticket {
   customerMood: CustomerMood;
   id: Scalars["String"]["output"];
   inspectionRequired?: Maybe<Scalars["Boolean"]["output"]>;
-  /**   Withdrawn for inspection */
+  /** Withdrawn for inspection */
   negativeReview?: Maybe<Scalars["Boolean"]["output"]>;
   notes?: Maybe<Scalars["String"]["output"]>;
   productId?: Maybe<Scalars["String"]["output"]>;
@@ -1516,12 +1516,12 @@ export interface TicketChangeStatusResponse {
 }
 
 export interface TicketInput {
-  /**   default OPEN */
+  /** default OPEN */
   action?: InputMaybe<TicketAction>;
   actionReason: Array<TicketActionReason>;
   customerMood: CustomerMood;
   inspectionRequired?: InputMaybe<Scalars["Boolean"]["input"]>;
-  /**   Withdrawn for inspection */
+  /** Withdrawn for inspection */
   negativeReview?: InputMaybe<Scalars["Boolean"]["input"]>;
   notes?: InputMaybe<Scalars["String"]["input"]>;
   productId?: InputMaybe<Scalars["String"]["input"]>;

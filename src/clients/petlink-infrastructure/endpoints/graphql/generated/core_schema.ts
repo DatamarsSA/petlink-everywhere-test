@@ -44,21 +44,21 @@ export type Scalars = {
 export interface Activities {
   __typename?: "Activities";
   calories?: Maybe<Scalars["Float"]["output"]>;
-  /**   only cat */
+  /** only cat */
   feed?: Maybe<Scalars["Float"]["output"]>;
   grooming?: Maybe<Scalars["Float"]["output"]>;
   highMovement?: Maybe<Scalars["Float"]["output"]>;
   jumps?: Maybe<Scalars["Float"]["output"]>;
   onTheMove?: Maybe<Scalars["Float"]["output"]>;
   petId?: Maybe<Scalars["String"]["output"]>;
-  /**   only dog */
+  /** only dog */
   play?: Maybe<Scalars["Float"]["output"]>;
   run?: Maybe<Scalars["Float"]["output"]>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
   sleep?: Maybe<Scalars["Float"]["output"]>;
   steps?: Maybe<Scalars["Float"]["output"]>;
   timestamp?: Maybe<Scalars["Float"]["output"]>;
-  /**   dog and cat */
+  /** dog and cat */
   walk?: Maybe<Scalars["Float"]["output"]>;
 }
 
@@ -602,13 +602,13 @@ export interface Mutation {
   forgotEmail?: Maybe<Response>;
   isActiveEnergySavingZone: Response;
   logDisabled?: Maybe<Response>;
-  /**   subscription publishers */
+  /** subscription publishers */
   publishOnGpsMessagePosition: GpsMessagePosition;
   publishOnGpsMessageStatus: GpsMessageStatus;
   publishOnSubscriptionStatus: SubscriptionMessageStatus;
   pushGpsMessagePositionBLE: Response;
   qrTagHasBeenScanned: Response;
-  /**   newsletter */
+  /** newsletter */
   registerToNewsletter: Response;
   removeProduct: Response;
   replacement: ResponseReplacement;
@@ -618,18 +618,18 @@ export interface Mutation {
   sendOtp: ResponseOtp;
   sendOtpForgotPassword: ResponseOtp;
   sendSetting: ResponseSendSetting;
-  /**   add sub w/uuid from verifyEmail */
+  /** add sub w/uuid from verifyEmail */
   sendTokenEmail: Response;
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
   setSafetyTermsCat: Response;
-  /**   sso */
+  /** sso */
   setSsoToken: ResponseSsoUrl;
   signUpUser: Response;
   stopRenewingAddon?: Maybe<Response>;
   stopRenewingSubscription?: Maybe<Response>;
-  /**   subscriptions */
+  /** subscriptions */
   updateBillingInfo: Response;
   updateEmailUser: Response;
   updateEnergySavingZone: ResponseEnergySavingZone;
@@ -638,13 +638,13 @@ export interface Mutation {
   updatePaymentSources: ResponseManagePaymentSources;
   updatePet: ResponsePet;
   updatePetProtectionData?: Maybe<ResponseUpdatePetProtectionData>;
-  /**   TODO: rename in deleteProduct */
+  /** TODO: rename in deleteProduct */
   updatePetlinkGps: ResponsePetlinkGps;
   updatePhoneNumberUser: Response;
   updateUser: ResponseUser;
-  /**   cct */
+  /** cct */
   updateUserContact: Response;
-  /**   test suite */
+  /** test suite */
   utilityIntegrationTest: ResponseUtilityIntegrationTest;
   verifyEmail?: Maybe<Response>;
 }
@@ -1296,11 +1296,11 @@ export interface Product {
   entityType: ProductTypeEnum;
   id: Scalars["String"]["output"];
   lastKnownPosition?: Maybe<GpsPosition>;
-  /**  TODO remove */
+  /** TODO remove */
   lastKnownStatus?: Maybe<GpsStatus>;
   petId: Scalars["String"]["output"];
   serialNumber: Scalars["String"]["output"];
-  /**  TODO remove */
+  /** TODO remove */
   subscriptionIsActive?: Maybe<Scalars["Boolean"]["output"]>;
   updateDate: Scalars["String"]["output"];
   userId: Scalars["String"]["output"];
@@ -1336,12 +1336,12 @@ export interface Query {
   checkoutPrepaid: ResponseCheckoutNewSubscription;
   getActiveSubscriptions: ResponseActiveSubscriptions;
   getActivities: ResponseActivities;
-  /**   TODO: rename in dog */
+  /** TODO: rename in dog */
   getActivitiesAverage?: Maybe<ResponseActivities>;
   getActivitiesAverageCat?: Maybe<ResponseActivitiesAverageCat>;
-  /**   TODO: rename in dog */
+  /** TODO: rename in dog */
   getActivitiesByHour: ResponseActivitiesByHour;
-  /**   TODO: rename in dog */
+  /** TODO: rename in dog */
   getActivitiesCat: ResponseActivitiesCat;
   getBillingInfo: ResponseBillingInfo;
   getBreed: ResponseGetBreed;
@@ -1371,11 +1371,11 @@ export interface Query {
   getPositionsHistoryDates?: Maybe<ResponsePositionsHistoryDates>;
   getPosts: ResponseGetPosts;
   getProduct: ResponseProduct;
-  /**   TODO remove */
+  /** TODO remove */
   getProducts: ResponseProducts;
   getProtectionPlans: ResponseProtectionPlans;
   getS3UploadUrl: ResponseS3Upload;
-  /**  sso */
+  /** sso */
   getSsoToken: ResponseSsoToken;
   getSubscriptionByProductId: ResponseGetSubscriptionByProductId;
   getSubscriptionPlanPricing: ResponseSubscriptionPlanPricing;
@@ -2106,7 +2106,7 @@ export interface Setting {
   id?: InputMaybe<Scalars["String"]["input"]>;
   operationType: SettingOperationEnum;
   settingType: SettingTypeEnum;
-  /**   id and deviceId both used for activation ESZ and eventually others */
+  /** id and deviceId both used for activation ESZ and eventually others */
   updateObject?: InputMaybe<Scalars["AWSJSON"]["input"]>;
 }
 
@@ -2421,6 +2421,22 @@ export type UtilityIntegrationTestMutation = {
     code: string;
     message: string;
   };
+};
+
+export type VerifyEmailMutationVariables = Exact<{
+  verificationId: Scalars["String"]["input"];
+  otp: Scalars["String"]["input"];
+  uuid: Scalars["String"]["input"];
+}>;
+
+export type VerifyEmailMutation = {
+  __typename?: "Mutation";
+  verifyEmail?: {
+    __typename?: "Response";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+  } | null;
 };
 
 export type GetBreedQueryVariables = Exact<{
@@ -2858,6 +2874,100 @@ export const UtilityIntegrationTestDocument = {
               kind: "SelectionSet",
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const VerifyEmailDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "verifyEmail" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "verificationId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "uuid" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "verifyEmail" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "verificationId" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "otp" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "otp" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "uuid" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "uuid" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
               ],
             },
@@ -3343,6 +3453,24 @@ export function getSdk(
             signal,
           }),
         "utilityIntegrationTest",
+        "mutation",
+        variables,
+      );
+    },
+    verifyEmail(
+      variables: VerifyEmailMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<VerifyEmailMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<VerifyEmailMutation>({
+            document: VerifyEmailDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "verifyEmail",
         "mutation",
         variables,
       );

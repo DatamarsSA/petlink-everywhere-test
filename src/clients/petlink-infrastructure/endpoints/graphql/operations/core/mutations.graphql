@@ -40,3 +40,12 @@ mutation utilityIntegrationTest($input: UtilityIntegrationTestInput!) {
     message
   }
 }
+
+mutation verifyEmail($verificationId: String!, $otp: String!, $uuid: String!) {
+verifyEmail(verificationId: $verificationId, otp: $otp, uuid: $uuid) {
+code
+translationCode
+message
+}
+}
+
