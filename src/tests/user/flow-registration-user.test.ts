@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { env } from "../../config/env-schema-validation.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
@@ -11,8 +11,7 @@ describe("Claude - User Registration Flow", () => {
   const userPassword = env.USER_PASSWORD;
 
   beforeAll(async () => {
-    const deletedCount =
-      await twilioClient.deleteAllMessagesSentoToNumber(userPhoneNumber);
+    await twilioClient.deleteAllMessagesSentoToNumber(userPhoneNumber);
   });
 
   it("should complete full registration flow", async () => {
@@ -130,9 +129,9 @@ describe("Claude - User Registration Flow", () => {
       return user;
     });
 
-    await step("Verify login with new user (with EMAIL)", () => {
-      //todo: login with Email
-    });
+    // await step("Verify login with new user (with EMAIL)", () => {
+    //   //todo: login with Email
+    // });
 
     // Step 7: Delete user
     await step("Delete user after tests", async () => {

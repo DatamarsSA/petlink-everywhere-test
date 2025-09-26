@@ -15,6 +15,7 @@ const SCOPES = [
 const GMAIL_QUERY = "is:unread";
 
 export class GmailClient {
+  //todo: understand better and clean and refactor it
   private authClient: OAuth2Client | null = null;
   private tokenRefreshInProgress = false;
 
@@ -162,7 +163,7 @@ export class GmailClient {
       }
 
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Errore durante il recupero delle email:", error);
       // Se c'è un errore di autenticazione, prova a riautenticare
       if (
@@ -239,7 +240,7 @@ export class GmailClient {
       }
 
       return deletedCount;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Errore durante l'eliminazione delle email:", error);
 
       // Se c'è un errore di autenticazione, prova a riautenticare
