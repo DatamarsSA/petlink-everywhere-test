@@ -16,7 +16,9 @@ import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
 
-// Costanti per gli header HTTP
+// ------------------------------
+// HTTP header constants
+// ------------------------------
 export const HTTP_HEADERS = {
   AUTHORIZATION: "Authorization",
   API_KEY: "x-api-key",
@@ -24,31 +26,31 @@ export const HTTP_HEADERS = {
   X_AMZ_SECURITY_TOKEN: "X-Amz-Security-Token",
 };
 
-// Tipi di servizio supportati
+// ------------------------------
+// Service types
+// ------------------------------
 export enum ServiceType {
   CORE = "CORE",
   CCT = "CCT",
 }
 
-// Tipi di autenticazione supportati
+// ------------------------------
+// Auth types
+// ------------------------------
 export enum AuthType {
   JWT = "jwt",
   IAM = "iam",
   API_KEY = "apiKey",
 }
 
-// Opzioni per i tentativi di ripetizione delle richieste
-export type RetryOptions = {
-  retries: number;
-  delayMs: number[];
-};
-
 export type IamCredentials = {
   accessKeyId: string;
   secretAccessKey: string;
 };
 
-// Classe per la gestione delle configurazioni di ambiente
+// ------------------------------
+// Env config helper
+// ------------------------------
 class EnvConfig {
   static getEndpoint(service: ServiceType): string {
     return env[`${service}_GRAPHQL_API_URL`];
@@ -70,15 +72,19 @@ class EnvConfig {
   }
 }
 
-// Gestore dell'autenticazione
+// ------------------------------
+// Auth manager
+// ------------------------------
 class AuthManager {
-  // Token JWT attivo
+  // Active JWT token cache
   private static jwtToken: { token: string; expiry: Date } | null = null;
 
-  // Credenziali IAM attive
+  // Active IAM credentials
   private static iamCredentials: IamCredentials | null = null;
 
-  // Autenticazione JWT con Cognito
+  /**
+   * Authenticate via Cognito user pools and cache the ID token.
+   */
   static async authenticateWithJwt(
     username: string,
     password: string,
@@ -112,12 +118,16 @@ class AuthManager {
     this.jwtToken = this.createTokenCacheEntry(token);
   }
 
-  // Verifica se abbiamo un token JWT valido
+  /**
+   * Return true if there is a non-expired JWT.
+   */
   static hasValidJwtToken(): boolean {
     return !!this.jwtToken && this.jwtToken.expiry > new Date();
   }
 
-  // Ottiene il token JWT (se disponibile)
+  /**
+   * Get the cached JWT token value (throws if missing/expired).
+   */
   static getJwtToken(): string {
     if (!this.hasValidJwtToken()) {
       throw new Error("No valid JWT token available. Please login first.");
@@ -125,7 +135,9 @@ class AuthManager {
     return this.jwtToken!.token;
   }
 
-  // Crea una voce di cache per il token con scadenza
+  /**
+   * Decode exp and compute a safe expiry with clock skew.
+   */
   private static createTokenCacheEntry(token: string): {
     token: string;
     expiry: Date;
@@ -141,26 +153,23 @@ class AuthManager {
 
     const { exp } = decodePayload(token);
     const nowMs = Date.now();
-    const skewMs = 60 * 1000; // 1 minuto di margine di sicurezza
+    const skewMs = 60 * 1000; // 1 minute safety margin
     const expiryMs = exp ? exp * 1000 - skewMs : nowMs + 3 * 60 * 1000;
 
-    return {
-      token,
-      expiry: new Date(expiryMs),
-    };
+    return { token, expiry: new Date(expiryMs) };
   }
 
-  // Gestione credenziali IAM
+  // ------------------------------
+  // IAM credentials management
+  // ------------------------------
   static setIamCredentials(credentials: IamCredentials): void {
     this.iamCredentials = credentials;
   }
 
-  // Verifica se abbiamo credenziali IAM
   static hasIamCredentials(): boolean {
     return !!this.iamCredentials;
   }
 
-  // Ottiene le credenziali IAM (se disponibili)
   static getIamCredentials(): IamCredentials {
     if (!this.hasIamCredentials()) {
       throw new Error(
@@ -170,21 +179,20 @@ class AuthManager {
     return this.iamCredentials!;
   }
 
-  // Genera gli header per l'autenticazione IAM con firma AWS SigV4
+  /**
+   * Build SigV4 headers for AppSync request.
+   */
   static async generateIamAuthHeaders(
     endpoint: string,
     body: string,
   ): Promise<Record<string, string>> {
     const credentials = this.getIamCredentials();
 
-    // Solo modalità ACCESS_KEYS supportata
-    const awsCredentials = {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-    };
-
     const signer = new SignatureV4({
-      credentials: awsCredentials,
+      credentials: {
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+      },
       region: EnvConfig.getAwsRegion(),
       service: "appsync",
       sha256: Sha256,
@@ -204,77 +212,21 @@ class AuthManager {
     });
 
     const signedRequest = await signer.sign(httpRequest);
-
     return signedRequest.headers as Record<string, string>;
   }
 
-  // Pulisce tutte le cache
+  /**
+   * Clear all cached auth material.
+   */
   static clearCache(): void {
     this.jwtToken = null;
     this.iamCredentials = null;
   }
 }
 
-// Tipo per SDK con funzionalità di retry
-type AugmentedSdk<T> = T & {
-  withRetry: (opts?: Partial<RetryOptions>) => AugmentedSdk<T>;
-};
-
-// Funzione per eseguire una chiamata con retry in caso di errore
-async function execWithRetry<T>(
-  fn: () => Promise<T>,
-  opts?: Partial<RetryOptions>,
-): Promise<T> {
-  const DEFAULT_RETRY: RetryOptions = {
-    retries: 3,
-    delayMs: [200, 400, 800],
-  };
-  const cfg: RetryOptions = { ...DEFAULT_RETRY, ...(opts ?? {}) };
-  let lastErr: unknown;
-
-  const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-  const isRetriableError = (err: unknown): boolean => {
-    const anyErr = err as any;
-    const status: number | undefined = anyErr?.response?.status;
-
-    if (typeof status === "number") {
-      if (status === 429) return true;
-      if (status >= 500 && status < 600) return true;
-    }
-
-    if (
-      !status &&
-      (anyErr?.code || anyErr?.errno || anyErr?.message?.includes("network"))
-    ) {
-      return true;
-    }
-
-    return false;
-  };
-
-  const computeDelay = (attempt: number, o: RetryOptions): number => {
-    const index = Math.min(attempt - 1, o.delayMs.length - 1);
-    return o.delayMs[index];
-  };
-
-  for (let attempt = 0; attempt <= cfg.retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      const isLast = attempt === cfg.retries;
-      if (isLast || !isRetriableError(err)) break;
-
-      const delay = computeDelay(attempt + 1, cfg);
-      await sleep(delay);
-    }
-  }
-
-  throw lastErr;
-}
-
-// Classe base per i client
+// ------------------------------
+// Base client (no retry)
+// ------------------------------
 abstract class BaseClient<TSdk extends object> {
   protected target: ServiceType;
   private sdkCache = new Map<string, { key: string; sdk: TSdk }>();
@@ -287,43 +239,33 @@ abstract class BaseClient<TSdk extends object> {
     this.sdkCache.clear();
   }
 
-  // Crea un proxy per l'SDK con supporto per retry
-  private makeSdkProxy(
-    authType: AuthType,
-    retryCfg?: Partial<RetryOptions>,
-  ): AugmentedSdk<TSdk> {
-    const self = this;
-
-    return new Proxy({} as AugmentedSdk<TSdk>, {
+  /**
+   * Create a proxy that lazily resolves the underlying SDK bound to the chosen auth.
+   */
+  private makeSdkProxy(authType: AuthType): TSdk {
+    const self = this as BaseClient<TSdk>;
+    return new Proxy({} as TSdk, {
       get: (_target, prop, _recv) => {
-        if (prop === "withRetry") {
-          return (opts?: Partial<RetryOptions>) =>
-            self.makeSdkProxy(authType, { ...retryCfg, ...(opts ?? {}) });
-        }
-
         return async (...args: any[]) => {
           const sdk = await self.getOrCreateSdk(authType);
           const member = (sdk as any)[prop];
-
-          if (typeof member !== "function") {
-            return member;
-          }
-
-          const call = () => member(...args);
-          return retryCfg ? execWithRetry(call, retryCfg) : call();
+          if (typeof member !== "function") return member;
+          return member(...args);
         };
       },
-    }) as AugmentedSdk<TSdk>;
+    }) as TSdk;
   }
 
-  // Ottiene o crea un SDK con le impostazioni di autenticazione appropriate
+  /**
+   * Resolve or create the underlying GraphQL SDK configured with the right auth headers/middleware.
+   */
   private async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
     const endpoint = EnvConfig.getEndpoint(this.target);
     let cacheKey: string;
     let headers: Record<string, string>;
 
     switch (authType) {
-      case AuthType.JWT:
+      case AuthType.JWT: {
         if (!AuthManager.hasValidJwtToken()) {
           throw new Error(
             "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
@@ -331,10 +273,11 @@ abstract class BaseClient<TSdk extends object> {
         }
         const token = AuthManager.getJwtToken();
         cacheKey = `jwt:${token}`;
+        // NOTE: AppSync + Cognito usually expects the raw JWT here; if your API expects Bearer, prepend it.
         headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
         break;
-
-      case AuthType.IAM:
+      }
+      case AuthType.IAM: {
         if (!AuthManager.hasIamCredentials()) {
           throw new Error(
             "No IAM credentials available. Please login first with loginWithIam.",
@@ -342,16 +285,16 @@ abstract class BaseClient<TSdk extends object> {
         }
         const iamCredentials = AuthManager.getIamCredentials();
         cacheKey = `iam:${iamCredentials.accessKeyId}`;
-        headers = {}; // Gli header IAM vengono generati dal middleware
+        headers = {}; // Will be filled by request middleware
         break;
-
-      case AuthType.API_KEY:
+      }
+      case AuthType.API_KEY: {
         const apiKey = EnvConfig.getApiKey(this.target);
         if (!apiKey) throw new Error(`[${this.target}] API Key not found`);
         cacheKey = `apiKey:${apiKey}`;
         headers = { [HTTP_HEADERS.API_KEY]: apiKey };
         break;
-
+      }
       default:
         throw new Error(`Unsupported auth type: ${authType}`);
     }
@@ -359,11 +302,12 @@ abstract class BaseClient<TSdk extends object> {
     const cached = this.sdkCache.get(cacheKey);
     if (cached) return cached.sdk;
 
-    // Crea il client con middleware per IAM se necessario
     const clientOptions: {
       headers: Record<string, string>;
       requestMiddleware?: RequestMiddleware;
-    } = { headers };
+    } = {
+      headers,
+    };
 
     if (authType === AuthType.IAM) {
       clientOptions.requestMiddleware = async (request) => {
@@ -391,23 +335,25 @@ abstract class BaseClient<TSdk extends object> {
     return sdk;
   }
 
-  // Proprietà per accedere ai diversi tipi di autenticazione
-  get authJwt(): AugmentedSdk<TSdk> {
+  // -------------- Auth facets --------------
+  get authJwt(): TSdk {
     return this.makeSdkProxy(AuthType.JWT);
   }
 
-  get authIam(): AugmentedSdk<TSdk> {
+  get authIam(): TSdk {
     return this.makeSdkProxy(AuthType.IAM);
   }
 
-  get public(): AugmentedSdk<TSdk> {
+  get public(): TSdk {
     return this.makeSdkProxy(AuthType.API_KEY);
   }
 
   protected abstract createSdk(client: GraphQLClient): TSdk;
 }
 
-// Client per il servizio Core
+// ------------------------------
+// Concrete clients
+// ------------------------------
 export class CoreClient extends BaseClient<CoreSdk> {
   constructor() {
     super(ServiceType.CORE);
@@ -418,7 +364,6 @@ export class CoreClient extends BaseClient<CoreSdk> {
   }
 }
 
-// Client per il servizio CCT
 export class CctClient extends BaseClient<CctSdk> {
   constructor() {
     super(ServiceType.CCT);
@@ -429,12 +374,14 @@ export class CctClient extends BaseClient<CctSdk> {
   }
 }
 
-// Classe principale per l'infrastruttura PetLink
+// ------------------------------
+// PetLink infrastructure (facade)
+// ------------------------------
 export class PetLinkInfrastructure {
   readonly core = new CoreClient();
   readonly cct = new CctClient();
 
-  // Metodi di autenticazione
+  // --- Auth ---
   async loginWithEmail(email: string, password: string): Promise<void> {
     await AuthManager.authenticateWithJwt(email, password, "email");
   }
@@ -443,19 +390,27 @@ export class PetLinkInfrastructure {
     await AuthManager.authenticateWithJwt(phone, password, "phone_number");
   }
 
-  // Login con credenziali IAM (Access Key + Secret Key)
   loginWithIam(accessKeyId: string, secretAccessKey: string): void {
-    AuthManager.setIamCredentials({
-      accessKeyId,
-      secretAccessKey,
-    });
+    AuthManager.setIamCredentials({ accessKeyId, secretAccessKey });
   }
 
-  // Resetta tutte le cache
+  // --- Utilities ---
   reset(): void {
     AuthManager.clearCache();
     this.core.clearCache();
     this.cct.clearCache();
+  }
+
+  async deleteUser(): Promise<void> {
+    await petlink.loginWithPhone(env.USER_PHONE_NUMBER, env.USER_PASSWORD);
+    const user = await petlink.core.authJwt.getUser();
+    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
+    await petlink.core.authIam.utilityIntegrationTest({
+      input: {
+        userId: user.getUser.user!.id,
+        utilityType: "CLEAN_UP_USER", //todo: put CLEAN_UP_USER and other actions in enum
+      },
+    });
   }
 }
 
