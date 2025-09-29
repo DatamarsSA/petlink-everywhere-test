@@ -34,6 +34,19 @@ export enum ServiceType {
   CCT = "CCT",
 }
 
+export enum UtilityTestTypeEnum {
+  BUY_NEW_SUBSCRIPTION = "BUY_NEW_SUBSCRIPTION",
+  CLEAN_UP_USER = "CLEAN_UP_USER",
+}
+
+export enum LanguageId {
+  DE = "DE",
+  EN = "EN",
+  ES = "ES",
+  FR = "FR",
+  IT = "IT",
+}
+
 // ------------------------------
 // Auth types
 // ------------------------------
@@ -399,18 +412,6 @@ export class PetLinkInfrastructure {
     AuthManager.clearCache();
     this.core.clearCache();
     this.cct.clearCache();
-  }
-
-  async deleteUser(): Promise<void> {
-    await petlink.loginWithPhone(env.USER_PHONE_NUMBER, env.USER_PASSWORD);
-    const user = await petlink.core.authJwt.getUser();
-    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-    await petlink.core.authIam.utilityIntegrationTest({
-      input: {
-        userId: user.getUser.user!.id,
-        utilityType: "CLEAN_UP_USER", //todo: put CLEAN_UP_USER and other actions in enum
-      },
-    });
   }
 }
 

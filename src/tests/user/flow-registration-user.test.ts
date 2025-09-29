@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { step } from "../../test-utils/helpers/utils-step.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { globalState } from "../../test-utils/global-state/state-global-flow.js";
 import { fixtures } from "../../test-utils/fixtures/fixture-user-pet-device.js";
@@ -128,7 +127,7 @@ describe("User Registration", () => {
     expect(user.getUser.user?.contactVerified?.email).toBe(true);
   }, 60000); // Timeout più lungo per l'attesa dell'email
 
-  it('Try login new user (with EMAIL)", as', async () => {
+  it("Try login new user (with EMAIL)", async () => {
     await petlink.loginWithEmail(userEmail, userPassword);
     const user = await petlink.core.authJwt.getUser();
 
@@ -140,6 +139,6 @@ describe("User Registration", () => {
   });
 
   afterAll(async () => {
-    await globalState.cleanupAll();
+    // await globalState.cleanupAll();
   });
 });

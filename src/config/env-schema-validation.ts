@@ -8,19 +8,13 @@ const envSchemaValidation = z.object({
   // CCT API
   CCT_GRAPHQL_API_URL: z.url("CCT_GRAPHQL_API_URL deve essere un URL valido"),
   CCT_GRAPHQL_API_KEY: z.string().min(1, "CCT_GRAPHQL_API_KEY è richiesta"),
-  // AWS Cognito
+  // AWS Cognito (for LOGIN)
   COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
   COGNITO_CLIENT_ID: z.string().min(1, "COGNITO_CLIENT_ID è richiesto"),
   // AWS IAM
   AWS_REGION: z.string().min(1, "AWS_REGION è richiesta"),
   AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID è richiesta"),
   AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY è richiesta"),
-  // USER
-  USER_PHONE_NUMBER: z
-    .string()
-    .min(10, "USER_PHONE_NUMBER deve essere un numero valida"),
-  USER_EMAIL: z.email("USER_EMAIL deve essere un email valida"),
-  USER_PASSWORD: z.string().min(1, "COGNITO_PASSWORD è richiesta"),
   // Twilio
   TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
