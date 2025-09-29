@@ -16,7 +16,7 @@ describe("User Registration", () => {
   let receivedOtp: string;
 
   beforeAll(async () => {
-    await globalState.cleanupAll();
+    // await globalState.cleanupAll();
   });
 
   it("Verify phone number availability", async () => {
