@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "prettier:write-src": "prettier --write ./src",
+    "prettier:write-src": "prettier --write --ignore-path .prettierignore ./src",
     "precommit": "yarn prettier:write-src && yarn run tsc --noEmit",
     "fetch:schemas": "node --loader ts-node/esm src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts ALL",
     "codegen:generate-sdk": "graphql-codegen --config codegen.yaml",
