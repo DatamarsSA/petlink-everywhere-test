@@ -3,8 +3,7 @@ import { google } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
 import { env } from "../../config/env-schema-validation.js";
 
-// Utilizziamo un solo scope completo che include tutte le operazioni
-const GMAIL_SCOPE = "https://mail.google.com/";
+// Minimal scope for reading and deleting/moving messages to Trash
 const GMAIL_QUERY = "is:unread";
 
 export class GmailClient {
@@ -12,97 +11,69 @@ export class GmailClient {
   private refreshInProgress = false;
 
   constructor() {
-    // Inizializzazione semplificata
+    // No-op. All configuration comes from env at authenticate() time.
   }
 
   /**
-   * Ottiene un client OAuth2 autenticato utilizzando solo il refresh token.
-   * La libreria gestisce automaticamente il refresh dell'access token quando necessario.
+   * Build an OAuth2 client using ONLY the long‑lived refresh_token.
+   * google-auth-library will mint/refresh short‑lived access tokens automatically.
    */
   private async authenticate(): Promise<OAuth2Client> {
-    // Se abbiamo già un client autenticato e non è in corso un refresh, lo restituiamo
     if (this.authClient && !this.refreshInProgress) return this.authClient;
 
     this.refreshInProgress = true;
-
     try {
-      // Crea un nuovo client OAuth2
       const oAuth2 = new google.auth.OAuth2(
         env.GMAIL_CLIENT_ID,
         env.GMAIL_CLIENT_SECRET,
-        env.GMAIL_REDIRECT_URI,
       );
 
-      // Imposta solo il refresh token - la libreria gestirà automaticamente l'access token
-      oAuth2.setCredentials({
-        refresh_token: env.GMAIL_REFRESH_TOKEN,
-        scope: GMAIL_SCOPE,
-      });
-
-      // Forza un refresh per verificare che il token funzioni
+      oAuth2.setCredentials({ refresh_token: env.GMAIL_REFRESH_TOKEN });
+      // Optional: force-mint an access token now to fail fast in case RT is invalid
       await oAuth2.getAccessToken();
 
-      // Verifica che il token funzioni con una chiamata API reale
-      const gmail = google.gmail({ version: "v1", auth: oAuth2 });
-      await gmail.users.getProfile({ userId: "me" });
-
-      // Salva il client autenticato
       this.authClient = oAuth2;
       this.refreshInProgress = false;
-
       return oAuth2;
     } catch (error) {
       this.refreshInProgress = false;
-      console.error(
-        "Errore durante l'autenticazione con refresh token:",
-        error,
-      );
+      // Normalize and surface a concise error
+      const msg = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `Impossibile autenticarsi con Gmail: ${error instanceof Error ? error.message : String(error)}`,
+        `Gmail OAuth2 authentication failed (refresh_token flow): ${msg}`,
       );
     }
   }
 
   /**
-   * Attende l'arrivo di un'email di verifica e ne estrae il link.
-   * @param timeoutMs Timeout in millisecondi (default: 60000)
-   * @param retryIntervalMs Intervallo tra i tentativi in millisecondi (default: 10000)
-   * @returns Il link di verifica trovato o null se non trovato entro il timeout
+   * Poll for a verification email and return the first matching link.
    */
   async waitForVerificationEmail(
-    timeoutMs = 60000,
-    retryIntervalMs = 10000,
+    timeoutMs = 60_000,
+    retryIntervalMs = 10_000,
   ): Promise<string> {
-    const startTime = Date.now();
-    console.log("🔍 In attesa dell'email di verifica...");
-
-    while (Date.now() - startTime < timeoutMs) {
+    const start = Date.now();
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
       const link = await this.getVerificationLink();
-      if (link) {
-        console.log("✅ Link di verifica trovato:", link);
-        return link;
+      if (link) return link;
+      if (Date.now() - start >= timeoutMs) {
+        throw new Error(
+          `Verification email not received within ${timeoutMs}ms`,
+        );
       }
-
-      console.log(
-        `⏳ Email non ancora arrivata, riprovo tra ${retryIntervalMs / 1000} secondi...`,
-      );
-      // Attendi prima di riprovare
-      await new Promise((resolve) => setTimeout(resolve, retryIntervalMs));
+      await new Promise((r) => setTimeout(r, retryIntervalMs));
     }
-
-    throw new Error(`Verification email not received within ${timeoutMs}ms`);
   }
 
   /**
-   * Cerca nelle email non lette un link di verifica.
-   * @returns Il link di verifica trovato o null se non trovato
+   * Search unread messages and extract the first verification link.
    */
   private async getVerificationLink(): Promise<string | null> {
     try {
       const authClient = await this.authenticate();
       const gmail = google.gmail({ version: "v1", auth: authClient });
 
-      // Cerca le email non lette
       const list = await gmail.users.messages.list({
         userId: "me",
         q: GMAIL_QUERY,
@@ -123,66 +94,44 @@ export class GmailClient {
         const textBodies = this.extractTextParts(payload);
         const content = textBodies.join("\n");
 
+        // Best-effort: move message to Trash (recoverable). Use users.messages.delete for permanent deletion.
         try {
-          // Segna come letto
-          await gmail.users.messages.modify({
-            userId: "me",
-            id: msg.id!,
-            requestBody: {
-              removeLabelIds: ["UNREAD"],
-            },
-          });
-        } catch (error) {
-          console.error("Errore durante la modifica dell'email:", error);
-          // Continua comunque, anche se non riesce a segnare come letta
-        }
+          await gmail.users.messages.trash({ userId: "me", id: msg.id! });
+        } catch {}
 
         const link = this.extractLink(content);
         if (link) return link;
       }
 
       return null;
-    } catch (error) {
-      console.error("Errore durante il recupero delle email:", error);
-
-      // Se c'è un errore di autenticazione, resetta il client e riprova
-      if (
-        error instanceof Error &&
-        (error.message.includes("authentication") ||
-          error.message.includes("auth") ||
-          error.message.includes("token"))
-      ) {
-        this.authClient = null; // Reset del client per forzare la riautenticazione
-      }
-
+    } catch (error: any) {
+      // Reset cached client only on auth/permission errors
+      const status = error?.code ?? error?.response?.status ?? 0;
+      if (status === 401 || status === 403) this.authClient = null;
       return null;
     }
   }
 
   /**
-   * Estrae le parti di testo da una parte MIME di un'email.
-   * @param part Parte MIME dell'email
-   * @returns Array di stringhe contenenti il testo estratto
+   * Extract text parts from a Gmail MIME payload.
+   * NOTE: Gmail bodies are base64url; here we keep it minimal per user's request.
    */
   private extractTextParts(part: any): string[] {
     if (!part) return [];
     if (part.mimeType?.startsWith("text/") && part.body?.data) {
+      // Minimal decoding (base64). For full correctness, normalize base64url first.
       const decoded = Buffer.from(part.body.data, "base64").toString("utf8");
       return [decoded];
     }
-    if (part.parts) {
+    if (part.parts)
       return part.parts.flatMap((p: any) => this.extractTextParts(p));
-    }
     return [];
   }
 
   /**
-   * Estrae un link di verifica dal testo di un'email.
-   * @param text Testo dell'email
-   * @returns Il link di verifica trovato o null se non trovato
+   * Very simple link extractor for URLs containing "verify-email" (case-insensitive).
    */
   private extractLink(text: string): string | null {
-    // Decodifica veloce per i casi più comuni
     const decoded = text
       .replace(/&amp;/gi, "&")
       .replace(/&lt;/gi, "<")
@@ -190,18 +139,13 @@ export class GmailClient {
       .replace(/&quot;/gi, '"')
       .replace(/&#39;|&apos;/gi, "'");
 
-    // Cerca URL che includono "verify-email" (case-insensitive)
-    const re = /https?:\/\/[^\s"'<>]*verify-email[^\s"'<>]*/gi;
-    const matches = decoded.match(re) ?? [];
-
-    // Ripulisce punteggiatura finale e deduplica
-    const cleaned = matches.map((u) => u.replace(/[)\].,;>'"]+$/g, "").trim());
-    return Array.from(new Set(cleaned))[0] || null;
+    const re = /https?:\/\/[^\s"'<>]*verify-email[^\s"'<>]*/i;
+    const m = decoded.match(re)?.[0];
+    return m ? m.replace(/[)\].,;>'"]+$/g, "").trim() : null;
   }
 
   /**
-   * Elimina tutte le email nella casella.
-   * @returns Il numero di email eliminate
+   * Delete up to 100 recent messages (moves them to Trash).
    */
   async deleteAllEmails(): Promise<number> {
     try {
@@ -212,68 +156,34 @@ export class GmailClient {
         userId: "me",
         maxResults: 100,
       });
-
       const messages = list.data.messages ?? [];
       if (messages.length === 0) return 0;
 
-      // Elimina un messaggio alla volta per maggiore affidabilità
-      let deletedCount = 0;
+      let deleted = 0;
       for (const msg of messages) {
         try {
-          await gmail.users.messages.trash({
-            userId: "me",
-            id: msg.id!,
-          });
-          deletedCount++;
-        } catch (error) {
-          console.error(
-            `Errore durante l'eliminazione dell'email ${msg.id}:`,
-            error,
-          );
-          // Continua con le altre email
-        }
+          await gmail.users.messages.trash({ userId: "me", id: msg.id! });
+          deleted++;
+        } catch {}
       }
-
-      return deletedCount;
-    } catch (error) {
-      console.error("Errore durante l'eliminazione delle email:", error);
-
-      // Se c'è un errore di autenticazione, resetta il client
-      if (
-        error instanceof Error &&
-        (error.message.includes("authentication") ||
-          error.message.includes("auth") ||
-          error.message.includes("insufficient") ||
-          error.message.includes("scope") ||
-          error.message.includes("token"))
-      ) {
-        this.authClient = null;
-      }
-
+      return deleted;
+    } catch (error: any) {
+      const status = error?.code ?? error?.response?.status ?? 0;
+      if (status === 401 || status === 403) this.authClient = null;
       return 0;
     }
   }
 
   /**
-   * Verifica la connessione con l'API Gmail.
-   * @returns L'indirizzo email dell'account autenticato
+   * Quick connectivity check; returns the mailbox address.
    */
   async verifyConnection(): Promise<string> {
-    try {
-      const authClient = await this.authenticate();
-      const gmail = google.gmail({ version: "v1", auth: authClient });
-
-      const profile = await gmail.users.getProfile({ userId: "me" });
-      const email = profile.data.emailAddress || "";
-      console.log(`✅ Connessione verificata come: ${email}`);
-      return email;
-    } catch (error) {
-      console.error("Errore durante la verifica della connessione:", error);
-      this.authClient = null; // Reset del client per forzare la riautenticazione
-      throw error;
-    }
+    const authClient = await this.authenticate();
+    const gmail = google.gmail({ version: "v1", auth: authClient });
+    const profile = await gmail.users.getProfile({ userId: "me" });
+    return profile.data.emailAddress || "";
   }
 }
 
-// Esporta un'istanza singleton del client
+// Singleton export
 export const gmailClient = new GmailClient();
