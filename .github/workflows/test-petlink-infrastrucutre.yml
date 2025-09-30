@@ -17,12 +17,12 @@ on:
 jobs:
   run-integration-tests:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'develop' }}
+
     permissions:
       checks: write
       pull-requests: write
       contents: read
-    # Usa l'ambiente specificato nell'input o 'develop' se non specificato
-    environment: ${{ github.event.inputs.environment || 'develop' }}
 
     steps:
       - name: Checkout code
@@ -54,7 +54,7 @@ jobs:
           GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
           GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
           # Imposta NODE_ENV in base all'ambiente selezionato
-          NODE_ENV: ${{ github.event.inputs.environment || 'develop' }}
+          NODE_ENV: ${{ github.event.inputs.environment || 'develop'  }}
         run: |
           # Crea directory per estrarre i report
           mkdir -p ./test-reports
@@ -85,21 +85,14 @@ jobs:
         if: always()
         with:
           report_paths: 'test-reports/junit.xml'
-          check_name: "Report integration test (${{ github.event.inputs.environment || 'develop' }})"
+          check_name: "Report integration test (${{ env.NODE_ENV }})"
           fail_on_failure: true
           require_tests: true
-
           # Summary (pagina "Summary" del run su Actions)
-          job_summary: true          # aggiunge un box nel job summary con i risultati (pass/fail/skip)
-          detailed_summary: true     # arricchisce il box con tabella leggibile (test falliti con nomi e durata)
-#          simplified_summary: false  # se true mostra solo numeri; false = mostra dettagli completi
-          verbose_summary: true      # include messaggi di errore e stack trace nel summary (più verboso)
-          group_suite: true           # raggruppa i test per suite (es. blocchi describe) nella tabella del check
-
-
+          job_summary: true
+          detailed_summary: true
+          verbose_summary: true
+          group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
-#          check_annotations: 'all' # crea annotazioni solo per i test falliti (all = tutti, none = nessuno)
-          annotations_limit: 50       # max annotazioni per check (GitHub ha limite hard 50)
-#          update_check: true          # aggiorna il check esistente invece di aprirne uno nuovo ogni run
-#          truncate_stack_traces: false # mostra stack trace completi invece di troncarli
-          include_passed: false       # evita di riportare anche i test passati (meno rumore)
+          annotations_limit: 200
+          include_passed: false

@@ -160,15 +160,3 @@ describe("test math", () => {
     expect(c).toBe(7);
   });
 });
-
-describe("tet string", () => {
-  it("name should be the same", async () => {
-    let a = "Emanuel";
-    expect(a).toBe("Roberto");
-  });
-
-  it("sourname should be the same", async () => {
-    let a = "Epifani";
-    expect(a).toBe("Rossi");
-  });
-});
