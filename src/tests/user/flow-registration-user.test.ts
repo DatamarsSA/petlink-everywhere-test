@@ -16,7 +16,7 @@ describe("User Registration", () => {
   let receivedOtp: string;
 
   beforeAll(async () => {
-    // await globalState.cleanupAll();
+    await globalState.cleanupAll();
   });
 
   it("Verify phone number availability", async () => {
@@ -136,6 +136,21 @@ describe("User Registration", () => {
     expect(user.getUser.user?.phone).toBe(userPhoneNumber);
     expect(user.getUser.user?.contactVerified?.phone).toBe(true);
     expect(user.getUser.user?.contactVerified?.email).toBe(true);
+  });
+
+  afterAll(async () => {
+    // await globalState.cleanupAll();
+  });
+});
+
+describe("", () => {
+  beforeAll(async () => {
+    // await globalState.cleanupAll();
+  });
+
+  it("should", async () => {
+    let a = 4;
+    expect(a).toBe(4);
   });
 
   afterAll(async () => {

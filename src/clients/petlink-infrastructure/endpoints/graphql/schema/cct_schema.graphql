@@ -1,0 +1,1510 @@
+"""
+This directive allows results to be deferred during execution
+"""
+directive @defer on FIELD
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service which subscriptions will be published to when this mutation is
+called. This directive is deprecated use @aws_susbscribe directive instead.
+"""
+directive @aws_publish(
+  """
+  List of subscriptions which will be published to when this mutation is called.
+  """
+  subscriptions: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service which mutation triggers this subscription.
+"""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Directs the schema to enforce authorization on a field
+"""
+directive @aws_auth(
+  """
+  List of cognito user pool groups which have access on this field
+  """
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Cognito User Pools token.
+"""
+directive @aws_cognito_user_pools(
+  """
+  List of cognito user pool groups which have access on this field
+  """
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+type Activity {
+  date: String!
+  play: Int!
+  walk: Int!
+  run: Int!
+  sleep: Int!
+  rest: Int!
+  steps: Int!
+  jumps: Int!
+  calories: Int!
+  climb: Int!
+  grooming: Int!
+  eat: Int!
+  drink: Int!
+}
+
+enum ActivityProfileEnum {
+  SEDENTARY
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+}
+
+enum AddFreePeriod {
+  ADD_7_DAYS
+  ADD_14_DAYS
+  ADD_30_DAYS
+  ADD_60_DAYS
+  ADD_90_DAYS
+  ADD_1_YEAR
+}
+
+type AddTicketToIssueResponse {
+  code: String!
+  translationCode: String
+  message: String!
+  issue: Issue
+}
+
+"""
+Type
+"""
+type BaseResponse {
+  code: String!
+  message: String!
+  translationCode: String
+}
+
+type Breed {
+  code: String!
+  species: SpeciesEnum!
+  breedName: String!
+}
+
+enum CancelReasonCodeEnum {
+  DO_NOT_USE
+  DO_NOT_WORK_PROPERLY
+  MISSING_PET
+  TOO_EXPENSIVE
+  NOT_SUITABLE
+  OTHER
+}
+
+type Card {
+  expiryMonth: Int
+  expiryYear: Int
+  maskedNumber: String
+  type: String
+  brand: String
+  paymentMethod: PaymentMethodEnum!
+}
+
+type Color {
+  code: String!
+  name: String!
+}
+
+type Connection {
+  deviceId: String!
+  serialId: String!
+  connectionDate: String!
+  fix: String!
+  device: String!
+  csq: Int!
+  lat: Float!
+  lng: Float!
+  preLink: String
+  postLink: String
+  notify: [String]!
+  spareC5: [String]!
+  ephemeridi: String
+  updateFrequency: Int!
+  battery: Int!
+  firmware: String!
+}
+
+type Coupon {
+  id: String!
+  name: String!
+}
+
+"""
+Enum
+"""
+enum CouponSetMode {
+  apply
+  simulate
+}
+
+type CreateIssueResponse {
+  code: String!
+  translationCode: String
+  message: String!
+  issue: Issue
+}
+
+input CreateUserInput {
+  name: String!
+  surname: String!
+  email: String!
+  phone: String!
+  role: [RoleEnum!]!
+  username: String
+  active: Boolean!
+  deviceVisibility: [DeviceVisibilityEnum!]!
+  vodafoneCountryVisibility: [VodafoneCountryVisibilityEnum!]!
+}
+
+type CreateUserResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  user: User
+}
+
+type CreditNote {
+  id: String!
+  entityType: String!
+  serialNumber: String
+  chargebeeSubscriptionId: String
+  chargebeeInvoiceId: String
+  chargebeeCreditNoteId: String
+  subscriptionId: String!
+  invoiceId: String!
+  productId: String
+  refundItems: [RefundItem!]
+  refundReason: String
+  status: CreditNoteStatusTypeEnum
+  total: Int!
+  refundedAt: String
+  currencyCode: String
+  customerId: String!
+  userId: String!
+  username: String!
+  creationDate: String!
+  updateDate: String!
+}
+
+enum CreditNoteStatusTypeEnum {
+  adjusted
+  refunded
+  refund_due
+  voided
+}
+
+type Customer {
+  id: String!
+  name: String!
+  surname: String!
+  email: String!
+  emailConfirmed: Boolean!
+  phone: String!
+  phoneConfirmed: Boolean!
+  language: LanguageId!
+  registrationDate: String!
+  countryCode: String!
+  chargebeeId: String
+  appBrand: String
+}
+
+enum CustomerMood {
+  COLLABORATIVE
+  NON_COOPERATIVE
+  CRITICAL
+  VERY_CRITICAL
+}
+
+input DateFilterInput {
+  lte: String
+  gte: String
+}
+
+type Device {
+  serialId: String!
+  deviceId: String!
+  petId: String!
+  customerId: String!
+  customerName: String
+  customerSurname: String
+  customerEmail: String
+  customerCountry: String
+  customerLanguage: LanguageId
+  imei: String!
+  iccid: String!
+  registrationDate: String!
+  lastPurchasedSubscriptionId: String
+  lastPurchasedSubscriptionExpiringDate: String
+  lastActivatedSubscriptionId: String
+  lastActivatedSubscriptionExpiringDate: String
+  hasSubscriptionActive: Boolean
+  hasEverSubscriptionActive: Boolean
+  planProfileId: String
+  brand: String
+  model: String
+  planProfileType: String
+  vodafoneCountry: String
+  simStatus: SimStatusEnum!
+  lastOperationInAppDate: String
+  lastConnectionDate: String
+  firmware: String!
+  battery: Float
+  factory: String
+  hardwareType: String
+  simManufacturer: String
+  testingDate: String
+  group: String
+
+  """
+  non so se è un enum
+  """
+  lat: Float
+  lng: Float
+
+  """
+  check which object is this
+  """
+  timezone: String
+  updateFrequency: Float
+  country: String!
+  logEnabled: Boolean
+}
+
+type DeviceAction {
+  type: String!
+  timestamp: String!
+}
+
+type DeviceCoupon {
+  serialNumber: String!
+  couponId: String!
+  couponName: String!
+  userId: String
+  userEmail: String
+  creationDate: String
+}
+
+type DeviceInsuranceInfo {
+  id: String
+  serialNumber: String!
+  imei: String
+  registered: String
+  subscriptionEnd: String
+  newDeviceId: String
+  action: DeviceAction
+}
+
+type DeviceMap {
+  serialId: String!
+  deviceId: String!
+  petId: String!
+  customerId: String!
+  lastConnectionDate: String
+  lat: Float
+  lng: Float
+}
+
+enum DeviceVisibilityEnum {
+  KIPPY
+  VODAFONE
+  PETLINK
+}
+
+type DiscoutItem {
+  chargebeeInvoiceItemId: String!
+  amount: Float!
+  couponId: String!
+  discountPercentage: Float
+  discountType: String!
+}
+
+type DunningAttemptsItem {
+  attempt: Int!
+  createdAt: String!
+  transactionId: String!
+  status: String!
+}
+
+enum FilterEnum {
+  AND
+  OR
+}
+
+type GetActivitiesResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [Activity!]!
+  pagination: Pagination!
+}
+
+input GetConnectionsHistoryInput {
+  connectionDate: DateFilterInput
+  preLink: String
+  postLink: String
+  notify: String
+  spareC5: String
+  ephemeridi: String
+  filterType: FilterEnum!
+  device: String
+  firmware: String
+}
+
+type GetConnectionsHistoryResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [Connection!]!
+  pagination: Pagination!
+}
+
+type GetCouponsResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  coupons: [Coupon!]!
+}
+
+type GetCustomerResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  customer: Customer
+}
+
+input GetCustomersInput {
+  id: String
+  name: String
+  surname: String
+  email: String
+  emailConfirmed: Boolean
+  phone: String
+  phoneConfirmed: Boolean
+  registrationDate: DateFilterInput
+  filterType: FilterEnum!
+}
+
+type GetCustomersResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [Customer!]!
+  pagination: Pagination!
+}
+
+type GetDeviceResponse {
+  code: String!
+  message: String!
+  device: Device
+  translationCode: String
+}
+
+input GetDevicesInput {
+  customerEmailOrSerialNumber: String
+  deviceId: String
+  petId: String
+  battery: Float
+  lat: Float
+  lng: Float
+  timezone: String
+  updateFrequency: Float
+  serialId: String
+  customerId: String
+  imei: String
+  iccid: String
+  hardwareType: String
+  firmware: String
+  vodafoneCountry: LanguageId
+  lastConnectionDate: DateFilterInput
+  registrationDate: DateFilterInput
+  planProfileType: String
+  customerLanguage: LanguageId
+  customerName: String
+  customerSurname: String
+  customerEmail: String
+  customerCountry: String
+  hasEverSubscriptionActive: Boolean
+  hasSubscriptionActive: Boolean
+  filterType: FilterEnum!
+}
+
+input GetDevicesMapInput {
+  lastConnectionDate: String!
+}
+
+type GetDevicesMapResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [DeviceMap!]!
+  pagination: Pagination!
+}
+
+type GetDevicesResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [Device!]!
+  pagination: Pagination!
+}
+
+input GetDevicesWithCouponInput {
+  serialNumber: String
+  couponId: String
+  filterType: String!
+}
+
+type GetDevicesWithCouponResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [DeviceCoupon!]!
+  pagination: Pagination!
+}
+
+type GetInsuranceDevicesInfoResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [DeviceInsuranceInfo!]!
+  pagination: Pagination!
+}
+
+type GetIssuesResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [Issue!]!
+  pagination: Pagination!
+}
+
+input GetLogActivityUserInput {
+  id: String
+  userId: String
+  userName: String
+  activityType: String
+  creationDate: DateFilterInput
+  filterType: String!
+}
+
+type GetLogActivityUserResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [LogActivityUser!]!
+  pagination: Pagination!
+}
+
+type GetMyInfoResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  user: User
+}
+
+type GetOrderResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  order: Order
+}
+
+type GetOrdersResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [OrderListItem!]
+}
+
+type GetPetResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  pet: Pet
+}
+
+type GetPlanProfilesResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  planProfiles: [PlanProfiles!]!
+}
+
+input GetShelterOrdersInput {
+  dmosBpid: String
+  billingCompany: String
+  lastOrderDate: DateFilterInput
+  filterType: FilterEnum!
+}
+
+type GetSubscriptionResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  subscription: PetlinkSubscription
+}
+
+input GetSubscriptionsCancelled {
+  filterType: FilterEnum!
+  customerId: String
+  chargebeeSubscriptionId: String
+  cancelReason: String
+  cancelReasonCode: CancelReasonCodeEnum
+  firstname: String
+  lastname: String
+  email: String
+  phone: String
+  city: String
+  countryCode: String
+  streetAddress: String
+  zipCode: String
+  creationDate: DateFilterInput
+  updateDate: DateFilterInput
+}
+
+type GetSubscriptionsCancelledResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [SubscriptionCancelled]
+  pagination: Pagination!
+}
+
+input GetSubscriptionsPrepaidInput {
+  orderId: String
+  imei: String
+  email: String
+  subscriptionId: String
+  addonId: String
+  registered: Boolean
+  cancelled: Boolean
+  creationDate: DateFilterInput
+  filterType: FilterEnum!
+}
+
+type GetSubscriptionsPreregistrationResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [PreregistrationSubscription!]
+  pagination: Pagination!
+}
+
+type GetSubscriptionsResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [PetlinkSubscription!]
+  pagination: Pagination!
+}
+
+type GetUserResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  user: User
+}
+
+input GetUsersInput {
+  id: String
+  name: String
+  surname: String
+  email: String
+  phone: String
+  filterType: String!
+}
+
+type GetUsersResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [User!]!
+  pagination: Pagination!
+}
+
+type Invoice {
+  id: String!
+  entityType: String!
+  userId: String!
+  subscriptionId: String
+  status: InvoiceStatusEnum!
+  businessEntityId: String!
+  chargebeeSubscriptionId: String!
+  chargebeeInvoiceId: String!
+  total: Int!
+  currencyCode: String!
+  items: [InvoiceItem!]!
+  discountItems: [DiscoutItem!]
+  billingAddress: InvoiceBillingAddress
+  creationDate: String!
+  updateDate: String!
+  notes: String
+}
+
+type InvoiceBillingAddress {
+  city: String
+  country: String
+  email: String
+  firstName: String
+  lastName: String
+  address: String
+  phone: String
+}
+
+type InvoiceItem {
+  chargebeeInvoiceItemId: String!
+  amount: Int!
+  description: String!
+  itemType: String!
+  itemId: String!
+  quantity: Int!
+  unitPrice: Int!
+}
+
+enum InvoiceReasonCodeEnum {
+  product_unsatisfactory
+  service_unsatisfactory
+  order_change
+  order_cancellation
+  waiver
+  other
+}
+
+enum InvoiceStatusEnum {
+  paid
+  posted
+  payment_due
+  not_paid
+  voided
+  pending
+  paid_externally
+  non_paying
+}
+
+type Issue {
+  id: String!
+  creationDate: String!
+  zendeskId: String!
+  customerId: String!
+  deviceId: String!
+  customerIssues: [TicketIssue!]!
+  tickets: [Ticket!]!
+}
+
+input IssueInput {
+  zendeskId: String!
+  customerId: String!
+  deviceId: String!
+  customerIssues: [TicketIssue!]!
+  tickets: [TicketInput!]!
+}
+
+enum LanguageId {
+  IT
+  EN
+  FR
+}
+
+type LogActivityUser {
+  id: String!
+  userId: String!
+  userName: String!
+  activityType: String!
+  request: String!
+  creationDate: String!
+}
+
+type Mutation {
+  createUser(user: CreateUserInput!): CreateUserResponse!
+  deleteCustomer(id: String!): BaseResponse!
+  deleteUser(id: String!): BaseResponse!
+
+  """
+    updateRoleUser(userInfo: UpdateUserRoleInput!): UpdateUserRoleResponse!
+  @aws_cognito_user_pools (cognito_groups:["SUPERADMIN"])
+  """
+  updateUser(userInfo: UpdateUserInput!): UpdateUserResponse!
+  createSubscription(
+    customerId: String!
+    productId: String!
+    planChangeNotAllowed: Boolean
+  ): BaseResponse!
+  refundInvoice(
+    invoiceId: String!
+    reason: String!
+    refunds: [RefundItemInput!]!
+  ): BaseResponse
+  updateCurrentTermEnd(
+    subscriptionId: String!
+    newTermEnd: String!
+  ): GetSubscriptionResponse!
+  resetPetlinkGps(id: String!): BaseResponse!
+  addFreePeriod(
+    freePeriod: AddFreePeriod!
+    productId: String
+    serialNumber: String
+  ): BaseResponse!
+  updateCustomer(
+    customerId: String!
+    updateCustomer: UpdateCustomerInput!
+  ): UpdateCustomerResponse!
+  createIssue(issue: IssueInput!): CreateIssueResponse!
+  addTicketToIssue(
+    issueId: String!
+    ticket: TicketInput
+  ): AddTicketToIssueResponse!
+  stopRenewingSubscription(subscriptionId: String!): BaseResponse
+  stopRenewingAddon(
+    subscriptionId: String!
+    itemPriceIds: [String!]!
+  ): BaseResponse
+  renewInsuranceSubscription(productId: String!, notes: String!): BaseResponse
+  hidePet(petId: String!, hide: Boolean!): BaseResponse
+  logEnabled(deviceId: String!, enable: Boolean!): BaseResponse
+  setPlanProfiles(
+    serialNumbers: [String!]!
+    planProfileId: String!
+  ): setPlanProfilesResponse!
+  setCoupon(
+    serialNumbers: [String!]!
+    couponId: String!
+    setMode: CouponSetMode
+  ): SetCouponResponse!
+}
+
+type Order {
+  id: String!
+  orderSource: String!
+  ipAddress: String
+  externalOrderId: Float!
+  kippyId: Float!
+  externalOrderName: String!
+  dmosOrderId: String
+  status: String!
+  customer: OrderCustomer!
+  total: String!
+  currency: String!
+  paymentMethod: String!
+  shippingAddress: OrderAddress!
+  billingAddress: OrderAddress!
+  lineItems: [OrderLineItem!]!
+  packItems: [OrderPacksItem!]
+  trackingService: String
+  trackingCode: String
+  trackingUrl: String
+  creationDate: String
+  updateDate: String
+}
+
+type OrderAddress {
+  firstName: String!
+  lastName: String!
+  address: String!
+  province: String!
+  country: String!
+  city: String!
+  zip: String!
+  company: String
+}
+
+type OrderCustomer {
+  firstName: String!
+  lastName: String!
+  email: String!
+  phone: String!
+  chargebeeId: String
+  dmosBpid: String
+}
+
+enum OrderEnum {
+  asc
+  desc
+}
+
+input OrderInput {
+  field: String!
+  order: OrderEnum!
+}
+
+type OrderLineItem {
+  id: String!
+  orderId: String!
+  externalItemId: String!
+  amount: String!
+  quantity: Int!
+  kippySku: String!
+  kippyId: Int!
+  imei: String
+  activated: Boolean
+  serialNumber: String!
+}
+
+type OrderListItem {
+  orderSource: String!
+  externalOrderId: Float!
+  kippyId: Int!
+  externalOrderName: String!
+  status: String!
+  customer: OrderCustomer!
+  total: String!
+  currency: String!
+  paymentMethod: String!
+  shippingAddress: OrderAddress!
+  billingAddress: OrderAddress!
+  trackingService: String
+  trackingCode: String
+  trackingUrl: String
+}
+
+type OrderPacksItem {
+  id: String!
+  orderId: String!
+  packId: String!
+  sku: String!
+  description: String!
+  amount: String!
+  planId: String
+}
+
+type Pagination {
+  pageSize: Int!
+  totalPage: Int!
+  totalItems: Int!
+  currentPage: Int!
+}
+
+input PaginationInput {
+  pageSize: Int
+  pageNumber: Int
+}
+
+enum PaymentMethodEnum {
+  PAYPAL
+  CARD
+}
+
+enum PaymentStatusTypeEnum {
+  SUCCEEDED
+  FAILED
+  PENDING
+}
+
+type Pet {
+  id: String!
+  name: String!
+  birthDate: String
+  species: String!
+  breedType: String!
+  breeds: [String!]!
+  gender: String!
+  primaryColor: String
+  weight: Float
+  userId: String!
+  creationDate: String!
+  updateDate: String!
+  neutered: Boolean
+  length: Float
+  dateMarkedAsLost: String
+  activityProfile: ActivityProfileEnum!
+  hidden: Boolean
+}
+
+type PetlinkSubscription {
+  id: String!
+  orderId: String
+  entityType: String!
+  planChangeNotAllowed: Boolean
+  userId: String!
+  productId: String
+  serialNumber: String
+  chargebeeSubscriptionId: String
+  billingPeriod: Int
+  billingPeriodUnit: String
+  status: SubscriptionStatusEnum
+  paymentStatus: PaymentStatusTypeEnum
+  dunningAttempts: [DunningAttemptsItem!]
+  nextPaymentRetryAt: String
+  card: Card
+  currencyCode: String!
+  currentTermStart: String
+  currentTermEnd: String
+  nextBillingAt: String
+  createdAt: String!
+  startedAt: String
+  activatedAt: String
+  updatedAt: String!
+  cancelledAt: String
+  cancelReason: String
+  cancelReasonCode: CancelReasonCodeEnum
+  businessEntityId: String!
+  subscriptionItems: [SubscriptionItem!]!
+  invoice: Invoice
+  creditNotes: [CreditNote!]
+  note: String
+  moved: String
+  movedFrom: String
+  creationDate: String!
+  updateDate: String!
+  imei: String
+  addedFreePeriod: Int
+  totalDeviceProtectionReplacements: Int
+  availableDeviceProtectionReplacements: Int
+}
+
+type PetProtection {
+  id: String!
+  petId: String
+  customerId: String!
+  chargebeeSubscriptionId: String
+  currentTermStart: String!
+  currentTermEnd: String!
+  status: PetProtectionStatus!
+  petOwner: PetProtectionOwnerData
+  pet: PetProtectionPetData
+  petFlag: PetProtectionFlag!
+  codiceTessera: String
+  fileName: String
+  name: String!
+  price: Int!
+  currencyCode: String!
+  period: Int!
+  periodUnit: String!
+  reservedCoupon: String!
+  reservedCouponPercent: Int!
+  customerServiceContact: String!
+}
+
+type PetProtectionFlag {
+  country: Boolean!
+  age: Boolean!
+}
+
+type PetProtectionOwnerData {
+  name: String!
+  surname: String!
+  email: String!
+  fiscalCode: String!
+  city: String!
+  zipCode: String!
+  streetAddress: String!
+  countryCode: String!
+  provinceCode: String!
+  homePhone: String!
+  mobilePhone: String!
+}
+
+type PetProtectionPetData {
+  species: String!
+  breed: String!
+  gender: String!
+  name: String!
+  birthDate: String
+  microchip: String
+}
+
+enum PetProtectionStatus {
+  IN_PROGRESS
+  ACTIVE
+  REJECTED
+  REFUNDED
+  EXPIRED
+  IN_REVIEW
+  TO_UPDATE
+  OPEN
+  CANCELLED
+}
+
+type PlanProfiles {
+  id: String!
+  trialDuration: Int!
+  brands: [String!]
+}
+
+type PreregistrationSubscription {
+  id: String!
+  serialNumber: String!
+  creationDate: String!
+  updateDate: String!
+  addedFreePeriod: Int
+}
+
+type Query {
+  getUser(userId: String!): GetUserResponse!
+  getUsers(
+    filter: GetUsersInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetUsersResponse!
+  getMyInfo: GetMyInfoResponse!
+  getDevices(
+    filter: GetDevicesInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetDevicesResponse!
+  getDevicesMap(
+    filter: GetDevicesMapInput
+    pagination: PaginationInput
+  ): GetDevicesMapResponse!
+  getDevice(deviceId: String!): GetDeviceResponse!
+  getConnectionsHistory(
+    deviceId: String!
+    filter: GetConnectionsHistoryInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetConnectionsHistoryResponse!
+  getInsuranceDevicesInfo(
+    deviceList: [String!]!
+    pagination: PaginationInput
+  ): GetInsuranceDevicesInfoResponse!
+  getCustomers(
+    filter: GetCustomersInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetCustomersResponse!
+  getCustomer(customerId: String!): GetCustomerResponse!
+  getPet(petId: String!): GetPetResponse!
+  getActivities(
+    deviceId: String!
+    date: DateFilterInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetActivitiesResponse!
+  getBreed(species: SpeciesEnum!, languageId: LanguageId): ResponseGetBreed!
+  getColors(species: SpeciesEnum!, languageId: LanguageId): ResponseGetColors!
+  getIssues(
+    deviceId: String!
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetIssuesResponse!
+  getSubscriptions(
+    deviceId: String!
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsResponse!
+  getSubscription(id: String!): GetSubscriptionResponse!
+  getSubscriptionsCancelled(
+    filter: GetSubscriptionsCancelled
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsCancelledResponse!
+  getSubscriptionsPrepaid(
+    filter: GetSubscriptionsPrepaidInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsResponse
+  getSubscriptionsPreregistration(
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetSubscriptionsPreregistrationResponse
+  getPetProtection(petProtectionId: String!): ResponseGetPetProtection!
+  getOrders(pagination: PaginationInput, order: OrderInput): GetOrdersResponse!
+  getOrder(orderId: String): GetOrderResponse!
+  getPlanProfiles: GetPlanProfilesResponse!
+  getCoupons: GetCouponsResponse!
+  getDevicesWithCoupon(
+    filter: GetDevicesWithCouponInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetDevicesWithCouponResponse!
+  getReplacementPetlinkGpsHistory(
+    productId: String!
+  ): ResponseGetReplacementHistory!
+  getDeviceProtectionReplacements(
+    productId: String!
+  ): ResponseGetDeviceProtectionReplacements!
+  getShelterOrder(dmosBpid: String!): ResponseGetShelterOrder!
+  getShelterOrders(
+    filter: GetShelterOrdersInput
+    pagination: PaginationInput
+  ): ResponseGetShelterOrders!
+  getLogActivityUser(
+    filter: GetLogActivityUserInput
+    pagination: PaginationInput
+    order: OrderInput
+  ): GetLogActivityUserResponse!
+}
+
+type RefundItem {
+  amount: Int!
+  chargebeeInvoiceItemId: String!
+}
+
+"""
+Input
+"""
+input RefundItemInput {
+  chargebeeInvoiceItemId: String!
+  amount: Int!
+}
+
+type ReplacementHistory {
+  id: String!
+  petId: String!
+  creationDate: String!
+  registrationDate: String!
+  expirationDate: String
+  planProfileId: String
+  brand: String
+  model: String
+  planProfileType: String
+  reasonCode: [String!]
+  customerEmail: String!
+  typeAction: TypeActionEnum
+  productId: String
+  userId: String
+  oldSerialNumber: String!
+  newSerialNumber: String!
+}
+
+type ResponseGetBreed {
+  code: String!
+  translationCode: String
+  message: String!
+  items: [Breed!]
+}
+
+type ResponseGetColors {
+  code: String!
+  translationCode: String
+  message: String!
+  items: [Color!]
+}
+
+type ResponseGetDeviceProtectionReplacements {
+  code: String!
+  message: String!
+  translationCode: String
+  hasProtection: Boolean
+  replacementsDone: Int
+  replacementsLeft: Int
+}
+
+type ResponseGetPetProtection {
+  code: String!
+  translationCode: String
+  message: String!
+  petProtection: PetProtection
+}
+
+type ResponseGetReplacementHistory {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [ReplacementHistory!]
+}
+
+type ResponseGetShelterOrder {
+  code: String!
+  message: String!
+  translationCode: String
+  orderList: [ShelterOrder!]
+}
+
+type ResponseGetShelterOrders {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [ShelterOrderRecap!]!
+  pagination: Pagination!
+}
+
+enum RoleEnum {
+  SUPERREADER
+  SUPERADMIN
+  L1
+  L2
+}
+
+type SetCouponResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  warningList: [String!]!
+  failureList: [String!]!
+}
+
+type setPlanProfilesResponse {
+  code: String!
+  message: String!
+  invalidSerialNumbers: [String!]
+  translationCode: String
+}
+
+type ShelterOrder {
+  dmosOrderId: String!
+  packId: String!
+  shippingCompany: String!
+  sku: String!
+  description: String!
+  imeiList: [String!]!
+  subscriptionIncluded: Boolean!
+  deviceRegisteredCount: Int!
+  deviceActiveCount: Int!
+  deviceCount: Int!
+  orderDate: String!
+}
+
+type ShelterOrderRecap {
+  orderCount: Int!
+  deviceRegisteredCount: Int!
+  deviceActiveCount: Int!
+  deviceCount: Int!
+  dmosBpid: String!
+  lastName: String!
+  name: String!
+  lastOrderDate: String!
+  billingCompany: String!
+}
+
+enum SimStatusEnum {
+  inactive
+  test
+  ready
+  live
+  standBy
+  suspended
+  sleep
+  stopped
+  terminated
+  other
+}
+
+enum SpeciesEnum {
+  DOG
+  CAT
+  OTHER
+}
+
+type SubscriptionCancelled {
+  customerId: String
+  customerChargebeeId: String
+  chargebeeSubscriptionId: String
+  cancelReason: String
+  cancelReasonCode: CancelReasonCodeEnum
+  firstname: String
+  lastname: String
+  email: String
+  phone: String
+  city: String
+  countryCode: String
+  streetAddress: String
+  zipCode: String
+  creationDate: String
+  updateDate: String
+  subscriptionItems: [SubscriptionItem!]!
+}
+
+type SubscriptionItem {
+  amount: Int!
+  billingCycles: Int
+  name: String
+  itemPriceId: String!
+  itemType: String!
+  quantity: Int!
+  unitPrice: Int!
+}
+
+enum SubscriptionStatusEnum {
+  to_stop_renew
+  transferred
+  cancelled
+  paused
+  non_renewing
+  future
+  in_trial
+  active
+  closed
+}
+
+type Ticket {
+  id: String!
+  creationDate: String!
+  supectedIssues: [TicketIssue!]!
+  customerMood: CustomerMood!
+  status: TicketStatus!
+  action: TicketAction
+  actionReason: [TicketActionReason!]!
+  inspectionRequired: Boolean
+
+  """
+  Withdrawn for inspection
+  """
+  negativeReview: Boolean
+  notes: String
+  techNotes: String
+  username: String!
+  userId: String!
+  productId: String
+}
+
+enum TicketAction {
+  RETURNED
+  REPLACEMENT
+}
+
+enum TicketActionReason {
+  SUBSCRIPTION
+  GPS_PERFORMANCE
+  GPRS_PERFORMANCE
+  BATTERY_CHARGING
+  BATTERY_BLOCK
+  COMMERCIAL_RETURN
+  OUT_OF_WARRANTY_RETURN
+  LOST
+  DAMAGED
+  KIPPY_CARE_DEVICE_PROTECTION
+}
+
+type TicketChangeStatusResponse {
+  code: String!
+  translationCode: String
+  message: String!
+  issue: Issue
+}
+
+input TicketInput {
+  supectedIssues: [TicketIssue!]!
+  customerMood: CustomerMood!
+  status: TicketStatus!
+
+  """
+  default OPEN
+  """
+  action: TicketAction
+  actionReason: [TicketActionReason!]!
+  inspectionRequired: Boolean
+
+  """
+  Withdrawn for inspection
+  """
+  negativeReview: Boolean
+  notes: String
+  techNotes: String
+  productId: String
+}
+
+enum TicketIssue {
+  BATTERY_WIRE_DISCONNECTED
+  BATTERY_NOT_CHARGE
+  BATTERY_DRAINS_QUICKLY
+  BATTERY_PARTIALLY_CHARGES
+  GPS_FIXING_PERFORMANCE
+  GPS_LOCATION_PERFORMANCE
+  GPRS_PERFORMANCE
+  BLUETOOTH
+  WIFI_LOCATION
+  WIFI_HOME
+  LED
+  WATER_INFILTRATION
+  DAMAGED_UNDER_WARRANTY
+  DAMAGED_NO_WARRANTY
+  APP_BUG
+  ACTIVITY_BUG
+  DIMENSIONS
+  SIM
+  LOST
+  NO_SOUND
+  UNKNOWN
+}
+
+enum TicketStatus {
+  OPEN
+  CLOSED
+}
+
+enum TypeActionEnum {
+  RESET
+  REPLACEMENT
+  RETURNED
+}
+
+input UpdateCustomerInput {
+  language: LanguageId!
+  email: String!
+  confermationEmail: Boolean!
+}
+
+type UpdateCustomerResponse {
+  code: String!
+  message: String!
+  customer: Customer
+  translationCode: String
+}
+
+input UpdateUserInput {
+  id: String!
+  name: String!
+  surname: String!
+  phone: String!
+  role: [RoleEnum!]!
+  active: Boolean!
+  deviceVisibility: [DeviceVisibilityEnum!]!
+  vodafoneCountryVisibility: [VodafoneCountryVisibilityEnum!]!
+}
+
+type UpdateUserResponse {
+  code: String!
+  message: String!
+  user: User
+  translationCode: String
+}
+
+type User {
+  id: String!
+  name: String!
+  surname: String!
+  email: String!
+  phone: String!
+  role: [RoleEnum!]!
+  username: String!
+  active: Boolean!
+  deviceVisibility: [DeviceVisibilityEnum!]!
+  vodafoneCountryVisibility: [VodafoneCountryVisibilityEnum!]!
+  creationDate: String!
+  updateDate: String!
+}
+
+enum VodafoneCountryVisibilityEnum {
+  DE
+  ES
+  GB
+  IT
+  PT
+  EU
+  IE
+}

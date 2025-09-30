@@ -52,6 +52,10 @@ jobs:
           # Imposta NODE_ENV in base all'ambiente selezionato
           NODE_ENV: ${{ github.event.inputs.environment || 'develop' }}
         run: |
+          # Crea directory per estrarre i report
+          mkdir -p ./test-reports
+          
+          # Esegui i test nel container con volume mapping per estrarre i report
           docker run \
             -e CORE_GRAPHQL_API_URL \
             -e CORE_GRAPHQL_API_KEY \
@@ -68,4 +72,24 @@ jobs:
             -e GMAIL_CLIENT_SECRET \
             -e GMAIL_REFRESH_TOKEN \
             -e NODE_ENV \
+            -v $(pwd)/test-reports:/app/test-reports \
             petlink-everywhere-test yarn pipeline:$NODE_ENV
+
+      # Upload test reports come artifacts (sempre, anche se i test falliscono)
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()  # Importante: carica anche se i test falliscono
+        with:
+          name: test-reports-${{ github.event.inputs.environment || 'develop' }}
+          path: test-reports/
+          retention-days: 30
+
+      # Pubblica JUnit report per annotazioni su PR
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v4
+        if: always()  # Importante: pubblica anche se i test falliscono
+        with:
+          report_paths: 'test-reports/junit.xml'
+          check_name: 'Integration Test Results (${{ github.event.inputs.environment || 'develop' }})'
+          fail_on_failure: true
+          require_tests: true
