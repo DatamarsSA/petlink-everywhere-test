@@ -15,7 +15,7 @@ on:
           - test
 
 jobs:
-  integration-tests:
+  run-integration-tests:
     runs-on: ubuntu-latest
     # Usa l'ambiente specificato nell'input o 'develop' se non specificato
     environment: ${{ github.event.inputs.environment || 'develop' }}
@@ -90,6 +90,6 @@ jobs:
         if: always()  # Importante: pubblica anche se i test falliscono
         with:
           report_paths: 'test-reports/junit.xml'
-          check_name: "Integration Test Results (${{ github.event.inputs.environment || 'develop' }})"
+          check_name: "Report integration test (${{ github.event.inputs.environment || 'develop' }})"
           fail_on_failure: true
           require_tests: true

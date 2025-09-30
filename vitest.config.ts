@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "node",
       env: rawEnv,
+      testTimeout: 15000, // 15 seconds global timeout
       // 1) Eseguito PRIMA di ogni file di test
       setupFiles: ["./src/config/setup-teardown/setup-once-per-file.ts"],
       // 2) Eseguito UNA VOLTA all’inizio; ritorna il teardown UNA VOLTA alla fine
@@ -24,14 +25,14 @@ export default defineConfig(({ mode }) => {
 
       // --- Reporters per GitHub Actions ---
       reporters: [
-        "default",                    // Console output (per sviluppo locale)
-        "junit",                      // Per GitHub Actions annotations
-        "json",                       // Per automazioni custom
+        "default", // Console output (per sviluppo locale)
+        "junit", // Per GitHub Actions annotations
+        "json", // Per automazioni custom
       ],
 
       outputFile: {
-        junit: "./test-reports/junit.xml",        // GitHub Actions legge questo
-        json: "./test-reports/results.json",      // Per post-processing
+        junit: "./test-reports/junit.xml", // GitHub Actions legge questo
+        json: "./test-reports/results.json", // Per post-processing
       },
     },
   };
