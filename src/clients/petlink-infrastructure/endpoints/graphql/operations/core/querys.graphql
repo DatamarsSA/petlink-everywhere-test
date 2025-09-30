@@ -74,3 +74,54 @@ query checkContact($contact: String!, $contactType: ContactType!) {
     message
   }
 }
+
+
+query getPet($id: String!) {
+  getPet(id: $id) {
+    code
+    translationCode
+    message
+    pet {
+      id
+      name 
+      birthDate
+      species 
+      breedType 
+      breeds
+      gender 
+      primaryColor
+      weight
+      userId 
+      creationDate 
+      updateDate 
+      neutered
+      length
+      dateMarkedAsLost
+    }
+  }
+}
+
+query getPets {
+  getPets {
+    code
+    message
+    pets {
+      id
+      name
+      birthDate
+      species
+      breedType
+      breeds
+      gender
+      primaryColor
+      weight
+      userId
+      creationDate
+      updateDate
+      neutered
+      length
+      dateMarkedAsLost
+    }
+  }
+}
+
