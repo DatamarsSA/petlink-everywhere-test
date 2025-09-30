@@ -93,3 +93,5 @@ jobs:
           check_name: "Report integration test (${{ github.event.inputs.environment || 'develop' }})"
           fail_on_failure: true
           require_tests: true
+          check_run_annotations: 'failed'
+          detailed_summary: true
