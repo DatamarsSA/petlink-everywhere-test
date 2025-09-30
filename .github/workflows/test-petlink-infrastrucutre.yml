@@ -98,10 +98,16 @@ jobs:
           fail_on_failure: true
           require_tests: true
 
-          detailed_summary: true
-          simplified_summary: false
-          verbose_summary: true
-          truncate_stack_traces: false
-          check_annotations: 'failed'   # solo fail, niente rumore
-          include_passed: false          # evita lista dei passed
-          job_summary: true              # tabella anche nello Step Summary
+          # Summary (pagina "Summary" del run su Actions)
+          job_summary: true          # aggiunge un box nel job summary con i risultati (pass/fail/skip)
+          detailed_summary: true     # arricchisce il box con tabella leggibile (test falliti con nomi e durata)
+          simplified_summary: false  # se true mostra solo numeri; false = mostra dettagli completi
+          verbose_summary: true      # include messaggi di errore e stack trace nel summary (più verboso)
+
+          # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
+          check_annotations: 'failed' # crea annotazioni solo per i test falliti (all = tutti, none = nessuno)
+          annotations_limit: 50       # max annotazioni per check (GitHub ha limite hard 50)
+          update_check: true          # aggiorna il check esistente invece di aprirne uno nuovo ogni run
+          truncate_stack_traces: false # mostra stack trace completi invece di troncarli
+          include_passed: false       # evita di riportare anche i test passati (meno rumore)
+          group_suite: true           # raggruppa i test per suite (es. blocchi describe) nella tabella del check

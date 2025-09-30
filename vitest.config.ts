@@ -8,7 +8,6 @@ export default defineConfig(({ mode }) => {
   const environment = mode || process.env.NODE_ENV || "develop";
 
   console.log(`Running tests in '${environment}' environment`);
-
   // Carica le variabili d'ambiente dal file .env.{environment}
   const rawEnv = loadEnv(environment, process.cwd(), "");
 
