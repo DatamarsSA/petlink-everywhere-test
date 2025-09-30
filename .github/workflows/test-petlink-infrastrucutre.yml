@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Build Docker image
         run: docker build -t petlink-everywhere-test .
@@ -86,10 +86,10 @@ jobs:
 
       # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v5
         if: always()  # Importante: pubblica anche se i test falliscono
         with:
           report_paths: 'test-reports/junit.xml'
-          check_name: 'Integration Test Results (${{ github.event.inputs.environment || 'develop' }})'
+          check_name: "Integration Test Results (${{ github.event.inputs.environment || 'develop' }})"
           fail_on_failure: true
           require_tests: true
