@@ -64,15 +64,6 @@ export class TwilioClient {
     const startTime = Date.now();
     let attempts = 0;
 
-    console.log(
-      `⏳ Aspetto OTP per ${phoneNumber} (delay iniziale: ${pollIntervalMs}ms, timeout: ${timeoutMs}ms, polling ogni ${pollIntervalMs}ms)...`,
-    );
-
-    console.log(
-      `⏱️ Attendo ${pollIntervalMs}ms prima di iniziare il polling...`,
-    );
-    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-
     while (Date.now() - startTime < timeoutMs) {
       attempts++;
       console.log(`🔄 Tentativo ${attempts}...`);

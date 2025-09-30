@@ -36,6 +36,9 @@ export default defineConfig(({ mode }) => {
         junit: "./test-reports/junit.xml", // GitHub Actions legge questo
         json: "./test-reports/results.json", // Per post-processing
       },
+      sequence: {
+        concurrent: false,
+      },
     },
   };
 });
