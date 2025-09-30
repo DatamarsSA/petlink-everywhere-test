@@ -143,17 +143,16 @@ describe("User Registration", () => {
   });
 });
 
-describe("", () => {
-  beforeAll(async () => {
-    // await globalState.cleanupAll();
-  });
-
-  it("should", async () => {
+describe("test math", () => {
+  it("sum should be correct", async () => {
     let a = 4;
     expect(a).toBe(5);
   });
+});
 
-  afterAll(async () => {
-    // await globalState.cleanupAll();
+describe("tet string", () => {
+  it("should be same string", async () => {
+    let a = "Emanuel";
+    expect(a).toBe("Roberto");
   });
 });
