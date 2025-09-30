@@ -17,6 +17,10 @@ on:
 jobs:
   run-integration-tests:
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
     # Usa l'ambiente specificato nell'input o 'develop' se non specificato
     environment: ${{ github.event.inputs.environment || 'develop' }}
 
@@ -87,11 +91,17 @@ jobs:
       # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v5
-        if: always()  # Importante: pubblica anche se i test falliscono
+        if: always()
         with:
           report_paths: 'test-reports/junit.xml'
           check_name: "Report integration test (${{ github.event.inputs.environment || 'develop' }})"
           fail_on_failure: true
           require_tests: true
-          check_annotations: 'failed'
+
           detailed_summary: true
+          simplified_summary: false
+          verbose_summary: true
+          truncate_stack_traces: false
+          check_annotations: 'failed'   # solo fail, niente rumore
+          include_passed: false          # evita lista dei passed
+          job_summary: true              # tabella anche nello Step Summary

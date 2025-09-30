@@ -145,6 +145,7 @@ describe("User Registration", () => {
 
 describe("test math", () => {
   it("sum should be correct", async () => {
+    await globalState.cleanupAll();
     let a = 4;
     expect(a).toBe(5);
   });
