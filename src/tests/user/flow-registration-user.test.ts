@@ -147,13 +147,28 @@ describe("test math", () => {
   it("sum should be correct", async () => {
     await globalState.cleanupAll();
     let a = 4;
-    expect(a).toBe(5);
+    const b = 2;
+    let c = a + b;
+    expect(c).toBe(5);
+  });
+
+  it("multiplication should be correct", async () => {
+    await globalState.cleanupAll();
+    let a = 4;
+    const b = 2;
+    let c = a * b;
+    expect(c).toBe(7);
   });
 });
 
 describe("tet string", () => {
-  it("should be same string", async () => {
+  it("name should be the same", async () => {
     let a = "Emanuel";
     expect(a).toBe("Roberto");
+  });
+
+  it("sourname should be the same", async () => {
+    let a = "Epifani";
+    expect(a).toBe("Rossi");
   });
 });
