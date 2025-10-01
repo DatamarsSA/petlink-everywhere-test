@@ -5,6 +5,13 @@ import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { globalState } from "../../test-utils/global-state/state-global-flow.js";
 import { waitFor } from "../../test-utils/helpers/utils-retry.js";
 import { fixtures } from "../../test-utils/fixtures/fixtures.js";
+import type {
+  BreedTypeEnum,
+  Gender,
+  PetIn,
+  PetLivingEnvironment,
+  SpeciesEnum,
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe.sequential("Environment Setup", () => {
   let setupResults = {
@@ -175,8 +182,28 @@ describe.sequential("Environment Setup", () => {
   });
 
   describe("Pet Registration", () => {
-    const fixtureCat = fixtures.pet.defaultCat;
-    const fixtureDog = fixtures.pet.defaultDog;
+    const fixtureCat = {
+      name: fixtures.pet.defaultCat.name,
+      species: fixtures.pet.defaultCat.species,
+      breedType: fixtures.pet.defaultCat.breedType,
+      breeds: fixtures.pet.defaultCat.breeds,
+      gender: fixtures.pet.defaultCat.gender,
+      weight: fixtures.pet.defaultCat.weight,
+      birthDate: fixtures.pet.defaultCat.birthDate,
+      livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
+      primaryColor: fixtures.pet.defaultCat.livingEnvironment,
+    } as PetIn;
+    const fixtureDog = {
+      name: fixtures.pet.defaultDog.name,
+      species: fixtures.pet.defaultDog.species,
+      breedType: fixtures.pet.defaultDog.breedType,
+      breeds: fixtures.pet.defaultDog.breeds,
+      gender: fixtures.pet.defaultDog.gender,
+      weight: fixtures.pet.defaultDog.weight,
+      birthDate: fixtures.pet.defaultDog.birthDate,
+      livingEnvironment: fixtures.pet.defaultDog.livingEnvironment,
+      primaryColor: fixtures.pet.defaultDog.livingEnvironment,
+    } as PetIn;
 
     // Variabili condivise tra i test
     let createdDog: any;

@@ -1315,8 +1315,12 @@ export type ProductTypeEnum =
 
 export interface Promotion {
   __typename?: "Promotion";
+  billingPeriod: Scalars["Int"]["output"];
+  billingPeriodUnit: Scalars["String"]["output"];
+  currencyCode: Scalars["String"]["output"];
   id: Scalars["String"]["output"];
   name: Scalars["String"]["output"];
+  price: Scalars["Float"]["output"];
   type: PromotionTypeEnum;
 }
 
@@ -2307,6 +2311,7 @@ export interface User {
   id: Scalars["String"]["output"];
   image?: Maybe<Image>;
   languageId: LanguageId;
+  migrated?: Maybe<Scalars["Boolean"]["output"]>;
   mobileDevices?: Maybe<Array<MobileDevice>>;
   name: Scalars["String"]["output"];
   notificationSettings: NotificationSettings;
