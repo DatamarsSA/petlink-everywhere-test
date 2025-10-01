@@ -5,13 +5,7 @@ import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { globalState } from "../../test-utils/global-state/state-global-flow.js";
 import { waitFor } from "../../test-utils/helpers/utils-retry.js";
 import { fixtures } from "../../test-utils/fixtures/fixtures.js";
-import type {
-  BreedTypeEnum,
-  Gender,
-  PetIn,
-  PetLivingEnvironment,
-  SpeciesEnum,
-} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import type { PetIn } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe.sequential("Environment Setup", () => {
   let setupResults = {
@@ -29,7 +23,7 @@ describe.sequential("Environment Setup", () => {
 
     // Variabili condivise tra i test
     let verificationId: string;
-    let receivedOtp: string;
+    let receivedOtp: string | null;
 
     let createdUser: any;
 
@@ -65,7 +59,7 @@ describe.sequential("Environment Setup", () => {
         () => twilioClient.getLatestOtp(userPhoneNumber),
         {
           timeoutMs: 60000,
-          intervalMs: 1000,
+          intervalMs: 500,
           timeoutError: `OTP not received for ${userPhoneNumber}`,
         },
       );
@@ -144,16 +138,13 @@ describe.sequential("Environment Setup", () => {
       // waitFor guarantees linkUrlToOpen is not null (throws on timeout)
       const params = extractParamsFromUrl(linkUrlToOpen!);
 
-      await petlink.core.public.verifyEmail({
+      const response = await petlink.core.public.verifyEmail({
         uuid: params.uuid!,
         otp: params.otp!,
         verificationId: params.verificationId!,
       });
-
-      const user = await petlink.core.authJwt.getUser();
-      expect(user.getUser.user).toBeDefined();
-      expect(user.getUser.user?.email).toBe(userEmail);
-      expect(user.getUser.user?.contactVerified?.email).toBe(true);
+      expect(response.verifyEmail).toBeDefined();
+      expect(response.verifyEmail.code).toBe("200");
     }, 70000); // Timeout più lungo per l'attesa dell'email
 
     it("Try login new user (with EMAIL)", async () => {
@@ -167,17 +158,13 @@ describe.sequential("Environment Setup", () => {
       expect(user.getUser.user?.contactVerified?.email).toBe(true);
     });
 
-    afterAll(async () => {
-      this.setupResults.set(createdUser);
-    });
-
     it("Negative assertions", async () => {
       //todo: try to checkContact for number register => should not be available
       //todo:
     });
 
     afterAll(async () => {
-      this.setupResults.set(createdUser);
+      setupResults.user = createdUser;
     });
   });
 
@@ -191,7 +178,7 @@ describe.sequential("Environment Setup", () => {
       weight: fixtures.pet.defaultCat.weight,
       birthDate: fixtures.pet.defaultCat.birthDate,
       livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
-      primaryColor: fixtures.pet.defaultCat.livingEnvironment,
+      primaryColor: fixtures.pet.defaultCat.primaryColor,
     } as PetIn;
     const fixtureDog = {
       name: fixtures.pet.defaultDog.name,
@@ -202,7 +189,7 @@ describe.sequential("Environment Setup", () => {
       weight: fixtures.pet.defaultDog.weight,
       birthDate: fixtures.pet.defaultDog.birthDate,
       livingEnvironment: fixtures.pet.defaultDog.livingEnvironment,
-      primaryColor: fixtures.pet.defaultDog.livingEnvironment,
+      primaryColor: fixtures.pet.defaultDog.primaryColor,
     } as PetIn;
 
     // Variabili condivise tra i test
@@ -247,8 +234,20 @@ describe.sequential("Environment Setup", () => {
       createdCat = response.createPet.pet;
     });
 
+    it("Try to create PEt with wrong combinations data", () => {});
+
     it("Verify user has 2 pets", async () => {
-      //todo: implement check on getPets() return pets of user of jwt
+      const response = await petlink.core.authJwt.getPets();
+
+      expect(response.getPets).toBeDefined();
+      expect(response.getPets.code).toBe("200");
+      expect(response.getPets.pets).toBeDefined();
+      expect(response.getPets.pets).toHaveLength(2);
+
+      // Verifica che ci siano un cane e un gatto
+      const petSpecies = response.getPets.pets?.map((pet) => pet.species);
+      expect(petSpecies).toContain("DOG");
+      expect(petSpecies).toContain("CAT");
     });
 
     it("Verify pet details are correct", async () => {

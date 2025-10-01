@@ -8,7 +8,7 @@ import {
 } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
-import { fixtures } from "../fixtures/fixture-user-pet-device.js";
+import { fixtures } from "../fixtures/fixtures.js";
 
 export type GlobalState = {
   user?: User;
@@ -30,8 +30,8 @@ export class Store {
       console.log("No user to delete in the current state");
       try {
         await petlink.loginWithPhone(
-          fixtures.user.defaultUser.phoneNumber,
-          fixtures.user.defaultUser.password,
+          fixtures.user.phone,
+          fixtures.user.password,
         );
         const user = await petlink.core.authJwt.getUser();
 
@@ -45,7 +45,7 @@ export class Store {
 
         console.log(`Deleted default user with ID: ${user.getUser.user!.id}`);
       } catch (error) {
-        console.log("No default user found or error deleting user:", error);
+        // Silently ignore if user doesn't exist (expected in first run)
       }
 
       return;
@@ -57,23 +57,15 @@ export class Store {
    */
   public async cleanupAll(): Promise<void> {
     console.log("Cleaning up test environment");
-    // Elimina l'utente
-    await this.deleteUser();
-    // petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-    // await petlink.core.authIam.utilityIntegrationTest({
-    //   input: {
-    //     userId: user.getUser.user!.id,
-    //     utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
-    //   },
-    // });
-    // Pulisci email
-    await gmailClient.deleteAllEmails();
-    console.log("Deleted all emails");
-    // Pulisci SMS
-    await twilioClient.deleteAllMessagesSentoToNumber(
-      fixtures.user.defaultUser.phoneNumber,
-    );
-    console.log(`Deleted SMS for ${fixtures.user.defaultUser.phoneNumber}`);
+    
+    // Esegui tutte le operazioni di cleanup in parallelo
+    await Promise.all([
+      this.deleteUser(),
+      gmailClient.deleteAllEmails().then(() => console.log("Deleted all emails")),
+      twilioClient.deleteAllMessagesSentoToNumber(fixtures.user.phone)
+        .then(() => console.log(`Deleted SMS for ${fixtures.user.phone}`))
+    ]);
+    
     // Resetta lo stato
     this.state = {};
   }

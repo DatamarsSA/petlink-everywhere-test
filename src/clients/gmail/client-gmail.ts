@@ -58,7 +58,7 @@ export class GmailClient {
       const list = await gmail.users.messages.list({
         userId: "me",
         q: GMAIL_QUERY,
-        maxResults: 5,
+        maxResults: 1,
       });
 
       const messages = list.data.messages ?? [];

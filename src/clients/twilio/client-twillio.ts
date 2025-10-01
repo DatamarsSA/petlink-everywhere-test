@@ -43,7 +43,7 @@ export class TwilioClient {
    * Use with waitFor() utility for polling behavior.
    */
   async getLatestOtp(phoneNumber: string): Promise<string | null> {
-    const messages = await this.getMessagesSentTo(phoneNumber, 5);
+    const messages = await this.getMessagesSentTo(phoneNumber, 1);
 
     for (const message of messages) {
       console.log(`📄 Analizzo messaggio: "${message.body}"`);
