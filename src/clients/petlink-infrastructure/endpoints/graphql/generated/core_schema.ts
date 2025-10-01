@@ -44,21 +44,21 @@ export type Scalars = {
 export interface Activities {
   __typename?: "Activities";
   calories?: Maybe<Scalars["Float"]["output"]>;
-  /** only cat */
+  /**   only cat */
   feed?: Maybe<Scalars["Float"]["output"]>;
   grooming?: Maybe<Scalars["Float"]["output"]>;
   highMovement?: Maybe<Scalars["Float"]["output"]>;
   jumps?: Maybe<Scalars["Float"]["output"]>;
   onTheMove?: Maybe<Scalars["Float"]["output"]>;
   petId?: Maybe<Scalars["String"]["output"]>;
-  /** only dog */
+  /**   only dog */
   play?: Maybe<Scalars["Float"]["output"]>;
   run?: Maybe<Scalars["Float"]["output"]>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
   sleep?: Maybe<Scalars["Float"]["output"]>;
   steps?: Maybe<Scalars["Float"]["output"]>;
   timestamp?: Maybe<Scalars["Float"]["output"]>;
-  /** dog and cat */
+  /**   dog and cat */
   walk?: Maybe<Scalars["Float"]["output"]>;
 }
 
@@ -602,13 +602,13 @@ export interface Mutation {
   forgotEmail?: Maybe<Response>;
   isActiveEnergySavingZone: Response;
   logDisabled?: Maybe<Response>;
-  /** subscription publishers */
+  /**   subscription publishers */
   publishOnGpsMessagePosition: GpsMessagePosition;
   publishOnGpsMessageStatus: GpsMessageStatus;
   publishOnSubscriptionStatus: SubscriptionMessageStatus;
   pushGpsMessagePositionBLE: Response;
   qrTagHasBeenScanned: Response;
-  /** newsletter */
+  /**   newsletter */
   registerToNewsletter: Response;
   removeProduct: Response;
   replacement: ResponseReplacement;
@@ -618,18 +618,18 @@ export interface Mutation {
   sendOtp: ResponseOtp;
   sendOtpForgotPassword: ResponseOtp;
   sendSetting: ResponseSendSetting;
-  /** add sub w/uuid from verifyEmail */
+  /**   add sub w/uuid from verifyEmail */
   sendTokenEmail: Response;
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
   setSafetyTermsCat: Response;
-  /** sso */
+  /**   sso */
   setSsoToken: ResponseSsoUrl;
   signUpUser: Response;
   stopRenewingAddon?: Maybe<Response>;
   stopRenewingSubscription?: Maybe<Response>;
-  /** subscriptions */
+  /**   subscriptions */
   updateBillingInfo: Response;
   updateEmailUser: Response;
   updateEnergySavingZone: ResponseEnergySavingZone;
@@ -638,13 +638,13 @@ export interface Mutation {
   updatePaymentSources: ResponseManagePaymentSources;
   updatePet: ResponsePet;
   updatePetProtectionData?: Maybe<ResponseUpdatePetProtectionData>;
-  /** TODO: rename in deleteProduct */
+  /**   TODO: rename in deleteProduct */
   updatePetlinkGps: ResponsePetlinkGps;
   updatePhoneNumberUser: Response;
   updateUser: ResponseUser;
-  /** cct */
+  /**   cct */
   updateUserContact: Response;
-  /** test suite */
+  /**   test suite */
   utilityIntegrationTest: ResponseUtilityIntegrationTest;
   verifyEmail?: Maybe<Response>;
 }
@@ -1298,11 +1298,11 @@ export interface Product {
   entityType: ProductTypeEnum;
   id: Scalars["String"]["output"];
   lastKnownPosition?: Maybe<GpsPosition>;
-  /** TODO remove */
+  /**  TODO remove */
   lastKnownStatus?: Maybe<GpsStatus>;
   petId: Scalars["String"]["output"];
   serialNumber: Scalars["String"]["output"];
-  /** TODO remove */
+  /**  TODO remove */
   subscriptionIsActive?: Maybe<Scalars["Boolean"]["output"]>;
   updateDate: Scalars["String"]["output"];
   userId: Scalars["String"]["output"];
@@ -1339,12 +1339,12 @@ export interface Query {
   checkoutPrepaid: ResponseCheckoutNewSubscription;
   getActiveSubscriptions: ResponseActiveSubscriptions;
   getActivities: ResponseActivities;
-  /** TODO: rename in dog */
+  /**   TODO: rename in dog */
   getActivitiesAverage?: Maybe<ResponseActivities>;
   getActivitiesAverageCat?: Maybe<ResponseActivitiesAverageCat>;
-  /** TODO: rename in dog */
+  /**   TODO: rename in dog */
   getActivitiesByHour: ResponseActivitiesByHour;
-  /** TODO: rename in dog */
+  /**   TODO: rename in dog */
   getActivitiesCat: ResponseActivitiesCat;
   getBillingInfo: ResponseBillingInfo;
   getBreed: ResponseGetBreed;
@@ -1355,7 +1355,7 @@ export interface Query {
   getEnergySavingZones: ResponseEnergySavingZones;
   getGeofence: ResponseGeofence;
   getGeofences: ResponseGeofences;
-  getGpsPromotion: ResponseGetGpsPromotion;
+  getGpsPromotions: ResponseGetGpsPromotions;
   getLogUploadUrl: ResponseGetLogUploadUrl;
   getNotificationsHistory: ResponseNotificationsHistory;
   getOrder?: Maybe<ResponseGetOrder>;
@@ -1374,11 +1374,11 @@ export interface Query {
   getPositionsHistoryDates?: Maybe<ResponsePositionsHistoryDates>;
   getPosts: ResponseGetPosts;
   getProduct: ResponseProduct;
-  /** TODO remove */
+  /**   TODO remove */
   getProducts: ResponseProducts;
   getProtectionPlans: ResponseProtectionPlans;
   getS3UploadUrl: ResponseS3Upload;
-  /** sso */
+  /**  sso */
   getSsoToken: ResponseSsoToken;
   getSubscriptionByProductId: ResponseGetSubscriptionByProductId;
   getSubscriptionPlanPricing: ResponseSubscriptionPlanPricing;
@@ -1502,7 +1502,7 @@ export type QueryGetGeofenceArgs = {
   id: Scalars["String"]["input"];
 };
 
-export type QueryGetGpsPromotionArgs = {
+export type QueryGetGpsPromotionsArgs = {
   productId: Scalars["String"]["input"];
 };
 
@@ -1782,11 +1782,11 @@ export interface ResponseGetDictionary {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-export interface ResponseGetGpsPromotion {
-  __typename?: "ResponseGetGpsPromotion";
+export interface ResponseGetGpsPromotions {
+  __typename?: "ResponseGetGpsPromotions";
   code: Scalars["String"]["output"];
-  deviceProtectionPromotion?: Maybe<Promotion>;
   message: Scalars["String"]["output"];
+  promotions?: Maybe<Array<Maybe<Promotion>>>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -2109,7 +2109,7 @@ export interface Setting {
   id?: InputMaybe<Scalars["String"]["input"]>;
   operationType: SettingOperationEnum;
   settingType: SettingTypeEnum;
-  /** id and deviceId both used for activation ESZ and eventually others */
+  /**   id and deviceId both used for activation ESZ and eventually others */
   updateObject?: InputMaybe<Scalars["AWSJSON"]["input"]>;
 }
 
@@ -2444,6 +2444,92 @@ export type VerifyEmailMutation = {
   } | null;
 };
 
+export type CreatePetMutationVariables = Exact<{
+  pet: PetIn;
+}>;
+
+export type CreatePetMutation = {
+  __typename?: "Mutation";
+  createPet: {
+    __typename?: "ResponsePet";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    pet?: {
+      __typename?: "Pet";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      livingEnvironment?: PetLivingEnvironment | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+      petProtectionId?: string | null;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
+    } | null;
+  };
+};
+
+export type UpdatePetMutationVariables = Exact<{
+  pet: UpdatePetIn;
+}>;
+
+export type UpdatePetMutation = {
+  __typename?: "Mutation";
+  updatePet: {
+    __typename?: "ResponsePet";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    pet?: {
+      __typename?: "Pet";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      livingEnvironment?: PetLivingEnvironment | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+      petProtectionId?: string | null;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
+    } | null;
+  };
+};
+
+export type DeletePetMutationVariables = Exact<{
+  petId: Scalars["String"]["input"];
+}>;
+
+export type DeletePetMutation = {
+  __typename?: "Mutation";
+  deletePet: {
+    __typename?: "Response";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+  };
+};
+
 export type GetBreedQueryVariables = Exact<{
   species: SpeciesEnum;
   languageId?: InputMaybe<LanguageId>;
@@ -2540,6 +2626,67 @@ export type CheckContactQuery = {
     code: string;
     translationCode?: string | null;
     message: string;
+  };
+};
+
+export type GetPetQueryVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type GetPetQuery = {
+  __typename?: "Query";
+  getPet: {
+    __typename?: "ResponsePet";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    pet?: {
+      __typename?: "Pet";
+      id: string;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+    } | null;
+  };
+};
+
+export type GetPetsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetPetsQuery = {
+  __typename?: "Query";
+  getPets: {
+    __typename?: "ResponsePets";
+    code: string;
+    message: string;
+    pets?: Array<{
+      __typename?: "Pet";
+      id: string;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+    }> | null;
   };
 };
 
@@ -2982,6 +3129,349 @@ export const VerifyEmailDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const CreatePetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createPet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "PetIn" } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createPet" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pet" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "pet" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pet" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "entityType" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "birthDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "species" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breedType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breeds" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "gender" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "primaryColor" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "weight" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "id" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "url" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "neutered" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "livingEnvironment" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "length" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "dateMarkedAsLost" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petProtectionId" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "UpdatePetIn" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePet" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pet" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "pet" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pet" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "entityType" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "birthDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "species" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breedType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breeds" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "gender" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "primaryColor" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "weight" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "id" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "url" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "neutered" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "livingEnvironment" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "length" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "dateMarkedAsLost" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petProtectionId" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeletePetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deletePet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "petId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deletePet" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "petId" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetBreedDocument = {
   kind: "Document",
   definitions: [
@@ -3370,6 +3860,211 @@ export const CheckContactDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetPetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getPet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPet" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pet" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "birthDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "species" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breedType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breeds" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "gender" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "primaryColor" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "weight" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "neutered" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "length" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "dateMarkedAsLost" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetPetsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getPets" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPets" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pets" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "birthDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "species" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breedType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breeds" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "gender" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "primaryColor" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "weight" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "neutered" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "length" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "dateMarkedAsLost" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -3480,6 +4175,60 @@ export function getSdk(
         variables,
       );
     },
+    createPet(
+      variables: CreatePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreatePetMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreatePetMutation>({
+            document: CreatePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createPet",
+        "mutation",
+        variables,
+      );
+    },
+    updatePet(
+      variables: UpdatePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetMutation>({
+            document: UpdatePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updatePet",
+        "mutation",
+        variables,
+      );
+    },
+    deletePet(
+      variables: DeletePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeletePetMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeletePetMutation>({
+            document: DeletePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deletePet",
+        "mutation",
+        variables,
+      );
+    },
     getBreed(
       variables: GetBreedQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -3530,6 +4279,42 @@ export function getSdk(
             signal,
           }),
         "checkContact",
+        "query",
+        variables,
+      );
+    },
+    getPet(
+      variables: GetPetQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPetQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPetQuery>({
+            document: GetPetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getPet",
+        "query",
+        variables,
+      );
+    },
+    getPets(
+      variables?: GetPetsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPetsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPetsQuery>({
+            document: GetPetsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getPets",
         "query",
         variables,
       );

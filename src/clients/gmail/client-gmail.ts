@@ -46,30 +46,11 @@ export class GmailClient {
   }
 
   /**
-   * Poll for a verification email and return the first matching link.
-   */
-  async waitForVerificationEmail(
-    timeoutMs = 60_000,
-    retryIntervalMs = 10_000,
-  ): Promise<string> {
-    const start = Date.now();
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const link = await this.getVerificationLink();
-      if (link) return link;
-      if (Date.now() - start >= timeoutMs) {
-        throw new Error(
-          `Verification email not received within ${timeoutMs}ms`,
-        );
-      }
-      await new Promise((r) => setTimeout(r, retryIntervalMs));
-    }
-  }
-
-  /**
    * Search unread messages and extract the first verification link.
+   * Returns null if no verification email is found.
+   * Use with waitFor() utility for polling behavior.
    */
-  private async getVerificationLink(): Promise<string | null> {
+  async getVerificationLink(): Promise<string | null> {
     try {
       const authClient = await this.authenticate();
       const gmail = google.gmail({ version: "v1", auth: authClient });

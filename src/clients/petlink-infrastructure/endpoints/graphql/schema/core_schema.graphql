@@ -1,7 +1,10 @@
-"""
-This directive allows results to be deferred during execution
-"""
+"""This directive allows results to be deferred during execution"""
 directive @defer on FIELD
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service which subscriptions will be published to when this mutation is
@@ -14,48 +17,9 @@ directive @aws_publish(
   subscriptions: [String]
 ) on FIELD_DEFINITION
 
-"""
-Tells the service which mutation triggers this subscription.
-"""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """
-  List of cognito user pool groups which have access on this field
-  """
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""
-Directs the schema to enforce authorization on a field
-"""
+"""Directs the schema to enforce authorization on a field"""
 directive @aws_auth(
-  """
-  List of cognito user pool groups which have access on this field
-  """
+  """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on FIELD_DEFINITION
 
@@ -64,29 +28,49 @@ Tells the service this field/object has access authorized by sigv4 signing.
 """
 directive @aws_iam on OBJECT | FIELD_DEFINITION
 
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Cognito User Pools token.
+"""
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
+
 type Activities {
   serialNumber: String
   petId: String
   timestamp: Float
 
-  """
-  dog and cat
-  """
+  """  dog and cat"""
   walk: Float
   sleep: Float
   steps: Float
   calories: Float
   onTheMove: Float
 
-  """
-  only dog
-  """
+  """  only dog"""
   play: Float
   run: Float
 
-  """
-  only cat
-  """
+  """  only cat"""
   feed: Float
   jumps: Float
   highMovement: Float
@@ -635,86 +619,45 @@ enum ModeType {
 
 type Mutation {
   sendOtp(phone: String!, languageId: LanguageId): ResponseOtp!
-  checkOtp(
-    verificationId: String!
-    otp: String!
-    contact: String!
-  ): ResponseOtp!
-  signUpUser(
-    user: UserIn!
-    otpData: OtpInput!
-    languageId: LanguageId
-    appBrand: AppBrand
-  ): Response!
+  checkOtp(verificationId: String!, otp: String!, contact: String!): ResponseOtp!
+  signUpUser(user: UserIn!, otpData: OtpInput!, languageId: LanguageId, appBrand: AppBrand): Response!
   deleteUser(id: String!): Response!
   updateUser(user: UpdateUserIn!): ResponseUser!
   updateEmailUser(email: String!, languageId: LanguageId): Response!
-  updatePhoneNumberUser(
-    phone: String!
-    languageId: LanguageId
-    verificationId: String!
-    otp: String!
-  ): Response!
-  forgotEmail(
-    productNumber: String!
-    entityType: ProductTypeEnum
-    languageId: LanguageId
-  ): Response
+  updatePhoneNumberUser(phone: String!, languageId: LanguageId, verificationId: String!, otp: String!): Response!
+  forgotEmail(productNumber: String!, entityType: ProductTypeEnum, languageId: LanguageId): Response
   sendOtpForgotPassword(contact: String!, languageId: LanguageId): ResponseOtp!
-  changeForgotPassword(
-    otp: String!
-    verificationId: String!
-    password: String!
-  ): Response!
+  changeForgotPassword(otp: String!, verificationId: String!, password: String!): Response!
   changePassword(oldPassword: String!, password: String!): Response!
 
-  """
-  add sub w/uuid from verifyEmail
-  """
+  """  add sub w/uuid from verifyEmail"""
   sendTokenEmail(email: String, languageId: LanguageId): Response!
   verifyEmail(verificationId: String!, otp: String!, uuid: String!): Response
-  updateNotificationSettings(
-    notificationSettings: UpdateNotificationSettingsInput!
-  ): ResponseNotificationSettings!
+  updateNotificationSettings(notificationSettings: UpdateNotificationSettingsInput!): ResponseNotificationSettings!
   deleteRegistrationToken(mobileDevice: String!): Response!
   createPet(pet: PetIn!): ResponsePet!
   updatePet(pet: UpdatePetIn!): ResponsePet!
   deletePet(petId: String!): Response!
   createPetlinkQrTag(petlinkQrTag: PetlinkQrTagIn!): ResponsePetlinkQrTag!
-  createPetlinkMicrochip(
-    petlinkMicrochip: PetlinkMicrochipIn!
-  ): ResponsePetlinkMicrochip!
+  createPetlinkMicrochip(petlinkMicrochip: PetlinkMicrochipIn!): ResponsePetlinkMicrochip!
   createPetlinkGps(petlinkGps: PetlinkGpsIn!): ResponseCreatePetlinkGps!
   removeProduct(productId: String!): Response!
 
-  """
-  TODO: rename in deleteProduct
-  """
+  """  TODO: rename in deleteProduct"""
   updatePetlinkGps(petlinkGps: UpdatePetlinkGpsIn!): ResponsePetlinkGps!
   resetPetlinkGps(id: String!): Response!
-  replacement(
-    productId: String!
-    newSerialNumber: String!
-    entityType: ProductTypeEnum!
-  ): ResponseReplacement!
+  replacement(productId: String!, newSerialNumber: String!, entityType: ProductTypeEnum!): ResponseReplacement!
   setPetIsLost(petId: String!, lostIn: LostIn!): ResponseSetPetIsLost!
   setOptimizationDone(productId: String!): Response!
   setSafetyTermsCat: Response!
   qrTagHasBeenScanned(petlinkQrTag: String!): Response!
   sendMessageFoundPet(message: MessageFoundPetIn!): Response!
   setPetIsFound(petId: String!): ResponseSetPetIsFound!
-  pushGpsMessagePositionBLE(
-    productId: String!
-    position: GpsPositionIn!
-  ): Response!
+  pushGpsMessagePositionBLE(productId: String!, position: GpsPositionIn!): Response!
   sendCommand(command: Command!): Response!
   sendSetting(setting: Setting!): ResponseSendSetting!
-  createEnergySavingZone(
-    energySavingZone: EnergySavingZoneIn!
-  ): ResponseEnergySavingZone!
-  updateEnergySavingZone(
-    energySavingZone: UpdateEnergySavingZoneIn!
-  ): ResponseEnergySavingZone!
+  createEnergySavingZone(energySavingZone: EnergySavingZoneIn!): ResponseEnergySavingZone!
+  updateEnergySavingZone(energySavingZone: UpdateEnergySavingZoneIn!): ResponseEnergySavingZone!
   deleteEnergySavingZone(id: String!): Response!
   isActiveEnergySavingZone(id: String!, isActive: Boolean!): Response!
   createGeofence(geofence: GeofenceIn!): ResponseGeofence!
@@ -722,30 +665,16 @@ type Mutation {
   deleteGeofence(id: String!): Response!
   appKeepAlive(productIds: [String!]!): Response!
 
-  """
-  cct
-  """
-  updateUserContact(
-    userId: String!
-    contact: String!
-    contactType: ContactType!
-  ): Response!
+  """  cct"""
+  updateUserContact(userId: String!, contact: String!, contactType: ContactType!): Response!
 
-  """
-  sso
-  """
+  """  sso"""
   setSsoToken(productId: String!): ResponseSsoUrl!
 
-  """
-  subscriptions
-  """
+  """  subscriptions"""
   updateBillingInfo(updateBillingInfoInput: UpdateBillingInfoInput!): Response!
   updatePaymentSources: ResponseManagePaymentSources!
-  stopRenewingSubscription(
-    subscriptionId: String!
-    cancelReason: String!
-    cancelReasonCode: CancelReasonCodeEnum!
-  ): Response
+  stopRenewingSubscription(subscriptionId: String!, cancelReason: String!, cancelReasonCode: CancelReasonCodeEnum!): Response
   stopRenewingAddon(subscriptionId: String!, itemPriceIds: [String!]!): Response
 
   """
@@ -755,34 +684,18 @@ type Mutation {
   activateDeviceInOrder(deviceId: String!): Response
   addGpsPromotion(deviceId: String!, promotion: PromotionInput!): Response
 
-  """
-  subscription publishers
-  """
-  publishOnGpsMessagePosition(
-    gpsPosition: GpsMessagePositionIn!
-  ): GpsMessagePosition!
+  """  subscription publishers"""
+  publishOnGpsMessagePosition(gpsPosition: GpsMessagePositionIn!): GpsMessagePosition!
   publishOnGpsMessageStatus(gpsStatus: GpsMessageStatusIn!): GpsMessageStatus!
-  publishOnSubscriptionStatus(
-    subscriptionStatus: SubscriptionMessageStatusIn!
-  ): SubscriptionMessageStatus!
+  publishOnSubscriptionStatus(subscriptionStatus: SubscriptionMessageStatusIn!): SubscriptionMessageStatus!
 
-  """
-  newsletter
-  """
+  """  newsletter"""
   registerToNewsletter(email: String!): Response!
   logDisabled(deviceId: String!): Response
-  updatePetProtectionData(
-    petProtectionId: String!
-    owner: PetProtectionOwnerIn!
-    pet: PetProtectionPetIn!
-  ): ResponseUpdatePetProtectionData
+  updatePetProtectionData(petProtectionId: String!, owner: PetProtectionOwnerIn!, pet: PetProtectionPetIn!): ResponseUpdatePetProtectionData
 
-  """
-  test suite
-  """
-  utilityIntegrationTest(
-    input: UtilityIntegrationTestInput!
-  ): ResponseUtilityIntegrationTest!
+  """  test suite"""
+  utilityIntegrationTest(input: UtilityIntegrationTestInput!): ResponseUtilityIntegrationTest!
 }
 
 type NewFirmwareVersion {
@@ -1179,14 +1092,10 @@ type Product {
   updateDate: String!
   lastKnownPosition: GpsPosition
 
-  """
-  TODO remove
-  """
+  """ TODO remove"""
   lastKnownStatus: GpsStatus
 
-  """
-  TODO remove
-  """
+  """ TODO remove"""
   subscriptionIsActive: Boolean
 }
 
@@ -1224,148 +1133,54 @@ type Query {
   getPetlinkGps(id: String!): ResponsePetlinkGps!
   getProduct(id: String!, entityType: ProductTypeEnum!): ResponseProduct!
 
-  """
-  TODO remove
-  """
+  """  TODO remove"""
   getProducts(petId: String!): ResponseProducts!
-  getGpsPromotion(productId: String!): ResponseGetGpsPromotion!
-  getSubscriptionPlans(
-    productId: String
-    countryCode: String
-    serialNumber: String
-  ): ResponseSubscriptionPlans!
+  getGpsPromotions(productId: String!): ResponseGetGpsPromotions!
+  getSubscriptionPlans(productId: String, countryCode: String, serialNumber: String): ResponseSubscriptionPlans!
   getProtectionPlans(petId: String!): ResponseProtectionPlans!
-  getSubscriptionPlanPricing(
-    planPriceId: String!
-    careProtectionPlanId: String
-    addonPriceIds: [String!]
-    countryCode: String!
-    productId: String!
-  ): ResponseSubscriptionPlanPricing!
+  getSubscriptionPlanPricing(planPriceId: String!, careProtectionPlanId: String, addonPriceIds: [String!], countryCode: String!, productId: String!): ResponseSubscriptionPlanPricing!
   getPaymentSource: ResponseGetPaymentSource!
   getBillingInfo: ResponseBillingInfo!
-  checkoutAddons(
-    subscriptionId: String!
-    productId: String!
-    priceIds: [String!]!
-    hostedPageOptions: HostedPageOptionsInput
-  ): ResponseCheckoutAddons!
-  checkoutNewSubscription(
-    productId: String!
-    priceIds: [String!]!
-    hostedPageOptions: HostedPageOptionsInput
-  ): ResponseCheckoutNewSubscription!
-  checkoutCareProtection(
-    productId: String!
-    priceIds: [String!]!
-    hostedPageOptions: HostedPageOptionsInput
-  ): ResponseCheckoutCareProtection!
-  checkoutPrepaid(
-    orderId: String!
-    serialNumber: String!
-    priceIds: [String!]!
-    hostedPageOptions: HostedPageOptionsInput
-    appBrand: AppBrand
-  ): ResponseCheckoutNewSubscription!
-  changeSubscriptionPlan(
-    productId: String!
-    priceIds: [String!]!
-    hostedPageOptions: HostedPageOptionsInput
-  ): ResponseChangeSubscriptionPlan!
+  checkoutAddons(subscriptionId: String!, productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutAddons!
+  checkoutNewSubscription(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutNewSubscription!
+  checkoutCareProtection(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutCareProtection!
+  checkoutPrepaid(orderId: String!, serialNumber: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput, appBrand: AppBrand): ResponseCheckoutNewSubscription!
+  changeSubscriptionPlan(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseChangeSubscriptionPlan!
   getSubscriptions(productId: String!): ResponseGetSubscriptions!
-  getSubscriptionByProductId(
-    productId: String!
-  ): ResponseGetSubscriptionByProductId!
+  getSubscriptionByProductId(productId: String!): ResponseGetSubscriptionByProductId!
   getOrder(orderId: String!): ResponseGetOrder
   getPetsAndProducts: ResponsePetsAndProducts!
-  getNotificationsHistory(
-    from: String
-    to: String
-  ): ResponseNotificationsHistory!
-  getPositionsHistory(
-    petId: String!
-    from: String
-    to: String
-  ): ResponsePositionsHistory!
-  getPositionsHistoryDates(
-    petId: String!
-    from: String
-    to: String
-  ): ResponsePositionsHistoryDates
+  getNotificationsHistory(from: String, to: String): ResponseNotificationsHistory!
+  getPositionsHistory(petId: String!, from: String, to: String): ResponsePositionsHistory!
+  getPositionsHistoryDates(petId: String!, from: String, to: String): ResponsePositionsHistoryDates
   checkMicrochip(microchip: String!): ResponseCheckMicrochip!
   checkGps(serialNumber: String!): Response!
-  getDictionary(
-    languageId: LanguageId
-    appBrand: AppBrand
-  ): ResponseGetDictionary!
+  getDictionary(languageId: LanguageId, appBrand: AppBrand): ResponseGetDictionary!
   getS3UploadUrl(fileName: String!): ResponseS3Upload!
-  getLogUploadUrl(
-    fileName: String!
-    deviceId: String!
-  ): ResponseGetLogUploadUrl!
+  getLogUploadUrl(fileName: String!, deviceId: String!): ResponseGetLogUploadUrl!
   checkContact(contact: String!, contactType: ContactType!): Response!
-  getCountryState(
-    languageId: LanguageId
-    countryId: String
-  ): ResponseGetCountryState!
+  getCountryState(languageId: LanguageId, countryId: String): ResponseGetCountryState!
   getBreed(species: SpeciesEnum!, languageId: LanguageId): ResponseGetBreed!
   getColors(species: SpeciesEnum!, languageId: LanguageId): ResponseGetColors!
   getEnergySavingZone(id: String!): ResponseEnergySavingZone!
   getEnergySavingZones: ResponseEnergySavingZones!
   getGeofence(id: String!): ResponseGeofence!
   getGeofences: ResponseGeofences!
-  getActivities(
-    petId: String!
-    serialNumber: String
-    from: Int!
-    to: Int!
-  ): ResponseActivities!
+  getActivities(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivities!
 
-  """
-  TODO: rename in dog
-  """
-  getActivitiesAverage(
-    petId: String!
-    serialNumber: String
-    from: Int!
-    to: Int!
-  ): ResponseActivities
+  """  TODO: rename in dog"""
+  getActivitiesAverage(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivities
 
-  """
-  TODO: rename in dog
-  """
-  getActivitiesByHour(
-    petId: String!
-    serialNumber: String
-    from: Int!
-    to: Int!
-  ): ResponseActivitiesByHour!
+  """  TODO: rename in dog"""
+  getActivitiesByHour(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesByHour!
 
-  """
-  TODO: rename in dog
-  """
-  getActivitiesCat(
-    petId: String!
-    serialNumber: String
-    fromHealtRate: Int!
-    toHealtRate: Int!
-    fromActivities: Int!
-    toActivities: Int!
-  ): ResponseActivitiesCat!
-  getActivitiesAverageCat(
-    petId: String!
-    serialNumber: String
-    from: Int!
-    to: Int!
-  ): ResponseActivitiesAverageCat
-  getActiveSubscriptions(
-    subscriptionsIds: [String!]
-  ): ResponseActiveSubscriptions!
+  """  TODO: rename in dog"""
+  getActivitiesCat(petId: String!, serialNumber: String, fromHealtRate: Int!, toHealtRate: Int!, fromActivities: Int!, toActivities: Int!): ResponseActivitiesCat!
+  getActivitiesAverageCat(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesAverageCat
+  getActiveSubscriptions(subscriptionsIds: [String!]): ResponseActiveSubscriptions!
   getPosts(languageId: String, pagination: PaginationInput): ResponseGetPosts!
 
-  """
-  sso
-  """
+  """ sso"""
   getSsoToken(id: String!): ResponseSsoToken!
 }
 
@@ -1518,11 +1333,11 @@ type ResponseGetDictionary {
   dictionary: String!
 }
 
-type ResponseGetGpsPromotion {
+type ResponseGetGpsPromotions {
   code: String!
   translationCode: String
   message: String!
-  deviceProtectionPromotion: Promotion
+  promotions: [Promotion]
 }
 
 type ResponseGetLogUploadUrl {
@@ -1806,9 +1621,7 @@ input Setting {
   geofence: [CoordinatesIn]
   id: String
 
-  """
-  id and deviceId both used for activation ESZ and eventually others
-  """
+  """  id and deviceId both used for activation ESZ and eventually others"""
   updateObject: AWSJSON
   createObject: AWSJSON
 }
@@ -2056,3 +1869,4 @@ enum ValidationStatusEnum {
   partially_valid
   invalid
 }
+

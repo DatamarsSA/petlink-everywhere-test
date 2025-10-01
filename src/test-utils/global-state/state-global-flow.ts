@@ -2,16 +2,13 @@
 
 import { User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { env } from "../../config/env-schema-validation.js";
-import { step } from "../helpers/utils-step.js";
 import {
-  LanguageId,
   petlink,
   UtilityTestTypeEnum,
 } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { fixtures } from "../fixtures/fixture-user-pet-device.js";
-// import { flowRegistrationUser } from "../helpers/flow-registration-user.js";
 
 export type GlobalState = {
   user?: User;
@@ -25,44 +22,6 @@ export class Store {
     return this.state;
   }
 
-  // /**
-  //  * Crea un nuovo utente seguendo il flusso di registrazione completo
-  //  * @param email Email opzionale (se non fornita, viene usata quella dell'env)
-  //  * @param phoneNumber Numero di telefono opzionale (se non fornito, viene usato quello dell'env)
-  //  * @param password Password opzionale (se non fornita, viene usata quella dell'env)
-  //  * @returns L'utente creato
-  //  */
-  // public async createUser(
-  //   email?: string,
-  //   phoneNumber?: string,
-  //   password?: string,
-  // ): Promise<User> {
-  //   const userEmail = email || fixtures.user.default.email;
-  //   const userPhoneNumber = phoneNumber || fixtures.user.default.phoneNumber;
-  //   const userPassword = password || fixtures.user.default.password;
-  //
-  //   console.log(
-  //     `Creating user with email ${userEmail} and phone ${userPhoneNumber}`,
-  //   );
-  //
-  //   // Usa la classe RegistrationUserFlow per il flusso completo
-  //   const verifiedUser = await step(
-  //     "Complete user registration flow",
-  //     async () => {
-  //       return await flowRegistrationUser.completeRegistration(
-  //         userEmail,
-  //         userPhoneNumber,
-  //         userPassword,
-  //       );
-  //     },
-  //   );
-  //
-  //   // Salva l'utente nello stato
-  //   this.state.user = verifiedUser;
-  //
-  //   return verifiedUser;
-  // }
-
   /**
    * Elimina l'utente corrente
    */
@@ -71,8 +30,8 @@ export class Store {
       console.log("No user to delete in the current state");
       try {
         await petlink.loginWithPhone(
-          fixtures.user.default.phoneNumber,
-          fixtures.user.default.password,
+          fixtures.user.defaultUser.phoneNumber,
+          fixtures.user.defaultUser.password,
         );
         const user = await petlink.core.authJwt.getUser();
 
@@ -112,9 +71,9 @@ export class Store {
     console.log("Deleted all emails");
     // Pulisci SMS
     await twilioClient.deleteAllMessagesSentoToNumber(
-      fixtures.user.default.phoneNumber,
+      fixtures.user.defaultUser.phoneNumber,
     );
-    console.log(`Deleted SMS for ${fixtures.user.default.phoneNumber}`);
+    console.log(`Deleted SMS for ${fixtures.user.defaultUser.phoneNumber}`);
     // Resetta lo stato
     this.state = {};
   }

@@ -37,6 +37,11 @@ export class TwilioClient {
     }
   }
 
+  /**
+   * Get the latest OTP from messages sent to a phone number.
+   * Returns null if no OTP is found.
+   * Use with waitFor() utility for polling behavior.
+   */
   async getLatestOtp(phoneNumber: string): Promise<string | null> {
     const messages = await this.getMessagesSentTo(phoneNumber, 5);
 
@@ -54,35 +59,6 @@ export class TwilioClient {
 
     console.log("❌ Nessun OTP trovato");
     return null;
-  }
-
-  async waitForOtp(
-    phoneNumber: string,
-    timeoutMs: number = 30000,
-    pollIntervalMs: number = 15000,
-  ): Promise<string> {
-    const startTime = Date.now();
-    let attempts = 0;
-
-    while (Date.now() - startTime < timeoutMs) {
-      attempts++;
-      console.log(`🔄 Tentativo ${attempts}...`);
-
-      const otp = await this.getLatestOtp(phoneNumber);
-      if (otp) {
-        console.log(`🎉 OTP ricevuto dopo ${attempts} tentativi!`);
-        return otp;
-      }
-
-      console.log(
-        `⏸️ Aspetto ${pollIntervalMs}ms prima del prossimo tentativo...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-    }
-
-    throw new Error(
-      `❌ Timeout: OTP non ricevuto entro ${timeoutMs}ms per ${phoneNumber} dopo ${attempts} tentativi`,
-    );
   }
 
   async deleteAllMessagesSentoToNumber(
