@@ -29,7 +29,7 @@ export const HTTP_HEADERS = {
 // ------------------------------
 // Performance Tracker
 // ------------------------------
-type PerformanceRecord = {
+export type PerformanceRecord = {
   service: string;
   protocol: string;
   authType: string;
@@ -47,7 +47,11 @@ class PerformanceTracker {
     this.records.push({ ...data, timestamp: new Date() });
   }
 
-  static printReport(): void {
+  /**
+   * Log all performance records (or top N) sorted by duration (descending).
+   * @param topN - Optional limit for number of records to log
+   */
+  static logAll(topN?: number): void {
     if (this.records.length === 0) {
       console.log("\n=== 🚀 Performance Report ===");
       console.log("No requests tracked (tracking might be disabled)");
@@ -55,19 +59,31 @@ class PerformanceTracker {
     }
 
     const sorted = [...this.records].sort((a, b) => b.duration - a.duration);
-    console.log("\n=== 🚀 Performance Report (sorted by duration) ===");
-    sorted.forEach((r, i) => {
+    const toLog = topN ? sorted.slice(0, topN) : sorted;
+
+    console.log(
+      `\n=== 🚀 Performance Report (${toLog.length}/${this.records.length} requests) ===`,
+    );
+    toLog.forEach((r, i) => {
       console.log(
         `${i + 1}. [${r.service}/${r.protocol}/${r.authType}] ${r.operation} - ${r.duration}ms`,
       );
     });
-    console.log(`\nTotal requests: ${this.records.length}`);
 
-    const avgDuration = Math.round(
-      this.records.reduce((sum, r) => sum + r.duration, 0) /
-        this.records.length,
-    );
-    console.log(`Average duration: ${avgDuration}ms`);
+    if (this.records.length > 0) {
+      const avgDuration = Math.round(
+        this.records.reduce((sum, r) => sum + r.duration, 0) /
+          this.records.length,
+      );
+      console.log(
+        `\nAverage: ${avgDuration}ms | Total: ${this.records.length} requests`,
+      );
+    }
+  }
+
+  /** @deprecated Use logAll() instead */
+  static printReport(): void {
+    this.logAll();
   }
 
   static clear(): void {
@@ -80,6 +96,10 @@ class PerformanceTracker {
 
   static disable(): void {
     this.enabled = false;
+  }
+
+  static getRecords(): PerformanceRecord[] {
+    return [...this.records].sort((a, b) => b.duration - a.duration);
   }
 }
 
@@ -139,6 +159,126 @@ class EnvConfig {
 
   static getAwsRegion(): string {
     return env.AWS_REGION;
+  }
+}
+
+// ------------------------------
+// Reusable Components (Composition Pattern)
+// ------------------------------
+
+/**
+ * Generic cache manager for any client type.
+ * Handles get-or-create pattern with async factory.
+ */
+class CacheManager<T> {
+  private cache = new Map<string, T>();
+
+  async getOrCreate(key: string, factory: () => Promise<T>): Promise<T> {
+    const cached = this.cache.get(key);
+    if (cached) return cached;
+
+    const value = await factory();
+    this.cache.set(key, value);
+    return value;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+/**
+ * Centralized auth headers builder for all auth types.
+ * Eliminates duplication across protocols.
+ */
+class AuthHeadersBuilder {
+  static async build(
+    authType: AuthType,
+    serviceName: string,
+  ): Promise<{
+    cacheKey: string;
+    headers: Record<string, string>;
+    middleware?: RequestMiddleware;
+  }> {
+    switch (authType) {
+      case AuthType.JWT: {
+        if (!AuthManager.hasValidJwtToken()) {
+          throw new Error(
+            "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
+          );
+        }
+        const token = AuthManager.getJwtToken();
+        return {
+          cacheKey: `jwt:${token}`,
+          headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+        };
+      }
+
+      case AuthType.IAM: {
+        if (!AuthManager.hasIamCredentials()) {
+          throw new Error(
+            "No IAM credentials available. Please login first with loginWithIam.",
+          );
+        }
+        const credentials = AuthManager.getIamCredentials();
+        return {
+          cacheKey: `iam:${credentials.accessKeyId}`,
+          headers: {}, // Will be filled by middleware
+        };
+      }
+
+      case AuthType.API_KEY: {
+        const apiKey = EnvConfig.getApiKey(
+          serviceName as unknown as ServiceType,
+        );
+        if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
+        return {
+          cacheKey: `apiKey:${apiKey}`,
+          headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+        };
+      }
+
+      default:
+        throw new Error(`Unsupported auth type: ${authType}`);
+    }
+  }
+}
+
+/**
+ * Factory for creating performance-tracked proxies.
+ * Wraps any SDK with automatic performance monitoring.
+ */
+class ProxyFactory {
+  static create<TSdk extends object>(config: {
+    getClient: () => Promise<TSdk>;
+    serviceName: string;
+    protocolName: string;
+    authType: AuthType;
+  }): TSdk {
+    return new Proxy({} as TSdk, {
+      get: (_target, prop) => {
+        return async (...args: any[]) => {
+          const client = await config.getClient();
+          const member = (client as any)[prop];
+          if (typeof member !== "function") return member;
+
+          // Track performance
+          const startTime = performance.now();
+          try {
+            return await member(...args);
+          } finally {
+            const duration = Math.round(performance.now() - startTime);
+            PerformanceTracker.record({
+              service: config.serviceName,
+              protocol: config.protocolName,
+              authType: config.authType,
+              operation: String(prop),
+              duration,
+            });
+          }
+        };
+      },
+    }) as TSdk;
   }
 }
 
@@ -295,53 +435,34 @@ class AuthManager {
 }
 
 // ------------------------------
-// Base Protocol
+// Base Protocol (Simplified with Composition)
 // ------------------------------
 abstract class BaseProtocol<TSdk extends object> {
   protected serviceName: string;
   protected protocolName: string;
-  private sdkCache = new Map<string, { key: string; sdk: TSdk }>();
+  protected cache: CacheManager<TSdk>;
 
   protected constructor(serviceName: string, protocolName: string) {
     this.serviceName = serviceName;
     this.protocolName = protocolName;
+    this.cache = new CacheManager<TSdk>();
   }
 
   clearCache(): void {
-    this.sdkCache.clear();
+    this.cache.clear();
   }
 
   /**
    * Create a proxy that lazily resolves the underlying SDK bound to the chosen auth.
-   * Also tracks performance for each operation.
+   * Uses ProxyFactory for automatic performance tracking.
    */
-  private makeSdkProxy(authType: AuthType): TSdk {
-    const self = this;
-    return new Proxy({} as TSdk, {
-      get: (_target, prop) => {
-        return async (...args: any[]) => {
-          const sdk = await self.getOrCreateSdk(authType);
-          const member = (sdk as any)[prop];
-          if (typeof member !== "function") return member;
-
-          // Track performance
-          const startTime = performance.now();
-          try {
-            const result = await member(...args);
-            return result;
-          } finally {
-            const duration = Math.round(performance.now() - startTime);
-            PerformanceTracker.record({
-              service: this.serviceName,
-              protocol: this.protocolName,
-              authType: authType,
-              operation: String(prop),
-              duration,
-            });
-          }
-        };
-      },
-    }) as TSdk;
+  protected makeSdkProxy(authType: AuthType): TSdk {
+    return ProxyFactory.create({
+      getClient: () => this.getOrCreateSdk(authType),
+      serviceName: this.serviceName,
+      protocolName: this.protocolName,
+      authType,
+    });
   }
 
   /**
@@ -364,12 +485,11 @@ abstract class BaseProtocol<TSdk extends object> {
 }
 
 // ------------------------------
-// GraphQL Protocol Implementation
+// GraphQL Protocol Implementation (Simplified with Composition)
 // ------------------------------
 class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
   private endpoint: string;
   private sdkFactory: (client: GraphQLClient) => TSdk;
-  private sdkCache = new Map<string, TSdk>();
 
   constructor(
     serviceName: string,
@@ -382,80 +502,40 @@ class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
   }
 
   protected async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
-    let cacheKey: string;
-    let headers: Record<string, string>;
+    // Use AuthHeadersBuilder to get auth config (eliminates duplication)
+    const authConfig = await AuthHeadersBuilder.build(
+      authType,
+      this.serviceName,
+    );
 
-    switch (authType) {
-      case AuthType.JWT: {
-        if (!AuthManager.hasValidJwtToken()) {
-          throw new Error(
-            "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
+    // Use CacheManager to get or create SDK (eliminates cache duplication)
+    return this.cache.getOrCreate(authConfig.cacheKey, async () => {
+      const clientOptions: {
+        headers: Record<string, string>;
+        requestMiddleware?: RequestMiddleware;
+      } = { headers: authConfig.headers };
+
+      // IAM requires middleware because signature depends on request body
+      if (authType === AuthType.IAM) {
+        clientOptions.requestMiddleware = async (request) => {
+          const body =
+            typeof request.body === "string"
+              ? request.body
+              : JSON.stringify(request.body) || "";
+          const signedHeaders = await AuthManager.generateIamAuthHeaders(
+            this.endpoint,
+            body,
           );
-        }
-        const token = AuthManager.getJwtToken();
-        cacheKey = `jwt:${token}`;
-        headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
-        break;
-      }
-      case AuthType.IAM: {
-        if (!AuthManager.hasIamCredentials()) {
-          throw new Error(
-            "No IAM credentials available. Please login first with loginWithIam.",
-          );
-        }
-        const iamCredentials = AuthManager.getIamCredentials();
-        cacheKey = `iam:${iamCredentials.accessKeyId}`;
-        headers = {}; // Will be filled by request middleware (IAM needs body for signing)
-        break;
-      }
-      case AuthType.API_KEY: {
-        const apiKey = EnvConfig.getApiKey(
-          this.serviceName as unknown as ServiceType,
-        );
-        if (!apiKey) throw new Error(`[${this.serviceName}] API Key not found`);
-        cacheKey = `apiKey:${apiKey}`;
-        headers = { [HTTP_HEADERS.API_KEY]: apiKey };
-        break;
-      }
-      default:
-        throw new Error(`Unsupported auth type: ${authType}`);
-    }
-
-    const cached = this.sdkCache.get(cacheKey);
-    if (cached) return cached;
-
-    const clientOptions: {
-      headers: Record<string, string>;
-      requestMiddleware?: RequestMiddleware;
-    } = { headers };
-
-    // IAM requires middleware because signature depends on request body
-    if (authType === AuthType.IAM) {
-      clientOptions.requestMiddleware = async (request) => {
-        const body =
-          typeof request.body === "string"
-            ? request.body
-            : JSON.stringify(request.body) || "";
-        const signedHeaders = await AuthManager.generateIamAuthHeaders(
-          this.endpoint,
-          body,
-        );
-        return {
-          ...request,
-          headers: { ...request.headers, ...signedHeaders },
+          return {
+            ...request,
+            headers: { ...request.headers, ...signedHeaders },
+          };
         };
-      };
-    }
+      }
 
-    const client = new GraphQLClient(this.endpoint, clientOptions);
-    const sdk = this.sdkFactory(client);
-    this.sdkCache.set(cacheKey, sdk);
-    return sdk;
-  }
-
-  clearCache(): void {
-    super.clearCache();
-    this.sdkCache.clear();
+      const client = new GraphQLClient(this.endpoint, clientOptions);
+      return this.sdkFactory(client);
+    });
   }
 }
 
@@ -527,6 +607,15 @@ export class PetLinkInfrastructure {
   }
 
   // --- Performance Tracking ---
+  /**
+   * Log all performance records (or top N) sorted by duration.
+   * @param topN - Optional limit for number of records to log
+   */
+  logPerformance(topN?: number): void {
+    PerformanceTracker.logAll(topN);
+  }
+
+  /** @deprecated Use logPerformance() instead */
   printPerformanceReport(): void {
     PerformanceTracker.printReport();
   }
@@ -541,6 +630,10 @@ export class PetLinkInfrastructure {
 
   disablePerformanceTracking(): void {
     PerformanceTracker.disable();
+  }
+
+  getPerformanceRecords(): PerformanceRecord[] {
+    return PerformanceTracker.getRecords();
   }
 }
 

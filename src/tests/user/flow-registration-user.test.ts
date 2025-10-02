@@ -9,8 +9,9 @@ import type { PetIn } from "../../clients/petlink-infrastructure/endpoints/graph
 
 describe.sequential("Environment Setup", () => {
   // Enable performance tracking for this test suite
-  beforeAll(() => {
+  beforeAll(async () => {
     petlink.enablePerformanceTracking();
+    await globalState.cleanupAll();
   });
 
   // Print performance report after all tests
@@ -44,10 +45,11 @@ describe.sequential("Environment Setup", () => {
     let createdUser: any;
 
     it("Verify phone number availability", async () => {
-      const responseCheckPhoneNumber = await petlink.core.graphql.public.checkContact({
-        contact: userPhoneNumber,
-        contactType: "PHONE",
-      });
+      const responseCheckPhoneNumber =
+        await petlink.core.graphql.public.checkContact({
+          contact: userPhoneNumber,
+          contactType: "PHONE",
+        });
 
       expect(responseCheckPhoneNumber.checkContact).toBeDefined();
       expect(responseCheckPhoneNumber.checkContact.code).toBe("200");
@@ -261,7 +263,7 @@ describe.sequential("Environment Setup", () => {
     it("Try to create PETs with wrong combinations data", async () => {
       // Test validation rules:
       // 1. PUREBREED must have exactly 1 breed
-      // 2. MIXED_BREED must have exactly 2 breeds
+      // 2. MIXED_BREED must have exactly 2 breeds (and both should be differente breeds)
       // 3. DOG species cannot use CAT breeds
       // 4. CAT species cannot use DOG breeds
 
@@ -269,6 +271,7 @@ describe.sequential("Environment Setup", () => {
       const [
         dogPurebreedWithTwoBreeds,
         dogMixedbreedWithOneBreed,
+        dogMixedbreedWithwoEqualsBreed,
         catWithDogBreed,
         dogWithCatBreed,
       ] = await Promise.all([
@@ -291,6 +294,17 @@ describe.sequential("Environment Setup", () => {
             breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Only 1 breed
           },
         }),
+        // Invalid: MIXED_BREED with 2 equals breeds
+        petlink.core.graphql.authJwt.createPet({
+          pet: {
+            ...defaultDog,
+            breedType: "MIXED_BREED",
+            breeds: [
+              "5b0bfddb-532e-41cb-9705-b2ddc21226ef",
+              "5b0bfddb-532e-41cb-9705-b2ddc21226ef",
+            ],
+          },
+        }),
         // Invalid: CAT with DOG breed
         petlink.core.graphql.authJwt.createPet({
           pet: {
@@ -311,6 +325,7 @@ describe.sequential("Environment Setup", () => {
       // Assert all requests failed with validation error (400)
       expect(dogPurebreedWithTwoBreeds.createPet.code).toBe("400");
       expect(dogMixedbreedWithOneBreed.createPet.code).toBe("400");
+      expect(dogMixedbreedWithwoEqualsBreed.createPet.code).toBe("400");
       expect(catWithDogBreed.createPet.code).toBe("400");
       expect(dogWithCatBreed.createPet.code).toBe("400");
     });
@@ -327,6 +342,14 @@ describe.sequential("Environment Setup", () => {
       const petSpecies = response.getPets.pets?.map((pet) => pet.species);
       expect(petSpecies).toContain("DOG");
       expect(petSpecies).toContain("CAT");
+    });
+
+    it("Update PET should works correctly", async () => {
+      //todo: implemetns update pet
+    });
+
+    it("Delet PET should works correctly", async () => {
+      //todo: implemetns delete pet
     });
 
     afterAll(async () => {
