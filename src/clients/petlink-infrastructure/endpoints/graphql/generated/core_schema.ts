@@ -692,6 +692,7 @@ export type MutationCreatePetArgs = {
 };
 
 export type MutationCreatePetlinkGpsArgs = {
+  appBrand: AppBrand;
   petlinkGps: PetlinkGpsIn;
 };
 
@@ -800,6 +801,7 @@ export type MutationSendSettingArgs = {
 };
 
 export type MutationSendTokenEmailArgs = {
+  appBrand: AppBrand;
   email?: InputMaybe<Scalars["String"]["input"]>;
   languageId?: InputMaybe<LanguageId>;
 };
@@ -818,11 +820,12 @@ export type MutationSetPetIsLostArgs = {
 };
 
 export type MutationSetSsoTokenArgs = {
+  appBrand: AppBrand;
   productId: Scalars["String"]["input"];
 };
 
 export type MutationSignUpUserArgs = {
-  appBrand?: InputMaybe<AppBrand>;
+  appBrand: AppBrand;
   languageId?: InputMaybe<LanguageId>;
   otpData: OtpInput;
   user: UserIn;
@@ -834,6 +837,7 @@ export type MutationStopRenewingAddonArgs = {
 };
 
 export type MutationStopRenewingSubscriptionArgs = {
+  appBrand: AppBrand;
   cancelReason: Scalars["String"]["input"];
   cancelReasonCode: CancelReasonCodeEnum;
   subscriptionId: Scalars["String"]["input"];
@@ -844,6 +848,7 @@ export type MutationUpdateBillingInfoArgs = {
 };
 
 export type MutationUpdateEmailUserArgs = {
+  appBrand: AppBrand;
   email: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
 };
@@ -886,6 +891,7 @@ export type MutationUpdateUserArgs = {
 };
 
 export type MutationUpdateUserContactArgs = {
+  appBrand: AppBrand;
   contact: Scalars["String"]["input"];
   contactType: ContactType;
   userId: Scalars["String"]["input"];
@@ -1243,6 +1249,7 @@ export interface PetlinkSubscription {
 export interface PetlinkSubscriptionItem {
   __typename?: "PetlinkSubscriptionItem";
   amount: Scalars["Int"]["output"];
+  itemId: Scalars["String"]["output"];
   itemPriceId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
   name?: Maybe<Scalars["String"]["output"]>;
@@ -1494,7 +1501,7 @@ export type QueryGetCountryStateArgs = {
 };
 
 export type QueryGetDictionaryArgs = {
-  appBrand?: InputMaybe<AppBrand>;
+  appBrand: AppBrand;
   languageId?: InputMaybe<LanguageId>;
 };
 
@@ -2189,6 +2196,7 @@ export interface SubscriptionShortInfo {
 export interface SubscriptionShortInfoItem {
   __typename?: "SubscriptionShortInfoItem";
   amount: Scalars["Float"]["output"];
+  itemId: Scalars["String"]["output"];
   itemPriceId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
   name?: Maybe<Scalars["String"]["output"]>;
@@ -2356,9 +2364,9 @@ export interface UserSettingsIn {
 }
 
 export interface UtilityIntegrationTestInput {
+  phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
-  userId?: InputMaybe<Scalars["String"]["input"]>;
   utilityType: UtilityTestTypeEnum;
 }
 
@@ -2535,27 +2543,6 @@ export type DeletePetMutation = {
   };
 };
 
-export type GetBreedQueryVariables = Exact<{
-  species: SpeciesEnum;
-  languageId?: InputMaybe<LanguageId>;
-}>;
-
-export type GetBreedQuery = {
-  __typename?: "Query";
-  getBreed: {
-    __typename?: "ResponseGetBreed";
-    code: string;
-    message: string;
-    translationCode?: string | null;
-    items?: Array<{
-      __typename?: "Breed";
-      breedName: string;
-      code: string;
-      species: SpeciesEnum;
-    }> | null;
-  };
-};
-
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -2708,6 +2695,27 @@ export type GetColorsQuery = {
     message: string;
     translationCode?: string | null;
     items?: Array<{ __typename?: "Color"; code: string; name: string }> | null;
+  };
+};
+
+export type GetBreedQueryVariables = Exact<{
+  species: SpeciesEnum;
+  languageId?: InputMaybe<LanguageId>;
+}>;
+
+export type GetBreedQuery = {
+  __typename?: "Query";
+  getBreed: {
+    __typename?: "ResponseGetBreed";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items?: Array<{
+      __typename?: "Breed";
+      breedName: string;
+      code: string;
+      species: SpeciesEnum;
+    }> | null;
   };
 };
 
@@ -3496,99 +3504,6 @@ export const DeletePetDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export const GetBreedDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "query",
-      name: { kind: "Name", value: "getBreed" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: {
-            kind: "Variable",
-            name: { kind: "Name", value: "species" },
-          },
-          type: {
-            kind: "NonNullType",
-            type: {
-              kind: "NamedType",
-              name: { kind: "Name", value: "SpeciesEnum" },
-            },
-          },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: {
-            kind: "Variable",
-            name: { kind: "Name", value: "languageId" },
-          },
-          type: {
-            kind: "NamedType",
-            name: { kind: "Name", value: "LanguageId" },
-          },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "getBreed" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "species" },
-                value: {
-                  kind: "Variable",
-                  name: { kind: "Name", value: "species" },
-                },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "languageId" },
-                value: {
-                  kind: "Variable",
-                  name: { kind: "Name", value: "languageId" },
-                },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "translationCode" },
-                },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "items" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "breedName" },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "code" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "species" },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
 export const GetUserDocument = {
   kind: "Document",
   definitions: [
@@ -4175,6 +4090,99 @@ export const GetColorsDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetBreedDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getBreed" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "species" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "SpeciesEnum" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "languageId" },
+          },
+          type: {
+            kind: "NamedType",
+            name: { kind: "Name", value: "LanguageId" },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getBreed" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "species" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "species" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "languageId" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "breedName" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "code" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "species" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -4339,24 +4347,6 @@ export function getSdk(
         variables,
       );
     },
-    getBreed(
-      variables: GetBreedQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<GetBreedQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetBreedQuery>({
-            document: GetBreedDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "getBreed",
-        "query",
-        variables,
-      );
-    },
     getUser(
       variables?: GetUserQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -4443,6 +4433,24 @@ export function getSdk(
             signal,
           }),
         "getColors",
+        "query",
+        variables,
+      );
+    },
+    getBreed(
+      variables: GetBreedQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetBreedQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetBreedQuery>({
+            document: GetBreedDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getBreed",
         "query",
         variables,
       );

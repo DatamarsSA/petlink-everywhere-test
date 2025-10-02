@@ -23,49 +23,29 @@ export class Store {
   }
 
   /**
-   * Elimina l'utente corrente
-   */
-  public async deleteUser(): Promise<void> {
-    if (!this.state.user) {
-      console.log("No user to delete in the current state");
-      try {
-        await petlink.loginWithPhone(
-          fixtures.user.phone,
-          fixtures.user.password,
-        );
-        const user = await petlink.core.graphql.authJwt.getUser();
-
-        petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-        await petlink.core.graphql.authIam.utilityIntegrationTest({
-          input: {
-            userId: user.getUser.user!.id,
-            utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
-          },
-        });
-
-        console.log(`Deleted default user with ID: ${user.getUser.user!.id}`);
-      } catch (error) {
-        // Silently ignore if user doesn't exist (expected in first run)
-      }
-
-      return;
-    }
-  }
-
-  /**
    * Pulisce l'ambiente eliminando utenti, email e messaggi SMS
    */
   public async cleanupAll(): Promise<void> {
     console.log("Cleaning up test environment");
-    
-    // Esegui tutte le operazioni di cleanup in parallelo
+    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
+
     await Promise.all([
-      this.deleteUser(),
-      gmailClient.deleteAllEmails().then(() => console.log("Deleted all emails")),
-      twilioClient.deleteAllMessagesSentoToNumber(fixtures.user.phone)
-        .then(() => console.log(`Deleted SMS for ${fixtures.user.phone}`))
+      petlink.core.graphql.authIam
+        .utilityIntegrationTest({
+          input: {
+            phone: fixtures.user.phone,
+            utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
+          },
+        })
+        .then(() => console.log("Deleted User and all his related entity")),
+      gmailClient
+        .deleteAllEmails()
+        .then(() => console.log("Deleted all emails")),
+      twilioClient
+        .deleteAllMessagesSentoToNumber(fixtures.user.phone)
+        .then(() => console.log(`Deleted SMS for ${fixtures.user.phone}`)),
     ]);
-    
+
     // Resetta lo stato
     this.state = {};
   }

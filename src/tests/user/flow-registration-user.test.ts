@@ -8,15 +8,13 @@ import { fixtures } from "../../test-utils/fixtures/fixtures.js";
 import type { PetIn } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe.sequential("Environment Setup", () => {
-  // Enable performance tracking for this test suite
   beforeAll(async () => {
-    petlink.enablePerformanceTracking();
     await globalState.cleanupAll();
   });
 
-  // Print performance report after all tests
+  // Log performance report after all tests (top 10 slowest requests)
   afterAll(() => {
-    petlink.printPerformanceReport();
+    petlink.logPerformance();
   });
   const userData = fixtures.user;
   const userPhoneNumber = userData.phone;

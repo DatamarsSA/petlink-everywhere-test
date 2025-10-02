@@ -40,26 +40,24 @@ export type PerformanceRecord = {
 
 class PerformanceTracker {
   private static records: PerformanceRecord[] = [];
-  private static enabled: boolean = env.ENABLE_PERFORMANCE_TRACKING ?? false;
 
   static record(data: Omit<PerformanceRecord, "timestamp">): void {
-    if (!this.enabled) return;
     this.records.push({ ...data, timestamp: new Date() });
   }
 
   /**
-   * Log all performance records (or top N) sorted by duration (descending).
-   * @param topN - Optional limit for number of records to log
+   * Log performance records sorted by duration (descending).
+   * @param limit - Optional limit for number of records to log. If not provided, logs all records.
    */
-  static logAll(topN?: number): void {
+  static logRecords(limit?: number): void {
     if (this.records.length === 0) {
       console.log("\n=== 🚀 Performance Report ===");
-      console.log("No requests tracked (tracking might be disabled)");
+      console.log("No requests tracked yet");
       return;
     }
 
     const sorted = [...this.records].sort((a, b) => b.duration - a.duration);
-    const toLog = topN ? sorted.slice(0, topN) : sorted;
+    const toLog = limit ? sorted.slice(0, limit) : sorted;
 
     console.log(
       `\n=== 🚀 Performance Report (${toLog.length}/${this.records.length} requests) ===`,
@@ -81,21 +79,8 @@ class PerformanceTracker {
     }
   }
 
-  /** @deprecated Use logAll() instead */
-  static printReport(): void {
-    this.logAll();
-  }
-
   static clear(): void {
     this.records = [];
-  }
-
-  static enable(): void {
-    this.enabled = true;
-  }
-
-  static disable(): void {
-    this.enabled = false;
   }
 
   static getRecords(): PerformanceRecord[] {
@@ -608,28 +593,15 @@ export class PetLinkInfrastructure {
 
   // --- Performance Tracking ---
   /**
-   * Log all performance records (or top N) sorted by duration.
-   * @param topN - Optional limit for number of records to log
+   * Log performance records sorted by duration (descending).
+   * @param limit - Optional limit for number of records to log. If not provided, logs all records.
    */
-  logPerformance(topN?: number): void {
-    PerformanceTracker.logAll(topN);
-  }
-
-  /** @deprecated Use logPerformance() instead */
-  printPerformanceReport(): void {
-    PerformanceTracker.printReport();
+  logPerformance(limit?: number): void {
+    PerformanceTracker.logRecords(limit);
   }
 
   clearPerformanceData(): void {
     PerformanceTracker.clear();
-  }
-
-  enablePerformanceTracking(): void {
-    PerformanceTracker.enable();
-  }
-
-  disablePerformanceTracking(): void {
-    PerformanceTracker.disable();
   }
 
   getPerformanceRecords(): PerformanceRecord[] {

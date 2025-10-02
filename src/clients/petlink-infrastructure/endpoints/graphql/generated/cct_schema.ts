@@ -645,7 +645,7 @@ export interface Invoice {
   billingAddress?: Maybe<InvoiceBillingAddress>;
   businessEntityId: Scalars["String"]["output"];
   chargebeeInvoiceId: Scalars["String"]["output"];
-  chargebeeSubscriptionId: Scalars["String"]["output"];
+  chargebeeSubscriptionId?: Maybe<Scalars["String"]["output"]>;
   creationDate: Scalars["String"]["output"];
   currencyCode: Scalars["String"]["output"];
   discountItems?: Maybe<Array<DiscoutItem>>;
@@ -996,6 +996,7 @@ export interface PetProtection {
   customerServiceContact: Scalars["String"]["output"];
   fileName?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
+  invoice?: Maybe<Invoice>;
   name: Scalars["String"]["output"];
   period: Scalars["Int"]["output"];
   periodUnit: Scalars["String"]["output"];
@@ -1132,6 +1133,7 @@ export interface Query {
   getOrders: GetOrdersResponse;
   getPet: GetPetResponse;
   getPetProtection: ResponseGetPetProtection;
+  getPetProtections: ResponseGetPetProtections;
   getPlanProfiles: GetPlanProfilesResponse;
   getReplacementPetlinkGpsHistory: ResponseGetReplacementHistory;
   getShelterOrder: ResponseGetShelterOrder;
@@ -1236,6 +1238,12 @@ export type QueryGetPetArgs = {
 
 export type QueryGetPetProtectionArgs = {
   petProtectionId: Scalars["String"]["input"];
+};
+
+export type QueryGetPetProtectionsArgs = {
+  order?: InputMaybe<OrderInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  petId: Scalars["String"]["input"];
 };
 
 export type QueryGetReplacementPetlinkGpsHistoryArgs = {
@@ -1354,6 +1362,15 @@ export interface ResponseGetPetProtection {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseGetPetProtections {
+  __typename?: "ResponseGetPetProtections";
+  code: Scalars["String"]["output"];
+  items?: Maybe<Array<PetProtection>>;
+  message: Scalars["String"]["output"];
+  pagination: Pagination;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseGetReplacementHistory {
   __typename?: "ResponseGetReplacementHistory";
   code: Scalars["String"]["output"];
@@ -1456,6 +1473,7 @@ export interface SubscriptionItem {
   __typename?: "SubscriptionItem";
   amount: Scalars["Int"]["output"];
   billingCycles?: Maybe<Scalars["Int"]["output"]>;
+  itemId: Scalars["String"]["output"];
   itemPriceId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
   name?: Maybe<Scalars["String"]["output"]>;
