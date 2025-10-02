@@ -33,10 +33,10 @@ export class Store {
           fixtures.user.phone,
           fixtures.user.password,
         );
-        const user = await petlink.core.authJwt.getUser();
+        const user = await petlink.core.graphql.authJwt.getUser();
 
         petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-        await petlink.core.authIam.utilityIntegrationTest({
+        await petlink.core.graphql.authIam.utilityIntegrationTest({
           input: {
             userId: user.getUser.user!.id,
             utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,

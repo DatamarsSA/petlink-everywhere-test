@@ -2407,7 +2407,7 @@ export type SignUpUserMutationVariables = Exact<{
   user: UserIn;
   otpData: OtpInput;
   languageId?: InputMaybe<LanguageId>;
-  appBrand?: InputMaybe<AppBrand>;
+  appBrand: AppBrand;
 }>;
 
 export type SignUpUserMutation = {
@@ -2695,6 +2695,22 @@ export type GetPetsQuery = {
   };
 };
 
+export type GetColorsQueryVariables = Exact<{
+  species: SpeciesEnum;
+  languageId?: InputMaybe<LanguageId>;
+}>;
+
+export type GetColorsQuery = {
+  __typename?: "Query";
+  getColors: {
+    __typename?: "ResponseGetColors";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items?: Array<{ __typename?: "Color"; code: string; name: string }> | null;
+  };
+};
+
 export const SendOtpDocument = {
   kind: "Document",
   definitions: [
@@ -2926,8 +2942,11 @@ export const SignUpUserDocument = {
             name: { kind: "Name", value: "appBrand" },
           },
           type: {
-            kind: "NamedType",
-            name: { kind: "Name", value: "AppBrand" },
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "AppBrand" },
+            },
           },
         },
       ],
@@ -4070,6 +4089,92 @@ export const GetPetsDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetColorsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getColors" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "species" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "SpeciesEnum" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "languageId" },
+          },
+          type: {
+            kind: "NamedType",
+            name: { kind: "Name", value: "LanguageId" },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getColors" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "species" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "species" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "languageId" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "code" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -4320,6 +4425,24 @@ export function getSdk(
             signal,
           }),
         "getPets",
+        "query",
+        variables,
+      );
+    },
+    getColors(
+      variables: GetColorsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetColorsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetColorsQuery>({
+            document: GetColorsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getColors",
         "query",
         variables,
       );

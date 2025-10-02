@@ -27,6 +27,63 @@ export const HTTP_HEADERS = {
 };
 
 // ------------------------------
+// Performance Tracker
+// ------------------------------
+type PerformanceRecord = {
+  service: string;
+  protocol: string;
+  authType: string;
+  operation: string;
+  duration: number;
+  timestamp: Date;
+};
+
+class PerformanceTracker {
+  private static records: PerformanceRecord[] = [];
+  private static enabled: boolean = env.ENABLE_PERFORMANCE_TRACKING ?? false;
+
+  static record(data: Omit<PerformanceRecord, "timestamp">): void {
+    if (!this.enabled) return;
+    this.records.push({ ...data, timestamp: new Date() });
+  }
+
+  static printReport(): void {
+    if (this.records.length === 0) {
+      console.log("\n=== 🚀 Performance Report ===");
+      console.log("No requests tracked (tracking might be disabled)");
+      return;
+    }
+
+    const sorted = [...this.records].sort((a, b) => b.duration - a.duration);
+    console.log("\n=== 🚀 Performance Report (sorted by duration) ===");
+    sorted.forEach((r, i) => {
+      console.log(
+        `${i + 1}. [${r.service}/${r.protocol}/${r.authType}] ${r.operation} - ${r.duration}ms`,
+      );
+    });
+    console.log(`\nTotal requests: ${this.records.length}`);
+
+    const avgDuration = Math.round(
+      this.records.reduce((sum, r) => sum + r.duration, 0) /
+        this.records.length,
+    );
+    console.log(`Average duration: ${avgDuration}ms`);
+  }
+
+  static clear(): void {
+    this.records = [];
+  }
+
+  static enable(): void {
+    this.enabled = true;
+  }
+
+  static disable(): void {
+    this.enabled = false;
+  }
+}
+
+// ------------------------------
 // Service types
 // ------------------------------
 export enum ServiceType {
@@ -238,14 +295,16 @@ class AuthManager {
 }
 
 // ------------------------------
-// Base client (no retry)
+// Base Protocol
 // ------------------------------
-abstract class BaseClient<TSdk extends object> {
-  protected target: ServiceType;
+abstract class BaseProtocol<TSdk extends object> {
+  protected serviceName: string;
+  protected protocolName: string;
   private sdkCache = new Map<string, { key: string; sdk: TSdk }>();
 
-  protected constructor(target: ServiceType) {
-    this.target = target;
+  protected constructor(serviceName: string, protocolName: string) {
+    this.serviceName = serviceName;
+    this.protocolName = protocolName;
   }
 
   clearCache(): void {
@@ -254,99 +313,41 @@ abstract class BaseClient<TSdk extends object> {
 
   /**
    * Create a proxy that lazily resolves the underlying SDK bound to the chosen auth.
+   * Also tracks performance for each operation.
    */
   private makeSdkProxy(authType: AuthType): TSdk {
-    const self = this as BaseClient<TSdk>;
+    const self = this;
     return new Proxy({} as TSdk, {
-      get: (_target, prop, _recv) => {
+      get: (_target, prop) => {
         return async (...args: any[]) => {
           const sdk = await self.getOrCreateSdk(authType);
           const member = (sdk as any)[prop];
           if (typeof member !== "function") return member;
-          return member(...args);
+
+          // Track performance
+          const startTime = performance.now();
+          try {
+            const result = await member(...args);
+            return result;
+          } finally {
+            const duration = Math.round(performance.now() - startTime);
+            PerformanceTracker.record({
+              service: this.serviceName,
+              protocol: this.protocolName,
+              authType: authType,
+              operation: String(prop),
+              duration,
+            });
+          }
         };
       },
     }) as TSdk;
   }
 
   /**
-   * Resolve or create the underlying GraphQL SDK configured with the right auth headers/middleware.
+   * Resolve or create the underlying SDK configured with the right auth headers/middleware.
    */
-  private async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
-    const endpoint = EnvConfig.getEndpoint(this.target);
-    let cacheKey: string;
-    let headers: Record<string, string>;
-
-    switch (authType) {
-      case AuthType.JWT: {
-        if (!AuthManager.hasValidJwtToken()) {
-          throw new Error(
-            "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
-          );
-        }
-        const token = AuthManager.getJwtToken();
-        cacheKey = `jwt:${token}`;
-        // NOTE: AppSync + Cognito usually expects the raw JWT here; if your API expects Bearer, prepend it.
-        headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
-        break;
-      }
-      case AuthType.IAM: {
-        if (!AuthManager.hasIamCredentials()) {
-          throw new Error(
-            "No IAM credentials available. Please login first with loginWithIam.",
-          );
-        }
-        const iamCredentials = AuthManager.getIamCredentials();
-        cacheKey = `iam:${iamCredentials.accessKeyId}`;
-        headers = {}; // Will be filled by request middleware
-        break;
-      }
-      case AuthType.API_KEY: {
-        const apiKey = EnvConfig.getApiKey(this.target);
-        if (!apiKey) throw new Error(`[${this.target}] API Key not found`);
-        cacheKey = `apiKey:${apiKey}`;
-        headers = { [HTTP_HEADERS.API_KEY]: apiKey };
-        break;
-      }
-      default:
-        throw new Error(`Unsupported auth type: ${authType}`);
-    }
-
-    const cached = this.sdkCache.get(cacheKey);
-    if (cached) return cached.sdk;
-
-    const clientOptions: {
-      headers: Record<string, string>;
-      requestMiddleware?: RequestMiddleware;
-    } = {
-      headers,
-    };
-
-    if (authType === AuthType.IAM) {
-      clientOptions.requestMiddleware = async (request) => {
-        const body =
-          typeof request.body === "string"
-            ? request.body
-            : JSON.stringify(request.body) || "";
-        const signedHeaders = await AuthManager.generateIamAuthHeaders(
-          endpoint,
-          body,
-        );
-        return {
-          ...request,
-          headers: {
-            ...request.headers,
-            ...signedHeaders,
-          },
-        };
-      };
-    }
-
-    const client = new GraphQLClient(endpoint, clientOptions);
-    const sdk = this.createSdk(client);
-    this.sdkCache.set(cacheKey, { key: cacheKey, sdk });
-    return sdk;
-  }
+  protected abstract getOrCreateSdk(authType: AuthType): Promise<TSdk>;
 
   // -------------- Auth facets --------------
   get authJwt(): TSdk {
@@ -360,39 +361,150 @@ abstract class BaseClient<TSdk extends object> {
   get public(): TSdk {
     return this.makeSdkProxy(AuthType.API_KEY);
   }
-
-  protected abstract createSdk(client: GraphQLClient): TSdk;
 }
 
 // ------------------------------
-// Concrete clients
+// GraphQL Protocol Implementation
 // ------------------------------
-export class CoreClient extends BaseClient<CoreSdk> {
+class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
+  private endpoint: string;
+  private sdkFactory: (client: GraphQLClient) => TSdk;
+  private sdkCache = new Map<string, TSdk>();
+
+  constructor(
+    serviceName: string,
+    endpoint: string,
+    sdkFactory: (client: GraphQLClient) => TSdk,
+  ) {
+    super(serviceName, "graphql");
+    this.endpoint = endpoint;
+    this.sdkFactory = sdkFactory;
+  }
+
+  protected async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
+    let cacheKey: string;
+    let headers: Record<string, string>;
+
+    switch (authType) {
+      case AuthType.JWT: {
+        if (!AuthManager.hasValidJwtToken()) {
+          throw new Error(
+            "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
+          );
+        }
+        const token = AuthManager.getJwtToken();
+        cacheKey = `jwt:${token}`;
+        headers = { [HTTP_HEADERS.AUTHORIZATION]: token };
+        break;
+      }
+      case AuthType.IAM: {
+        if (!AuthManager.hasIamCredentials()) {
+          throw new Error(
+            "No IAM credentials available. Please login first with loginWithIam.",
+          );
+        }
+        const iamCredentials = AuthManager.getIamCredentials();
+        cacheKey = `iam:${iamCredentials.accessKeyId}`;
+        headers = {}; // Will be filled by request middleware (IAM needs body for signing)
+        break;
+      }
+      case AuthType.API_KEY: {
+        const apiKey = EnvConfig.getApiKey(
+          this.serviceName as unknown as ServiceType,
+        );
+        if (!apiKey) throw new Error(`[${this.serviceName}] API Key not found`);
+        cacheKey = `apiKey:${apiKey}`;
+        headers = { [HTTP_HEADERS.API_KEY]: apiKey };
+        break;
+      }
+      default:
+        throw new Error(`Unsupported auth type: ${authType}`);
+    }
+
+    const cached = this.sdkCache.get(cacheKey);
+    if (cached) return cached;
+
+    const clientOptions: {
+      headers: Record<string, string>;
+      requestMiddleware?: RequestMiddleware;
+    } = { headers };
+
+    // IAM requires middleware because signature depends on request body
+    if (authType === AuthType.IAM) {
+      clientOptions.requestMiddleware = async (request) => {
+        const body =
+          typeof request.body === "string"
+            ? request.body
+            : JSON.stringify(request.body) || "";
+        const signedHeaders = await AuthManager.generateIamAuthHeaders(
+          this.endpoint,
+          body,
+        );
+        return {
+          ...request,
+          headers: { ...request.headers, ...signedHeaders },
+        };
+      };
+    }
+
+    const client = new GraphQLClient(this.endpoint, clientOptions);
+    const sdk = this.sdkFactory(client);
+    this.sdkCache.set(cacheKey, sdk);
+    return sdk;
+  }
+
+  clearCache(): void {
+    super.clearCache();
+    this.sdkCache.clear();
+  }
+}
+
+// ------------------------------
+// Service Containers
+// ------------------------------
+class CoreService {
+  readonly graphql: GraphQLProtocol<CoreSdk>;
+
   constructor() {
-    super(ServiceType.CORE);
+    this.graphql = new GraphQLProtocol(
+      "CORE",
+      EnvConfig.getEndpoint(ServiceType.CORE),
+      (client) => getCoreSdk(client),
+    );
   }
 
-  protected createSdk(client: GraphQLClient): CoreSdk {
-    return getCoreSdk(client);
+  clearCache(): void {
+    this.graphql.clearCache();
   }
 }
 
-export class CctClient extends BaseClient<CctSdk> {
+class CctService {
+  readonly graphql: GraphQLProtocol<CctSdk>;
+
   constructor() {
-    super(ServiceType.CCT);
+    this.graphql = new GraphQLProtocol(
+      "CCT",
+      EnvConfig.getEndpoint(ServiceType.CCT),
+      (client) => getCctSdk(client),
+    );
   }
 
-  protected createSdk(client: GraphQLClient): CctSdk {
-    return getCctSdk(client);
+  clearCache(): void {
+    this.graphql.clearCache();
   }
 }
 
 // ------------------------------
-// PetLink infrastructure (facade)
+// PetLink Infrastructure (Facade)
 // ------------------------------
 export class PetLinkInfrastructure {
-  readonly core = new CoreClient();
-  readonly cct = new CctClient();
+  readonly core: CoreService;
+  readonly cct: CctService;
+
+  constructor() {
+    this.core = new CoreService();
+    this.cct = new CctService();
+  }
 
   // --- Auth ---
   async loginWithEmail(email: string, password: string): Promise<void> {
@@ -412,6 +524,23 @@ export class PetLinkInfrastructure {
     AuthManager.clearCache();
     this.core.clearCache();
     this.cct.clearCache();
+  }
+
+  // --- Performance Tracking ---
+  printPerformanceReport(): void {
+    PerformanceTracker.printReport();
+  }
+
+  clearPerformanceData(): void {
+    PerformanceTracker.clear();
+  }
+
+  enablePerformanceTracking(): void {
+    PerformanceTracker.enable();
+  }
+
+  disablePerformanceTracking(): void {
+    PerformanceTracker.disable();
   }
 }
 

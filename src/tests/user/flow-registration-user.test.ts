@@ -8,6 +8,15 @@ import { fixtures } from "../../test-utils/fixtures/fixtures.js";
 import type { PetIn } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe.sequential("Environment Setup", () => {
+  // Enable performance tracking for this test suite
+  beforeAll(() => {
+    petlink.enablePerformanceTracking();
+  });
+
+  // Print performance report after all tests
+  afterAll(() => {
+    petlink.printPerformanceReport();
+  });
   const userData = fixtures.user;
   const userPhoneNumber = userData.phone;
   const userEmail = userData.email;
@@ -20,6 +29,13 @@ describe.sequential("Environment Setup", () => {
     errors: [],
   };
 
+  // beforeAll(async () => {
+  //   await globalState.cleanupAll();
+  // });
+  it("CleanUp all", async () => {
+    await globalState.cleanupAll();
+  });
+
   describe("User Registration", () => {
     // Variabili condivise tra i test
     let verificationId: string;
@@ -27,16 +43,8 @@ describe.sequential("Environment Setup", () => {
 
     let createdUser: any;
 
-    beforeAll(async () => {
-      // await globalState.cleanupAll();
-    });
-
-    it("CleanUp all", async () => {
-      // await globalState.cleanupAll();
-    });
-
     it("Verify phone number availability", async () => {
-      const responseCheckPhoneNumber = await petlink.core.public.checkContact({
+      const responseCheckPhoneNumber = await petlink.core.graphql.public.checkContact({
         contact: userPhoneNumber,
         contactType: "PHONE",
       });
@@ -46,7 +54,7 @@ describe.sequential("Environment Setup", () => {
     });
 
     it("Send OTP to phone", async () => {
-      const response = await petlink.core.public.sendOtp({
+      const response = await petlink.core.graphql.public.sendOtp({
         phone: userPhoneNumber,
         languageId: userData.languageId,
       });
@@ -75,7 +83,7 @@ describe.sequential("Environment Setup", () => {
     }, 70000); // Timeout più lungo per l'attesa dell'SMS
 
     it("Verify phone number (sending received OTP)", async () => {
-      const response = await petlink.core.public.checkOtp({
+      const response = await petlink.core.graphql.public.checkOtp({
         verificationId,
         otp: receivedOtp!,
         contact: userPhoneNumber,
@@ -86,7 +94,7 @@ describe.sequential("Environment Setup", () => {
     });
 
     it("Complete user registration", async () => {
-      const response = await petlink.core.public.signUpUser({
+      const response = await petlink.core.graphql.public.signUpUser({
         user: {
           email: userEmail,
           name: userData.name,
@@ -114,7 +122,7 @@ describe.sequential("Environment Setup", () => {
 
     it("Try login new user (with PHONE)", async () => {
       await petlink.loginWithPhone(userPhoneNumber, userPassword);
-      const createdUser = await petlink.core.authJwt.getUser();
+      const createdUser = await petlink.core.graphql.authJwt.getUser();
 
       expect(createdUser.getUser.user).toBeDefined();
       expect(createdUser.getUser.user?.phone).toBe(userPhoneNumber);
@@ -142,7 +150,7 @@ describe.sequential("Environment Setup", () => {
       // waitFor guarantees linkUrlToOpen is not null (throws on timeout)
       const params = extractParamsFromUrl(linkUrlToOpen!);
 
-      const response = await petlink.core.public.verifyEmail({
+      const response = await petlink.core.graphql.public.verifyEmail({
         uuid: params.uuid!,
         otp: params.otp!,
         verificationId: params.verificationId!,
@@ -153,7 +161,7 @@ describe.sequential("Environment Setup", () => {
 
     it("Try login new user (with EMAIL)", async () => {
       await petlink.loginWithEmail(userEmail, userPassword);
-      const user = await petlink.core.authJwt.getUser();
+      const user = await petlink.core.graphql.authJwt.getUser();
 
       expect(user.getUser.user).toBeDefined();
       expect(user.getUser.user?.email).toBe(userEmail);
@@ -173,7 +181,7 @@ describe.sequential("Environment Setup", () => {
   });
 
   describe("Pet Registration", () => {
-    const fixtureCat = {
+    const defaultCat = {
       name: fixtures.pet.defaultCat.name,
       species: fixtures.pet.defaultCat.species,
       breedType: fixtures.pet.defaultCat.breedType,
@@ -184,7 +192,7 @@ describe.sequential("Environment Setup", () => {
       livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
       primaryColor: fixtures.pet.defaultCat.primaryColor,
     } as PetIn;
-    const fixtureDog = {
+    const defaultDog = {
       name: fixtures.pet.defaultDog.name,
       species: fixtures.pet.defaultDog.species,
       breedType: fixtures.pet.defaultDog.breedType,
@@ -205,90 +213,110 @@ describe.sequential("Environment Setup", () => {
     });
 
     it("Create a DOG for the user", async () => {
-      const response = await petlink.core.authJwt.createPet({
-        pet: fixtureDog,
+      const response = await petlink.core.graphql.authJwt.createPet({
+        pet: defaultDog,
       });
 
       expect(response.createPet).toBeDefined();
       expect(response.createPet.code).toBe("200");
       expect(response.createPet.pet).toBeDefined();
-      expect(response.createPet.pet?.name).toBe(fixtureDog.name);
-      expect(response.createPet.pet?.species).toBe(fixtureDog.species);
-      expect(response.createPet.pet?.breedType).toBe(fixtureDog.breedType);
-      expect(response.createPet.pet?.gender).toBe(fixtureDog.gender);
+      expect(response.createPet.pet?.name).toBe(defaultDog.name);
+      expect(response.createPet.pet?.species).toBe(defaultDog.species);
+      expect(response.createPet.pet?.breedType).toBe(defaultDog.breedType);
+      expect(response.createPet.pet?.gender).toBe(defaultDog.gender);
       expect(response.createPet.pet?.id).toBeDefined();
-
-      // Salva il pet creato per i test successivi
-      createdDog = response.createPet.pet;
+      expect(response.createPet.pet?.weight).toBe(defaultDog.weight);
+      expect(response.createPet.pet?.birthDate).toBe(defaultDog.birthDate);
+      expect(response.createPet.pet?.livingEnvironment).toBe(
+        defaultDog.livingEnvironment,
+      );
+      expect(response.createPet.pet?.primaryColor).toBe(
+        defaultDog.primaryColor,
+      );
     });
 
     it("Create a CAT for the user", async () => {
-      const response = await petlink.core.authJwt.createPet({
-        pet: fixtureCat,
+      const response = await petlink.core.graphql.authJwt.createPet({
+        pet: defaultCat,
       });
 
       expect(response.createPet).toBeDefined();
       expect(response.createPet.code).toBe("200");
       expect(response.createPet.pet).toBeDefined();
-      expect(response.createPet.pet?.name).toBe(fixtureCat.name);
-      expect(response.createPet.pet?.species).toBe(fixtureCat.species);
-      expect(response.createPet.pet?.breedType).toBe(fixtureCat.breedType);
-      expect(response.createPet.pet?.gender).toBe(fixtureCat.gender);
+      expect(response.createPet.pet?.name).toBe(defaultCat.name);
+      expect(response.createPet.pet?.species).toBe(defaultCat.species);
+      expect(response.createPet.pet?.breedType).toBe(defaultCat.breedType);
+      expect(response.createPet.pet?.gender).toBe(defaultCat.gender);
       expect(response.createPet.pet?.id).toBeDefined();
-
-      // Salva il pet creato per i test successivi
-      createdCat = response.createPet.pet;
+      expect(response.createPet.pet?.weight).toBe(defaultCat.weight);
+      expect(response.createPet.pet?.birthDate).toBe(defaultCat.birthDate);
+      expect(response.createPet.pet?.livingEnvironment).toBe(
+        defaultCat.livingEnvironment,
+      );
+      expect(response.createPet.pet?.primaryColor).toBe(
+        defaultCat.primaryColor,
+      );
     });
 
     it("Try to create PETs with wrong combinations data", async () => {
-      // Se purebred => devo passargli 1solo breeds
-      // Se mixed breed => devo passargli 2 breeds
-      //
-      // Se cane => non deve accettare colori per gatto
-      // Se gatto => non deve accettare colori per cane
-      //
-      // Se cane => non deve accettare breed di gatto
-      // Se gatto => non deve accettare breed di gatto
+      // Test validation rules:
+      // 1. PUREBREED must have exactly 1 breed
+      // 2. MIXED_BREED must have exactly 2 breeds
+      // 3. DOG species cannot use CAT breeds
+      // 4. CAT species cannot use DOG breeds
 
-      //Wrong combination of BREEDTYPE adn quantity of breeds
-      const dogPurebreedWIthTwoBreeds = await petlink.core.authJwt.createPet({
-        pet: {
-          ...fixtureDog,
-          breedType: "PUREBREED",
-          breeds: [
-            "5b0bfddb-532e-41cb-9705-b2ddc21226ef",
-            "0074b56e-8c84-43b6-aaad-d7c00a9aa37e",
-          ],
-        },
-      });
-      const dogMixedbreedWIthOneBreed = await petlink.core.authJwt.createPet({
-        pet: {
-          ...fixtureDog,
-          breedType: "MIXED_BREED",
-          breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"],
-        },
-      });
-
-      //Wrong combination of breed
-      const catWithDogBreed = await petlink.core.authJwt.createPet({
-        pet: {
-          ...fixtureCat,
-          breedType: "PUREBREED",
-          breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], //DOG - Labrador Retriever
-        },
-      });
-
-      const dogWithCAtBreed = await petlink.core.authJwt.createPet({
-        pet: {
-          ...fixtureCat,
-          breedType: "PUREBREED",
-          breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], //CAT - Siamese
-        },
-      });
+      // Execute all invalid pet creation requests in parallel
+      const [
+        dogPurebreedWithTwoBreeds,
+        dogMixedbreedWithOneBreed,
+        catWithDogBreed,
+        dogWithCatBreed,
+      ] = await Promise.all([
+        // Invalid: PUREBREED with 2 breeds (should have only 1)
+        petlink.core.graphql.authJwt.createPet({
+          pet: {
+            ...defaultDog,
+            breedType: "PUREBREED",
+            breeds: [
+              "5b0bfddb-532e-41cb-9705-b2ddc21226ef", // Labrador Retriever
+              "0074b56e-8c84-43b6-aaad-d7c00a9aa37e", // Another dog breed
+            ],
+          },
+        }),
+        // Invalid: MIXED_BREED with 1 breed (should have 2)
+        petlink.core.graphql.authJwt.createPet({
+          pet: {
+            ...defaultDog,
+            breedType: "MIXED_BREED",
+            breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Only 1 breed
+          },
+        }),
+        // Invalid: CAT with DOG breed
+        petlink.core.graphql.authJwt.createPet({
+          pet: {
+            ...defaultCat,
+            breedType: "PUREBREED",
+            breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever (DOG)
+          },
+        }),
+        // Invalid: DOG with CAT breed
+        petlink.core.graphql.authJwt.createPet({
+          pet: {
+            ...defaultDog,
+            breedType: "PUREBREED",
+            breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese (CAT)
+          },
+        }),
+      ]);
+      // Assert all requests failed with validation error (400)
+      expect(dogPurebreedWithTwoBreeds.createPet.code).toBe("400");
+      expect(dogMixedbreedWithOneBreed.createPet.code).toBe("400");
+      expect(catWithDogBreed.createPet.code).toBe("400");
+      expect(dogWithCatBreed.createPet.code).toBe("400");
     });
 
     it("Verify user has 2 pets", async () => {
-      const response = await petlink.core.authJwt.getPets();
+      const response = await petlink.core.graphql.authJwt.getPets();
 
       expect(response.getPets).toBeDefined();
       expect(response.getPets.code).toBe("200");
@@ -299,19 +327,6 @@ describe.sequential("Environment Setup", () => {
       const petSpecies = response.getPets.pets?.map((pet) => pet.species);
       expect(petSpecies).toContain("DOG");
       expect(petSpecies).toContain("CAT");
-    });
-
-    it("Verify pet details are correct", async () => {
-      // Verifica dettagli del cane
-      expect(createdDog.weight).toBe(fixtureDog.weight);
-      expect(createdDog.birthDate).toBe(fixtureDog.birthDate);
-      expect(createdDog.livingEnvironment).toBe(fixtureDog.livingEnvironment);
-      expect(createdDog.primaryColor).toBe(fixtureDog.primaryColor);
-      // Verifica dettagli del gatto
-      expect(createdCat.weight).toBe(fixtureCat.weight);
-      expect(createdCat.birthDate).toBe(fixtureCat.birthDate);
-      expect(createdCat.livingEnvironment).toBe(fixtureCat.livingEnvironment);
-      expect(createdCat.primaryColor).toBe(fixtureCat.primaryColor);
     });
 
     afterAll(async () => {

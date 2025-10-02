@@ -27,25 +27,25 @@ export const fixtures = {
     defaultDog: {
       name: "TestDog",
       species: "DOG" as SpeciesEnum,
-      breedType: "MIXED_BREED" as BreedTypeEnum,
-      breeds: ["MIXED"],
+      breedType: "PUREBREED" as BreedTypeEnum,
+      breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], //Labrador Retriever
       gender: "MALE" as Gender,
       weight: 15.5,
       birthDate: "2023-12-25T14:30:00.000Z",
       livingEnvironment: "INDOORS_AND_OUTOORS" as PetLivingEnvironment,
-      primaryColor: "Brown",
+      primaryColor: "07f20c17-1fae-45f3-bbce-149a79aad7b4", //Black Bay
     } as PetIn,
 
     defaultCat: {
       name: "TestCat",
       species: "CAT" as SpeciesEnum,
       breedType: "PUREBREED" as BreedTypeEnum,
-      breeds: ["PERSIAN"],
+      breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], //Siamese
       gender: "FEMALE" as Gender,
       weight: 4.2,
       birthDate: "2023-12-25T14:30:00.000Z",
       livingEnvironment: "ALWAYS_AT_HOME" as PetLivingEnvironment,
-      primaryColor: "White",
+      primaryColor: "009f64c1-8fbb-4084-a962-696de40bc5e5", //Tiger Brown
     } as PetIn,
   },
 };

@@ -1,15 +1,3 @@
-query getBreed($species: SpeciesEnum!, $languageId: LanguageId) {
-  getBreed(species: $species, languageId: $languageId) {
-    code
-    message
-    translationCode
-    items {
-      breedName
-      code
-      species
-    }
-  }
-}
 
 query getUser {
   getUser {
@@ -125,3 +113,28 @@ query getPets {
   }
 }
 
+query getColors($species: SpeciesEnum!, $languageId: LanguageId) {
+  getColors(species: $species, languageId: $languageId) {
+    code
+    message
+    translationCode
+    items {
+      code
+      name
+    }
+  }
+}
+
+
+query getBreed($species: SpeciesEnum!, $languageId: LanguageId) {
+  getBreed(species: $species, languageId: $languageId) {
+    code
+    message
+    translationCode
+    items {
+      breedName
+      code
+      species
+    }
+  }
+}
