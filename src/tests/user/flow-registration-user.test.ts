@@ -13,8 +13,8 @@ describe.sequential("Environment Setup", () => {
   });
 
   // Log performance report after all tests (top 10 slowest requests)
-  afterAll(() => {
-    petlink.logPerformance();
+  afterAll(async () => {
+    await globalState.cleanupAll();
   });
   const userData = fixtures.user;
   const userPhoneNumber = userData.phone;
@@ -28,17 +28,11 @@ describe.sequential("Environment Setup", () => {
     errors: [],
   };
 
-  // beforeAll(async () => {
-  //   await globalState.cleanupAll();
-  // });
-  it("CleanUp all", async () => {
-    await globalState.cleanupAll();
-  });
-
   describe("User Registration", () => {
     // Variabili condivise tra i test
     let verificationId: string;
     let receivedOtp: string | null;
+    let verificationLink: string | null;
 
     let createdUser: any;
 
@@ -129,7 +123,7 @@ describe.sequential("Environment Setup", () => {
       expect(createdUser.getUser.user?.contactVerified?.phone).toBe(true);
     });
 
-    it("Verify Email (by clicking on received link)", async () => {
+    it("Wait to receive CONFIRMATION EMAIL", async () => {
       const linkUrlToOpen = await waitFor(
         () => gmailClient.getVerificationLink(),
         {
@@ -139,6 +133,16 @@ describe.sequential("Environment Setup", () => {
         },
       );
 
+      expect(linkUrlToOpen).toBeDefined();
+      expect(linkUrlToOpen).toContain("uuid=");
+      expect(linkUrlToOpen).toContain("otp=");
+      expect(linkUrlToOpen).toContain("verificationId=");
+
+      // Salva il link per i test successivi
+      verificationLink = linkUrlToOpen;
+    }, 70000); // Timeout più lungo per l'attesa dell'email
+
+    it("Verify Email (by clicking on received link)", async () => {
       const extractParamsFromUrl = (url: string) => {
         const urlObj = new URL(url);
         const uuid = urlObj.searchParams.get("uuid");
@@ -147,8 +151,7 @@ describe.sequential("Environment Setup", () => {
         return { uuid, otp, verificationId };
       };
 
-      // waitFor guarantees linkUrlToOpen is not null (throws on timeout)
-      const params = extractParamsFromUrl(linkUrlToOpen!);
+      const params = extractParamsFromUrl(verificationLink!);
 
       const response = await petlink.core.graphql.public.verifyEmail({
         uuid: params.uuid!,
@@ -157,7 +160,7 @@ describe.sequential("Environment Setup", () => {
       });
       expect(response.verifyEmail).toBeDefined();
       expect(response.verifyEmail.code).toBe("200");
-    }, 70000); // Timeout più lungo per l'attesa dell'email
+    });
 
     it("Try login new user (with EMAIL)", async () => {
       await petlink.loginWithEmail(userEmail, userPassword);
@@ -212,48 +215,45 @@ describe.sequential("Environment Setup", () => {
       await petlink.loginWithPhone(userPhoneNumber, userPassword);
     });
 
-    it("Create a DOG for the user", async () => {
-      const response = await petlink.core.graphql.authJwt.createPet({
-        pet: defaultDog,
-      });
+    it("Create DOG and CAT for the user", async () => {
+      const [dogResponse, catResponse] = await Promise.all([
+        petlink.core.graphql.authJwt.createPet({ pet: defaultDog }),
+        petlink.core.graphql.authJwt.createPet({ pet: defaultCat }),
+      ]);
 
-      expect(response.createPet).toBeDefined();
-      expect(response.createPet.code).toBe("200");
-      expect(response.createPet.pet).toBeDefined();
-      expect(response.createPet.pet?.name).toBe(defaultDog.name);
-      expect(response.createPet.pet?.species).toBe(defaultDog.species);
-      expect(response.createPet.pet?.breedType).toBe(defaultDog.breedType);
-      expect(response.createPet.pet?.gender).toBe(defaultDog.gender);
-      expect(response.createPet.pet?.id).toBeDefined();
-      expect(response.createPet.pet?.weight).toBe(defaultDog.weight);
-      expect(response.createPet.pet?.birthDate).toBe(defaultDog.birthDate);
-      expect(response.createPet.pet?.livingEnvironment).toBe(
+      // Assertions for DOG
+      expect(dogResponse.createPet).toBeDefined();
+      expect(dogResponse.createPet.code).toBe("200");
+      expect(dogResponse.createPet.pet).toBeDefined();
+      expect(dogResponse.createPet.pet?.name).toBe(defaultDog.name);
+      expect(dogResponse.createPet.pet?.species).toBe(defaultDog.species);
+      expect(dogResponse.createPet.pet?.breedType).toBe(defaultDog.breedType);
+      expect(dogResponse.createPet.pet?.gender).toBe(defaultDog.gender);
+      expect(dogResponse.createPet.pet?.id).toBeDefined();
+      expect(dogResponse.createPet.pet?.weight).toBe(defaultDog.weight);
+      expect(dogResponse.createPet.pet?.birthDate).toBe(defaultDog.birthDate);
+      expect(dogResponse.createPet.pet?.livingEnvironment).toBe(
         defaultDog.livingEnvironment,
       );
-      expect(response.createPet.pet?.primaryColor).toBe(
+      expect(dogResponse.createPet.pet?.primaryColor).toBe(
         defaultDog.primaryColor,
       );
-    });
 
-    it("Create a CAT for the user", async () => {
-      const response = await petlink.core.graphql.authJwt.createPet({
-        pet: defaultCat,
-      });
-
-      expect(response.createPet).toBeDefined();
-      expect(response.createPet.code).toBe("200");
-      expect(response.createPet.pet).toBeDefined();
-      expect(response.createPet.pet?.name).toBe(defaultCat.name);
-      expect(response.createPet.pet?.species).toBe(defaultCat.species);
-      expect(response.createPet.pet?.breedType).toBe(defaultCat.breedType);
-      expect(response.createPet.pet?.gender).toBe(defaultCat.gender);
-      expect(response.createPet.pet?.id).toBeDefined();
-      expect(response.createPet.pet?.weight).toBe(defaultCat.weight);
-      expect(response.createPet.pet?.birthDate).toBe(defaultCat.birthDate);
-      expect(response.createPet.pet?.livingEnvironment).toBe(
+      // Assertions for CAT
+      expect(catResponse.createPet).toBeDefined();
+      expect(catResponse.createPet.code).toBe("200");
+      expect(catResponse.createPet.pet).toBeDefined();
+      expect(catResponse.createPet.pet?.name).toBe(defaultCat.name);
+      expect(catResponse.createPet.pet?.species).toBe(defaultCat.species);
+      expect(catResponse.createPet.pet?.breedType).toBe(defaultCat.breedType);
+      expect(catResponse.createPet.pet?.gender).toBe(defaultCat.gender);
+      expect(catResponse.createPet.pet?.id).toBeDefined();
+      expect(catResponse.createPet.pet?.weight).toBe(defaultCat.weight);
+      expect(catResponse.createPet.pet?.birthDate).toBe(defaultCat.birthDate);
+      expect(catResponse.createPet.pet?.livingEnvironment).toBe(
         defaultCat.livingEnvironment,
       );
-      expect(response.createPet.pet?.primaryColor).toBe(
+      expect(catResponse.createPet.pet?.primaryColor).toBe(
         defaultCat.primaryColor,
       );
     });
@@ -328,30 +328,58 @@ describe.sequential("Environment Setup", () => {
       expect(dogWithCatBreed.createPet.code).toBe("400");
     });
 
-    it("Verify user has 2 pets", async () => {
-      const response = await petlink.core.graphql.authJwt.getPets();
+    it("Update and Delete PET should work correctly", async () => {
+      // Create a temporary PET for CRUD testing (isolated from main DOG and CAT)
+      const tempPetData = {
+        ...defaultDog,
+        name: "Temp Pet for CRUD Test",
+      } as PetIn;
 
-      expect(response.getPets).toBeDefined();
-      expect(response.getPets.code).toBe("200");
-      expect(response.getPets.pets).toBeDefined();
-      expect(response.getPets.pets).toHaveLength(2);
+      const createResponse = await petlink.core.graphql.authJwt.createPet({
+        pet: tempPetData,
+      });
 
-      // Verifica che ci siano un cane e un gatto
-      const petSpecies = response.getPets.pets?.map((pet) => pet.species);
-      expect(petSpecies).toContain("DOG");
-      expect(petSpecies).toContain("CAT");
-    });
+      expect(createResponse.createPet).toBeDefined();
+      expect(createResponse.createPet.code).toBe("200");
+      expect(createResponse.createPet.pet).toBeDefined();
+      expect(createResponse.createPet.pet?.name).toBe(tempPetData.name);
 
-    it("Update PET should works correctly", async () => {
-      //todo: implemetns update pet
-    });
+      const petId = createResponse.createPet.pet?.id!;
 
-    it("Delet PET should works correctly", async () => {
-      //todo: implemetns delete pet
-    });
+      // TEST UPDATE: Modify the temporary PET
+      const updatedName = "Updated Temp Pet";
+      const updatedWeight = 25;
 
-    afterAll(async () => {
-      // Salva i pet creati per i test successivi (es. Device Registration)
+      const updateResponse = await petlink.core.graphql.authJwt.updatePet({
+        pet: {
+          id: petId,
+          name: updatedName,
+          weight: updatedWeight,
+        },
+      });
+
+      expect(updateResponse.updatePet).toBeDefined();
+      expect(updateResponse.updatePet.code).toBe("200");
+      expect(updateResponse.updatePet.pet).toBeDefined();
+      expect(updateResponse.updatePet.pet?.id).toBe(petId);
+      expect(updateResponse.updatePet.pet?.name).toBe(updatedName);
+      expect(updateResponse.updatePet.pet?.weight).toBe(updatedWeight);
+
+      // TEST DELETE: Remove the temporary PET
+      const deleteResponse = await petlink.core.graphql.authJwt.deletePet({
+        petId,
+      });
+
+      expect(deleteResponse.deletePet).toBeDefined();
+      expect(deleteResponse.deletePet.code).toBe("200");
+
+      // Verify the PET no longer exists
+      const petsAfterDelete = await petlink.core.graphql.authJwt.getPets();
+      const deletedPet = petsAfterDelete.getPets.pets?.find(
+        (p) => p.id === petId,
+      );
+      expect(deletedPet).toBeUndefined();
+      petlink.logPerformance();
     });
   });
 });
