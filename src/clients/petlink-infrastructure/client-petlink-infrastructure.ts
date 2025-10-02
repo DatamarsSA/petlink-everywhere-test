@@ -15,8 +15,8 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
-import { writeFileSync } from "fs";
-import { join } from "path";
+import { writeFileSync, mkdirSync } from "fs";
+import { dirname } from "path";
 
 // ------------------------------
 // HTTP header constants
@@ -48,63 +48,62 @@ class PerformanceTracker {
   }
 
   /**
-   * Log performance records sorted by duration (descending).
-   * @param limit - Optional limit for number of records to log. If not provided, logs all records.
+   * Generate performance report grouped by endpoint with aggregated metrics.
+   * Logs to console and optionally saves to file.
+   * @param filePath - Optional path to save the report file
    */
-  static logRecords(limit?: number): void {
+  static logRecords(filePath?: string): void {
     if (this.records.length === 0) {
-      console.log("\n=== 🚀 Performance Report ===");
-      console.log("No requests tracked yet");
+      const message =
+        "\n=== 🚀 Performance Report ===\nNo requests tracked yet\n";
+      console.log(message);
+      if (filePath) {
+        writeFileSync(filePath, message, "utf-8");
+      }
       return;
     }
 
-    const sorted = [...this.records].sort((a, b) => b.duration - a.duration);
-    const toLog = limit ? sorted.slice(0, limit) : sorted;
-
-    console.log(
-      `\n=== 🚀 Performance Report (${toLog.length}/${this.records.length} requests) ===`,
-    );
-    toLog.forEach((r, i) => {
-      console.log(
-        `${i + 1}. [${r.service}/${r.protocol}/${r.authType}] ${r.operation} - ${r.duration}ms`,
-      );
+    // Group by endpoint (service/protocol/authType/operation)
+    const grouped = new Map<string, number[]>();
+    this.records.forEach((r) => {
+      const key = `[${r.service}/${r.protocol}/${r.authType}] ${r.operation}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(r.duration);
     });
 
-    if (this.records.length > 0) {
-      const avgDuration = Math.round(
-        this.records.reduce((sum, r) => sum + r.duration, 0) /
-          this.records.length,
-      );
-      console.log(
-        `\nAverage: ${avgDuration}ms | Total: ${this.records.length} requests`,
-      );
-    }
-  }
+    // Calculate max duration for each endpoint (worst case = cold start)
+    const aggregated = Array.from(grouped.entries()).map(([key, durations]) => {
+      const count = durations.length;
+      const max = Math.max(...durations);
+      return { key, count, max };
+    });
 
-  /**
-   * Save performance records to a file for CI/CD pipeline consumption.
-   * @param filePath - Path where to save the performance report
-   */
-  static saveToFile(filePath: string): void {
-    if (this.records.length === 0) {
-      const content = "=== 🚀 Performance Report ===\nNo requests tracked yet\n";
+    // Sort by max duration (descending)
+    aggregated.sort((a, b) => b.max - a.max);
+
+    // Build report content
+    let content = `\n=== 🚀 Performance Report (${this.records.length} requests, ${aggregated.length} unique endpoints) ===\n\n`;
+    aggregated.forEach((item, i) => {
+      if (item.count === 1) {
+        content += `${i + 1}. ${item.key} - ${item.max}ms\n`;
+      } else {
+        content += `${i + 1}. ${item.key} - ${item.max}ms (${item.count}x calls)\n`;
+      }
+    });
+    content += `\nTotal Requests: ${this.records.length}\n`;
+
+    // Log to console
+    console.log(content);
+
+    // Save to file if path provided
+    if (filePath) {
+      // Create directory if it doesn't exist
+      const dir = dirname(filePath);
+      mkdirSync(dir, { recursive: true });
       writeFileSync(filePath, content, "utf-8");
-      return;
     }
-
-    const sorted = [...this.records].sort((a, b) => b.duration - a.duration);
-    const avgDuration = Math.round(
-      this.records.reduce((sum, r) => sum + r.duration, 0) /
-        this.records.length,
-    );
-
-    let content = `=== 🚀 Performance Report (${sorted.length} requests) ===\n\n`;
-    sorted.forEach((r, i) => {
-      content += `${i + 1}. [${r.service}/${r.protocol}/${r.authType}] ${r.operation} - ${r.duration}ms\n`;
-    });
-    content += `\nAverage: ${avgDuration}ms | Total: ${this.records.length} requests\n`;
-
-    writeFileSync(filePath, content, "utf-8");
   }
 
   static clear(): void {
@@ -617,31 +616,18 @@ export class PetLinkInfrastructure {
     AuthManager.clearCache();
     this.core.clearCache();
     this.cct.clearCache();
+    PerformanceTracker.clear();
   }
 
   // --- Performance Tracking ---
   /**
-   * Log performance records sorted by duration (descending).
-   * @param limit - Optional limit for number of records to log. If not provided, logs all records.
+   * Log performance report to console and optionally save to file.
+   * @param filePath - Optional path to save the report file
    */
-  logPerformance(limit?: number): void {
-    PerformanceTracker.logRecords(limit);
-  }
-
-  /**
-   * Save performance records to a file for CI/CD pipeline consumption.
-   * @param filePath - Path where to save the performance report
-   */
-  savePerformanceToFile(filePath: string): void {
-    PerformanceTracker.saveToFile(filePath);
-  }
-
-  clearPerformanceData(): void {
-    PerformanceTracker.clear();
-  }
-
-  getPerformanceRecords(): PerformanceRecord[] {
-    return PerformanceTracker.getRecords();
+  exportPerformanceTimes(
+    filePath: string = "./test-reports/performance-report.txt",
+  ): void {
+    PerformanceTracker.logRecords(filePath);
   }
 }
 
