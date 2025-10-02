@@ -15,6 +15,8 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
+import { writeFileSync } from "fs";
+import { join } from "path";
 
 // ------------------------------
 // HTTP header constants
@@ -77,6 +79,32 @@ class PerformanceTracker {
         `\nAverage: ${avgDuration}ms | Total: ${this.records.length} requests`,
       );
     }
+  }
+
+  /**
+   * Save performance records to a file for CI/CD pipeline consumption.
+   * @param filePath - Path where to save the performance report
+   */
+  static saveToFile(filePath: string): void {
+    if (this.records.length === 0) {
+      const content = "=== 🚀 Performance Report ===\nNo requests tracked yet\n";
+      writeFileSync(filePath, content, "utf-8");
+      return;
+    }
+
+    const sorted = [...this.records].sort((a, b) => b.duration - a.duration);
+    const avgDuration = Math.round(
+      this.records.reduce((sum, r) => sum + r.duration, 0) /
+        this.records.length,
+    );
+
+    let content = `=== 🚀 Performance Report (${sorted.length} requests) ===\n\n`;
+    sorted.forEach((r, i) => {
+      content += `${i + 1}. [${r.service}/${r.protocol}/${r.authType}] ${r.operation} - ${r.duration}ms\n`;
+    });
+    content += `\nAverage: ${avgDuration}ms | Total: ${this.records.length} requests\n`;
+
+    writeFileSync(filePath, content, "utf-8");
   }
 
   static clear(): void {
@@ -598,6 +626,14 @@ export class PetLinkInfrastructure {
    */
   logPerformance(limit?: number): void {
     PerformanceTracker.logRecords(limit);
+  }
+
+  /**
+   * Save performance records to a file for CI/CD pipeline consumption.
+   * @param filePath - Path where to save the performance report
+   */
+  savePerformanceToFile(filePath: string): void {
+    PerformanceTracker.saveToFile(filePath);
   }
 
   clearPerformanceData(): void {

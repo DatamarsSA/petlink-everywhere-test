@@ -379,7 +379,10 @@ describe.sequential("Environment Setup", () => {
         (p) => p.id === petId,
       );
       expect(deletedPet).toBeUndefined();
+      
+      // Log and save performance report
       petlink.logPerformance();
+      petlink.savePerformanceToFile("./test-reports/performance-report.txt");
     });
   });
 });

@@ -96,3 +96,17 @@ jobs:
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
           annotations_limit: 200
           include_passed: false
+
+      # Add Performance Report to Summary
+      - name: Add Performance Report to Summary
+        if: always()
+        run: |
+          if [ -f "test-reports/performance-report.txt" ]; then
+            echo "## 🚀 Performance Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat test-reports/performance-report.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Performance report not found" >> $GITHUB_STEP_SUMMARY
+          fi
