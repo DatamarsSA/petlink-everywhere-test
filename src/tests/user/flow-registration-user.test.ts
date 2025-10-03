@@ -103,7 +103,7 @@ describe.sequential("Environment Setup", () => {
           languageId: userData.languageId,
         },
         otpData: {
-          otp: receivedOtp,
+          otp: receivedOtp!,
           verificationId,
         },
         languageId: userData.languageId,
@@ -159,7 +159,7 @@ describe.sequential("Environment Setup", () => {
         verificationId: params.verificationId!,
       });
       expect(response.verifyEmail).toBeDefined();
-      expect(response.verifyEmail.code).toBe("200");
+      expect(response.verifyEmail!.code).toBe("200");
     });
 
     it("Try login new user (with EMAIL)", async () => {
