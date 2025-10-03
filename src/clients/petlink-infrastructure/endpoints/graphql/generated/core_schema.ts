@@ -2543,6 +2543,160 @@ export type DeletePetMutation = {
   };
 };
 
+export type CreatePetlinkGpsMutationVariables = Exact<{
+  petlinkGps: PetlinkGpsIn;
+  appBrand: AppBrand;
+}>;
+
+export type CreatePetlinkGpsMutation = {
+  __typename?: "Mutation";
+  createPetlinkGps: {
+    __typename?: "ResponseCreatePetlinkGps";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    currentTermEnd?: string | null;
+    url?: string | null;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{
+        __typename?: "Coordinates";
+        lat: number;
+        lng: number;
+      } | null> | null;
+      newFirmwareVersion?: {
+        __typename?: "NewFirmwareVersion";
+        url: string;
+        version: string;
+      } | null;
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
+    } | null;
+  };
+};
+
+export type UpdatePetlinkGpsMutationVariables = Exact<{
+  petlinkGps: UpdatePetlinkGpsIn;
+}>;
+
+export type UpdatePetlinkGpsMutation = {
+  __typename?: "Mutation";
+  updatePetlinkGps: {
+    __typename?: "ResponsePetlinkGps";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      subscriptionId?: string | null;
+      subscriptionIsActive?: boolean | null;
+      logEnabled?: boolean | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{
+        __typename?: "Coordinates";
+        lat: number;
+        lng: number;
+      } | null> | null;
+      newFirmwareVersion?: {
+        __typename?: "NewFirmwareVersion";
+        version: string;
+        url: string;
+      } | null;
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
+    } | null;
+  };
+};
+
+export type ResetPetlinkGpsMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type ResetPetlinkGpsMutation = {
+  __typename?: "Mutation";
+  resetPetlinkGps: {
+    __typename?: "Response";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+  };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -2716,6 +2870,76 @@ export type GetBreedQuery = {
       code: string;
       species: SpeciesEnum;
     }> | null;
+  };
+};
+
+export type GetPetlinkGpsQueryVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type GetPetlinkGpsQuery = {
+  __typename?: "Query";
+  getPetlinkGps: {
+    __typename?: "ResponsePetlinkGps";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      subscriptionId?: string | null;
+      subscriptionIsActive?: boolean | null;
+      logEnabled?: boolean | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{
+        __typename?: "Coordinates";
+        lat: number;
+        lng: number;
+      } | null> | null;
+      newFirmwareVersion?: {
+        __typename?: "NewFirmwareVersion";
+        version: string;
+        url: string;
+      } | null;
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
+    } | null;
   };
 };
 
@@ -3504,6 +3728,598 @@ export const DeletePetDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const CreatePetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "petlinkGps" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "PetlinkGpsIn" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "appBrand" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "AppBrand" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createPetlinkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petlinkGps" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "petlinkGps" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "appBrand" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "appBrand" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "entityType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "serialNumber" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "countryCode" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "timezone" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lat" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lng" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "alt" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "radius" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "speed" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "positionType" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "date" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "battery" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "flashlight" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "sound" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "liveTracking" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "geofence" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "inGeofence" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "energySavingMode" },
+                            },
+                            {
+                              kind: "Field",
+                              name: {
+                                kind: "Name",
+                                value: "inEnergySavingZone",
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "firmwareVersion" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "offline" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "date" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lat" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lng" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "newFirmwareVersion" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "url" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "version" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "activityProfile" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "updateFrequency" },
+                            },
+                            {
+                              kind: "Field",
+                              name: {
+                                kind: "Name",
+                                value: "enableGpsOnDefault",
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "optimizationDone" },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "currentTermEnd" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "petlinkGps" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "UpdatePetlinkGpsIn" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePetlinkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petlinkGps" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "petlinkGps" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "entityType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "serialNumber" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "countryCode" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "timezone" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lat" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lng" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "alt" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "radius" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "speed" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "positionType" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "date" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "battery" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "flashlight" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "sound" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "liveTracking" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "geofence" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "inGeofence" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "energySavingMode" },
+                            },
+                            {
+                              kind: "Field",
+                              name: {
+                                kind: "Name",
+                                value: "inEnergySavingZone",
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "firmwareVersion" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "offline" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "date" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lat" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lng" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "newFirmwareVersion" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "version" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "url" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "activityProfile" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "updateFrequency" },
+                            },
+                            {
+                              kind: "Field",
+                              name: {
+                                kind: "Name",
+                                value: "enableGpsOnDefault",
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "optimizationDone" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionIsActive" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "logEnabled" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ResetPetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "resetPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "resetPetlinkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetUserDocument = {
   kind: "Document",
   definitions: [
@@ -4183,6 +4999,265 @@ export const GetBreedDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetPetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPetlinkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "entityType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "serialNumber" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "userId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creationDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "updateDate" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "countryCode" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "timezone" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lat" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lng" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "alt" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "radius" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "speed" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "positionType" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "date" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "battery" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "flashlight" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "sound" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "liveTracking" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "geofence" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "inGeofence" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "energySavingMode" },
+                            },
+                            {
+                              kind: "Field",
+                              name: {
+                                kind: "Name",
+                                value: "inEnergySavingZone",
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "firmwareVersion" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "offline" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "date" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lat" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "lng" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "newFirmwareVersion" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "version" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "url" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "activityProfile" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "updateFrequency" },
+                            },
+                            {
+                              kind: "Field",
+                              name: {
+                                kind: "Name",
+                                value: "enableGpsOnDefault",
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "optimizationDone" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionIsActive" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "logEnabled" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -4347,6 +5422,60 @@ export function getSdk(
         variables,
       );
     },
+    createPetlinkGps(
+      variables: CreatePetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreatePetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreatePetlinkGpsMutation>({
+            document: CreatePetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createPetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
+    updatePetlinkGps(
+      variables: UpdatePetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetlinkGpsMutation>({
+            document: UpdatePetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updatePetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
+    resetPetlinkGps(
+      variables: ResetPetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ResetPetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ResetPetlinkGpsMutation>({
+            document: ResetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "resetPetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
     getUser(
       variables?: GetUserQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -4451,6 +5580,24 @@ export function getSdk(
             signal,
           }),
         "getBreed",
+        "query",
+        variables,
+      );
+    },
+    getPetlinkGps(
+      variables: GetPetlinkGpsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPetlinkGpsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPetlinkGpsQuery>({
+            document: GetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getPetlinkGps",
         "query",
         variables,
       );
