@@ -166,5 +166,7 @@ export class GmailClient {
   }
 }
 
-// Singleton export
+// ------------------------------
+// Export singleton instance
+// ------------------------------
 export const gmailClient = new GmailClient();

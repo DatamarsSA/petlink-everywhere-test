@@ -1,6 +1,8 @@
 import { z, ZodError } from "zod";
 
+// ------------------------------
 // Schema Zod per le variabili d'ambiente
+// ------------------------------
 const envSchemaValidation = z.object({
   // CORE API
   CORE_GRAPHQL_API_URL: z.url("CORE_GRAPHQL_API_URL deve essere un URL valido"),

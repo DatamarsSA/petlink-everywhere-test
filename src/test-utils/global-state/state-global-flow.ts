@@ -1,5 +1,3 @@
-// src/test-utils/environment.ts
-
 import { User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { env } from "../../config/env-schema-validation.js";
 import {

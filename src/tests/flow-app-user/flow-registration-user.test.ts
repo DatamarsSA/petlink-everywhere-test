@@ -2,12 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
-import { globalState } from "../../test-utils/global-state/state-global-flow.js";
 import { waitFor } from "../../test-utils/helpers/utils-retry.js";
-import {
-  fixtures,
-  getAnotherAppBrand,
-} from "../../test-utils/fixtures/fixtures.js";
+import { fixtures } from "../../test-utils/fixtures/fixtures.js";
 import type {
   PetIn,
   PetlinkGpsIn,
@@ -37,16 +33,14 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
   beforeAll(async () => {});
 
   // Log performance report after all tests (top 10 slowest requests)
-  afterAll(async () => {
-    petlink.exportPerformanceTimes();
-  });
+  afterAll(async () => {});
 
   /**
    * Oggetto condiviso tra tutti i describe blocks per salvare i dati creati durante i test.
    * Questo permette di accedere ai dati dell'utente, dei pet e dei device in tutti i test successivi.
    *
    * Struttura:
-   * - user: dati dell'utente creato (salvato in "User Registration")
+   * - flow-app-user: dati dell'utente creato (salvato in "User Registration")
    * - pet.dog: dati del cane creato (salvato in "Pet Registration")
    * - pet.cat: dati del gatto creato (salvato in "Pet Registration")
    * - device.dogGps: dati del GPS del cane (salvato in "PetlinkGPS registration")
@@ -69,8 +63,6 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
     let verificationId: string;
     let receivedOtp: string | null;
     let verificationLink: string | null;
-
-    let createdUser: any;
 
     it("Verify phone number availability", async () => {
       const response = await petlink.core.graphql.public.checkContact({
@@ -117,7 +109,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
       expect(response.checkOtp.code).toBe("200");
     });
 
-    it("Complete user registration", async () => {
+    it("Complete User registration", async () => {
       const response = await petlink.core.graphql.public.signUpUser({
         user: testUser.signUpPayload,
         otpData: {
@@ -131,7 +123,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
       expect(response.signUpUser.code).toBe("200");
     });
 
-    it("Try login new user (with PHONE)", async () => {
+    it("Try login new flow-app-user (with PHONE)", async () => {
       await petlink.loginWithPhone(testUser.phone, testUser.password);
       const userResponse = await petlink.core.graphql.authJwt.getUser();
 
@@ -140,58 +132,58 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
       setupResults.user = userResponse.getUser.user;
     });
 
-    // it("Wait to receive CONFIRMATION EMAIL", async () => {
-    //   const linkUrlToOpen = await waitFor(
-    //     () => gmailClient.getVerificationLink(),
-    //     {
-    //       timeoutMs: 60000,
-    //       intervalMs: 500,
-    //       timeoutError: "Verification email not received",
-    //     },
-    //   );
-    //
-    //   expect(linkUrlToOpen).toBeDefined();
-    //   expect(linkUrlToOpen).toContain("uuid=");
-    //   expect(linkUrlToOpen).toContain("otp=");
-    //   expect(linkUrlToOpen).toContain("verificationId=");
-    //
-    //   // Salva il link per i test successivi
-    //   verificationLink = linkUrlToOpen;
-    // }, 15000);
-    //
-    // it("Verify Email (by clicking on received link)", async () => {
-    //   const extractParamsFromUrl = (url: string) => {
-    //     const urlObj = new URL(url);
-    //     const uuid = urlObj.searchParams.get("uuid");
-    //     const otp = urlObj.searchParams.get("otp");
-    //     const verificationId = urlObj.searchParams.get("verificationId");
-    //     return { uuid, otp, verificationId };
-    //   };
-    //
-    //   const params = extractParamsFromUrl(verificationLink!);
-    //
-    //   const response = await petlink.core.graphql.public.verifyEmail({
-    //     uuid: params.uuid!,
-    //     otp: params.otp!,
-    //     verificationId: params.verificationId!,
-    //   });
-    //   expect(response.verifyEmail).toBeDefined();
-    //   expect(response.verifyEmail!.code).toBe("200");
-    // });
-    //
-    // it("Try login new user (with EMAIL)", async () => {
-    //   await petlink.loginWithEmail(userEmail, userPassword);
-    //   const user = await petlink.core.graphql.authJwt.getUser();
-    //
-    //   expect(user.getUser.user).toBeDefined();
-    //   expect(user.getUser.user?.email).toBe(userEmail);
-    //   expect(user.getUser.user?.phone).toBe(userPhoneNumber);
-    //   expect(user.getUser.user?.contactVerified?.phone).toBe(true);
-    //   expect(user.getUser.user?.contactVerified?.email).toBe(true);
-    //
-    //   // Salva i dati dell'utente per i describe successivi
-    //   setupResults.user = user.getUser.user;
-    // });
+    it("Wait to receive CONFIRMATION EMAIL", async () => {
+      const linkUrlToOpen = await waitFor(
+        () => gmailClient.getVerificationLink(),
+        {
+          timeoutMs: 60000,
+          intervalMs: 500,
+          timeoutError: "Verification email not received",
+        },
+      );
+
+      expect(linkUrlToOpen).toBeDefined();
+      expect(linkUrlToOpen).toContain("uuid=");
+      expect(linkUrlToOpen).toContain("otp=");
+      expect(linkUrlToOpen).toContain("verificationId=");
+
+      // Salva il link per i test successivi
+      verificationLink = linkUrlToOpen;
+    });
+
+    it("Verify Email (clicking on received link)", async () => {
+      const extractParamsFromUrl = (url: string) => {
+        const urlObj = new URL(url);
+        const uuid = urlObj.searchParams.get("uuid");
+        const otp = urlObj.searchParams.get("otp");
+        const verificationId = urlObj.searchParams.get("verificationId");
+        return { uuid, otp, verificationId };
+      };
+
+      const params = extractParamsFromUrl(verificationLink!);
+
+      const response = await petlink.core.graphql.public.verifyEmail({
+        uuid: params.uuid!,
+        otp: params.otp!,
+        verificationId: params.verificationId!,
+      });
+      expect(response.verifyEmail).toBeDefined();
+      expect(response.verifyEmail!.code).toBe("200");
+    });
+
+    it("Try login new flow-app-user (with EMAIL)", async () => {
+      await petlink.loginWithEmail(testUser.email, testUser.password);
+      const user = await petlink.core.graphql.authJwt.getUser();
+
+      expect(user.getUser.user).toBeDefined();
+      expect(user.getUser.user?.email).toBe(testUser.email);
+      expect(user.getUser.user?.phone).toBe(testUser.phone);
+      expect(user.getUser.user?.contactVerified?.phone).toBe(true);
+      expect(user.getUser.user?.contactVerified?.email).toBe(true);
+
+      // Salva i dati dell'utente per i describe successivi
+      setupResults.user = user.getUser.user;
+    });
 
     it("Verify contacts (Phone & Email) are no longer available", async () => {
       const [phoneCheck, emailCheck] = await Promise.all([
@@ -253,16 +245,16 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
     };
 
     beforeAll(async () => {
-      // Guard: Ensure user was created in previous tests
+      // Guard: Ensure flow-app-user was created in previous tests
       if (!setupResults.user) {
         throw new Error(
-          "setupResults.user is null - User Registration tests may have failed",
+          "setupResults.flow-app-user is null - User Registration tests may have failed",
         );
       }
       await petlink.loginWithPhone(testUser.phone, testUser.password);
     });
 
-    it("Create DOG and CAT for the user", async () => {
+    it("Create DOG and CAT for the flow-app-user", async () => {
       const [dogResponse, catResponse] = await Promise.all([
         petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
         petlink.core.graphql.authJwt.createPet({ pet: catPayload }),

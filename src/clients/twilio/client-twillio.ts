@@ -99,4 +99,7 @@ export class TwilioClient {
   }
 }
 
+// ------------------------------
+// Export singleton instance
+// ------------------------------
 export const twilioClient = new TwilioClient();

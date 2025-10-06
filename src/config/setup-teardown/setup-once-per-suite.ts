@@ -1,13 +1,14 @@
-import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { PerformanceTracker } from "../../test-utils/helpers/performance-tracker.js";
 
 export default async function setup() {
-  console.log("----- INIZIO SUITE (globalSetup) -----");
   // una volta PRIMA di tutta la run
-  // await petlink.deleteUser();
+  console.log("----- INIZIO SUITE (globalSetup) -----");
+  PerformanceTracker.cleanJsonl();
 
   // ritorna la funzione di teardown UNA volta a FINE run
   return async () => {
     console.log("----- FINE SUITE (global teardown) -----");
-    // await petlink.deleteUser();
+    PerformanceTracker.generateReportFromJsonl();
+    console.log("✅ Aggregated performance report generated\n");
   };
 }

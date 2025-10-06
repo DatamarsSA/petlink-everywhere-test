@@ -15,8 +15,7 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
-import { writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
+import { PerformanceTracker } from "../../test-utils/helpers/performance-tracker.js";
 
 // ------------------------------
 // HTTP header constants
@@ -27,93 +26,6 @@ export const HTTP_HEADERS = {
   X_AMZ_DATE: "X-Amz-Date",
   X_AMZ_SECURITY_TOKEN: "X-Amz-Security-Token",
 };
-
-// ------------------------------
-// Performance Tracker
-// ------------------------------
-export type PerformanceRecord = {
-  service: string;
-  protocol: string;
-  authType: string;
-  operation: string;
-  duration: number;
-  timestamp: Date;
-};
-
-class PerformanceTracker {
-  private static records: PerformanceRecord[] = [];
-
-  static record(data: Omit<PerformanceRecord, "timestamp">): void {
-    this.records.push({ ...data, timestamp: new Date() });
-  }
-
-  /**
-   * Generate performance report grouped by endpoint with aggregated metrics.
-   * Logs to console and optionally saves to file.
-   * @param filePath - Optional path to save the report file
-   */
-  static logRecords(filePath?: string): void {
-    if (this.records.length === 0) {
-      const message =
-        "\n=== 🚀 Performance Report ===\nNo requests tracked yet\n";
-      console.log(message);
-      if (filePath) {
-        writeFileSync(filePath, message, "utf-8");
-      }
-      return;
-    }
-
-    // Group by endpoint (service/protocol/authType/operation)
-    const grouped = new Map<string, number[]>();
-    this.records.forEach((r) => {
-      const key = `[${r.service}/${r.protocol}/${r.authType}] ${r.operation}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
-      }
-      grouped.get(key)!.push(r.duration);
-    });
-
-    // Calculate max duration for each endpoint (worst case = cold start)
-    const aggregated = Array.from(grouped.entries()).map(([key, durations]) => {
-      const count = durations.length;
-      const max = Math.max(...durations);
-      return { key, count, max };
-    });
-
-    // Sort by max duration (descending)
-    aggregated.sort((a, b) => b.max - a.max);
-
-    // Build report content
-    let content = `\n=== 🚀 Performance Report (${this.records.length} requests, ${aggregated.length} unique endpoints) ===\n\n`;
-    aggregated.forEach((item, i) => {
-      if (item.count === 1) {
-        content += `${i + 1}. ${item.key} - ${item.max}ms\n`;
-      } else {
-        content += `${i + 1}. ${item.key} - ${item.max}ms (${item.count}x calls)\n`;
-      }
-    });
-    content += `\nTotal Requests: ${this.records.length}\n`;
-
-    // Log to console
-    console.log(content);
-
-    // Save to file if path provided
-    if (filePath) {
-      // Create directory if it doesn't exist
-      const dir = dirname(filePath);
-      mkdirSync(dir, { recursive: true });
-      writeFileSync(filePath, content, "utf-8");
-    }
-  }
-
-  static clear(): void {
-    this.records = [];
-  }
-
-  static getRecords(): PerformanceRecord[] {
-    return [...this.records].sort((a, b) => b.duration - a.duration);
-  }
-}
 
 // ------------------------------
 // Service types
@@ -616,18 +528,6 @@ export class PetLinkInfrastructure {
     AuthManager.clearCache();
     this.core.clearCache();
     this.cct.clearCache();
-    PerformanceTracker.clear();
-  }
-
-  // --- Performance Tracking ---
-  /**
-   * Log performance report to console and optionally save to file.
-   * @param filePath - Optional path to save the report file
-   */
-  exportPerformanceTimes(
-    filePath: string = "./test-reports/performance-report.txt",
-  ): void {
-    PerformanceTracker.logRecords(filePath);
   }
 }
 
