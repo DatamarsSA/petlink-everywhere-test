@@ -22,11 +22,8 @@ const envSchemaValidation = z.object({
   GMAIL_CLIENT_ID: z.string().min(1, "GMAIL_CLIENT_ID è richiesto"),
   GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
   GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
-  // Performance Tracking (optional)
-  ENABLE_PERFORMANCE_TRACKING: z
-    .string()
-    .optional()
-    .transform((val) => val === "true"),
+  // App Brand
+  APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("PETLINK"),
 });
 
 type EnvConfig = z.infer<typeof envSchemaValidation>;

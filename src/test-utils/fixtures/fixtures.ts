@@ -1,14 +1,29 @@
-import type {
+import {
   PetIn,
   SpeciesEnum,
   BreedTypeEnum,
   Gender,
   PetLivingEnvironment,
   UserIn,
+  AppBrand,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { LanguageId } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { env } from "../../config/env-schema-validation.js";
+
+const currentAppBrand = env.APP_BRAND;
+
+export function getAnotherAppBrand(actualAppBrand: AppBrand): AppBrand {
+  const otherBrands = ["PETLINK", "KIPPY"].filter(
+    (brand) => brand !== actualAppBrand,
+  );
+  if (otherBrands.length === 0) {
+    throw new Error("No other app brands available");
+  }
+  return otherBrands[0] as AppBrand;
+}
 
 export const fixtures = {
+  appBrand: currentAppBrand,
   user: {
     name: "Test",
     surname: "User",
@@ -47,5 +62,40 @@ export const fixtures = {
       livingEnvironment: "ALWAYS_AT_HOME" as PetLivingEnvironment,
       primaryColor: "009f64c1-8fbb-4084-a962-696de40bc5e5", //Tiger Brown
     } as PetIn,
+  },
+
+  devices: {
+    petlinkGps: {
+      PETLINK: {
+        CAT: {
+          id: null,
+          serialNumber: "UTEST04",
+          countryCode: "IT",
+          timezone: "Europe/Rome",
+        },
+        DOG: {
+          serialNumber: "UTEST05",
+          countryCode: "IT",
+          timezone: "Europe/Rome",
+        },
+      },
+      KIPPY: {
+        CAT: {
+          serialNumber: "UTEST01",
+          countryCode: "IT",
+          timezone: "Europe/Rome",
+        },
+        DOG: {
+          serialNumber: "UTEST02",
+          countryCode: "IT",
+          timezone: "Europe/Rome",
+        },
+        EVO: {
+          serialNumber: "UTEST03",
+          countryCode: "IT",
+          timezone: "Europe/Rome",
+        },
+      },
+    },
   },
 };
