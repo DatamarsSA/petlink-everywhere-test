@@ -8,26 +8,38 @@ import {
   fixtures,
   getAnotherAppBrand,
 } from "../../test-utils/fixtures/fixtures.js";
-import { env } from "../../config/env-schema-validation.js";
 import type {
   PetIn,
   PetlinkGpsIn,
-  ActivityProfileEnum,
+  UserIn,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import exp from "node:constants";
 
 describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
+  const testUser = {
+    phone: fixtures.user.phone,
+    email: fixtures.user.email,
+    password: fixtures.user.password,
+    signUpPayload: {
+      email: fixtures.user.email,
+      name: fixtures.user.name,
+      surname: fixtures.user.surname,
+      city: fixtures.user.city,
+      countryCode: fixtures.user.countryCode,
+      zipCode: fixtures.user.zipCode,
+      streetAddress: fixtures.user.streetAddress,
+      phone: fixtures.user.phone,
+      password: fixtures.user.password,
+      confirmPassword: fixtures.user.confirmPassword,
+      languageId: fixtures.user.languageId,
+    } as UserIn,
+  };
+
   beforeAll(async () => {});
 
   // Log performance report after all tests (top 10 slowest requests)
   afterAll(async () => {
     petlink.exportPerformanceTimes();
   });
-
-  const userData = fixtures.user;
-  const userPhoneNumber = userData.phone;
-  const userEmail = userData.email;
-  const userPassword = userData.password;
 
   /**
    * Oggetto condiviso tra tutti i describe blocks per salvare i dati creati durante i test.
@@ -61,23 +73,20 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
     let createdUser: any;
 
     it("Verify phone number availability", async () => {
-      const responseCheckPhoneNumber =
-        await petlink.core.graphql.public.checkContact({
-          contact: userPhoneNumber,
-          contactType: "PHONE",
-        });
+      const response = await petlink.core.graphql.public.checkContact({
+        contact: testUser.phone,
+        contactType: "PHONE",
+      });
 
-      expect(responseCheckPhoneNumber.checkContact).toBeDefined();
-      expect(responseCheckPhoneNumber.checkContact.code).toBe("200");
+      expect(response.checkContact.code).toBe("200");
     });
 
     it("Send OTP to phone", async () => {
       const response = await petlink.core.graphql.public.sendOtp({
-        phone: userPhoneNumber,
-        languageId: userData.languageId,
+        phone: testUser.phone,
+        languageId: testUser.signUpPayload.languageId,
       });
 
-      expect(response.sendOtp).toBeDefined();
       expect(response.sendOtp.verificationId).toBeDefined();
 
       // Salva il verificationId per i test successivi
@@ -86,66 +95,49 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
 
     it("Wait to receive OTP via SMS", async () => {
       const otp = await waitFor(
-        () => twilioClient.getLatestOtp(userPhoneNumber),
+        () => twilioClient.getLatestOtp(testUser.phone),
         {
           timeoutMs: 60000,
           intervalMs: 500,
-          timeoutError: `OTP not received for ${userPhoneNumber}`,
+          timeoutError: `OTP not received for ${testUser.phone}`,
         },
       );
 
       expect(otp).toMatch(/^\d{4,6}$/);
-
-      // Salva l'OTP per i test successivi
       receivedOtp = otp;
-    }, 70000); // Timeout più lungo per l'attesa dell'SMS
+    }, 70000);
 
     it("Verify phone number (sending received OTP)", async () => {
       const response = await petlink.core.graphql.public.checkOtp({
         verificationId,
         otp: receivedOtp!,
-        contact: userPhoneNumber,
+        contact: testUser.phone,
       });
 
-      expect(response.checkOtp).toBeDefined();
       expect(response.checkOtp.code).toBe("200");
     });
 
     it("Complete user registration", async () => {
       const response = await petlink.core.graphql.public.signUpUser({
-        user: {
-          email: userEmail,
-          name: userData.name,
-          surname: userData.surname,
-          city: userData.city,
-          countryCode: userData.countryCode,
-          zipCode: userData.zipCode,
-          streetAddress: userData.streetAddress,
-          phone: userPhoneNumber,
-          password: userPassword,
-          confirmPassword: userPassword,
-          languageId: userData.languageId,
-        },
+        user: testUser.signUpPayload,
         otpData: {
           otp: receivedOtp!,
           verificationId,
         },
-        languageId: userData.languageId,
+        languageId: testUser.signUpPayload.languageId,
         appBrand: fixtures.appBrand,
       });
 
-      expect(response.signUpUser).toBeDefined();
       expect(response.signUpUser.code).toBe("200");
     });
 
     it("Try login new user (with PHONE)", async () => {
-      await petlink.loginWithPhone(userPhoneNumber, userPassword);
-      const createdUser = await petlink.core.graphql.authJwt.getUser();
+      await petlink.loginWithPhone(testUser.phone, testUser.password);
+      const userResponse = await petlink.core.graphql.authJwt.getUser();
 
-      expect(createdUser.getUser.user).toBeDefined();
-      expect(createdUser.getUser.user?.phone).toBe(userPhoneNumber);
-      expect(createdUser.getUser.user?.contactVerified?.phone).toBe(true);
-      setupResults.user = createdUser.getUser.user;
+      expect(userResponse.getUser.user?.phone).toBe(testUser.phone);
+      expect(userResponse.getUser.user?.contactVerified?.phone).toBe(true);
+      setupResults.user = userResponse.getUser.user;
     });
 
     // it("Wait to receive CONFIRMATION EMAIL", async () => {
@@ -201,36 +193,25 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
     //   setupResults.user = user.getUser.user;
     // });
 
-    it("PhoneNumber & Email should not be available anymore", async () => {
-      const [responseCheckPhoneNumber, responseCheckEmail] = await Promise.all([
+    it("Verify contacts (Phone & Email) are no longer available", async () => {
+      const [phoneCheck, emailCheck] = await Promise.all([
         petlink.core.graphql.public.checkContact({
-          contact: userPhoneNumber,
+          contact: testUser.phone,
           contactType: "PHONE",
         }),
         petlink.core.graphql.public.checkContact({
-          contact: userEmail,
+          contact: testUser.email,
           contactType: "EMAIL",
         }),
       ]);
 
-      expect(responseCheckPhoneNumber.checkContact.code).toBe("400");
-      expect(responseCheckEmail.checkContact.code).toBe("400");
+      expect(phoneCheck.checkContact.code).toBe("400");
+      expect(emailCheck.checkContact.code).toBe("400");
     });
   });
 
   describe("Pet Registration", () => {
-    const defaultCat = {
-      name: fixtures.pet.defaultCat.name,
-      species: fixtures.pet.defaultCat.species,
-      breedType: fixtures.pet.defaultCat.breedType,
-      breeds: fixtures.pet.defaultCat.breeds,
-      gender: fixtures.pet.defaultCat.gender,
-      weight: fixtures.pet.defaultCat.weight,
-      birthDate: fixtures.pet.defaultCat.birthDate,
-      livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
-      primaryColor: fixtures.pet.defaultCat.primaryColor,
-    } as PetIn;
-    const defaultDog = {
+    const dogPayload = {
       name: fixtures.pet.defaultDog.name,
       species: fixtures.pet.defaultDog.species,
       breedType: fixtures.pet.defaultDog.breedType,
@@ -242,6 +223,35 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
       primaryColor: fixtures.pet.defaultDog.primaryColor,
     } as PetIn;
 
+    const catPayload = {
+      name: fixtures.pet.defaultCat.name,
+      species: fixtures.pet.defaultCat.species,
+      breedType: fixtures.pet.defaultCat.breedType,
+      breeds: fixtures.pet.defaultCat.breeds,
+      gender: fixtures.pet.defaultCat.gender,
+      weight: fixtures.pet.defaultCat.weight,
+      birthDate: fixtures.pet.defaultCat.birthDate,
+      livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
+      primaryColor: fixtures.pet.defaultCat.primaryColor,
+    } as PetIn;
+
+    const assertPetCreation = (response: any, expectedPet: PetIn) => {
+      expect(response.createPet.code).toBe("200");
+      expect(response.createPet.pet?.name).toBe(expectedPet.name);
+      expect(response.createPet.pet?.species).toBe(expectedPet.species);
+      expect(response.createPet.pet?.breedType).toBe(expectedPet.breedType);
+      expect(response.createPet.pet?.gender).toBe(expectedPet.gender);
+      expect(response.createPet.pet?.weight).toBe(expectedPet.weight);
+      expect(response.createPet.pet?.birthDate).toBe(expectedPet.birthDate);
+      expect(response.createPet.pet?.livingEnvironment).toBe(
+        expectedPet.livingEnvironment,
+      );
+      expect(response.createPet.pet?.primaryColor).toBe(
+        expectedPet.primaryColor,
+      );
+      expect(response.createPet.pet?.id).toBeDefined();
+    };
+
     beforeAll(async () => {
       // Guard: Ensure user was created in previous tests
       if (!setupResults.user) {
@@ -249,52 +259,19 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
           "setupResults.user is null - User Registration tests may have failed",
         );
       }
-      await petlink.loginWithPhone(userPhoneNumber, userPassword);
+      await petlink.loginWithPhone(testUser.phone, testUser.password);
     });
 
     it("Create DOG and CAT for the user", async () => {
       const [dogResponse, catResponse] = await Promise.all([
-        petlink.core.graphql.authJwt.createPet({ pet: defaultDog }),
-        petlink.core.graphql.authJwt.createPet({ pet: defaultCat }),
+        petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
+        petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
       ]);
 
-      // Assertions for DOG
-      expect(dogResponse.createPet).toBeDefined();
-      expect(dogResponse.createPet.code).toBe("200");
-      expect(dogResponse.createPet.pet).toBeDefined();
-      expect(dogResponse.createPet.pet?.name).toBe(defaultDog.name);
-      expect(dogResponse.createPet.pet?.species).toBe(defaultDog.species);
-      expect(dogResponse.createPet.pet?.breedType).toBe(defaultDog.breedType);
-      expect(dogResponse.createPet.pet?.gender).toBe(defaultDog.gender);
-      expect(dogResponse.createPet.pet?.id).toBeDefined();
-      expect(dogResponse.createPet.pet?.weight).toBe(defaultDog.weight);
-      expect(dogResponse.createPet.pet?.birthDate).toBe(defaultDog.birthDate);
-      expect(dogResponse.createPet.pet?.livingEnvironment).toBe(
-        defaultDog.livingEnvironment,
-      );
-      expect(dogResponse.createPet.pet?.primaryColor).toBe(
-        defaultDog.primaryColor,
-      );
+      // Usa helper per ridurre duplicazione
+      assertPetCreation(dogResponse, dogPayload);
+      assertPetCreation(catResponse, catPayload);
 
-      // Assertions for CAT
-      expect(catResponse.createPet).toBeDefined();
-      expect(catResponse.createPet.code).toBe("200");
-      expect(catResponse.createPet.pet).toBeDefined();
-      expect(catResponse.createPet.pet?.name).toBe(defaultCat.name);
-      expect(catResponse.createPet.pet?.species).toBe(defaultCat.species);
-      expect(catResponse.createPet.pet?.breedType).toBe(defaultCat.breedType);
-      expect(catResponse.createPet.pet?.gender).toBe(defaultCat.gender);
-      expect(catResponse.createPet.pet?.id).toBeDefined();
-      expect(catResponse.createPet.pet?.weight).toBe(defaultCat.weight);
-      expect(catResponse.createPet.pet?.birthDate).toBe(defaultCat.birthDate);
-      expect(catResponse.createPet.pet?.livingEnvironment).toBe(
-        defaultCat.livingEnvironment,
-      );
-      expect(catResponse.createPet.pet?.primaryColor).toBe(
-        defaultCat.primaryColor,
-      );
-
-      // Salva i dati dei pet per i describe successivi
       setupResults.pet.dog = dogResponse.createPet.pet;
       setupResults.pet.cat = catResponse.createPet.pet;
     });
@@ -317,7 +294,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
         // Invalid: PUREBREED with 2 breeds (should have only 1)
         petlink.core.graphql.authJwt.createPet({
           pet: {
-            ...defaultDog,
+            ...dogPayload,
             breedType: "PUREBREED",
             breeds: [
               "5b0bfddb-532e-41cb-9705-b2ddc21226ef", // Labrador Retriever
@@ -328,7 +305,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
         // Invalid: MIXED_BREED with 1 breed (should have 2)
         petlink.core.graphql.authJwt.createPet({
           pet: {
-            ...defaultDog,
+            ...dogPayload,
             breedType: "MIXED_BREED",
             breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Only 1 breed
           },
@@ -336,7 +313,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
         // Invalid: MIXED_BREED with 2 equals breeds
         petlink.core.graphql.authJwt.createPet({
           pet: {
-            ...defaultDog,
+            ...dogPayload,
             breedType: "MIXED_BREED",
             breeds: [
               "5b0bfddb-532e-41cb-9705-b2ddc21226ef",
@@ -347,7 +324,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
         // Invalid: CAT with DOG breed
         petlink.core.graphql.authJwt.createPet({
           pet: {
-            ...defaultCat,
+            ...catPayload,
             breedType: "PUREBREED",
             breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever (DOG)
           },
@@ -355,7 +332,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
         // Invalid: DOG with CAT breed
         petlink.core.graphql.authJwt.createPet({
           pet: {
-            ...defaultDog,
+            ...dogPayload,
             breedType: "PUREBREED",
             breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese (CAT)
           },
@@ -372,7 +349,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
     it("Update and Delete PET should work correctly", async () => {
       // Create a temporary PET for CRUD testing (isolated from main DOG and CAT)
       const tempPetData = {
-        ...defaultDog,
+        ...dogPayload,
         name: "Temp Pet for CRUD Test",
       } as PetIn;
 
@@ -426,125 +403,118 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
   describe("PetlinkGPS registration", () => {
     beforeAll(async () => {
       if (!setupResults.user) {
-        throw new Error(
-          "setupResults.user is null - User Registration tests may have failed",
-        );
+        throw new Error("User not created - previous tests failed");
       }
       if (!setupResults.pet.dog || !setupResults.pet.cat) {
-        throw new Error(
-          "setupResults.pet is incomplete - Pet Registration tests may have failed",
-        );
+        throw new Error("Pets not created - previous tests failed");
       }
-      await petlink.loginWithPhone(userPhoneNumber, userPassword);
+      await petlink.loginWithPhone(testUser.phone, testUser.password);
     });
 
     it("Associate Petlink GPS to both DOG and CAT", async () => {
-      // Prepara i dati per entrambi i device
-      const dogPetlinkGps = {
-        ...fixtures.devices.petlinkGps[fixtures.appBrand].DOG,
-        petId: setupResults.pet?.dog.id,
+      // Payload puliti e consistenti
+      const dogDevicePayload = {
+        serialNumber:
+          fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
+        countryCode:
+          fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
+        timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
+        petId: setupResults.pet.dog.id,
       } as PetlinkGpsIn;
 
-      const catPetlinkGps = {
-        ...fixtures.devices.petlinkGps[fixtures.appBrand].CAT,
-        petId: setupResults.pet?.cat.id,
+      const catDevicePayload = {
+        serialNumber:
+          fixtures.devices.petlinkGps[fixtures.appBrand].CAT.serialNumber,
+        countryCode:
+          fixtures.devices.petlinkGps[fixtures.appBrand].CAT.countryCode,
+        timezone: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.timezone,
+        petId: setupResults.pet.cat.id,
       } as PetlinkGpsIn;
 
-      const [createdDogPetlinkGps, createdCatPetlinkGps] = await Promise.all([
+      const [dogResponse, catResponse] = await Promise.all([
         petlink.core.graphql.authJwt.createPetlinkGps({
-          petlinkGps: {
-            serialNumber: dogPetlinkGps.serialNumber,
-            countryCode: dogPetlinkGps.countryCode,
-            timezone: dogPetlinkGps.timezone,
-            petId: dogPetlinkGps.petId,
-          },
+          petlinkGps: dogDevicePayload,
           appBrand: fixtures.appBrand,
         }),
         petlink.core.graphql.authJwt.createPetlinkGps({
-          petlinkGps: {
-            serialNumber: catPetlinkGps.serialNumber,
-            countryCode: catPetlinkGps.countryCode,
-            timezone: catPetlinkGps.timezone,
-            petId: catPetlinkGps.petId,
-          },
+          petlinkGps: catDevicePayload,
           appBrand: fixtures.appBrand,
         }),
       ]);
 
       // Assert per DOG
-      expect(createdDogPetlinkGps.createPetlinkGps).toBeDefined();
-      expect(createdDogPetlinkGps.createPetlinkGps.code).toBe("200");
-      expect(createdDogPetlinkGps.createPetlinkGps.petlinkGps?.userId).toBe(
+      expect(dogResponse.createPetlinkGps.code).toBe("200");
+      expect(dogResponse.createPetlinkGps.petlinkGps?.serialNumber).toBe(
+        dogDevicePayload.serialNumber,
+      );
+      expect(dogResponse.createPetlinkGps.petlinkGps?.petId).toBe(
+        dogDevicePayload.petId,
+      );
+      expect(dogResponse.createPetlinkGps.petlinkGps?.countryCode).toBe(
+        dogDevicePayload.countryCode,
+      );
+      expect(dogResponse.createPetlinkGps.petlinkGps?.timezone).toBe(
+        dogDevicePayload.timezone,
+      );
+      expect(dogResponse.createPetlinkGps.petlinkGps?.userId).toBe(
         setupResults.user.id,
-      );
-      expect(createdDogPetlinkGps.createPetlinkGps.petlinkGps?.petId).toBe(
-        dogPetlinkGps.petId,
-      );
-      expect(
-        createdDogPetlinkGps.createPetlinkGps.petlinkGps?.countryCode,
-      ).toBe(dogPetlinkGps.countryCode);
-      expect(createdDogPetlinkGps.createPetlinkGps.petlinkGps?.timezone).toBe(
-        dogPetlinkGps.timezone,
       );
 
       // Assert per CAT
-      expect(createdCatPetlinkGps.createPetlinkGps).toBeDefined();
-      expect(createdCatPetlinkGps.createPetlinkGps.code).toBe("200");
-      expect(createdDogPetlinkGps.createPetlinkGps.petlinkGps?.userId).toBe(
+      expect(catResponse.createPetlinkGps.code).toBe("200");
+      expect(catResponse.createPetlinkGps.petlinkGps?.serialNumber).toBe(
+        catDevicePayload.serialNumber,
+      );
+      expect(catResponse.createPetlinkGps.petlinkGps?.petId).toBe(
+        catDevicePayload.petId,
+      );
+      expect(catResponse.createPetlinkGps.petlinkGps?.countryCode).toBe(
+        catDevicePayload.countryCode,
+      );
+      expect(catResponse.createPetlinkGps.petlinkGps?.timezone).toBe(
+        catDevicePayload.timezone,
+      );
+      expect(catResponse.createPetlinkGps.petlinkGps?.userId).toBe(
         setupResults.user.id,
       );
-      expect(createdCatPetlinkGps.createPetlinkGps.petlinkGps?.petId).toBe(
-        catPetlinkGps.petId,
-      );
-      expect(
-        createdCatPetlinkGps.createPetlinkGps.petlinkGps?.countryCode,
-      ).toBe(catPetlinkGps.countryCode);
-      expect(createdCatPetlinkGps.createPetlinkGps.petlinkGps?.timezone).toBe(
-        catPetlinkGps.timezone,
-      );
 
-      // Salva i device per i test successivi
-      setupResults.device.dogGps =
-        createdDogPetlinkGps.createPetlinkGps.petlinkGps;
-      setupResults.device.catGps =
-        createdCatPetlinkGps.createPetlinkGps.petlinkGps;
+      setupResults.device.dogGps = dogResponse.createPetlinkGps.petlinkGps;
+      setupResults.device.catGps = catResponse.createPetlinkGps.petlinkGps;
     });
 
     it("PetlinkGPS should not be available anymore", async () => {
-      // Prepara i dati per entrambi i device
-      const dogPetlinkGps = {
-        ...fixtures.devices.petlinkGps[fixtures.appBrand].DOG,
-        petId: setupResults.pet?.dog.id,
+      // Payload puliti per test duplicazione
+      const dogDevicePayload = {
+        serialNumber:
+          fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
+        countryCode:
+          fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
+        timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
+        petId: setupResults.pet.dog.id,
       } as PetlinkGpsIn;
 
-      const catPetlinkGps = {
-        ...fixtures.devices.petlinkGps[fixtures.appBrand].CAT,
-        petId: setupResults.pet?.cat.id,
+      const catDevicePayload = {
+        serialNumber:
+          fixtures.devices.petlinkGps[fixtures.appBrand].CAT.serialNumber,
+        countryCode:
+          fixtures.devices.petlinkGps[fixtures.appBrand].CAT.countryCode,
+        timezone: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.timezone,
+        petId: setupResults.pet.cat.id,
       } as PetlinkGpsIn;
 
-      const [createdDogPetlinkGps, createdCatPetlinkGps] = await Promise.all([
+      const [dogResponse, catResponse] = await Promise.all([
         petlink.core.graphql.authJwt.createPetlinkGps({
-          petlinkGps: {
-            serialNumber: dogPetlinkGps.serialNumber,
-            countryCode: dogPetlinkGps.countryCode,
-            timezone: dogPetlinkGps.timezone,
-            petId: dogPetlinkGps.petId,
-          },
+          petlinkGps: dogDevicePayload,
           appBrand: fixtures.appBrand,
         }),
         petlink.core.graphql.authJwt.createPetlinkGps({
-          petlinkGps: {
-            serialNumber: catPetlinkGps.serialNumber,
-            countryCode: catPetlinkGps.countryCode,
-            timezone: catPetlinkGps.timezone,
-            petId: catPetlinkGps.petId,
-          },
+          petlinkGps: catDevicePayload,
           appBrand: fixtures.appBrand,
         }),
       ]);
 
-      expect(createdDogPetlinkGps.createPetlinkGps.code).not.toBe("200");
-      expect(createdCatPetlinkGps.createPetlinkGps.code).not.toBe("200");
+      expect(dogResponse.createPetlinkGps.code).not.toBe("200");
+      expect(catResponse.createPetlinkGps.code).not.toBe("200");
     });
 
     it("Update PetlinkGps should work correctly", async () => {
