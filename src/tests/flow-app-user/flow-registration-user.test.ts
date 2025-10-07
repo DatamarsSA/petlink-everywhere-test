@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
-import { waitFor } from "../../test-utils/helpers/utils-retry.js";
-import { fixtures } from "../../test-utils/fixtures/fixtures.js";
+import { waitFor } from "../../helpers/utils-retry.js";
+import { fixtures } from "../../fixtures/fixtures.js";
 import type {
   PetIn,
   PetlinkGpsIn,

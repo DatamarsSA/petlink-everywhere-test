@@ -6,9 +6,9 @@ import {
   PetLivingEnvironment,
   UserIn,
   AppBrand,
-} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { LanguageId } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { env } from "../../config/env-schema-validation.js";
+} from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { LanguageId } from "../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { env } from "../config/env-schema-validation.js";
 
 const currentAppBrand = env.APP_BRAND;
 

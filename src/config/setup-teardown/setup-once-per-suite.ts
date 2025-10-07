@@ -1,4 +1,4 @@
-import { PerformanceTracker } from "../../test-utils/helpers/performance-tracker.js";
+import { PerformanceTracker } from "../../helpers/performance-tracker.js";
 
 export default async function setup() {
   // una volta PRIMA di tutta la run

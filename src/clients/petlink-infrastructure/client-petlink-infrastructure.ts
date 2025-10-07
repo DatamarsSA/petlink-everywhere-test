@@ -15,7 +15,7 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
-import { PerformanceTracker } from "../../test-utils/helpers/performance-tracker.js";
+import { PerformanceTracker } from "../../helpers/performance-tracker.js";
 
 // ------------------------------
 // HTTP header constants

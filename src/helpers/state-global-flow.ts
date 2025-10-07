@@ -1,11 +1,11 @@
-import { User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { env } from "../../config/env-schema-validation.js";
+import { User } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { env } from "../config/env-schema-validation.js";
 import {
   petlink,
   UtilityTestTypeEnum,
-} from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { gmailClient } from "../../clients/gmail/client-gmail.js";
-import { twilioClient } from "../../clients/twilio/client-twillio.js";
+} from "../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { gmailClient } from "../clients/gmail/client-gmail.js";
+import { twilioClient } from "../clients/twilio/client-twillio.js";
 import { fixtures } from "../fixtures/fixtures.js";
 
 export type GlobalState = {
