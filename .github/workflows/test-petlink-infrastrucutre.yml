@@ -65,7 +65,7 @@ jobs:
           NODE_ENV: ${{ github.event.inputs.environment || 'develop'  }}
         run: |
           # Crea directory per estrarre i report (separata per ogni brand)
-          mkdir -p ./test-reports-${{ matrix.app_brand }}
+          mkdir -p ./test-reports-${{ APP_BRAND }}
           
           # Esegui i test nel container con volume mapping per estrarre i report
           docker run \
@@ -85,7 +85,7 @@ jobs:
             -e GMAIL_REFRESH_TOKEN \
             -e APP_BRAND \
             -e NODE_ENV \
-            -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
+            -v $(pwd)/test-reports-${{ APP_BRAND }}:/app/test-reports \
             petlink-everywhere-test yarn pipeline:$NODE_ENV
 
       # Pubblica JUnit report per annotazioni su PR
@@ -93,8 +93,8 @@ jobs:
         uses: mikepenz/action-junit-report@v5
         if: always()
         with:
-          report_paths: 'test-reports-${{ matrix.app_brand }}/junit.xml'
-          check_name: "Report integration test (${{ env.NODE_ENV }} - ${{ matrix.app_brand }})"
+          report_paths: 'test-reports-${{ APP_BRAND }}/junit.xml'
+          check_name: "Report integration test (${{ env.NODE_ENV }} - ${{ APP_BRAND }})"
           fail_on_failure: true
           require_tests: true
           # Summary (pagina "Summary" del run su Actions)
@@ -110,11 +110,11 @@ jobs:
       - name: Add Performance Report to Summary
         if: always()
         run: |
-          if [ -f "test-reports-${{ matrix.app_brand }}/performance-records.jsonl" ]; then
-            echo "## 🚀 Performance Report (${{ matrix.app_brand }})" >> $GITHUB_STEP_SUMMARY
+          if [ -f "test-reports-${{ APP_BRAND }}/performance-records.jsonl" ]; then
+            echo "## 🚀 Performance Report (${{ APP_BRAND }})" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat test-reports-${{ matrix.app_brand }}/performance-records.jsonl >> $GITHUB_STEP_SUMMARY
+            cat test-reports-${{ APP_BRAND }}/performance-records.jsonl >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ Performance report not found" >> $GITHUB_STEP_SUMMARY
