@@ -19,6 +19,32 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'develop' }}
     
+    env:
+      # Environment
+      NODE_ENV: ${{ github.event.inputs.environment || 'develop' }}
+      # Core API
+      CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
+      CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
+      # CCT API
+      CCT_GRAPHQL_API_URL: ${{ secrets.CCT_GRAPHQL_API_URL }}
+      CCT_GRAPHQL_API_KEY: ${{ secrets.CCT_GRAPHQL_API_KEY }}
+      # AWS Cognito
+      COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
+      COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      # AWS IAM
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Twilio
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      # Gmail
+      GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+      GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+      GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      # App Brand
+      APP_BRAND: ${{ matrix.app_brand }}
+    
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -37,32 +63,7 @@ jobs:
       - name: Build Docker image
         run: docker build -t petlink-everywhere-test .
 
-      - name: Run integration tests (${{ matrix.app_brand }})
-        env:
-          # Core API
-          CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
-          CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
-          # CCT API
-          CCT_GRAPHQL_API_URL: ${{ secrets.CCT_GRAPHQL_API_URL }}
-          CCT_GRAPHQL_API_KEY: ${{ secrets.CCT_GRAPHQL_API_KEY }}
-          # AWS Cognito
-          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
-          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
-          # AWS IAM
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # Twilio
-          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          # Gmail
-          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
-          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
-          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
-          # App Brand
-          APP_BRAND: ${{ matrix.app_brand }}
-          # Imposta NODE_ENV in base all'ambiente selezionato
-          NODE_ENV: ${{ github.event.inputs.environment || 'develop'  }}
+      - name: Run integration tests (${{ matrix.app_brand }} on env ${{ env.NODE_ENV }})
         run: |
           # Crea directory per estrarre i report (separata per ogni brand)
           mkdir -p ./test-reports-${{ matrix.app_brand }}
@@ -94,7 +95,7 @@ jobs:
         if: always()
         with:
           report_paths: 'test-reports-${{ matrix.app_brand }}/junit.xml'
-          check_name: "Report integration test (${{ env.NODE_ENV }} - ${{ matrix.app_brand }})"
+          check_name: "Report integration test (${{ matrix.app_brand }} on env ${{ env.NODE_ENV }})"
           fail_on_failure: true
           require_tests: true
           # Summary (pagina "Summary" del run su Actions)

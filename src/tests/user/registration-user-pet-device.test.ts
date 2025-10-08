@@ -40,7 +40,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
    * Questo permette di accedere ai dati dell'utente, dei pet e dei device in tutti i test successivi.
    *
    * Struttura:
-   * - flow-app-user: dati dell'utente creato (salvato in "User Registration")
+   * - user: dati dell'utente creato (salvato in "User Registration")
    * - pet.dog: dati del cane creato (salvato in "Pet Registration")
    * - pet.cat: dati del gatto creato (salvato in "Pet Registration")
    * - device.dogGps: dati del GPS del cane (salvato in "PetlinkGPS registration")
@@ -123,7 +123,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
       expect(response.signUpUser.code).toBe("200");
     });
 
-    it("Try login new flow-app-user (with PHONE)", async () => {
+    it("Try login new user (with PHONE)", async () => {
       await petlink.loginWithPhone(testUser.phone, testUser.password);
       const userResponse = await petlink.core.graphql.authJwt.getUser();
 
@@ -171,7 +171,7 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
       expect(response.verifyEmail!.code).toBe("200");
     });
 
-    it("Try login new flow-app-user (with EMAIL)", async () => {
+    it("Try login new user (with EMAIL)", async () => {
       await petlink.loginWithEmail(testUser.email, testUser.password);
       const user = await petlink.core.graphql.authJwt.getUser();
 
@@ -245,16 +245,16 @@ describe.sequential("User - Pet - PetlinkGPS registration flows", () => {
     };
 
     beforeAll(async () => {
-      // Guard: Ensure flow-app-user was created in previous tests
+      // Guard: Ensure user was created in previous tests
       if (!setupResults.user) {
         throw new Error(
-          "setupResults.flow-app-user is null - User Registration tests may have failed",
+          "setupResults.user is null - User Registration tests may have failed",
         );
       }
       await petlink.loginWithPhone(testUser.phone, testUser.password);
     });
 
-    it("Create DOG and CAT for the flow-app-user", async () => {
+    it("Create DOG and CAT for the user", async () => {
       const [dogResponse, catResponse] = await Promise.all([
         petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
         petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
