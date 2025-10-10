@@ -15,3 +15,15 @@
  * - sometimes signUpUser() return 422 (o 428?, insted 200) also if user does note exist
  *
  */
+
+/** DOCS
+ * - add docs flow registration user, pet and device
+ * - add schema excalidraw of archtecture
+ *
+ */
+
+/** TODAY
+ * - finish read & understand docs PEM-404
+ * - refactor flow register suer-pet-device idempotent with new createUser() for test
+ * - understand how to use ChargeBee test environment (https://www.chargebee.com/docs/payments/2.0/payment-gateways-and-configuration/chargebee-test-gateway?utm_source=chatgpt.com)
+ */

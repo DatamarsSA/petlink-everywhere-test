@@ -17,7 +17,7 @@ export class TwilioClient {
     limit: number = 10,
   ): Promise<any[]> {
     try {
-      console.log(`🔍 Cerco messaggi inviati a ${phoneNumber}...`);
+      // console.log(`🔍 Cerco messaggi inviati a ${phoneNumber}...`);
 
       const messages = await this.client.messages.list({
         to: phoneNumber,
@@ -29,10 +29,10 @@ export class TwilioClient {
           new Date(b.dateSent!).getTime() - new Date(a.dateSent!).getTime(),
       );
 
-      console.log(`📱 Trovati ${sortedMessages.length} messaggi`);
+      // console.log(`📱 Trovati ${sortedMessages.length} messaggi`);
       return sortedMessages;
     } catch (error) {
-      console.error("❌ Errore nel recupero messaggi:", error);
+      // console.error("❌ Errore nel recupero messaggi:", error);
       throw error;
     }
   }
@@ -66,31 +66,21 @@ export class TwilioClient {
     limit: number = 50,
   ): Promise<number> {
     try {
-      console.log(`\n🧹 Pulizia messaggi per ${phoneNumber}...`);
-
       const messages = await this.client.messages.list({
         to: phoneNumber,
         limit: limit,
       });
-
-      console.log(`📋 Trovati ${messages.length} messaggi da eliminare`);
 
       let deletedCount = 0;
       for (const message of messages) {
         try {
           await this.client.messages(message.sid).remove();
           deletedCount++;
-          console.log(
-            `✅ Eliminato messaggio ${message.sid} (${deletedCount}/${messages.length})`,
-          );
         } catch (err) {
           console.error(`❌ Impossibile eliminare messaggio ${message.sid}`);
         }
       }
 
-      console.log(
-        `🧹 Pulizia completata: ${deletedCount}/${messages.length} messaggi eliminati`,
-      );
       return deletedCount;
     } catch (error) {
       console.error("❌ Errore nell'eliminazione dei messaggi:", error);

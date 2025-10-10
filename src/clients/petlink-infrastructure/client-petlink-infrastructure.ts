@@ -15,7 +15,7 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
-import { PerformanceTracker } from "../../helpers/performance-tracker.js";
+import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 
 // ------------------------------
 // HTTP header constants
@@ -38,6 +38,7 @@ export enum ServiceType {
 export enum UtilityTestTypeEnum {
   BUY_NEW_SUBSCRIPTION = "BUY_NEW_SUBSCRIPTION",
   CLEAN_UP_USER = "CLEAN_UP_USER",
+  SIGN_UP = "SIGN_UP",
 }
 
 export enum LanguageId {
@@ -192,7 +193,7 @@ class ProxyFactory {
             return await member(...args);
           } finally {
             const duration = Math.round(performance.now() - startTime);
-            PerformanceTracker.record({
+            performanceTracker.recordPerformance({
               service: config.serviceName,
               protocol: config.protocolName,
               authType: config.authType,
@@ -523,8 +524,11 @@ export class PetLinkInfrastructure {
     AuthManager.setIamCredentials({ accessKeyId, secretAccessKey });
   }
 
-  // --- Utilities ---
-  reset(): void {
+  /**
+   * Clear all authentication state and cached clients.
+   * Should be called between test suites to ensure clean state.
+   */
+  clearAllCache(): void {
     AuthManager.clearCache();
     this.core.clearCache();
     this.cct.clearCache();

@@ -1,10 +1,6 @@
 import { beforeAll, afterAll } from "vitest";
-import { globalState } from "../../helpers/state-global-flow.js";
+import { testHelper } from "../../clients/client-test-helper.js";
 
 beforeAll(async () => {
-  await globalState.cleanupAll();
-});
-
-afterAll(async () => {
-  await globalState.cleanupAll();
+  await testHelper.cleanupAll();
 });

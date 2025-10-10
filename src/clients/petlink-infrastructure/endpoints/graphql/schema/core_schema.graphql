@@ -2,27 +2,34 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
 Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
 directive @aws_cognito_user_pools(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service which subscriptions will be published to when this mutation is
+called. This directive is deprecated use @aws_susbscribe directive instead.
+"""
+directive @aws_publish(
+  """
+  List of subscriptions which will be published to when this mutation is called.
+  """
+  subscriptions: [String]
+) on FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by sigv4 signing.
@@ -38,21 +45,14 @@ directive @aws_subscribe(
 ) on FIELD_DEFINITION
 
 """
-Tells the service which subscriptions will be published to when this mutation is
-called. This directive is deprecated use @aws_susbscribe directive instead.
+Tells the service this field/object has access authorized by a Lambda Authorizer.
 """
-directive @aws_publish(
-  """
-  List of subscriptions which will be published to when this mutation is called.
-  """
-  subscriptions: [String]
-) on FIELD_DEFINITION
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -292,6 +292,14 @@ type Device {
   activated: Boolean!
 }
 
+type DevicePrice {
+  deviceType: DeviceTypeEnum!
+  price: Float!
+  period: Float
+  periodUnit: String
+  discountPercentage: Int!
+}
+
 enum DeviceTypeEnum {
   CAT
   DOG
@@ -304,6 +312,31 @@ type DiscoutItem {
   couponId: String!
   discountPercentage: Float
   discountType: String!
+}
+
+type EndOfLife {
+  id: String!
+  step: String!
+  userId: String!
+  productId: String!
+  serialNumber: String!
+  deviceType: String
+  subscriptionId: String
+  priceIds: [String!]
+  shopUrl: String
+  shippingAddress: ShippingAddress
+}
+
+input EndOfLifeIn {
+  step: String!
+  userId: String!
+  productId: String!
+  serialNumber: String!
+  deviceType: String
+  subscriptionId: String
+  priceIds: [String!]
+  shopUrl: String
+  shippingAddress: ShippingAddressIn
 }
 
 type EnergySavingZone {
@@ -650,6 +683,7 @@ type Mutation {
   setPetIsLost(petId: String!, lostIn: LostIn!): ResponseSetPetIsLost!
   setOptimizationDone(productId: String!): Response!
   setSafetyTermsCat: Response!
+  setArcaPlanetTerms: Response!
   qrTagHasBeenScanned(petlinkQrTag: String!): Response!
   sendMessageFoundPet(message: MessageFoundPetIn!): Response!
   setPetIsFound(petId: String!): ResponseSetPetIsFound!
@@ -669,7 +703,7 @@ type Mutation {
   updateUserContact(userId: String!, contact: String!, contactType: ContactType!, appBrand: AppBrand!): Response!
 
   """  sso"""
-  setSsoToken(productId: String!, appBrand: AppBrand!): ResponseSsoUrl!
+  setSsoToken(productId: String, appBrand: AppBrand!, pageType: PageTypeEnum!): ResponseSsoUrl!
 
   """  subscriptions"""
   updateBillingInfo(updateBillingInfoInput: UpdateBillingInfoInput!): Response!
@@ -688,6 +722,9 @@ type Mutation {
   publishOnGpsMessagePosition(gpsPosition: GpsMessagePositionIn!): GpsMessagePosition!
   publishOnGpsMessageStatus(gpsStatus: GpsMessageStatusIn!): GpsMessageStatus!
   publishOnSubscriptionStatus(subscriptionStatus: SubscriptionMessageStatusIn!): SubscriptionMessageStatus!
+
+  """  end of life"""
+  updateEndOfLife(eolId: String, deviceId: String, input: EndOfLifeIn): ResponseUpdateEndOfLife!
 
   """  newsletter"""
   registerToNewsletter(email: String!): Response!
@@ -742,6 +779,12 @@ type Order {
 input OtpInput {
   otp: String!
   verificationId: String!
+}
+
+enum PageTypeEnum {
+  PET_PROFILE
+  PAYMENT_METHOD
+  EOL
 }
 
 type Pagination {
@@ -882,6 +925,7 @@ type PetlinkGps {
   subscriptionId: String
   subscriptionIsActive: Boolean
   logEnabled: Boolean
+  endOfLifeDevice: Boolean
 }
 
 input PetlinkGpsIn {
@@ -934,6 +978,7 @@ type PetlinkSubscription {
   subscriptionItems: [PetlinkSubscriptionItem!]!
   billingPeriod: Int!
   billingPeriodUnit: String!
+  addonToStopIds: [String!]
 }
 
 type PetlinkSubscriptionItem {
@@ -973,6 +1018,7 @@ type PetProtection {
   reservedCoupon: String!
   reservedCouponPercent: Int!
   customerServiceContact: String!
+  card: Card
 }
 
 type PetProtectionFlag {
@@ -1098,6 +1144,7 @@ type Product {
 
   """ TODO remove"""
   subscriptionIsActive: Boolean
+  endOfLifeDevice: Boolean
 }
 
 enum ProductTypeEnum {
@@ -1125,6 +1172,18 @@ enum PromotionTypeEnum {
   ADDON
 }
 
+type PurchasedService {
+  id: String!
+  creationDate: String!
+  currentTermStart: String
+  currentTermEnd: String
+  card: Card
+  currencyCode: String!
+  paymentStatus: PaymentStatusTypeEnum
+  invoice: InvoiceShortInfo
+  subscriptionStatus: SubscriptionStatusEnum
+}
+
 type Query {
   getUser: ResponseUser!
   getPet(id: String!): ResponsePet!
@@ -1137,10 +1196,13 @@ type Query {
   getPetlinkQrTag(id: String!): ResponsePetlinkQrTag!
   getPetlinkGps(id: String!): ResponsePetlinkGps!
   getProduct(id: String!, entityType: ProductTypeEnum!): ResponseProduct!
-
-  """  TODO remove"""
   getProducts(petId: String!): ResponseProducts!
   getGpsPromotions(productId: String!): ResponseGetGpsPromotions!
+
+  """  end of life"""
+  getEndOfLife(eolId: String, deviceId: String): ResponseGetEndOfLife!
+  getPlansEOL(productId: String!, countryCode: String): ResponseGetPlansEOL!
+  checkoutEOLNewDevice(eolId: String!): ResponseCheckoutEOLNewDevice!
   getSubscriptionPlans(productId: String, countryCode: String, serialNumber: String): ResponseSubscriptionPlans!
   getProtectionPlans(petId: String!): ResponseProtectionPlans!
   getSubscriptionPlanPricing(planPriceId: String!, careProtectionPlanId: String, addonPriceIds: [String!], countryCode: String!, productId: String!): ResponseSubscriptionPlanPricing!
@@ -1152,6 +1214,7 @@ type Query {
   checkoutPrepaid(orderId: String!, serialNumber: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput, appBrand: AppBrand): ResponseCheckoutNewSubscription!
   changeSubscriptionPlan(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseChangeSubscriptionPlan!
   getSubscriptions(productId: String!): ResponseGetSubscriptions!
+  getPurchasedServices(productId: String!): ResponseGetPurchasedServices!
   getSubscriptionByProductId(productId: String!): ResponseGetSubscriptionByProductId!
   getOrder(orderId: String!): ResponseGetOrder
   getPetsAndProducts: ResponsePetsAndProducts!
@@ -1159,7 +1222,7 @@ type Query {
   getPositionsHistory(petId: String!, from: String, to: String): ResponsePositionsHistory!
   getPositionsHistoryDates(petId: String!, from: String, to: String): ResponsePositionsHistoryDates
   checkMicrochip(microchip: String!): ResponseCheckMicrochip!
-  checkGps(serialNumber: String!): Response!
+  checkGps(serialNumber: String!): ResponseCheckGps!
   getDictionary(languageId: LanguageId, appBrand: AppBrand!): ResponseGetDictionary!
   getS3UploadUrl(fileName: String!): ResponseS3Upload!
   getLogUploadUrl(fileName: String!, deviceId: String!): ResponseGetLogUploadUrl!
@@ -1245,6 +1308,20 @@ type ResponseChangeSubscriptionPlan {
   checkoutId: String
 }
 
+type ResponseCheckGps {
+  code: String!
+  translationCode: String
+  message: String!
+  imei: String
+  idccd: String
+  planProfileId: String
+  brand: String
+  model: String
+  firmwareVersion: String
+  simStatus: String
+  simRequestedStatus: String
+}
+
 type ResponseCheckMicrochip {
   code: String!
   translationCode: String
@@ -1264,6 +1341,12 @@ type ResponseCheckoutCareProtection {
   message: String!
   url: String
   checkoutId: String
+}
+
+type ResponseCheckoutEOLNewDevice {
+  code: String!
+  message: String!
+  url: String
 }
 
 type ResponseCheckoutNewSubscription {
@@ -1338,6 +1421,13 @@ type ResponseGetDictionary {
   dictionary: String!
 }
 
+type ResponseGetEndOfLife {
+  code: String!
+  message: String!
+  translationCode: String
+  endOfLifeItem: EndOfLife
+}
+
 type ResponseGetGpsPromotions {
   code: String!
   translationCode: String
@@ -1379,12 +1469,28 @@ type ResponseGetPetProtection {
   petProtection: PetProtection
 }
 
+type ResponseGetPlansEOL {
+  code: String!
+  translationCode: String
+  message: String!
+  plans: [Plan!]
+  devicePrice: [DevicePrice!]
+  endOfLife: EndOfLife
+}
+
 type ResponseGetPosts {
   code: String!
   message: String!
   translationCode: String
   items: [Post!]!
   pagination: Pagination!
+}
+
+type ResponseGetPurchasedServices {
+  code: String!
+  message: String!
+  translationCode: String
+  purchasedServices: [PurchasedService!]
 }
 
 type ResponseGetSubscriptionByProductId {
@@ -1594,6 +1700,13 @@ type ResponseSubscriptionPlans {
   coupon: Coupon
 }
 
+type ResponseUpdateEndOfLife {
+  code: String!
+  message: String!
+  translationCode: String
+  endOfLifeItem: EndOfLife
+}
+
 type ResponseUpdatePaymentSources {
   code: String!
   message: String!
@@ -1617,6 +1730,7 @@ type ResponseUser {
 type ResponseUtilityIntegrationTest {
   code: String!
   message: String!
+  userId: String
 }
 
 input Setting {
@@ -1643,6 +1757,26 @@ enum SettingTypeEnum {
   GEOFENCE
   ENERGY_SAVING_ZONE
   UPDATE_FREQUENCY
+}
+
+type ShippingAddress {
+  firstName: String!
+  lastName: String!
+  address: String!
+  province: String!
+  country: String!
+  city: String!
+  zip: String!
+}
+
+input ShippingAddressIn {
+  firstName: String!
+  lastName: String!
+  address: String!
+  province: String!
+  country: String!
+  city: String!
+  zip: String!
 }
 
 enum SpeciesEnum {
@@ -1690,6 +1824,7 @@ type SubscriptionShortInfo {
   totalAmount: Float!
   billingPeriod: Int!
   billingPeriodUnit: String!
+  addonToStopIds: [String!]
 }
 
 type SubscriptionShortInfoItem {
@@ -1710,6 +1845,7 @@ type SubscriptionStatus {
 
 enum SubscriptionStatusEnum {
   to_stop_renew
+  to_stop_renew_addon
   transferred
   cancelled
   paused
@@ -1863,11 +1999,14 @@ input UtilityIntegrationTestInput {
   phone: String
   productId: String
   priceIds: [String!]
+  userIn: UserIn
+  appBrand: AppBrand
 }
 
 enum UtilityTestTypeEnum {
   CLEAN_UP_USER
   BUY_NEW_SUBSCRIPTION
+  SIGN_UP
 }
 
 enum ValidationStatusEnum {

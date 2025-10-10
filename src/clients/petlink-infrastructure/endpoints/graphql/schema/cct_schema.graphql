@@ -2,14 +2,41 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by sigv4 signing.
+Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
-directive @aws_iam on OBJECT | FIELD_DEFINITION
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by a Lambda Authorizer.
 """
 directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service which subscriptions will be published to when this mutation is
@@ -23,36 +50,9 @@ directive @aws_publish(
 ) on FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by an API key.
+Tells the service this field/object has access authorized by sigv4 signing.
 """
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
+directive @aws_iam on OBJECT | FIELD_DEFINITION
 
 type Activity {
   date: String!
@@ -191,7 +191,7 @@ type CreditNote {
   chargebeeSubscriptionId: String
   chargebeeInvoiceId: String
   chargebeeCreditNoteId: String
-  subscriptionId: String!
+  subscriptionId: String
   invoiceId: String!
   productId: String
   refundItems: [RefundItem!]
@@ -249,6 +249,7 @@ type Device {
   customerName: String
   customerSurname: String
   customerEmail: String
+  customerBrand: String
   customerCountry: String
   customerLanguage: LanguageId
   imei: String!
@@ -893,6 +894,7 @@ type Pet {
   dateMarkedAsLost: String
   activityProfile: ActivityProfileEnum!
   hidden: Boolean
+  petProtection: PetProtectionShortInfo
 }
 
 type PetlinkSubscription {
@@ -935,6 +937,7 @@ type PetlinkSubscription {
   addedFreePeriod: Int
   totalDeviceProtectionReplacements: Int
   availableDeviceProtectionReplacements: Int
+  addonToStopIds: [String!]
 }
 
 type PetProtection {
@@ -959,6 +962,8 @@ type PetProtection {
   reservedCouponPercent: Int!
   customerServiceContact: String!
   invoice: Invoice
+  creditNotes: [CreditNote!]
+  card: Card
 }
 
 type PetProtectionFlag {
@@ -987,6 +992,14 @@ type PetProtectionPetData {
   name: String!
   birthDate: String
   microchip: String
+}
+
+type PetProtectionShortInfo {
+  id: String!
+  currentTermStart: String!
+  currentTermEnd: String!
+  status: PetProtectionStatus!
+  name: String!
 }
 
 enum PetProtectionStatus {
@@ -1239,6 +1252,7 @@ type SubscriptionItem {
 
 enum SubscriptionStatusEnum {
   to_stop_renew
+  to_stop_renew_addon
   transferred
   cancelled
   paused

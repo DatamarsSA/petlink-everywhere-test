@@ -181,7 +181,7 @@ export interface CreditNote {
   refundedAt?: Maybe<Scalars["String"]["output"]>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
   status?: Maybe<CreditNoteStatusTypeEnum>;
-  subscriptionId: Scalars["String"]["output"];
+  subscriptionId?: Maybe<Scalars["String"]["output"]>;
   total: Scalars["Int"]["output"];
   updateDate: Scalars["String"]["output"];
   userId: Scalars["String"]["output"];
@@ -226,6 +226,7 @@ export interface Device {
   battery?: Maybe<Scalars["Float"]["output"]>;
   brand?: Maybe<Scalars["String"]["output"]>;
   country: Scalars["String"]["output"];
+  customerBrand?: Maybe<Scalars["String"]["output"]>;
   customerCountry?: Maybe<Scalars["String"]["output"]>;
   customerEmail?: Maybe<Scalars["String"]["output"]>;
   customerId: Scalars["String"]["output"];
@@ -978,6 +979,7 @@ export interface Pet {
   length?: Maybe<Scalars["Float"]["output"]>;
   name: Scalars["String"]["output"];
   neutered?: Maybe<Scalars["Boolean"]["output"]>;
+  petProtection?: Maybe<PetProtectionShortInfo>;
   primaryColor?: Maybe<Scalars["String"]["output"]>;
   species: Scalars["String"]["output"];
   updateDate: Scalars["String"]["output"];
@@ -987,8 +989,10 @@ export interface Pet {
 
 export interface PetProtection {
   __typename?: "PetProtection";
+  card?: Maybe<Card>;
   chargebeeSubscriptionId?: Maybe<Scalars["String"]["output"]>;
   codiceTessera?: Maybe<Scalars["String"]["output"]>;
+  creditNotes?: Maybe<Array<CreditNote>>;
   currencyCode: Scalars["String"]["output"];
   currentTermEnd: Scalars["String"]["output"];
   currentTermStart: Scalars["String"]["output"];
@@ -1041,6 +1045,15 @@ export interface PetProtectionPetData {
   species: Scalars["String"]["output"];
 }
 
+export interface PetProtectionShortInfo {
+  __typename?: "PetProtectionShortInfo";
+  currentTermEnd: Scalars["String"]["output"];
+  currentTermStart: Scalars["String"]["output"];
+  id: Scalars["String"]["output"];
+  name: Scalars["String"]["output"];
+  status: PetProtectionStatus;
+}
+
 export type PetProtectionStatus =
   | "ACTIVE"
   | "CANCELLED"
@@ -1056,6 +1069,7 @@ export interface PetlinkSubscription {
   __typename?: "PetlinkSubscription";
   activatedAt?: Maybe<Scalars["String"]["output"]>;
   addedFreePeriod?: Maybe<Scalars["Int"]["output"]>;
+  addonToStopIds?: Maybe<Array<Scalars["String"]["output"]>>;
   availableDeviceProtectionReplacements?: Maybe<Scalars["Int"]["output"]>;
   billingPeriod?: Maybe<Scalars["Int"]["output"]>;
   billingPeriodUnit?: Maybe<Scalars["String"]["output"]>;
@@ -1490,6 +1504,7 @@ export type SubscriptionStatusEnum =
   | "non_renewing"
   | "paused"
   | "to_stop_renew"
+  | "to_stop_renew_addon"
   | "transferred";
 
 export interface Ticket {

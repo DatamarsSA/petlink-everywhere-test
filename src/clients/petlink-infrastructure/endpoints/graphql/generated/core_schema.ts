@@ -270,6 +270,15 @@ export interface Device {
   serialNumber: Scalars["String"]["output"];
 }
 
+export interface DevicePrice {
+  __typename?: "DevicePrice";
+  deviceType: DeviceTypeEnum;
+  discountPercentage: Scalars["Int"]["output"];
+  period?: Maybe<Scalars["Float"]["output"]>;
+  periodUnit?: Maybe<Scalars["String"]["output"]>;
+  price: Scalars["Float"]["output"];
+}
+
 export type DeviceTypeEnum = "CAT" | "DOG" | "EVO";
 
 export interface DiscoutItem {
@@ -279,6 +288,32 @@ export interface DiscoutItem {
   couponId: Scalars["String"]["output"];
   discountPercentage?: Maybe<Scalars["Float"]["output"]>;
   discountType: Scalars["String"]["output"];
+}
+
+export interface EndOfLife {
+  __typename?: "EndOfLife";
+  deviceType?: Maybe<Scalars["String"]["output"]>;
+  id: Scalars["String"]["output"];
+  priceIds?: Maybe<Array<Scalars["String"]["output"]>>;
+  productId: Scalars["String"]["output"];
+  serialNumber: Scalars["String"]["output"];
+  shippingAddress?: Maybe<ShippingAddress>;
+  shopUrl?: Maybe<Scalars["String"]["output"]>;
+  step: Scalars["String"]["output"];
+  subscriptionId?: Maybe<Scalars["String"]["output"]>;
+  userId: Scalars["String"]["output"];
+}
+
+export interface EndOfLifeIn {
+  deviceType?: InputMaybe<Scalars["String"]["input"]>;
+  priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  productId: Scalars["String"]["input"];
+  serialNumber: Scalars["String"]["input"];
+  shippingAddress?: InputMaybe<ShippingAddressIn>;
+  shopUrl?: InputMaybe<Scalars["String"]["input"]>;
+  step: Scalars["String"]["input"];
+  subscriptionId?: InputMaybe<Scalars["String"]["input"]>;
+  userId: Scalars["String"]["input"];
 }
 
 export interface EnergySavingZone {
@@ -620,6 +655,7 @@ export interface Mutation {
   sendSetting: ResponseSendSetting;
   /**   add sub w/uuid from verifyEmail */
   sendTokenEmail: Response;
+  setArcaPlanetTerms: Response;
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
@@ -632,6 +668,8 @@ export interface Mutation {
   /**   subscriptions */
   updateBillingInfo: Response;
   updateEmailUser: Response;
+  /**   end of life */
+  updateEndOfLife: ResponseUpdateEndOfLife;
   updateEnergySavingZone: ResponseEnergySavingZone;
   updateGeofence: ResponseGeofence;
   updateNotificationSettings: ResponseNotificationSettings;
@@ -821,7 +859,8 @@ export type MutationSetPetIsLostArgs = {
 
 export type MutationSetSsoTokenArgs = {
   appBrand: AppBrand;
-  productId: Scalars["String"]["input"];
+  pageType: PageTypeEnum;
+  productId?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationSignUpUserArgs = {
@@ -851,6 +890,12 @@ export type MutationUpdateEmailUserArgs = {
   appBrand: AppBrand;
   email: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
+};
+
+export type MutationUpdateEndOfLifeArgs = {
+  deviceId?: InputMaybe<Scalars["String"]["input"]>;
+  eolId?: InputMaybe<Scalars["String"]["input"]>;
+  input?: InputMaybe<EndOfLifeIn>;
 };
 
 export type MutationUpdateEnergySavingZoneArgs = {
@@ -956,6 +1001,8 @@ export interface OtpInput {
   otp: Scalars["String"]["input"];
   verificationId: Scalars["String"]["input"];
 }
+
+export type PageTypeEnum = "EOL" | "PAYMENT_METHOD" | "PET_PROFILE";
 
 export interface Pagination {
   __typename?: "Pagination";
@@ -1083,6 +1130,7 @@ export type PetLivingEnvironment =
 
 export interface PetProtection {
   __typename?: "PetProtection";
+  card?: Maybe<Card>;
   chargebeeSubscriptionId?: Maybe<Scalars["String"]["output"]>;
   codiceTessera?: Maybe<Scalars["String"]["output"]>;
   currencyCode: Scalars["String"]["output"];
@@ -1174,6 +1222,7 @@ export interface PetlinkGps {
   __typename?: "PetlinkGps";
   countryCode?: Maybe<Scalars["String"]["output"]>;
   creationDate: Scalars["String"]["output"];
+  endOfLifeDevice?: Maybe<Scalars["Boolean"]["output"]>;
   entityType: EntityTypeEnum;
   geofenceCoordinates?: Maybe<Array<Maybe<Coordinates>>>;
   id: Scalars["String"]["output"];
@@ -1232,6 +1281,7 @@ export interface PetlinkQrTagIn {
 
 export interface PetlinkSubscription {
   __typename?: "PetlinkSubscription";
+  addonToStopIds?: Maybe<Array<Scalars["String"]["output"]>>;
   billingPeriod: Scalars["Int"]["output"];
   billingPeriodUnit: Scalars["String"]["output"];
   card?: Maybe<Card>;
@@ -1302,6 +1352,7 @@ export interface Pricing {
 export interface Product {
   __typename?: "Product";
   creationDate: Scalars["String"]["output"];
+  endOfLifeDevice?: Maybe<Scalars["Boolean"]["output"]>;
   entityType: ProductTypeEnum;
   id: Scalars["String"]["output"];
   lastKnownPosition?: Maybe<GpsPosition>;
@@ -1338,14 +1389,28 @@ export interface PromotionInput {
 
 export type PromotionTypeEnum = "ADDON";
 
+export interface PurchasedService {
+  __typename?: "PurchasedService";
+  card?: Maybe<Card>;
+  creationDate: Scalars["String"]["output"];
+  currencyCode: Scalars["String"]["output"];
+  currentTermEnd?: Maybe<Scalars["String"]["output"]>;
+  currentTermStart?: Maybe<Scalars["String"]["output"]>;
+  id: Scalars["String"]["output"];
+  invoice?: Maybe<InvoiceShortInfo>;
+  paymentStatus?: Maybe<PaymentStatusTypeEnum>;
+  subscriptionStatus?: Maybe<SubscriptionStatusEnum>;
+}
+
 export interface Query {
   __typename?: "Query";
   changeSubscriptionPlan: ResponseChangeSubscriptionPlan;
   checkContact: Response;
-  checkGps: Response;
+  checkGps: ResponseCheckGps;
   checkMicrochip: ResponseCheckMicrochip;
   checkoutAddons: ResponseCheckoutAddons;
   checkoutCareProtection: ResponseCheckoutCareProtection;
+  checkoutEOLNewDevice: ResponseCheckoutEolNewDevice;
   checkoutNewSubscription: ResponseCheckoutNewSubscription;
   checkoutPrepaid: ResponseCheckoutNewSubscription;
   getActiveSubscriptions: ResponseActiveSubscriptions;
@@ -1362,6 +1427,8 @@ export interface Query {
   getColors: ResponseGetColors;
   getCountryState: ResponseGetCountryState;
   getDictionary: ResponseGetDictionary;
+  /**   end of life */
+  getEndOfLife: ResponseGetEndOfLife;
   getEnergySavingZone: ResponseEnergySavingZone;
   getEnergySavingZones: ResponseEnergySavingZones;
   getGeofence: ResponseGeofence;
@@ -1381,13 +1448,14 @@ export interface Query {
   getPetlinkQrTag: ResponsePetlinkQrTag;
   getPets: ResponsePets;
   getPetsAndProducts: ResponsePetsAndProducts;
+  getPlansEOL: ResponseGetPlansEol;
   getPositionsHistory: ResponsePositionsHistory;
   getPositionsHistoryDates?: Maybe<ResponsePositionsHistoryDates>;
   getPosts: ResponseGetPosts;
   getProduct: ResponseProduct;
-  /**   TODO remove */
   getProducts: ResponseProducts;
   getProtectionPlans: ResponseProtectionPlans;
+  getPurchasedServices: ResponseGetPurchasedServices;
   getS3UploadUrl: ResponseS3Upload;
   /**  sso */
   getSsoToken: ResponseSsoToken;
@@ -1428,6 +1496,10 @@ export type QueryCheckoutCareProtectionArgs = {
   hostedPageOptions?: InputMaybe<HostedPageOptionsInput>;
   priceIds: Array<Scalars["String"]["input"]>;
   productId: Scalars["String"]["input"];
+};
+
+export type QueryCheckoutEolNewDeviceArgs = {
+  eolId: Scalars["String"]["input"];
 };
 
 export type QueryCheckoutNewSubscriptionArgs = {
@@ -1505,6 +1577,11 @@ export type QueryGetDictionaryArgs = {
   languageId?: InputMaybe<LanguageId>;
 };
 
+export type QueryGetEndOfLifeArgs = {
+  deviceId?: InputMaybe<Scalars["String"]["input"]>;
+  eolId?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type QueryGetEnergySavingZoneArgs = {
   id: Scalars["String"]["input"];
 };
@@ -1563,6 +1640,11 @@ export type QueryGetPetlinkQrTagArgs = {
   id: Scalars["String"]["input"];
 };
 
+export type QueryGetPlansEolArgs = {
+  countryCode?: InputMaybe<Scalars["String"]["input"]>;
+  productId: Scalars["String"]["input"];
+};
+
 export type QueryGetPositionsHistoryArgs = {
   from?: InputMaybe<Scalars["String"]["input"]>;
   petId: Scalars["String"]["input"];
@@ -1591,6 +1673,10 @@ export type QueryGetProductsArgs = {
 
 export type QueryGetProtectionPlansArgs = {
   petId: Scalars["String"]["input"];
+};
+
+export type QueryGetPurchasedServicesArgs = {
+  productId: Scalars["String"]["input"];
 };
 
 export type QueryGetS3UploadUrlArgs = {
@@ -1687,6 +1773,21 @@ export interface ResponseChangeSubscriptionPlan {
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseCheckGps {
+  __typename?: "ResponseCheckGps";
+  brand?: Maybe<Scalars["String"]["output"]>;
+  code: Scalars["String"]["output"];
+  firmwareVersion?: Maybe<Scalars["String"]["output"]>;
+  idccd?: Maybe<Scalars["String"]["output"]>;
+  imei?: Maybe<Scalars["String"]["output"]>;
+  message: Scalars["String"]["output"];
+  model?: Maybe<Scalars["String"]["output"]>;
+  planProfileId?: Maybe<Scalars["String"]["output"]>;
+  simRequestedStatus?: Maybe<Scalars["String"]["output"]>;
+  simStatus?: Maybe<Scalars["String"]["output"]>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseCheckMicrochip {
   __typename?: "ResponseCheckMicrochip";
   code: Scalars["String"]["output"];
@@ -1706,6 +1807,13 @@ export interface ResponseCheckoutAddons {
 export interface ResponseCheckoutCareProtection {
   __typename?: "ResponseCheckoutCareProtection";
   checkoutId?: Maybe<Scalars["String"]["output"]>;
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  url?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseCheckoutEolNewDevice {
+  __typename?: "ResponseCheckoutEOLNewDevice";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
   url?: Maybe<Scalars["String"]["output"]>;
@@ -1793,6 +1901,14 @@ export interface ResponseGetDictionary {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseGetEndOfLife {
+  __typename?: "ResponseGetEndOfLife";
+  code: Scalars["String"]["output"];
+  endOfLifeItem?: Maybe<EndOfLife>;
+  message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseGetGpsPromotions {
   __typename?: "ResponseGetGpsPromotions";
   code: Scalars["String"]["output"];
@@ -1840,12 +1956,30 @@ export interface ResponseGetPetProtection {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseGetPlansEol {
+  __typename?: "ResponseGetPlansEOL";
+  code: Scalars["String"]["output"];
+  devicePrice?: Maybe<Array<DevicePrice>>;
+  endOfLife?: Maybe<EndOfLife>;
+  message: Scalars["String"]["output"];
+  plans?: Maybe<Array<Plan>>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseGetPosts {
   __typename?: "ResponseGetPosts";
   code: Scalars["String"]["output"];
   items: Array<Post>;
   message: Scalars["String"]["output"];
   pagination: Pagination;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetPurchasedServices {
+  __typename?: "ResponseGetPurchasedServices";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  purchasedServices?: Maybe<Array<PurchasedService>>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -2084,6 +2218,14 @@ export interface ResponseSubscriptionPlans {
   trialDuration?: Maybe<Scalars["Int"]["output"]>;
 }
 
+export interface ResponseUpdateEndOfLife {
+  __typename?: "ResponseUpdateEndOfLife";
+  code: Scalars["String"]["output"];
+  endOfLifeItem?: Maybe<EndOfLife>;
+  message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseUpdatePaymentSources {
   __typename?: "ResponseUpdatePaymentSources";
   code: Scalars["String"]["output"];
@@ -2111,6 +2253,7 @@ export interface ResponseUtilityIntegrationTest {
   __typename?: "ResponseUtilityIntegrationTest";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
+  userId?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface Setting {
@@ -2135,6 +2278,27 @@ export type SettingTypeEnum =
   | "ENERGY_SAVING_ZONE"
   | "GEOFENCE"
   | "UPDATE_FREQUENCY";
+
+export interface ShippingAddress {
+  __typename?: "ShippingAddress";
+  address: Scalars["String"]["output"];
+  city: Scalars["String"]["output"];
+  country: Scalars["String"]["output"];
+  firstName: Scalars["String"]["output"];
+  lastName: Scalars["String"]["output"];
+  province: Scalars["String"]["output"];
+  zip: Scalars["String"]["output"];
+}
+
+export interface ShippingAddressIn {
+  address: Scalars["String"]["input"];
+  city: Scalars["String"]["input"];
+  country: Scalars["String"]["input"];
+  firstName: Scalars["String"]["input"];
+  lastName: Scalars["String"]["input"];
+  province: Scalars["String"]["input"];
+  zip: Scalars["String"]["input"];
+}
 
 export type SpeciesEnum = "CAT" | "DOG" | "OTHER";
 
@@ -2177,6 +2341,7 @@ export interface SubscriptionMessageStatusIn {
 
 export interface SubscriptionShortInfo {
   __typename?: "SubscriptionShortInfo";
+  addonToStopIds?: Maybe<Array<Scalars["String"]["output"]>>;
   billingPeriod: Scalars["Int"]["output"];
   billingPeriodUnit: Scalars["String"]["output"];
   card?: Maybe<Card>;
@@ -2220,6 +2385,7 @@ export type SubscriptionStatusEnum =
   | "non_renewing"
   | "paused"
   | "to_stop_renew"
+  | "to_stop_renew_addon"
   | "transferred";
 
 export interface SubscriptionStatusIn {
@@ -2364,13 +2530,18 @@ export interface UserSettingsIn {
 }
 
 export interface UtilityIntegrationTestInput {
+  appBrand?: InputMaybe<AppBrand>;
   phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
+  userIn?: InputMaybe<UserIn>;
   utilityType: UtilityTestTypeEnum;
 }
 
-export type UtilityTestTypeEnum = "BUY_NEW_SUBSCRIPTION" | "CLEAN_UP_USER";
+export type UtilityTestTypeEnum =
+  | "BUY_NEW_SUBSCRIPTION"
+  | "CLEAN_UP_USER"
+  | "SIGN_UP";
 
 export type ValidationStatusEnum =
   | "invalid"

@@ -1,36 +1,4 @@
 /**
- * Retry a function on errors/exceptions.
- * Use this when operations can fail temporarily (network errors, rate limits, etc.)
- *
- * @example
- * const user = await withRetry(() => petlink.core.authJwt.getUser(), {
- *   retries: 3,
- *   delayMs: 500
- * });
- */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: { retries?: number; delayMs?: number } = {},
-): Promise<T> {
-  const { retries = 3, delayMs = 500 } = options;
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      if (attempt < retries) {
-        // simple fixed delay backoff
-        await new Promise((res) => setTimeout(res, delayMs));
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-/**
  * Poll a function until a condition is met or timeout occurs.
  * Use this when waiting for asynchronous data/events (OTP arrival, email verification, etc.)
  *
