@@ -2,16 +2,17 @@
   "name": "petlink-everywhere-test",
   "version": "1.0.0",
   "type": "module",
+  "license": "UNLICENSED",
   "scripts": {
     "prettier:write-src": "prettier --write --ignore-path .prettierignore ./src",
     "precommit": "yarn prettier:write-src && yarn run tsc --noEmit",
-    "fetch:schemas": "node --loader ts-node/esm src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts ALL",
+    "fetch:schemas": "tsx src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts ALL",
     "codegen:generate-sdk": "graphql-codegen --config codegen.yaml",
     "fetch-schemas:generate-sdk": "yarn fetch:schemas && yarn codegen:generate-sdk",
     "test": "vitest run",
     "pipeline": "yarn fetch:schemas && yarn codegen:generate-sdk && yarn test",
-    "pipeline:develop": "NODE_ENV=develop yarn pipeline",
-    "pipeline:test": "NODE_ENV=test yarn pipeline"
+    "pipeline:develop": "TEST_ENV=develop yarn pipeline",
+    "pipeline:test": "TEST_ENV=test yarn pipeline"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",
@@ -26,6 +27,7 @@
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "prettier": "^3.3.2",
+    "tsx": "^4.19.2",
     "typescript": "~5.4.5",
     "vitest": "^3.2.4"
   },

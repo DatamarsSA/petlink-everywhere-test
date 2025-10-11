@@ -89,7 +89,7 @@ export class GmailClient {
       // Reset cached client only on auth/permission errors
       const status = error?.code ?? error?.response?.status ?? 0;
       if (status === 401 || status === 403) this.authClient = null;
-      return null;
+      throw error;
     }
   }
 

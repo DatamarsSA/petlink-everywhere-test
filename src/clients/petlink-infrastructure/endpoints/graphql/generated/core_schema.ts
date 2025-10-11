@@ -272,8 +272,11 @@ export interface Device {
 
 export interface DevicePrice {
   __typename?: "DevicePrice";
+  countryCode: Scalars["String"]["output"];
+  currencyCode: Scalars["String"]["output"];
   deviceType: DeviceTypeEnum;
   discountPercentage: Scalars["Int"]["output"];
+  id: Scalars["String"]["output"];
   period?: Maybe<Scalars["Float"]["output"]>;
   periodUnit?: Maybe<Scalars["String"]["output"]>;
   price: Scalars["Float"]["output"];
@@ -292,7 +295,7 @@ export interface DiscoutItem {
 
 export interface EndOfLife {
   __typename?: "EndOfLife";
-  deviceType?: Maybe<Scalars["String"]["output"]>;
+  devicePriceId?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
   priceIds?: Maybe<Array<Scalars["String"]["output"]>>;
   productId: Scalars["String"]["output"];
@@ -305,7 +308,7 @@ export interface EndOfLife {
 }
 
 export interface EndOfLifeIn {
-  deviceType?: InputMaybe<Scalars["String"]["input"]>;
+  devicePriceId?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId: Scalars["String"]["input"];
   serialNumber: Scalars["String"]["input"];
@@ -759,7 +762,7 @@ export type MutationDeleteRegistrationTokenArgs = {
 };
 
 export type MutationDeleteUserArgs = {
-  id: Scalars["String"]["input"];
+  id?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationForgotEmailArgs = {

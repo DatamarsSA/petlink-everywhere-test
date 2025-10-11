@@ -2,12 +2,12 @@ import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
-  // 1. Usa il mode passato da riga di comando (--mode)
-  // 2. ..Altrimenti usa NODE_ENV
-  // 3. ..Se nessuno dei due è definito, usa "develop"
-  const environment = mode || process.env.NODE_ENV || "develop";
+  const environment = process.env.TEST_ENV || "develop";
 
-  console.log(`Running tests in '${environment}' environment`);
+  console.log(
+    `🔧 Vitest Config - Mode: ${mode}, NODE_ENV: ${process.env.NODE_ENV}, TEST_ENV: ${process.env.TEST_ENV}, Using: ${environment}`,
+  );
+
   // Carica le variabili d'ambiente dal file .env.{environment}
   const rawEnv = loadEnv(environment, process.cwd(), "");
 
@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => {
       environment: "node",
       env: rawEnv,
       // timeouts più larghi per integrazione/E2E
-      testTimeout: 25000, // singolo test (it)
-      hookTimeout: 25000, // beforeAll/afterAll/beforeEach/afterEach
+      testTimeout: 15000, // singolo test (it)
+      hookTimeout: 15000, // beforeAll/afterAll/beforeEach/afterEach
 
       // 1) Eseguito PRIMA di ogni file di test
       setupFiles: ["./src/config/setup-teardown/setup-once-per-file.ts"],
@@ -35,21 +35,11 @@ export default defineConfig(({ mode }) => {
         junit: "./test-reports/junit.xml", // GitHub Actions legge questo
         json: "./test-reports/results.json", // Per post-processing
       },
-      // 1. Disabilita parallelismo tra FILE
+      // 1. Disabilita parallelismo TRA file
       fileParallelism: false,
-      // 2. Assicura che i test dentro ogni file siano sequenziali
+      // 2. Disabilita parallelismo tra test DENTRO lo stesso file
       sequence: {
         concurrent: false,
-      },
-      // 3. Usa un solo worker (un solo processo alla volta)
-      pool: "forks", // o 'threads'
-      poolOptions: {
-        forks: {
-          singleFork: true, // Forza un singolo fork process
-        },
-        threads: {
-          singleThread: true, // Oppure singolo thread
-        },
       },
     },
   };

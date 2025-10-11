@@ -1,10 +1,6 @@
 import twilio from "twilio";
 import { env } from "../../config/env-schema-validation.js";
 
-/**
- * Client Twilio per leggere messaggi inviati dal nostro account
- * Permette di "intercettare" gli OTP inviati dal backend nei test
- */
 export class TwilioClient {
   private client: twilio.Twilio;
 
@@ -46,18 +42,18 @@ export class TwilioClient {
     const messages = await this.getMessagesSentTo(phoneNumber, 1);
 
     for (const message of messages) {
-      console.log(`📄 Analizzo messaggio: "${message.body}"`);
+      // console.log(`📄 Analizzo messaggio: "${message.body}"`);
 
       // Pattern comuni per OTP
       const otpMatch = message.body.match(/\b(\d{4,6})\b/);
       if (otpMatch) {
         const otp = otpMatch[1];
-        console.log(`✅ OTP trovato: ${otp}`);
+        // console.log(`✅ OTP trovato: ${otp}`);
         return otp;
       }
     }
 
-    console.log("❌ Nessun OTP trovato");
+    // console.log("❌ Nessun OTP trovato");
     return null;
   }
 

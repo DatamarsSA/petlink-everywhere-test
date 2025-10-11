@@ -7,8 +7,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 const serviceType = process.argv[2]?.toUpperCase();
 
 // Ottieni l'ambiente dal secondo argomento o dalla variabile d'ambiente
-const envArg = process.argv[3];
-const environment = envArg || process.env.NODE_ENV || "develop";
+// const envArg = process.argv[3];
+const environment = process.env.TEST_ENV || "develop";
 
 function getBinFile(cmd: string): string {
   return join("node_modules", ".bin", cmd);

@@ -37,6 +37,7 @@ export async function waitFor<T>(
 
   const startTime = Date.now();
   let attempts = 0;
+  let lastError: Error | null = null;
 
   while (Date.now() - startTime < timeoutMs) {
     attempts++;
@@ -47,15 +48,17 @@ export async function waitFor<T>(
         return result;
       }
     } catch (error) {
-      // Continue polling even if fn throws (e.g., network errors during polling)
-      // If you want to fail fast on errors, remove this try-catch
+      // Salva l'errore silenziosamente, senza loggarlo
+      lastError = error instanceof Error ? error : new Error(String(error));
+      // Continua a fare retry
     }
 
-    // Don't wait after the last attempt if we're about to timeout
     if (Date.now() - startTime + intervalMs < timeoutMs) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
   }
 
-  throw new Error(`${timeoutError} (${attempts} attempts)`);
+  // Lancia l'errore finale con i dettagli
+  const errorInfo = lastError ? `\nCaused by: ${lastError.message}` : "";
+  throw new Error(`${timeoutError} (${attempts} attempts)${errorInfo}`);
 }

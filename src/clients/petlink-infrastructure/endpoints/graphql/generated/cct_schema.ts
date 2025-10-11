@@ -720,7 +720,7 @@ export interface IssueInput {
   zendeskId: Scalars["String"]["input"];
 }
 
-export type LanguageId = "EN" | "FR" | "IT";
+export type LanguageId = "DE" | "EN" | "ES" | "FR" | "IT";
 
 export interface LogActivityUser {
   __typename?: "LogActivityUser";

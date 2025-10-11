@@ -12,19 +12,13 @@ import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fixtures } from "../fixtures/fixtures.js";
 
-/**
- * Test helper utilities for managing test data and cleanup
- *
- * ⚠️ IMPORTANT: This class requires environment variables to be loaded.
- * Do NOT use in globalSetup - only use in test files or setupFiles.
- */
 export class TestHelper {
   /**
    * Clean up all test data (users, emails, SMS)
    * Should be called before each test suite to ensure clean state
    */
   async cleanupAll(): Promise<void> {
-    console.log("🧹 Cleaning up test environment...");
+    // console.log("🧹 Cleaning up test environment...");
 
     // Clear all cached authentication and clients first
     // petlink.clearAllCache();
@@ -40,15 +34,18 @@ export class TestHelper {
             utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
           },
         })
-        .then(() => console.log("✅ Deleted User and all related entities")),
-      gmailClient
-        .deleteAllEmails()
-        .then(() => console.log("✅ Deleted all emails")),
-      twilioClient
-        .deleteAllMessagesSentoToNumber(fixtures.user.phone)
-        .then(() =>
-          console.log(`✅ Deleted all SMS for ${fixtures.user.phone}`),
+        .then(
+          () => {},
+          // console.log("✅ Deleted User and all related entities")
         ),
+      gmailClient.deleteAllEmails().then(
+        () => {},
+        // console.log("✅ Deleted all emails")
+      ),
+      twilioClient.deleteAllMessagesSentoToNumber(fixtures.user.phone).then(
+        () => {},
+        // console.log(`✅ Deleted all SMS for ${fixtures.user.phone}`),
+      ),
     ]);
 
     // Clear cache again after cleanup to ensure fresh state for next test
@@ -107,7 +104,7 @@ export class TestHelper {
     if (!userResponse.getUser.user) {
       throw new Error("User not found after creation");
     }
-    console.log(JSON.stringify(userResponse.getUser.user));
+    // console.log(JSON.stringify(userResponse.getUser.user));
     return userResponse.getUser.user;
   }
 

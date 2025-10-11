@@ -19,6 +19,7 @@ describe("PetlinkGPS Registration", () => {
 
   // Clean everything BEFORE this test file starts, then create user and pets
   beforeAll(async () => {
+    console.log("beforeAll - PetlinkGPS Registration");
     testUser = await testHelper.createUser();
     testPets = (await testHelper.createPetsForUser()) as { dog: Pet; cat: Pet };
   });

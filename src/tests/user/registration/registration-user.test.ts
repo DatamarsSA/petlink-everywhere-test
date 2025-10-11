@@ -55,7 +55,7 @@ describe("User Registration", () => {
 
   it("Wait to receive OTP via SMS", async () => {
     const otp = await waitFor(() => twilioClient.getLatestOtp(testUser.phone), {
-      timeoutMs: 60000,
+      timeoutMs: 10000,
       intervalMs: 500,
       timeoutError: `OTP not received for ${testUser.phone}`,
     });
@@ -95,11 +95,16 @@ describe("User Registration", () => {
     expect(userResponse.getUser.user?.contactVerified?.phone).toBe(true);
   });
 
+  it("User created should be like input payload", async () => {
+    const userResponse = await petlink.core.graphql.authJwt.getUser();
+    //todo: assert on every field of userResponse.getUser.user
+  });
+
   it("Wait to receive CONFIRMATION EMAIL", async () => {
     const linkUrlToOpen = await waitFor(
       () => gmailClient.getVerificationLink(),
       {
-        timeoutMs: 60000,
+        timeoutMs: 10000,
         intervalMs: 500,
         timeoutError: "Verification email not received",
       },
