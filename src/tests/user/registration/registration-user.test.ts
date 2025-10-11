@@ -8,24 +8,20 @@ import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 
 describe("User Registration", () => {
-  const testUser = {
-    phone: fixtures.user.phone,
+  // Payload per la registrazione utente
+  const signUpPayload = {
     email: fixtures.user.email,
+    name: fixtures.user.name,
+    surname: fixtures.user.surname,
+    city: fixtures.user.city,
+    countryCode: fixtures.user.countryCode,
+    zipCode: fixtures.user.zipCode,
+    streetAddress: fixtures.user.streetAddress,
+    phone: fixtures.user.phone,
     password: fixtures.user.password,
-    signUpPayload: {
-      email: fixtures.user.email,
-      name: fixtures.user.name,
-      surname: fixtures.user.surname,
-      city: fixtures.user.city,
-      countryCode: fixtures.user.countryCode,
-      zipCode: fixtures.user.zipCode,
-      streetAddress: fixtures.user.streetAddress,
-      phone: fixtures.user.phone,
-      password: fixtures.user.password,
-      confirmPassword: fixtures.user.confirmPassword,
-      languageId: fixtures.user.languageId,
-    } as UserIn,
-  };
+    confirmPassword: fixtures.user.confirmPassword,
+    languageId: fixtures.user.languageId,
+  } as UserIn;
 
   // Variabili condivise tra i test
   let verificationId: string;
@@ -34,7 +30,7 @@ describe("User Registration", () => {
 
   it("Verify phone number availability", async () => {
     const response = await petlink.core.graphql.public.checkContact({
-      contact: testUser.phone,
+      contact: signUpPayload.phone,
       contactType: "PHONE",
     });
 
@@ -43,8 +39,8 @@ describe("User Registration", () => {
 
   it("Send OTP to phone", async () => {
     const response = await petlink.core.graphql.public.sendOtp({
-      phone: testUser.phone,
-      languageId: testUser.signUpPayload.languageId,
+      phone: signUpPayload.phone,
+      languageId: signUpPayload.languageId,
     });
 
     expect(response.sendOtp.verificationId).toBeDefined();
@@ -54,11 +50,14 @@ describe("User Registration", () => {
   });
 
   it("Wait to receive OTP via SMS", async () => {
-    const otp = await waitFor(() => twilioClient.getLatestOtp(testUser.phone), {
-      timeoutMs: 10000,
-      intervalMs: 500,
-      timeoutError: `OTP not received for ${testUser.phone}`,
-    });
+    const otp = await waitFor(
+      () => twilioClient.getLatestOtp(signUpPayload.phone),
+      {
+        timeoutMs: 10000,
+        intervalMs: 500,
+        timeoutError: `OTP not received for ${signUpPayload.phone}`,
+      },
+    );
 
     expect(otp).toMatch(/^\d{4,6}$/);
     receivedOtp = otp;
@@ -68,7 +67,7 @@ describe("User Registration", () => {
     const response = await petlink.core.graphql.public.checkOtp({
       verificationId,
       otp: receivedOtp!,
-      contact: testUser.phone,
+      contact: signUpPayload.phone,
     });
 
     expect(response.checkOtp.code).toBe("200");
@@ -76,7 +75,7 @@ describe("User Registration", () => {
 
   it("Register User", async () => {
     const response = await petlink.core.graphql.public.signUpUser({
-      user: testUser.signUpPayload,
+      user: signUpPayload,
       otpData: {
         otp: receivedOtp!,
         verificationId,
@@ -88,16 +87,12 @@ describe("User Registration", () => {
   });
 
   it("Try login new user (with PHONE)", async () => {
-    await petlink.loginWithPhone(testUser.phone, testUser.password);
+    await petlink.loginWithPhone(signUpPayload.phone, signUpPayload.password);
     const userResponse = await petlink.core.graphql.authJwt.getUser();
 
-    expect(userResponse.getUser.user?.phone).toBe(testUser.phone);
+    expect(userResponse.getUser.user?.phone).toBe(signUpPayload.phone);
     expect(userResponse.getUser.user?.contactVerified?.phone).toBe(true);
-  });
-
-  it("User created should be like input payload", async () => {
-    const userResponse = await petlink.core.graphql.authJwt.getUser();
-    //todo: assert on every field of userResponse.getUser.user
+    expect(userResponse.getUser.user?.contactVerified?.email).toBe(false);
   });
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
@@ -140,24 +135,44 @@ describe("User Registration", () => {
   });
 
   it("Try login new user (with EMAIL)", async () => {
-    await petlink.loginWithEmail(testUser.email, testUser.password);
+    await petlink.loginWithEmail(signUpPayload.email, signUpPayload.password);
     const user = await petlink.core.graphql.authJwt.getUser();
 
     expect(user.getUser.user).toBeDefined();
-    expect(user.getUser.user?.email).toBe(testUser.email);
-    expect(user.getUser.user?.phone).toBe(testUser.phone);
+    expect(user.getUser.user?.email).toBe(signUpPayload.email);
+    expect(user.getUser.user?.phone).toBe(signUpPayload.phone);
     expect(user.getUser.user?.contactVerified?.phone).toBe(true);
     expect(user.getUser.user?.contactVerified?.email).toBe(true);
+  });
+
+  it("Verify user created has all value equals to input payload", async () => {
+    const userResponse = await petlink.core.graphql.authJwt.getUser();
+    // Verifica campi specifici dell'input
+    expect(userResponse.getUser.user).toMatchObject({
+      email: signUpPayload.email,
+      name: signUpPayload.name,
+      surname: signUpPayload.surname,
+      city: signUpPayload.city,
+      countryCode: signUpPayload.countryCode,
+      zipCode: signUpPayload.zipCode,
+      streetAddress: signUpPayload.streetAddress,
+      phone: signUpPayload.phone,
+      languageId: signUpPayload.languageId,
+    });
+    // Verifica anche i campi generati dal backend
+    expect(userResponse.getUser.user?.id).toBeDefined();
+    expect(userResponse.getUser.user?.creationDate).toBeDefined();
+    expect(userResponse.getUser.user?.updateDate).toBeDefined();
   });
 
   it("Verify contacts (Phone & Email) are no longer available", async () => {
     const [phoneCheck, emailCheck] = await Promise.all([
       petlink.core.graphql.public.checkContact({
-        contact: testUser.phone,
+        contact: signUpPayload.phone,
         contactType: "PHONE",
       }),
       petlink.core.graphql.public.checkContact({
-        contact: testUser.email,
+        contact: signUpPayload.email,
         contactType: "EMAIL",
       }),
     ]);

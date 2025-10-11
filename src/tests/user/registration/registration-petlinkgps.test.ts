@@ -17,11 +17,9 @@ describe("PetlinkGPS Registration", () => {
   let dogDevice: PetlinkGps;
   let catDevice: PetlinkGps;
 
-  // Clean everything BEFORE this test file starts, then create user and pets
   beforeAll(async () => {
-    console.log("beforeAll - PetlinkGPS Registration");
     testUser = await testHelper.createUser();
-    testPets = (await testHelper.createPetsForUser()) as { dog: Pet; cat: Pet };
+    testPets = await testHelper.createPetsForUser();
   });
 
   it("Associate Petlink GPS to both DOG and CAT", async () => {
@@ -55,37 +53,27 @@ describe("PetlinkGPS Registration", () => {
       }),
     ]);
 
-    // Assert per DOG
+    // Assert DOG device
     expect(dogResponse.createPetlinkGps.code).toBe("200");
-    expect(dogResponse.createPetlinkGps.petlinkGps?.serialNumber).toBe(
-      dogDevicePayload.serialNumber,
-    );
-    expect(dogResponse.createPetlinkGps.petlinkGps?.petId).toBe(
-      dogDevicePayload.petId,
-    );
-    expect(dogResponse.createPetlinkGps.petlinkGps?.countryCode).toBe(
-      dogDevicePayload.countryCode,
-    );
-    expect(dogResponse.createPetlinkGps.petlinkGps?.timezone).toBe(
-      dogDevicePayload.timezone,
-    );
-    expect(dogResponse.createPetlinkGps.petlinkGps?.userId).toBe(testUser.id);
+    expect(dogResponse.createPetlinkGps.petlinkGps).toMatchObject({
+      serialNumber: dogDevicePayload.serialNumber,
+      petId: dogDevicePayload.petId,
+      countryCode: dogDevicePayload.countryCode,
+      timezone: dogDevicePayload.timezone,
+      userId: testUser.id,
+    });
+    expect(dogResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
 
-    // Assert per CAT
+    // Assert CAT device
     expect(catResponse.createPetlinkGps.code).toBe("200");
-    expect(catResponse.createPetlinkGps.petlinkGps?.serialNumber).toBe(
-      catDevicePayload.serialNumber,
-    );
-    expect(catResponse.createPetlinkGps.petlinkGps?.petId).toBe(
-      catDevicePayload.petId,
-    );
-    expect(catResponse.createPetlinkGps.petlinkGps?.countryCode).toBe(
-      catDevicePayload.countryCode,
-    );
-    expect(catResponse.createPetlinkGps.petlinkGps?.timezone).toBe(
-      catDevicePayload.timezone,
-    );
-    expect(catResponse.createPetlinkGps.petlinkGps?.userId).toBe(testUser.id);
+    expect(catResponse.createPetlinkGps.petlinkGps).toMatchObject({
+      serialNumber: catDevicePayload.serialNumber,
+      petId: catDevicePayload.petId,
+      countryCode: catDevicePayload.countryCode,
+      timezone: catDevicePayload.timezone,
+      userId: testUser.id,
+    });
+    expect(catResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
 
     // Salva i dispositivi per i test successivi
     dogDevice = dogResponse.createPetlinkGps.petlinkGps!;

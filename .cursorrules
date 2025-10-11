@@ -1,0 +1,358 @@
+# Petlink Everywhere Test - Cursor Rules
+
+## General Principles
+
+- Use Vitest built-in matchers instead of custom utilities
+- Keep test structure consistent across all test files
+- Prefer explicit field definitions over dynamic spread operators
+- Use `toMatchObject()` for comparing payloads with responses
+- Keep tests isolated and independent
+
+## Test Structure
+
+### File Organization
+```typescript
+describe("Feature Name", () => {
+  // 1. Define explicit payloads at the top (no spread from fixtures)
+  const signUpPayload = {
+    email: fixtures.user.email,
+    name: fixtures.user.name,
+    // ... all fields explicitly listed
+  } as UserIn;
+
+  // 2. Shared variables between tests
+  let userId: string;
+  let createdEntity: SomeType;
+
+  // 3. Setup (if needed)
+  beforeAll(async () => {
+    // Setup code
+  });
+
+  // 4. Tests
+  it("should do something", async () => {
+    // Test code
+  });
+});
+```
+
+### Payload Definitions
+
+**✅ DO - Explicit fields:**
+```typescript
+const signUpPayload = {
+  email: fixtures.user.email,
+  name: fixtures.user.name,
+  surname: fixtures.user.surname,
+  city: fixtures.user.city,
+  countryCode: fixtures.user.countryCode,
+  zipCode: fixtures.user.zipCode,
+  phone: fixtures.user.phone,
+  password: fixtures.user.password,
+  confirmPassword: fixtures.user.confirmPassword,
+  languageId: fixtures.user.languageId,
+} as UserIn;
+```
+
+**❌ DON'T - Dynamic spread:**
+```typescript
+const signUpPayload = { ...fixtures.user } as UserIn;
+const signUpPayload = fixtures.user;
+```
+
+**Reason:** If fixtures grow with extra fields not needed by the API, tests remain stable.
+
+## Assertions
+
+### Use Built-in Matchers
+
+**✅ DO:**
+```typescript
+// Compare objects with specific fields
+expect(response.getUser.user).toMatchObject({
+  email: signUpPayload.email,
+  name: signUpPayload.name,
+  surname: signUpPayload.surname,
+  // ... explicit fields only
+});
+
+// Check existence
+expect(user?.id).toBeDefined();
+expect(user?.creationDate).toBeDefined();
+
+// Check types
+expect(user?.id).toEqual(expect.any(String));
+expect(user?.age).toEqual(expect.any(Number));
+expect(user?.active).toEqual(expect.any(Boolean));
+
+// Check specific values
+expect(response.code).toBe("200");
+expect(user?.email).toBe(signUpPayload.email);
+```
+
+**❌ DON'T:**
+```typescript
+// Don't use destructuring with spread for assertions
+const { password, ...expectedData } = signUpPayload;
+expect(response).toMatchObject(expectedData);
+
+// Don't create custom assertion helpers when built-in exists
+function assertUserMatches(actual, expected) { ... }
+```
+
+### Assertion Patterns by Entity
+
+**User:**
+```typescript
+expect(userResponse.getUser.user).toMatchObject({
+  email: signUpPayload.email,
+  name: signUpPayload.name,
+  surname: signUpPayload.surname,
+  city: signUpPayload.city,
+  countryCode: signUpPayload.countryCode,
+  zipCode: signUpPayload.zipCode,
+  streetAddress: signUpPayload.streetAddress,
+  phone: signUpPayload.phone,
+  languageId: signUpPayload.languageId,
+});
+expect(userResponse.getUser.user?.id).toBeDefined();
+expect(userResponse.getUser.user?.creationDate).toBeDefined();
+```
+
+**Pet:**
+```typescript
+expect(petResponse.createPet.pet).toMatchObject({
+  name: petPayload.name,
+  species: petPayload.species,
+  breedType: petPayload.breedType,
+  breeds: petPayload.breeds,
+  gender: petPayload.gender,
+  weight: petPayload.weight,
+  birthDate: petPayload.birthDate,
+  livingEnvironment: petPayload.livingEnvironment,
+  primaryColor: petPayload.primaryColor,
+});
+expect(petResponse.createPet.pet?.id).toBeDefined();
+```
+
+**Device:**
+```typescript
+expect(deviceResponse.createPetlinkGps.petlinkGps).toMatchObject({
+  serialNumber: devicePayload.serialNumber,
+  petId: devicePayload.petId,
+  countryCode: devicePayload.countryCode,
+  timezone: devicePayload.timezone,
+  userId: expectedUserId,
+});
+expect(deviceResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
+```
+
+## Async Operations & Polling
+
+### waitFor Helper Usage
+
+```typescript
+// Always provide explicit timeout error message
+const otp = await waitFor(
+  () => twilioClient.getLatestOtp(phone),
+  {
+    timeoutMs: 10000,
+    intervalMs: 500,
+    timeoutError: `OTP not received for ${phone}`,
+  }
+);
+```
+
+**Error Handling in Polled Functions:**
+- Client methods should throw errors (not return null silently)
+- `waitFor` catches errors and includes them in timeout message
+- Don't log errors multiple times inside polled functions
+
+## Test Isolation
+
+### Setup & Cleanup
+
+```typescript
+// Each test file starts with clean state via setupFiles
+// setupFiles runs BEFORE each test file
+// src/config/setup-teardown/setup-once-per-file.ts handles cleanup
+
+beforeAll(async () => {
+  // Create test data needed by ALL tests in this file
+  testUser = await testHelper.createUser();
+  testPets = await testHelper.createPetsForUser();
+});
+
+// NO afterAll cleanup needed - handled by next file's setup
+```
+
+### Test Dependencies
+
+**✅ DO - Sequential tests with shared state:**
+```typescript
+describe.sequential("User Registration", () => {
+  let verificationId: string;
+  let receivedOtp: string;
+  
+  it("Send OTP", async () => {
+    const response = await sendOtp();
+    verificationId = response.verificationId;
+  });
+  
+  it("Verify OTP", async () => {
+    // Uses verificationId from previous test
+    const response = await verifyOtp(verificationId);
+  });
+});
+```
+
+**❌ DON'T - Tests that can't run independently:**
+```typescript
+// Bad: Test relies on side effects without clear sequential dependency
+it("should verify email", async () => {
+  // Assumes user was created by some other test
+});
+```
+
+## Naming Conventions
+
+- Test files: `kebab-case` (e.g., `registration-user.test.ts`)
+- Variables: `camelCase` (e.g., `signUpPayload`, `testUser`)
+- Constants: `camelCase` for payloads (e.g., `dogPayload`)
+- Type assertions: Always use `as TypeName` (e.g., `as UserIn`)
+
+## Vitest Configuration
+
+- Use `fileParallelism: false` for sequential file execution
+- Use `maxWorkers: 1` and `singleFork: true` for complete isolation
+- Set appropriate timeouts: `testTimeout: 25000`, `hookTimeout: 25000`
+- Use `describe.sequential()` when tests share state
+
+## Common Patterns
+
+### Parallel Operations
+
+```typescript
+const [dogResponse, catResponse] = await Promise.all([
+  createPet(dogPayload),
+  createPet(catPayload),
+]);
+```
+
+### Conditional Assertions
+
+```typescript
+// Check response code first
+expect(response.code).toBe("200");
+
+// Then check data
+expect(response.data).toBeDefined();
+expect(response.data?.field).toBe(expectedValue);
+```
+
+### Type Safety
+
+```typescript
+// Always type payloads
+const payload = { ... } as UserIn;
+const pet = { ... } as PetIn;
+
+// Use non-null assertion only when guaranteed
+const userId = response.user!.id;
+
+// Use optional chaining for potentially null fields
+expect(user?.contactVerified?.email).toBe(true);
+```
+
+## Anti-Patterns to Avoid
+
+1. **Don't use spread operators for test payloads** - be explicit
+2. **Don't create custom matchers** when Vitest has built-in ones
+3. **Don't log errors multiple times** in retry loops
+4. **Don't skip cleanup** between test files
+5. **Don't use magic numbers** - use named constants or fixtures
+6. **Don't test multiple unrelated things** in one test
+7. **Don't use `.only()` or `.skip()`** in committed code (unless TODO)
+
+## Test Naming
+
+```typescript
+// ✅ Good - Descriptive and action-oriented
+it("should create user with valid payload", async () => {});
+it("should return 400 when email is invalid", async () => {});
+it("should verify email after clicking confirmation link", async () => {});
+
+// ❌ Bad - Vague or technical
+it("test user creation", async () => {});
+it("should work", async () => {});
+it("createUser()", async () => {});
+```
+
+## Environment & Configuration
+
+- Environment determined by `TEST_ENV` (not `--mode` flag)
+- Default environment: `develop`
+- Load fixtures at module level, create payloads at describe level
+
+## Example Complete Test Structure
+
+```typescript
+import { describe, expect, it, beforeAll } from "vitest";
+import { fixtures } from "../../../fixtures/fixtures.js";
+import type { UserIn } from "../../../generated/core_schema.js";
+import { petlink } from "../../../clients/client-petlink-infrastructure.js";
+import { testHelper } from "../../../clients/client-test-helper.js";
+
+describe("User Feature", () => {
+  // Explicit payload definition
+  const signUpPayload = {
+    email: fixtures.user.email,
+    name: fixtures.user.name,
+    surname: fixtures.user.surname,
+    phone: fixtures.user.phone,
+    password: fixtures.user.password,
+    confirmPassword: fixtures.user.confirmPassword,
+    languageId: fixtures.user.languageId,
+  } as UserIn;
+
+  let testUser: User;
+
+  beforeAll(async () => {
+    testUser = await testHelper.createUser();
+  });
+
+  it("should create user with correct data", async () => {
+    const response = await petlink.core.graphql.public.signUpUser({
+      user: signUpPayload,
+      appBrand: fixtures.appBrand,
+    });
+
+    expect(response.signUpUser.code).toBe("200");
+  });
+
+  it("should return user with matching fields", async () => {
+    const userResponse = await petlink.core.graphql.authJwt.getUser();
+    
+    expect(userResponse.getUser.user).toMatchObject({
+      email: signUpPayload.email,
+      name: signUpPayload.name,
+      surname: signUpPayload.surname,
+      phone: signUpPayload.phone,
+      languageId: signUpPayload.languageId,
+    });
+    
+    expect(userResponse.getUser.user?.id).toBeDefined();
+    expect(userResponse.getUser.user?.creationDate).toBeDefined();
+  });
+});
+```
+
+## Summary
+
+- **Explicit over implicit**: Define payloads field by field
+- **Built-in over custom**: Use Vitest matchers (toMatchObject, toBeDefined, etc.)
+- **Isolated tests**: Each file starts clean, tests can share state within file
+- **Clear assertions**: Match specific fields, check existence separately
+- **Descriptive naming**: Tests should read like documentation
+- **Type safety**: Always type payloads and use appropriate assertions
+

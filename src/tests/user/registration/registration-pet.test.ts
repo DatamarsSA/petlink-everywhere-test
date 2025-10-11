@@ -44,35 +44,34 @@ describe("Pet Registration", () => {
       petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
     ]);
 
-    //Check created DOG
+    // Assert DOG
     expect(dogResponse.createPet.code).toBe("200");
-    expect(dogResponse.createPet.pet?.name).toBe(dogPayload.name);
-    expect(dogResponse.createPet.pet?.species).toBe(dogPayload.species);
-    expect(dogResponse.createPet.pet?.breedType).toBe(dogPayload.breedType);
-    expect(dogResponse.createPet.pet?.gender).toBe(dogPayload.gender);
-    // expect(dogResponse.createPet.pet?.weight).toBe(dogPayload.weight);
-    expect(dogResponse.createPet.pet?.birthDate).toBe(dogPayload.birthDate);
-    expect(dogResponse.createPet.pet?.livingEnvironment).toBe(
-      dogPayload.livingEnvironment,
-    );
-    expect(dogResponse.createPet.pet?.primaryColor).toBe(
-      dogPayload.primaryColor,
-    );
+    expect(dogResponse.createPet.pet).toMatchObject({
+      name: dogPayload.name,
+      species: dogPayload.species,
+      breedType: dogPayload.breedType,
+      breeds: dogPayload.breeds,
+      gender: dogPayload.gender,
+      weight: dogPayload.weight,
+      birthDate: dogPayload.birthDate,
+      livingEnvironment: dogPayload.livingEnvironment,
+      primaryColor: dogPayload.primaryColor,
+    });
     expect(dogResponse.createPet.pet?.id).toBeDefined();
-    //Check created CAT
+
+    // Assert CAT
     expect(catResponse.createPet.code).toBe("200");
-    expect(catResponse.createPet.pet?.name).toBe(catPayload.name);
-    expect(catResponse.createPet.pet?.species).toBe(catPayload.species);
-    expect(catResponse.createPet.pet?.breedType).toBe(catPayload.breedType);
-    expect(catResponse.createPet.pet?.gender).toBe(catPayload.gender);
-    // expect(catResponse.createPet.pet?.weight).toBe(catPayload.weight);
-    expect(catResponse.createPet.pet?.birthDate).toBe(catPayload.birthDate);
-    expect(catResponse.createPet.pet?.livingEnvironment).toBe(
-      catPayload.livingEnvironment,
-    );
-    expect(catResponse.createPet.pet?.primaryColor).toBe(
-      catPayload.primaryColor,
-    );
+    expect(catResponse.createPet.pet).toMatchObject({
+      name: catPayload.name,
+      species: catPayload.species,
+      breedType: catPayload.breedType,
+      breeds: catPayload.breeds,
+      gender: catPayload.gender,
+      weight: catPayload.weight,
+      birthDate: catPayload.birthDate,
+      livingEnvironment: catPayload.livingEnvironment,
+      primaryColor: catPayload.primaryColor,
+    });
     expect(catResponse.createPet.pet?.id).toBeDefined();
   });
 
