@@ -1,21 +1,56 @@
 /**
  * Poll a function until a condition is met or timeout occurs.
- * Use this when waiting for asynchronous data/events (OTP arrival, email verification, etc.)
+ * Use this when waiting for asynchronous data/events (OTP arrival, email verification, subscription activation, etc.)
  *
  * @param fn - Function that returns the value to check (can return null/undefined if not ready)
  * @param options
- * @param options.isReady - Predicate to check if the result is valid (default: checks for truthy value)
+ * @param options.isReady - Predicate function to check if the result is valid.
+ *                          Receives the result and must return `true` when the condition is satisfied.
+ *                          Default: checks for truthy value (!!result)
  * @param options.timeoutMs - Maximum time to wait in milliseconds (default: 30000)
  * @param options.intervalMs - Delay between polling attempts in milliseconds (default: 1000)
  * @param options.timeoutError - Custom error message when timeout occurs
  *
  * @example
+ * // Example 1: Simple usage - waits for truthy value (default behavior)
  * const otp = await waitFor(
  *   () => twilioClient.getLatestOtp(phoneNumber),
  *   {
  *     timeoutMs: 60000,
  *     intervalMs: 3000,
  *     timeoutError: 'OTP not received in time'
+ *   }
+ * );
+ * // Stops when getLatestOtp returns a non-empty string
+ *
+ * @example
+ * // Example 2: Custom condition with isReady
+ * const subscription = await waitFor(
+ *   () => petlink.getSubscriptionByProductId({ productId: deviceId }),
+ *   {
+ *     isReady: (result) => {
+ *       // Define your custom condition here
+ *       // Returns true when subscription is active AND payment succeeded
+ *       const subs = result.getSubscriptionByProductId.subscriptions;
+ *       return subs?.some(sub =>
+ *         sub?.status === "active" &&
+ *         sub?.paymentStatus === "SUCCEEDED"
+ *       ) ?? false;
+ *     },
+ *     timeoutMs: 30000,
+ *     intervalMs: 2000,
+ *     timeoutError: 'Subscription did not become active in time'
+ *   }
+ * );
+ *
+ * @example
+ * // Example 3: Wait for specific array length
+ * const devices = await waitFor(
+ *   () => api.getDevices(userId),
+ *   {
+ *     isReady: (result) => result.devices.length >= 3,
+ *     timeoutMs: 20000,
+ *     intervalMs: 1000
  *   }
  * );
  */

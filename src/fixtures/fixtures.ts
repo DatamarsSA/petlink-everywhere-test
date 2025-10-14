@@ -5,25 +5,15 @@ import {
   Gender,
   PetLivingEnvironment,
   UserIn,
-  AppBrand,
 } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { LanguageId } from "../clients/petlink-infrastructure/types.js";
 import { env } from "../config/env-schema-validation.js";
 
 const currentAppBrand = env.APP_BRAND;
 
-export function getAnotherAppBrand(actualAppBrand: AppBrand): AppBrand {
-  const otherBrands = ["PETLINK", "KIPPY"].filter(
-    (brand) => brand !== actualAppBrand,
-  );
-  if (otherBrands.length === 0) {
-    throw new Error("No other app brands available");
-  }
-  return otherBrands[0] as AppBrand;
-}
-
 export const fixtures = {
   appBrand: currentAppBrand,
+
   user: {
     name: "Test",
     surname: "User",

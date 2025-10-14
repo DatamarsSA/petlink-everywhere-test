@@ -71,9 +71,7 @@ class TestSetupBuilder {
 
   withDogEvoDevice(): this {
     if (fixtures.appBrand !== "KIPPY") {
-      throw new Error(
-        "EVO device can only be created when appBrand is KIPPY"
-      );
+      throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
     this.includeDogEvoDevice = true;
     return this;
@@ -244,7 +242,9 @@ export class TestHelper {
     } else if (petType === PetType.CAT) {
       petFixture = fixtures.pet.defaultCat;
     } else {
-      throw new Error(`Invalid pet type: ${petType}. Only DOG and CAT are supported.`);
+      throw new Error(
+        `Invalid pet type: ${petType}. Only DOG and CAT are supported.`,
+      );
     }
 
     const petPayload: PetIn = {
@@ -278,19 +278,19 @@ export class TestHelper {
   ): Promise<PetlinkGps> {
     // Validate EVO can only be created with KIPPY brand
     if (deviceType === DeviceType.EVO && fixtures.appBrand !== "KIPPY") {
-      throw new Error(
-        "EVO device can only be created when appBrand is KIPPY"
-      );
+      throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
 
     // Use the enum value as string for indexing
     const deviceTypeKey = deviceType as string;
-    const brandFixtures = fixtures.devices.petlinkGps[fixtures.appBrand] as Record<string, any>;
+    const brandFixtures = fixtures.devices.petlinkGps[
+      fixtures.appBrand
+    ] as Record<string, any>;
     const deviceFixture = brandFixtures[deviceTypeKey];
 
     if (!deviceFixture) {
       throw new Error(
-        `Device fixture not found for brand ${fixtures.appBrand} and type ${deviceType}`
+        `Device fixture not found for brand ${fixtures.appBrand} and type ${deviceType}`,
       );
     }
 

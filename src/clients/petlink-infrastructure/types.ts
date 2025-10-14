@@ -1,11 +1,13 @@
-import {
-  SpeciesEnum as GeneratedSpeciesEnum,
-  DeviceTypeEnum as GeneratedDeviceTypeEnum,
-} from "./endpoints/graphql/generated/core_schema.js";
+import { SpeciesEnum as GeneratedSpeciesEnum, DeviceTypeEnum as GeneratedDeviceTypeEnum } from "./endpoints/graphql/generated/core_schema.js";
 
 // ============================================================================
 // UTILITY TEST TYPES
 // ============================================================================
+
+export enum AppBrand {
+  KIPPY = "KIPPY",
+  PETLINK = "PETLINK",
+}
 
 export enum UtilityTestTypeEnum {
   BUY_NEW_SUBSCRIPTION = "BUY_NEW_SUBSCRIPTION",

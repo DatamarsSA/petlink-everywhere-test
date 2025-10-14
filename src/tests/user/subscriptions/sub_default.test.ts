@@ -1,121 +1,123 @@
-import { beforeAll, describe, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { env } from "../../../config/env-schema-validation.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fixtures } from "../../../fixtures/fixtures.js";
-import { UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
-import {
-  BillingInfoInput,
-  Scalars,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { AppBrand, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
+import { waitFor } from "../../../helpers/helper-waitfor.js";
+import exp from "node:constants";
 
-describe("Payment of sub (through utilityIntegrationTest) should works", () => {
+describe("DEFAULT subsscriptions flow", () => {
   let setup: TestSetup = {} as TestSetup;
 
+  // FLOW SUBS
+  // getBillingInfo / updateBillingInfo (se non ho billing info le aggiorno) - OK
+  // getSubscriptionPlans => getSubscriptionPlanPricing
+  // utility
+  // getSubscriptionByProductId() in polling per vedere se torna pyment succeded
+
+  let device: any;
+  let availableSubscriptionPlans: any;
+  let choosenSubscriptionPlan: any;
+
   beforeAll(async () => {
-    setup = await testHelper
-      .setupBuilder()
-      .withUser()
-      .withDog()
-      .withCat()
-      .withDogDevice()
-      .withCatDevice()
-      .build();
-    // await petlink.loginWithPhone(fixtures.user.phone, fixtures.user.password);
+    // 1. Setup base (user + device)
+    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+    device = setup.devices.dogStandard!;
+
+    // 2. Fetch subscription plans (shared across tests)
+    const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
+      productId: device.id,
+      countryCode: device.countryCode,
+      serialNumber: device.serialNumber,
+    });
+
+    availableSubscriptionPlans = plansResponse.getSubscriptionPlans;
+    choosenSubscriptionPlan = availableSubscriptionPlans.plans![0].pricings[0]!;
   });
 
-  it("should work", async () => {
-    // FLOW SUBS
-    // getSubscriptionPlans
-    // getBillingInfo
-    // updateBillingInfo (se non ho billing info le aggiorno)
-    // getSubscriptionPlanPricing
-    // utility
+  it("There should be at least 1 sub plan available for this device", async () => {
+    expect(availableSubscriptionPlans).toBeDefined();
+    expect(availableSubscriptionPlans.code).toBe("200");
+    expect(availableSubscriptionPlans.plans?.length).toBeGreaterThan(0);
+    expect(choosenSubscriptionPlan).toHaveProperty("id");
+  });
 
-    // Use dogStandard device (available for both KIPPY and PETLINK)
-    const device = setup.devices.dogStandard!;
-    let deviceId = device.id;
-    let deviceCountryCode = device.countryCode;
-    let deviceSerialNumber = device.serialNumber;
+  it("Choosen plan price should be adjusted to the user's currency", async () => {
+    const pricingResponse = await petlink.core.graphql.authJwt.getSubscriptionPlanPricing({
+      planPriceId: choosenSubscriptionPlan.id,
+      countryCode: device.countryCode!,
+      productId: device.id,
+    });
 
-    const subscriptionsPlans =
-      await petlink.core.graphql.authJwt.getSubscriptionPlans({
-        productId: deviceId,
-        countryCode: deviceCountryCode,
-        serialNumber: deviceSerialNumber,
-      });
+    expect(pricingResponse.getSubscriptionPlanPricing.code).toBe("200");
+    expect(pricingResponse.getSubscriptionPlanPricing.pricing).toBeDefined();
+  });
 
-    const choosenSubscriptionPlan =
-      subscriptionsPlans.getSubscriptionPlans.plans![0].pricings[0]!;
+  it("Retrieve and Update billing info should works", async () => {
+    const user = setup.user!;
 
-    const billingInfo = await petlink.core.graphql.authJwt.updateBillingInfo({
+    const startingBillingInfo = await petlink.core.graphql.authJwt.getBillingInfo();
+
+    const updateResponse = await petlink.core.graphql.authJwt.updateBillingInfo({
       updateBillingInfoInput: {
         billingInfo: {
-          address: setup.user!.streetAddress!,
-          city: setup.user!.city!,
-          country: setup.user!.countryCode!,
-          state: "IT", // Optional field
-          zip: setup.user!.zipCode!,
+          address: user.streetAddress!,
+          city: user.city!,
+          country: user.countryCode!,
+          zip: user.zipCode!,
         },
-        email: setup.user!.email!,
-        firstName: setup.user!.name!,
-        lastName: setup.user!.surname!,
-        phone: setup.user!.phone!,
+        email: user.email!,
+        firstName: user.name!,
+        lastName: user.surname!,
+        phone: user.phone!,
       },
     });
 
-    console.log("billingInfo: ", JSON.stringify(billingInfo));
+    expect(updateResponse.updateBillingInfo.code).toBe("200");
 
-    const subscriptionPlanPricing =
-      await petlink.core.graphql.authJwt.getSubscriptionPlanPricing({
-        planPriceId: choosenSubscriptionPlan.id,
-        countryCode: deviceCountryCode!,
-        productId: deviceId,
-      });
-
-    const previousActiveSubsOfThisDevice =
-      await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-        productId: deviceId,
-      });
-    console.log(
-      "previousActiveSubsOfThisDevice PRIMA: ",
-      JSON.stringify(previousActiveSubsOfThisDevice),
-    );
-
-    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-    console.log("setup.user!.phone: ", setup.user!.phone);
-    console.log("deviceId: ", deviceId);
-    console.log("choosenSubscriptionPlan.id: ", choosenSubscriptionPlan.id);
-
-    const buySubscriptionResponse =
-      await petlink.core.graphql.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: setup.user!.phone,
-          productId: deviceId,
-          priceIds: [choosenSubscriptionPlan.id],
-          card: {
-            cardNumber: fixtures.card.valid.cardNumber,
-            expiryMonth: fixtures.card.valid.expiryMonth,
-            expiryYear: fixtures.card.valid.expiryYear,
-            cvv: fixtures.card.valid.cvv,
-          },
-        },
-      });
-
-    console.log(
-      "buySubscriptionResponse: ",
-      JSON.stringify(buySubscriptionResponse),
-    );
-
-    const updatedActiveSubsOfThisDevice =
-      await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-        productId: deviceId,
-      });
-    //todo: should have => statsu: "active" && paymentStatus: "SUCCEDED"
-    console.log(
-      "updatedActiveSubsOfThisDevice DOPO: ",
-      JSON.stringify(updatedActiveSubsOfThisDevice),
-    );
+    const updatedBillingInfo = await petlink.core.graphql.authJwt.getBillingInfo();
+    expect(updatedBillingInfo.getBillingInfo.billingInfo).toBeDefined();
   });
+
+  it("Test BUY subscription and verify it becomes active", async () => {
+    const user = setup.user!;
+
+    // Verify no active subscription before
+    const activePlanOfThisDevicePreviousPurchase = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
+      productId: device.id,
+    });
+    expect(activePlanOfThisDevicePreviousPurchase.getSubscriptionByProductId.code).toBe("404");
+
+    // Purchase subscription
+    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
+    const activePlanOfThisDeviceAfterPurchase = await petlink.core.graphql.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+        phone: user.phone,
+        productId: device.id,
+        priceIds: [choosenSubscriptionPlan.id],
+        card: fixtures.card.valid,
+      },
+    });
+    expect(activePlanOfThisDeviceAfterPurchase.utilityIntegrationTest.code).toBe("200");
+
+    const result = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      isReady: (result) => {
+        const sub = result.getSubscriptionByProductId.subscription;
+        return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+      },
+      timeoutMs: 30000,
+      intervalMs: 2000,
+    });
+
+    expect(result.getSubscriptionByProductId.subscription?.status).toBe("active");
+    expect(result.getSubscriptionByProductId.subscription?.paymentStatus).toBe("SUCCEEDED");
+  });
+
+  it("Test CHANGE (upgrade/downgrade) sub plan", () => {
+    //todo: to implement
+  });
+
+  it("Test CANCEL sub plan");
 });
