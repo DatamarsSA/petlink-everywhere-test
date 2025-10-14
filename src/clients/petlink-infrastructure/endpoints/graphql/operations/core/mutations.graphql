@@ -240,3 +240,11 @@ mutation resetPetlinkGps($id: String!) {
     message
   }
 }
+
+mutation updateBillingInfo($updateBillingInfoInput: UpdateBillingInfoInput!) {
+  updateBillingInfo(updateBillingInfoInput: $updateBillingInfoInput) {
+    code
+    translationCode
+    message
+  }
+}

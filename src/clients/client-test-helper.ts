@@ -2,21 +2,160 @@ import {
   User,
   UserIn,
   PetIn,
+  Pet,
+  PetlinkGps,
+  PetlinkGpsIn,
+  SpeciesEnum,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { env } from "../config/env-schema-validation.js";
-import {
-  petlink,
-  UtilityTestTypeEnum,
-} from "./petlink-infrastructure/client-petlink-infrastructure.js";
+import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fixtures } from "../fixtures/fixtures.js";
+import {
+  PetType,
+  DeviceType,
+  UtilityTestTypeEnum,
+} from "./petlink-infrastructure/types.js";
+
+export interface TestSetup {
+  user?: User;
+  pets: {
+    dog?: Pet;
+    dogForEvo?: Pet;
+    cat?: Pet;
+  };
+  devices: {
+    dogStandard?: PetlinkGps;
+    dogEvo?: PetlinkGps;
+    catStandard?: PetlinkGps;
+  };
+}
+
+class TestSetupBuilder {
+  private setup: TestSetup = { pets: {}, devices: {} };
+  private includeUser = false;
+  private includeDog = false;
+  private includeDogForEvo = false;
+  private includeCat = false;
+  private includeDogDevice = false;
+  private includeDogEvoDevice = false;
+  private includeCatDevice = false;
+
+  constructor(private helper: TestHelper) {}
+
+  withUser(): this {
+    this.includeUser = true;
+    return this;
+  }
+
+  withDog(): this {
+    this.includeDog = true;
+    return this;
+  }
+
+  withDogForEvo(): this {
+    this.includeDogForEvo = true;
+    return this;
+  }
+
+  withCat(): this {
+    this.includeCat = true;
+    return this;
+  }
+
+  withDogDevice(): this {
+    this.includeDogDevice = true;
+    return this;
+  }
+
+  withDogEvoDevice(): this {
+    if (fixtures.appBrand !== "KIPPY") {
+      throw new Error(
+        "EVO device can only be created when appBrand is KIPPY"
+      );
+    }
+    this.includeDogEvoDevice = true;
+    return this;
+  }
+
+  withCatDevice(): this {
+    this.includeCatDevice = true;
+    return this;
+  }
+
+  async build(): Promise<TestSetup> {
+    if (this.includeUser) {
+      this.setup.user = await this.helper.createUser();
+    }
+
+    const petPromises: Promise<void>[] = [];
+
+    if (this.includeDog) {
+      petPromises.push(
+        this.helper.createPet(PetType.DOG).then((dog) => {
+          this.setup.pets.dog = dog;
+        }),
+      );
+    }
+
+    if (this.includeDogForEvo) {
+      petPromises.push(
+        this.helper.createPet(PetType.DOG).then((dogForEvo) => {
+          this.setup.pets.dogForEvo = dogForEvo;
+        }),
+      );
+    }
+
+    if (this.includeCat) {
+      petPromises.push(
+        this.helper.createPet(PetType.CAT).then((cat) => {
+          this.setup.pets.cat = cat;
+        }),
+      );
+    }
+
+    await Promise.all(petPromises);
+
+    const devicePromises: Promise<void>[] = [];
+
+    if (this.includeDogDevice && this.setup.pets.dog) {
+      devicePromises.push(
+        this.helper
+          .createDeviceForPet(this.setup.pets.dog.id, DeviceType.DOG)
+          .then((device) => {
+            this.setup.devices.dogStandard = device;
+          }),
+      );
+    }
+
+    if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
+      devicePromises.push(
+        this.helper
+          .createDeviceForPet(this.setup.pets.dogForEvo.id, DeviceType.EVO)
+          .then((device) => {
+            this.setup.devices.dogEvo = device;
+          }),
+      );
+    }
+
+    if (this.includeCatDevice && this.setup.pets.cat) {
+      devicePromises.push(
+        this.helper
+          .createDeviceForPet(this.setup.pets.cat.id, DeviceType.CAT)
+          .then((device) => {
+            this.setup.devices.catStandard = device;
+          }),
+      );
+    }
+
+    await Promise.all(devicePromises);
+
+    return this.setup;
+  }
+}
 
 export class TestHelper {
-  /**
-   * Clean up all test data (users, emails, SMS)
-   * Should be called before each test suite to ensure clean state
-   */
   async cleanupAll(): Promise<void> {
     // console.log("🧹 Cleaning up test environment...");
 
@@ -52,25 +191,14 @@ export class TestHelper {
     // petlink.clearAllCache();
   }
 
-  /**
-   * Clear only authentication cache without deleting data
-   * Useful between test files to prevent auth state leakage
-   */
   async clearAuthCache(): Promise<void> {
     petlink.clearAllCache();
   }
 
-  /**
-   * Create a test user using the utility endpoint (bypasses OTP flow)
-   * Automatically logs in the user after creation
-   *
-   * @returns The created user object
-   */
   async createUser(): Promise<User> {
-    // Login with IAM to use utility endpoint
     petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
 
-    const userPayload = {
+    const userPayload: UserIn = {
       email: fixtures.user.email,
       name: fixtures.user.name,
       surname: fixtures.user.surname,
@@ -82,7 +210,7 @@ export class TestHelper {
       password: fixtures.user.password,
       confirmPassword: fixtures.user.confirmPassword,
       languageId: fixtures.user.languageId,
-    } as UserIn;
+    };
 
     const response = await petlink.core.graphql.authIam.utilityIntegrationTest({
       input: {
@@ -108,89 +236,88 @@ export class TestHelper {
     return userResponse.getUser.user;
   }
 
-  /**
-   * Get or create a test user
-   * If the user already exists, it will login and return the existing user
-   * Otherwise, it will create a new user
-   *
-   * @returns The user object
-   */
-  async getOrCreateUser(): Promise<User> {
-    try {
-      // Try to login with existing credentials
-      await petlink.loginWithPhone(fixtures.user.phone, fixtures.user.password);
-      const userResponse = await petlink.core.graphql.authJwt.getUser();
+  async createPet(petType: SpeciesEnum): Promise<Pet> {
+    let petFixture: PetIn;
 
-      if (userResponse.getUser.user) {
-        console.log("✅ Using existing user");
-        return userResponse.getUser.user;
-      }
-    } catch (error) {
-      // User doesn't exist, create it
-      console.log("👤 Creating new user...");
-      return await this.createUser();
+    if (petType === PetType.DOG) {
+      petFixture = fixtures.pet.defaultDog;
+    } else if (petType === PetType.CAT) {
+      petFixture = fixtures.pet.defaultCat;
+    } else {
+      throw new Error(`Invalid pet type: ${petType}. Only DOG and CAT are supported.`);
     }
 
-    // Fallback: create user
-    return await this.createUser();
+    const petPayload: PetIn = {
+      name: petFixture.name,
+      species: petFixture.species,
+      breedType: petFixture.breedType,
+      breeds: petFixture.breeds,
+      gender: petFixture.gender,
+      weight: petFixture.weight,
+      birthDate: petFixture.birthDate,
+      livingEnvironment: petFixture.livingEnvironment,
+      primaryColor: petFixture.primaryColor,
+    };
+
+    const response = await petlink.core.graphql.authJwt.createPet({
+      pet: petPayload,
+    });
+
+    if (response.createPet.code !== "200") {
+      throw new Error(
+        `Failed to create ${petType}: ${response.createPet.message}`,
+      );
+    }
+
+    return response.createPet.pet!;
   }
 
-  /**
-   * Create both a dog and a cat for the currently authenticated user
-   *
-   * @returns Object containing both created pets
-   */
-  async createPetsForUser(): Promise<{ dog: any; cat: any }> {
-    const dogPayload = {
-      name: fixtures.pet.defaultDog.name,
-      species: fixtures.pet.defaultDog.species,
-      breedType: fixtures.pet.defaultDog.breedType,
-      breeds: fixtures.pet.defaultDog.breeds,
-      gender: fixtures.pet.defaultDog.gender,
-      weight: fixtures.pet.defaultDog.weight,
-      birthDate: fixtures.pet.defaultDog.birthDate,
-      livingEnvironment: fixtures.pet.defaultDog.livingEnvironment,
-      primaryColor: fixtures.pet.defaultDog.primaryColor,
-    } as PetIn;
-
-    const catPayload = {
-      name: fixtures.pet.defaultCat.name,
-      species: fixtures.pet.defaultCat.species,
-      breedType: fixtures.pet.defaultCat.breedType,
-      breeds: fixtures.pet.defaultCat.breeds,
-      gender: fixtures.pet.defaultCat.gender,
-      weight: fixtures.pet.defaultCat.weight,
-      birthDate: fixtures.pet.defaultCat.birthDate,
-      livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
-      primaryColor: fixtures.pet.defaultCat.primaryColor,
-    } as PetIn;
-
-    const [dogResponse, catResponse] = await Promise.all([
-      petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
-      petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
-    ]);
-
-    if (dogResponse.createPet.code !== "200") {
-      throw new Error(`Failed to create dog: ${dogResponse.createPet.message}`);
+  async createDeviceForPet(
+    petId: string,
+    deviceType: DeviceType,
+  ): Promise<PetlinkGps> {
+    // Validate EVO can only be created with KIPPY brand
+    if (deviceType === DeviceType.EVO && fixtures.appBrand !== "KIPPY") {
+      throw new Error(
+        "EVO device can only be created when appBrand is KIPPY"
+      );
     }
 
-    if (catResponse.createPet.code !== "200") {
-      throw new Error(`Failed to create cat: ${catResponse.createPet.message}`);
+    // Use the enum value as string for indexing
+    const deviceTypeKey = deviceType as string;
+    const brandFixtures = fixtures.devices.petlinkGps[fixtures.appBrand] as Record<string, any>;
+    const deviceFixture = brandFixtures[deviceTypeKey];
+
+    if (!deviceFixture) {
+      throw new Error(
+        `Device fixture not found for brand ${fixtures.appBrand} and type ${deviceType}`
+      );
     }
 
-    return {
-      dog: dogResponse.createPet.pet,
-      cat: catResponse.createPet.pet,
+    const devicePayload: PetlinkGpsIn = {
+      serialNumber: deviceFixture.serialNumber,
+      countryCode: deviceFixture.countryCode,
+      timezone: deviceFixture.timezone,
+      petId: petId,
     };
+
+    const response = await petlink.core.graphql.authJwt.createPetlinkGps({
+      petlinkGps: devicePayload,
+      appBrand: fixtures.appBrand,
+    });
+
+    if (response.createPetlinkGps.code !== "200") {
+      throw new Error(
+        `Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}`,
+      );
+    }
+
+    return response.createPetlinkGps.petlinkGps!;
+  }
+
+  setupBuilder(): TestSetupBuilder {
+    return new TestSetupBuilder(this);
   }
 }
 
-// ============================================================================
-// SINGLETON EXPORT
-// ============================================================================
-
-/**
- * Default singleton instance for test utilities
- * Use this in test files for consistent test data management
- */
 export const testHelper = new TestHelper();

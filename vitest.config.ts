@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => {
       environment: "node",
       env: rawEnv,
       // timeouts più larghi per integrazione/E2E
-      testTimeout: 15000, // singolo test (it)
-      hookTimeout: 15000, // beforeAll/afterAll/beforeEach/afterEach
+      testTimeout: 150000, // singolo test (it)
+      hookTimeout: 150000, // beforeAll/afterAll/beforeEach/afterEach
 
       // 1) Eseguito PRIMA di ogni file di test
       setupFiles: ["./src/config/setup-teardown/setup-once-per-file.ts"],

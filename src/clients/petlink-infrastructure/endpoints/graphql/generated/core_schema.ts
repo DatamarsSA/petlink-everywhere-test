@@ -2475,6 +2475,7 @@ export interface UploadData {
 
 export interface User {
   __typename?: "User";
+  arcaPlanetTerms?: Maybe<Scalars["Boolean"]["output"]>;
   birthDate?: Maybe<Scalars["String"]["output"]>;
   chargebeeId?: Maybe<Scalars["String"]["output"]>;
   city?: Maybe<Scalars["String"]["output"]>;
@@ -2532,8 +2533,16 @@ export interface UserSettingsIn {
   liveTrack: Scalars["Boolean"]["input"];
 }
 
+export interface UtilityIntegrationTestCardInput {
+  cardNumber: Scalars["String"]["input"];
+  cvv: Scalars["String"]["input"];
+  expiryMonth: Scalars["Int"]["input"];
+  expiryYear: Scalars["Int"]["input"];
+}
+
 export interface UtilityIntegrationTestInput {
   appBrand?: InputMaybe<AppBrand>;
+  card?: InputMaybe<UtilityIntegrationTestCardInput>;
   phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
@@ -2871,6 +2880,20 @@ export type ResetPetlinkGpsMutation = {
   };
 };
 
+export type UpdateBillingInfoMutationVariables = Exact<{
+  updateBillingInfoInput: UpdateBillingInfoInput;
+}>;
+
+export type UpdateBillingInfoMutation = {
+  __typename?: "Mutation";
+  updateBillingInfo: {
+    __typename?: "Response";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+  };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -3113,6 +3136,206 @@ export type GetPetlinkGpsQuery = {
         enableGpsOnDefault: boolean;
         optimizationDone?: boolean | null;
       };
+    } | null;
+  };
+};
+
+export type GetSubscriptionPlansQueryVariables = Exact<{
+  productId?: InputMaybe<Scalars["String"]["input"]>;
+  countryCode?: InputMaybe<Scalars["String"]["input"]>;
+  serialNumber?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetSubscriptionPlansQuery = {
+  __typename?: "Query";
+  getSubscriptionPlans: {
+    __typename?: "ResponseSubscriptionPlans";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    trialDuration?: number | null;
+    paymentMethodRequired?: boolean | null;
+    plans?: Array<{
+      __typename?: "Plan";
+      itemId: string;
+      pricings: Array<{
+        __typename?: "Pricing";
+        id: string;
+        name: string;
+        externalName?: string | null;
+        itemId: string;
+        price?: number | null;
+        period?: number | null;
+        currencyCode: string;
+        periodUnit?: string | null;
+        itemFamilyId?: string | null;
+        status?: string | null;
+        trialPeriod?: number | null;
+        trialPeriodUnit?: string | null;
+      } | null>;
+    }> | null;
+    careProtectionPlans?: Array<{
+      __typename?: "CareProtectionPlan";
+      itemId: string;
+      pricings: Array<{
+        __typename?: "Pricing";
+        id: string;
+        name: string;
+        externalName?: string | null;
+        itemId: string;
+        price?: number | null;
+        period?: number | null;
+        currencyCode: string;
+        periodUnit?: string | null;
+        itemFamilyId?: string | null;
+        status?: string | null;
+        trialPeriod?: number | null;
+        trialPeriodUnit?: string | null;
+      } | null>;
+    }> | null;
+    coupon?: {
+      __typename?: "Coupon";
+      id: string;
+      name: string;
+      discountType: string;
+      discountPercentage?: number | null;
+      discountAmount?: number | null;
+      discountQuantity?: number | null;
+      currencyCode?: string | null;
+    } | null;
+  };
+};
+
+export type GetBillingInfoQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetBillingInfoQuery = {
+  __typename?: "Query";
+  getBillingInfo: {
+    __typename?: "ResponseBillingInfo";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    billingInfo?: {
+      __typename?: "BillingInfo";
+      firstName?: string | null;
+      lastName?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      city?: string | null;
+      stateCode?: string | null;
+      state?: string | null;
+      country?: string | null;
+      zip?: string | null;
+    } | null;
+  };
+};
+
+export type GetSubscriptionPlanPricingQueryVariables = Exact<{
+  planPriceId: Scalars["String"]["input"];
+  careProtectionPlanId?: InputMaybe<Scalars["String"]["input"]>;
+  addonPriceIds?: InputMaybe<
+    Array<Scalars["String"]["input"]> | Scalars["String"]["input"]
+  >;
+  countryCode: Scalars["String"]["input"];
+  productId: Scalars["String"]["input"];
+}>;
+
+export type GetSubscriptionPlanPricingQuery = {
+  __typename?: "Query";
+  getSubscriptionPlanPricing: {
+    __typename?: "ResponseSubscriptionPlanPricing";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    trialDuration?: number | null;
+    paymentMethodRequired?: boolean | null;
+    pricing?: {
+      __typename?: "Pricing";
+      id: string;
+      name: string;
+      externalName?: string | null;
+      itemId: string;
+      price?: number | null;
+      period?: number | null;
+      currencyCode: string;
+      periodUnit?: string | null;
+      itemFamilyId?: string | null;
+      status?: string | null;
+      trialPeriod?: number | null;
+      trialPeriodUnit?: string | null;
+    } | null;
+    careProtectionPricing?: {
+      __typename?: "Pricing";
+      id: string;
+      name: string;
+      externalName?: string | null;
+      itemId: string;
+      price?: number | null;
+      period?: number | null;
+      currencyCode: string;
+      periodUnit?: string | null;
+      itemFamilyId?: string | null;
+      status?: string | null;
+      trialPeriod?: number | null;
+      trialPeriodUnit?: string | null;
+    } | null;
+    coupon?: {
+      __typename?: "Coupon";
+      id: string;
+      name: string;
+      discountType: string;
+      discountPercentage?: number | null;
+      discountAmount?: number | null;
+      discountQuantity?: number | null;
+      currencyCode?: string | null;
+    } | null;
+  };
+};
+
+export type GetSubscriptionByProductIdQueryVariables = Exact<{
+  productId: Scalars["String"]["input"];
+}>;
+
+export type GetSubscriptionByProductIdQuery = {
+  __typename?: "Query";
+  getSubscriptionByProductId: {
+    __typename?: "ResponseGetSubscriptionByProductId";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    subscription?: {
+      __typename?: "PetlinkSubscription";
+      id: string;
+      status: SubscriptionStatusEnum;
+      currentTermStart?: string | null;
+      currentTermEnd?: string | null;
+      nextBillingAt?: string | null;
+      currencyCode: string;
+      paymentStatus?: PaymentStatusTypeEnum | null;
+      planChangeNotAllowed: boolean;
+      billingPeriod: number;
+      billingPeriodUnit: string;
+      addonToStopIds?: Array<string> | null;
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
+      subscriptionItems: Array<{
+        __typename?: "PetlinkSubscriptionItem";
+        amount: number;
+        name?: string | null;
+        itemPriceId: string;
+        itemType: string;
+        quantity: number;
+        unitPrice: number;
+        itemId: string;
+      }>;
     } | null;
   };
 };
@@ -4494,6 +4717,62 @@ export const ResetPetlinkGpsDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const UpdateBillingInfoDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateBillingInfo" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "updateBillingInfoInput" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "UpdateBillingInfoInput" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateBillingInfo" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "updateBillingInfoInput" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "updateBillingInfoInput" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetUserDocument = {
   kind: "Document",
   definitions: [
@@ -5432,6 +5711,783 @@ export const GetPetlinkGpsDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetSubscriptionPlansDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getSubscriptionPlans" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "productId" },
+          },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "countryCode" },
+          },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "serialNumber" },
+          },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getSubscriptionPlans" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "productId" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "countryCode" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "countryCode" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "serialNumber" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "serialNumber" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "plans" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "itemId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pricings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "id" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "name" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "externalName" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemId" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "price" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "period" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "currencyCode" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "periodUnit" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemFamilyId" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "status" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "trialPeriod" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "trialPeriodUnit" },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "careProtectionPlans" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "itemId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pricings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "id" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "name" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "externalName" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemId" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "price" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "period" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "currencyCode" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "periodUnit" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemFamilyId" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "status" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "trialPeriod" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "trialPeriodUnit" },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "trialDuration" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "paymentMethodRequired" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "coupon" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountPercentage" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountAmount" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountQuantity" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currencyCode" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetBillingInfoDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getBillingInfo" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getBillingInfo" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "billingInfo" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "firstName" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastName" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "address" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "city" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "stateCode" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "state" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "country" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "zip" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetSubscriptionPlanPricingDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getSubscriptionPlanPricing" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "planPriceId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "careProtectionPlanId" },
+          },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "addonPriceIds" },
+          },
+          type: {
+            kind: "ListType",
+            type: {
+              kind: "NonNullType",
+              type: {
+                kind: "NamedType",
+                name: { kind: "Name", value: "String" },
+              },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "countryCode" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "productId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getSubscriptionPlanPricing" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "planPriceId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "planPriceId" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "careProtectionPlanId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "careProtectionPlanId" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "addonPriceIds" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "addonPriceIds" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "countryCode" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "countryCode" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "productId" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pricing" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "externalName" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "itemId" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "price" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "period" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currencyCode" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "periodUnit" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "itemFamilyId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "status" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "trialPeriod" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "trialPeriodUnit" },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "careProtectionPricing" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "externalName" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "itemId" },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "price" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "period" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currencyCode" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "periodUnit" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "itemFamilyId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "status" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "trialPeriod" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "trialPeriodUnit" },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "trialDuration" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "paymentMethodRequired" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "coupon" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountPercentage" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountAmount" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "discountQuantity" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currencyCode" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetSubscriptionByProductIdDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getSubscriptionByProductId" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "productId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getSubscriptionByProductId" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "productId" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "translationCode" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "subscription" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "status" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currentTermStart" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currentTermEnd" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "nextBillingAt" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "card" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "expiryMonth" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "expiryYear" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "maskedNumber" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "type" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "brand" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "paymentMethod" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "currencyCode" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "paymentStatus" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "planChangeNotAllowed" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionItems" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "amount" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "name" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemPriceId" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemType" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "quantity" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "unitPrice" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "itemId" },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "billingPeriod" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "billingPeriodUnit" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "addonToStopIds" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -5650,6 +6706,24 @@ export function getSdk(
         variables,
       );
     },
+    updateBillingInfo(
+      variables: UpdateBillingInfoMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateBillingInfoMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateBillingInfoMutation>({
+            document: UpdateBillingInfoDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateBillingInfo",
+        "mutation",
+        variables,
+      );
+    },
     getUser(
       variables?: GetUserQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -5772,6 +6846,78 @@ export function getSdk(
             signal,
           }),
         "getPetlinkGps",
+        "query",
+        variables,
+      );
+    },
+    getSubscriptionPlans(
+      variables?: GetSubscriptionPlansQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetSubscriptionPlansQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetSubscriptionPlansQuery>({
+            document: GetSubscriptionPlansDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getSubscriptionPlans",
+        "query",
+        variables,
+      );
+    },
+    getBillingInfo(
+      variables?: GetBillingInfoQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetBillingInfoQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetBillingInfoQuery>({
+            document: GetBillingInfoDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getBillingInfo",
+        "query",
+        variables,
+      );
+    },
+    getSubscriptionPlanPricing(
+      variables: GetSubscriptionPlanPricingQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetSubscriptionPlanPricingQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetSubscriptionPlanPricingQuery>({
+            document: GetSubscriptionPlanPricingDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getSubscriptionPlanPricing",
+        "query",
+        variables,
+      );
+    },
+    getSubscriptionByProductId(
+      variables: GetSubscriptionByProductIdQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetSubscriptionByProductIdQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetSubscriptionByProductIdQuery>({
+            document: GetSubscriptionByProductIdDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getSubscriptionByProductId",
         "query",
         variables,
       );

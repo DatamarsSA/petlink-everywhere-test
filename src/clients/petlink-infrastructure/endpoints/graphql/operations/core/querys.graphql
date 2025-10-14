@@ -196,3 +196,161 @@ query getPetlinkGps($id: String!) {
     }
   }
 }
+
+query getSubscriptionPlans($productId: String, $countryCode: String, $serialNumber: String) {
+  getSubscriptionPlans(productId: $productId, countryCode: $countryCode, serialNumber: $serialNumber) {
+    code
+    translationCode
+    message
+    plans {
+      itemId
+      pricings {
+        id
+        name
+        externalName
+        itemId
+        price
+        period
+        currencyCode
+        periodUnit
+        itemFamilyId
+        status
+        trialPeriod
+        trialPeriodUnit
+      }
+    }
+    careProtectionPlans {
+      itemId
+      pricings {
+        id
+        name
+        externalName
+        itemId
+        price
+        period
+        currencyCode
+        periodUnit
+        itemFamilyId
+        status
+        trialPeriod
+        trialPeriodUnit
+      }
+    }
+    trialDuration
+    paymentMethodRequired
+    coupon {
+      id
+      name
+      discountType
+      discountPercentage
+      discountAmount
+      discountQuantity
+      currencyCode
+    }
+  }
+}
+
+query getBillingInfo {
+  getBillingInfo {
+    code
+    translationCode
+    message
+    billingInfo {
+      firstName
+      lastName
+      email
+      phone
+      address
+      city
+      stateCode
+      state
+      country
+      zip
+    }
+  }
+}
+
+query getSubscriptionPlanPricing($planPriceId: String!, $careProtectionPlanId: String, $addonPriceIds: [String!], $countryCode: String!, $productId: String!) {
+  getSubscriptionPlanPricing(planPriceId: $planPriceId, careProtectionPlanId: $careProtectionPlanId, addonPriceIds: $addonPriceIds, countryCode: $countryCode, productId: $productId) {
+    code
+    translationCode
+    message
+    pricing {
+      id
+      name
+      externalName
+      itemId
+      price
+      period
+      currencyCode
+      periodUnit
+      itemFamilyId
+      status
+      trialPeriod
+      trialPeriodUnit
+    }
+    careProtectionPricing {
+      id
+      name
+      externalName
+      itemId
+      price
+      period
+      currencyCode
+      periodUnit
+      itemFamilyId
+      status
+      trialPeriod
+      trialPeriodUnit
+    }
+    trialDuration
+    paymentMethodRequired
+    coupon {
+      id
+      name
+      discountType
+      discountPercentage
+      discountAmount
+      discountQuantity
+      currencyCode
+    }
+  }
+}
+
+query getSubscriptionByProductId($productId: String!) {
+  getSubscriptionByProductId(productId: $productId) {
+    code
+    translationCode
+    message
+    subscription {
+      id
+      status
+      currentTermStart
+      currentTermEnd
+      nextBillingAt
+      card {
+        expiryMonth
+        expiryYear
+        maskedNumber
+        type
+        brand
+        paymentMethod
+      }
+      currencyCode
+      paymentStatus
+      planChangeNotAllowed
+      subscriptionItems {
+        amount
+        name
+        itemPriceId
+        itemType
+        quantity
+        unitPrice
+        itemId
+      }
+      billingPeriod
+      billingPeriodUnit
+      addonToStopIds
+    }
+  }
+}

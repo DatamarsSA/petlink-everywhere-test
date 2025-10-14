@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { fixtures } from "../../../fixtures/fixtures.js";
-import { testHelper } from "../../../clients/client-test-helper.js";
+import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import {
   CreatePetlinkGpsMutation,
   Pet,
@@ -11,15 +11,18 @@ import {
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe("PetlinkGPS Registration", () => {
-  let testUser: User;
-  let testPets: { dog: Pet; cat: Pet };
+  let setup: TestSetup;
   // Tipizziamo correttamente i dispositivi
   let dogDevice: PetlinkGps;
   let catDevice: PetlinkGps;
 
   beforeAll(async () => {
-    testUser = await testHelper.createUser();
-    testPets = await testHelper.createPetsForUser();
+    setup = await testHelper
+      .setupBuilder()
+      .withUser()
+      .withDog()
+      .withCat()
+      .build();
   });
 
   it("Associate Petlink GPS to both DOG and CAT", async () => {
@@ -30,7 +33,7 @@ describe("PetlinkGPS Registration", () => {
       countryCode:
         fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
       timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
-      petId: testPets.dog.id,
+      petId: setup.pets.dog!.id,
     } as PetlinkGpsIn;
 
     const catDevicePayload = {
@@ -39,7 +42,7 @@ describe("PetlinkGPS Registration", () => {
       countryCode:
         fixtures.devices.petlinkGps[fixtures.appBrand].CAT.countryCode,
       timezone: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.timezone,
-      petId: testPets.cat.id,
+      petId: setup.pets.cat!.id,
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
@@ -60,7 +63,7 @@ describe("PetlinkGPS Registration", () => {
       petId: dogDevicePayload.petId,
       countryCode: dogDevicePayload.countryCode,
       timezone: dogDevicePayload.timezone,
-      userId: testUser.id,
+      userId: setup.user!.id,
     });
     expect(dogResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
 
@@ -71,7 +74,7 @@ describe("PetlinkGPS Registration", () => {
       petId: catDevicePayload.petId,
       countryCode: catDevicePayload.countryCode,
       timezone: catDevicePayload.timezone,
-      userId: testUser.id,
+      userId: setup.user!.id,
     });
     expect(catResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
 
@@ -88,7 +91,7 @@ describe("PetlinkGPS Registration", () => {
       countryCode:
         fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
       timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
-      petId: testPets.dog.id,
+      petId: setup.pets.dog!.id,
     } as PetlinkGpsIn;
 
     const catDevicePayload = {
@@ -97,7 +100,7 @@ describe("PetlinkGPS Registration", () => {
       countryCode:
         fixtures.devices.petlinkGps[fixtures.appBrand].CAT.countryCode,
       timezone: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.timezone,
-      petId: testPets.cat.id,
+      petId: setup.pets.cat!.id,
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([

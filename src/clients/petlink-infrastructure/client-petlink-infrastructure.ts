@@ -20,7 +20,7 @@ import { performanceTracker } from "../../helpers/helper-performance-tracker.js"
 // ------------------------------
 // HTTP header constants
 // ------------------------------
-export const HTTP_HEADERS = {
+const HTTP_HEADERS = {
   AUTHORIZATION: "Authorization",
   API_KEY: "x-api-key",
   X_AMZ_DATE: "X-Amz-Date",
@@ -30,35 +30,21 @@ export const HTTP_HEADERS = {
 // ------------------------------
 // Service types
 // ------------------------------
-export enum ServiceType {
+enum ServiceType {
   CORE = "CORE",
   CCT = "CCT",
-}
-
-export enum UtilityTestTypeEnum {
-  BUY_NEW_SUBSCRIPTION = "BUY_NEW_SUBSCRIPTION",
-  CLEAN_UP_USER = "CLEAN_UP_USER",
-  SIGN_UP = "SIGN_UP",
-}
-
-export enum LanguageId {
-  DE = "DE",
-  EN = "EN",
-  ES = "ES",
-  FR = "FR",
-  IT = "IT",
 }
 
 // ------------------------------
 // Auth types
 // ------------------------------
-export enum AuthType {
+enum AuthType {
   JWT = "jwt",
   IAM = "iam",
   API_KEY = "apiKey",
 }
 
-export type IamCredentials = {
+type IamCredentials = {
   accessKeyId: string;
   secretAccessKey: string;
 };
