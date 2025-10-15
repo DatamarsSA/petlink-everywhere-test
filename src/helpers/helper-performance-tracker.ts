@@ -1,11 +1,4 @@
-import {
-  writeFileSync,
-  mkdirSync,
-  appendFileSync,
-  readFileSync,
-  existsSync,
-  unlinkSync,
-} from "fs";
+import { writeFileSync, mkdirSync, appendFileSync, readFileSync, existsSync, unlinkSync } from "fs";
 import { dirname } from "path";
 
 // ============================================================================
@@ -28,28 +21,10 @@ export type PerformanceRecord = {
 export class PerformanceTracker {
   private readonly jsonlPath: string;
   private readonly reportPath: string;
-  private hasCleanedThisSession = false;
 
-  constructor(
-    jsonlPath = "./test-reports/performance-records.jsonl",
-    reportPath = "./test-reports/performance-report.txt",
-  ) {
+  constructor(jsonlPath = "./test-reports/performance-records.jsonl", reportPath = "./test-reports/performance-report.txt") {
     this.jsonlPath = jsonlPath;
     this.reportPath = reportPath;
-  }
-
-  /**
-   * Clean performance tracking files
-   * Note: This is now called automatically on first recordPerformance() call
-   * You can still call it manually if needed for edge cases
-   */
-  cleanPerformanceFiles(): void {
-    if (existsSync(this.jsonlPath)) {
-      unlinkSync(this.jsonlPath);
-    }
-    if (existsSync(this.reportPath)) {
-      unlinkSync(this.reportPath);
-    }
   }
 
   /**
@@ -57,11 +32,6 @@ export class PerformanceTracker {
    * Automatically cleans old files on first call, then appends to JSONL and regenerates the report
    */
   recordPerformance(data: Omit<PerformanceRecord, "timestamp">): void {
-    // Auto-clean on first call
-    if (!this.hasCleanedThisSession) {
-      this.cleanPerformanceFiles();
-      this.hasCleanedThisSession = true;
-    }
     const newRecord: PerformanceRecord = {
       ...data,
       timestamp: new Date(),
