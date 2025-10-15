@@ -2,27 +2,27 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { fixtures } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import {
-  CreatePetlinkGpsMutation,
-  Pet,
-  PetlinkGps,
-  PetlinkGpsIn,
-  User,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { CreatePetlinkGpsMutation, Pet, PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { AppBrand } from "../../../clients/petlink-infrastructure/types.js";
 
 describe("PetlinkGPS Registration", () => {
   let setup: TestSetup;
   // Tipizziamo correttamente i dispositivi
   let dogDevice: PetlinkGps;
   let catDevice: PetlinkGps;
+  let evoDevice: PetlinkGps;
 
   beforeAll(async () => {
-    setup = await testHelper.setupBuilder().withUser().withDog().withCat().build();
+    const builder = testHelper.setupBuilder().withUser().withDog().withCat();
+
+    if (fixtures.appBrand === AppBrand.KIPPY) {
+      builder.withDogForEvo();
+    }
+
+    setup = await builder.build();
   });
 
-  it("Associate Petlink GPS to both DOG and CAT", async () => {
-    //TODO: test to register EVO device to dog
-    // Payload puliti e consistenti
+  it("Associate PetlinkGPS to both DOG and CAT", async () => {
     const dogDevicePayload = {
       serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
       countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
@@ -73,6 +73,34 @@ describe("PetlinkGPS Registration", () => {
     // Salva i dispositivi per i test successivi
     dogDevice = dogResponse.createPetlinkGps.petlinkGps!;
     catDevice = catResponse.createPetlinkGps.petlinkGps!;
+  });
+
+  it.runIf(fixtures.appBrand == AppBrand.KIPPY)("Associate EVO device to DOG", async () => {
+    const evoDevicePayload = {
+      serialNumber: fixtures.devices.petlinkGps.KIPPY.EVO.serialNumber,
+      countryCode: fixtures.devices.petlinkGps.KIPPY.EVO.countryCode,
+      timezone: fixtures.devices.petlinkGps.KIPPY.EVO.timezone,
+      petId: setup.pets.dogForEvo!.id,
+    } as PetlinkGpsIn;
+
+    const evoResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
+      petlinkGps: evoDevicePayload,
+      appBrand: fixtures.appBrand,
+    });
+
+    // Assert EVO device
+    expect(evoResponse.createPetlinkGps.code).toBe("200");
+    expect(evoResponse.createPetlinkGps.petlinkGps).toMatchObject({
+      serialNumber: evoDevicePayload.serialNumber,
+      petId: evoDevicePayload.petId,
+      countryCode: evoDevicePayload.countryCode,
+      timezone: evoDevicePayload.timezone,
+      userId: setup.user!.id,
+    });
+    expect(evoResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
+
+    // Salva per eventuali test successivi
+    evoDevice = evoResponse.createPetlinkGps.petlinkGps!;
   });
 
   it("PetlinkGPS should not be available anymore", async () => {
