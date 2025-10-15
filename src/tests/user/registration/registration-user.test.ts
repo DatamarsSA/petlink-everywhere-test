@@ -50,14 +50,11 @@ describe("User Registration", () => {
   });
 
   it("Wait to receive OTP via SMS", async () => {
-    const otp = await waitFor(
-      () => twilioClient.getLatestOtp(signUpPayload.phone),
-      {
-        timeoutMs: 10000,
-        intervalMs: 500,
-        timeoutError: `OTP not received for ${signUpPayload.phone}`,
-      },
-    );
+    const otp = await waitFor(() => twilioClient.getLatestOtp(signUpPayload.phone), {
+      timeoutMs: 10000,
+      intervalMs: 500,
+      timeoutError: `OTP not received for ${signUpPayload.phone}`,
+    });
 
     expect(otp).toMatch(/^\d{4,6}$/);
     receivedOtp = otp;
@@ -96,14 +93,11 @@ describe("User Registration", () => {
   });
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
-    const linkUrlToOpen = await waitFor(
-      () => gmailClient.getVerificationLink(),
-      {
-        timeoutMs: 10000,
-        intervalMs: 500,
-        timeoutError: "Verification email not received",
-      },
-    );
+    const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
+      timeoutMs: 10000,
+      intervalMs: 500,
+      timeoutError: "Verification email not received",
+    });
 
     expect(linkUrlToOpen).toBeDefined();
     expect(linkUrlToOpen).toContain("uuid=");
@@ -179,5 +173,9 @@ describe("User Registration", () => {
 
     expect(phoneCheck.checkContact.code).toBe("400");
     expect(emailCheck.checkContact.code).toBe("400");
+  });
+
+  it("Test RESET email, phone number and password", async () => {
+    //TODO: Test RESET email, phone number and password
   });
 });

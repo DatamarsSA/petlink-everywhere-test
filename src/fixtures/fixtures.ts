@@ -35,14 +35,14 @@ export const fixtures = {
       cvv: "737",
     },
     insufficientFunds: {
-      //todo: change
+      //todo: change insufficientFunds data
       cardNumber: "4111111111111111",
       expiryMonth: 3,
       expiryYear: 2030,
       cvv: "737",
     },
     expiredCard: {
-      //todo: change
+      //todo: change expiredCard data
       cardNumber: "4111111111111111",
       expiryMonth: 3,
       expiryYear: 2030,

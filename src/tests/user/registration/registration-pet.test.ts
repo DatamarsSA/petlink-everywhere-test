@@ -1,8 +1,5 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import type {
-  PetIn,
-  User,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import type { PetIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fixtures } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
@@ -83,13 +80,7 @@ describe("Pet Registration", () => {
     // 4. CAT species cannot use DOG breeds
 
     // Execute all invalid pet creation requests in parallel
-    const [
-      dogPurebreedWithTwoBreeds,
-      dogMixedbreedWithOneBreed,
-      dogMixedbreedWithTwoEqualsBreed,
-      catWithDogBreed,
-      dogWithCatBreed,
-    ] = await Promise.all([
+    const [dogPurebreedWithTwoBreeds, dogMixedbreedWithOneBreed, dogMixedbreedWithTwoEqualsBreed, catWithDogBreed, dogWithCatBreed] = await Promise.all([
       // Invalid: PUREBREED with 2 breeds (should have only 1)
       petlink.core.graphql.authJwt.createPet({
         pet: {
@@ -114,10 +105,7 @@ describe("Pet Registration", () => {
         pet: {
           ...dogPayload,
           breedType: "MIXED_BREED",
-          breeds: [
-            "5b0bfddb-532e-41cb-9705-b2ddc21226ef",
-            "5b0bfddb-532e-41cb-9705-b2ddc21226ef",
-          ],
+          breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef", "5b0bfddb-532e-41cb-9705-b2ddc21226ef"],
         },
       }),
       // Invalid: CAT with DOG breed
@@ -192,13 +180,11 @@ describe("Pet Registration", () => {
 
     // Verify the PET no longer exists
     const petsAfterDelete = await petlink.core.graphql.authJwt.getPets();
-    const deletedPet = petsAfterDelete.getPets.pets?.find(
-      (p) => p.id === petId,
-    );
+    const deletedPet = petsAfterDelete.getPets.pets?.find((p) => p.id === petId);
     expect(deletedPet).toBeUndefined();
   });
 
   it("Pet should not be removable if he has device associated", () => {
-    //todo: implements test
+    //TODO: Pet should not be removable if he has device associated
   });
 });

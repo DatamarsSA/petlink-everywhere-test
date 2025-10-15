@@ -63,12 +63,7 @@ export async function waitFor<T>(
     timeoutError?: string;
   } = {},
 ): Promise<T> {
-  const {
-    isReady = (result) => !!result,
-    timeoutMs = 30000,
-    intervalMs = 1000,
-    timeoutError = `Timeout: condition not met within ${timeoutMs}ms`,
-  } = options;
+  const { isReady = (result) => !!result, timeoutMs = 30000, intervalMs = 1000, timeoutError = `Timeout: Payment succeeded not return within ${timeoutMs}ms` } = options;
 
   const startTime = Date.now();
   let attempts = 0;

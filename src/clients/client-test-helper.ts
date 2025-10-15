@@ -1,22 +1,10 @@
-import {
-  User,
-  UserIn,
-  PetIn,
-  Pet,
-  PetlinkGps,
-  PetlinkGpsIn,
-  SpeciesEnum,
-} from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { User, UserIn, PetIn, Pet, PetlinkGps, PetlinkGpsIn, SpeciesEnum } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { env } from "../config/env-schema-validation.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fixtures } from "../fixtures/fixtures.js";
-import {
-  PetType,
-  DeviceType,
-  UtilityTestTypeEnum,
-} from "./petlink-infrastructure/types.js";
+import { PetType, DeviceType, UtilityTestTypeEnum } from "./petlink-infrastructure/types.js";
 
 export interface TestSetup {
   user?: User;
@@ -119,31 +107,25 @@ class TestSetupBuilder {
 
     if (this.includeDogDevice && this.setup.pets.dog) {
       devicePromises.push(
-        this.helper
-          .createDeviceForPet(this.setup.pets.dog.id, DeviceType.DOG)
-          .then((device) => {
-            this.setup.devices.dogStandard = device;
-          }),
+        this.helper.createDeviceForPet(this.setup.pets.dog.id, DeviceType.DOG).then((device) => {
+          this.setup.devices.dogStandard = device;
+        }),
       );
     }
 
     if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
       devicePromises.push(
-        this.helper
-          .createDeviceForPet(this.setup.pets.dogForEvo.id, DeviceType.EVO)
-          .then((device) => {
-            this.setup.devices.dogEvo = device;
-          }),
+        this.helper.createDeviceForPet(this.setup.pets.dogForEvo.id, DeviceType.EVO).then((device) => {
+          this.setup.devices.dogEvo = device;
+        }),
       );
     }
 
     if (this.includeCatDevice && this.setup.pets.cat) {
       devicePromises.push(
-        this.helper
-          .createDeviceForPet(this.setup.pets.cat.id, DeviceType.CAT)
-          .then((device) => {
-            this.setup.devices.catStandard = device;
-          }),
+        this.helper.createDeviceForPet(this.setup.pets.cat.id, DeviceType.CAT).then((device) => {
+          this.setup.devices.catStandard = device;
+        }),
       );
     }
 
@@ -219,9 +201,7 @@ export class TestHelper {
     });
 
     if (response.utilityIntegrationTest.code !== "200") {
-      throw new Error(
-        `Failed to create user: ${response.utilityIntegrationTest.message}`,
-      );
+      throw new Error(`Failed to create user: ${response.utilityIntegrationTest.message}`);
     }
 
     await petlink.loginWithPhone(userPayload.phone, userPayload.password);
@@ -242,9 +222,7 @@ export class TestHelper {
     } else if (petType === PetType.CAT) {
       petFixture = fixtures.pet.defaultCat;
     } else {
-      throw new Error(
-        `Invalid pet type: ${petType}. Only DOG and CAT are supported.`,
-      );
+      throw new Error(`Invalid pet type: ${petType}.`);
     }
 
     const petPayload: PetIn = {
@@ -264,18 +242,13 @@ export class TestHelper {
     });
 
     if (response.createPet.code !== "200") {
-      throw new Error(
-        `Failed to create ${petType}: ${response.createPet.message}`,
-      );
+      throw new Error(`Failed to create ${petType}: ${response.createPet.message}`);
     }
 
     return response.createPet.pet!;
   }
 
-  async createDeviceForPet(
-    petId: string,
-    deviceType: DeviceType,
-  ): Promise<PetlinkGps> {
+  async createDeviceForPet(petId: string, deviceType: DeviceType): Promise<PetlinkGps> {
     // Validate EVO can only be created with KIPPY brand
     if (deviceType === DeviceType.EVO && fixtures.appBrand !== "KIPPY") {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
@@ -283,15 +256,11 @@ export class TestHelper {
 
     // Use the enum value as string for indexing
     const deviceTypeKey = deviceType as string;
-    const brandFixtures = fixtures.devices.petlinkGps[
-      fixtures.appBrand
-    ] as Record<string, any>;
+    const brandFixtures = fixtures.devices.petlinkGps[fixtures.appBrand] as Record<string, any>;
     const deviceFixture = brandFixtures[deviceTypeKey];
 
     if (!deviceFixture) {
-      throw new Error(
-        `Device fixture not found for brand ${fixtures.appBrand} and type ${deviceType}`,
-      );
+      throw new Error(`Device fixture not found for brand ${fixtures.appBrand} and type ${deviceType}`);
     }
 
     const devicePayload: PetlinkGpsIn = {
@@ -307,9 +276,7 @@ export class TestHelper {
     });
 
     if (response.createPetlinkGps.code !== "200") {
-      throw new Error(
-        `Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}`,
-      );
+      throw new Error(`Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}`);
     }
 
     return response.createPetlinkGps.petlinkGps!;
