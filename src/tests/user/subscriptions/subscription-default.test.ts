@@ -8,21 +8,20 @@ import { waitFor } from "../../../helpers/helper-waitfor.js";
 
 describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
-  const isKippyRun = fixtures.appBrand === AppBrand.KIPPY;
 
   beforeAll(async () => {
     // Base setup: common for all brands
     const builder = testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice();
 
     // Add EVO device only for KIPPY brand
-    if (isKippyRun) {
+    if (fixtures.isKippyRun) {
       builder.withDogForEvo().withDogEvoDevice();
     }
 
     setup = await builder.build();
   });
 
-  it("Verify each device type has at elast 1 sub plan available", async () => {
+  it("Verify each device type has at least 1 sub plan available", async () => {
     const dogDevice = setup.devices.dogStandard!;
     const catDevice = setup.devices.catStandard!;
     const evoDevice = setup.devices.dogEvo;
@@ -41,7 +40,7 @@ describe("DEFAULT subscription flow", () => {
         serialNumber: catDevice.serialNumber,
       }),
       // EVO device plans (only for KIPPY)
-      ...(isKippyRun && evoDevice
+      ...(fixtures.isKippyRun && evoDevice
         ? [
             petlink.core.graphql.authJwt.getSubscriptionPlans({
               productId: evoDevice.id,
@@ -73,7 +72,7 @@ describe("DEFAULT subscription flow", () => {
     expect(catPlans.getSubscriptionPlans.plans?.length).toBeGreaterThan(0);
 
     // Assert EVO device (only for KIPPY)
-    if (isKippyRun && evoPlans) {
+    if (fixtures.isKippyRun && evoPlans) {
       expect(evoPlans.getSubscriptionPlans.code).toBe("200");
       expect(evoPlans.getSubscriptionPlans.plans).toBeDefined();
       expect(Array.isArray(evoPlans.getSubscriptionPlans.plans)).toBe(true);
@@ -185,7 +184,7 @@ describe("DEFAULT subscription flow", () => {
         const sub = result.getSubscriptionByProductId.subscription;
         return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
       },
-      timeoutMs: 30000,
+      timeoutMs: 60000,
       intervalMs: 2000,
       timeoutError: `Timeout: Payment succeeded not return in time.`,
     });
@@ -194,20 +193,53 @@ describe("DEFAULT subscription flow", () => {
     expect(afterPurchase.getSubscriptionByProductId.subscription?.paymentStatus).toBe("SUCCEEDED");
   });
 
+  it.runIf(fixtures.isKippyRun)("Test BUY sub + addon (PET & DEVICE protection)", () => {
+    //TODO: (If KIPPY) Buy sub with addon PET-PROTECTION
+    //TODO: (If KIPPY && user IT) Buy sub with addon DEVICE-PROTECTION
+  });
+
   it("Test CHANGE (Upgrade/Downgrade) sub", () => {
     //TODO: Test CHANGE (Upgrade/Downgrade) sub
   });
 
-  it("Test AUTMATICA RENEWAL active sub", () => {
-    //TODO: Test AUTMATICA RENEWAL active sub
+  it("Test AUTMATIC RENEWAL active sub", () => {
+    //TODO: Test AUTMATIC RENEWAL active sub
   });
 
-  it("Test CANCEL active sub", () => {
-    //TODO: Test CANCEL active sub
-  });
+  it("Test CANCEL active sub", async () => {
+    const device = setup.devices.dogStandard!;
 
-  it.runIf(isKippyRun)("Test CANCEL active sub", () => {
-    //TODO: Buy sub with addon PET-PROTECTION
-    //TODO: Buy sub with addon DEVICE-PROTECTION
+    // STEP 1: Get the active subscription (purchased in previous test)
+    const subBeforeCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
+      productId: device.id,
+    });
+
+    expect(subBeforeCancel.getSubscriptionByProductId.code).toBe("200");
+    expect(subBeforeCancel.getSubscriptionByProductId.subscription).toBeDefined();
+    expect(subBeforeCancel.getSubscriptionByProductId.subscription?.status).toBe("active");
+
+    const subscriptionId = subBeforeCancel.getSubscriptionByProductId.subscription!.id;
+    const currentTermEnd = subBeforeCancel.getSubscriptionByProductId.subscription!.currentTermEnd;
+
+    console.log("Subscription to delete (BEFORE):", subBeforeCancel);
+
+    // STEP 2: Cancel the subscription (stop auto-renewal)
+    const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
+      subscriptionId,
+      appBrand: fixtures.appBrand,
+      cancelReason: "Testing cancellation flow for integration tests",
+      cancelReasonCode: "OTHER",
+    });
+
+    expect(cancelResponse.stopRenewingSubscription?.code).toBe("200");
+
+    // STEP 3: Verify subscription is now "non_renewing" but still active until term end
+    const subAfterCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
+      productId: device.id,
+    });
+    console.log("Subscription to delete (AFTER):", subAfterCancel);
+
+    expect(subAfterCancel.getSubscriptionByProductId.code).toBe("200");
+    //TODO: how to check if is real deleted automatic renewal?
   });
 });

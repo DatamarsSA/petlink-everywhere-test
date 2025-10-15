@@ -1,18 +1,13 @@
-import {
-  PetIn,
-  SpeciesEnum,
-  BreedTypeEnum,
-  Gender,
-  PetLivingEnvironment,
-  UserIn,
-} from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { LanguageId } from "../clients/petlink-infrastructure/types.js";
+import { PetIn, SpeciesEnum, BreedTypeEnum, Gender, PetLivingEnvironment, UserIn } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { AppBrand, LanguageId } from "../clients/petlink-infrastructure/types.js";
 import { env } from "../config/env-schema-validation.js";
 
 const currentAppBrand = env.APP_BRAND;
 
 export const fixtures = {
   appBrand: currentAppBrand,
+  isKippyRun: currentAppBrand === AppBrand.KIPPY,
+  isPetlinkRun: currentAppBrand === AppBrand.PETLINK,
 
   user: {
     name: "Test",

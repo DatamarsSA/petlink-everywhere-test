@@ -248,3 +248,22 @@ mutation updateBillingInfo($updateBillingInfoInput: UpdateBillingInfoInput!) {
     message
   }
 }
+
+
+mutation stopRenewingSubscription(
+  $subscriptionId: String!
+  $appBrand: AppBrand!
+  $cancelReason: String!
+  $cancelReasonCode: CancelReasonCodeEnum!
+) {
+  stopRenewingSubscription(
+    subscriptionId: $subscriptionId
+    appBrand: $appBrand
+    cancelReason: $cancelReason
+    cancelReasonCode: $cancelReasonCode
+  ) {
+    code
+    translationCode
+    message
+  }
+}

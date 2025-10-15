@@ -2,24 +2,11 @@ import { GraphQLClient, RequestOptions } from "graphql-request";
 import { DocumentNode } from "graphql";
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
-export type Exact<T extends { [key: string]: unknown }> = {
-  [K in keyof T]: T[K];
-};
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
-  [SubKey in K]?: Maybe<T[SubKey]>;
-};
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
-  [SubKey in K]: Maybe<T[SubKey]>;
-};
-export type MakeEmpty<
-  T extends { [key: string]: unknown },
-  K extends keyof T,
-> = { [_ in K]?: never };
-export type Incremental<T> =
-  | T
-  | {
-      [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never;
-    };
+export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+export type Incremental<T> = T | { [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never };
 type GraphQLClientRequestHeaders = RequestOptions["requestHeaders"];
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
@@ -47,18 +34,9 @@ export interface Activity {
   walk: Scalars["Int"]["output"];
 }
 
-export type ActivityProfileEnum =
-  | "MODERATELY_ACTIVE"
-  | "SEDENTARY"
-  | "VERY_ACTIVE";
+export type ActivityProfileEnum = "MODERATELY_ACTIVE" | "SEDENTARY" | "VERY_ACTIVE";
 
-export type AddFreePeriod =
-  | "ADD_1_YEAR"
-  | "ADD_7_DAYS"
-  | "ADD_14_DAYS"
-  | "ADD_30_DAYS"
-  | "ADD_60_DAYS"
-  | "ADD_90_DAYS";
+export type AddFreePeriod = "ADD_1_YEAR" | "ADD_7_DAYS" | "ADD_14_DAYS" | "ADD_30_DAYS" | "ADD_60_DAYS" | "ADD_90_DAYS";
 
 export interface AddTicketToIssueResponse {
   __typename?: "AddTicketToIssueResponse";
@@ -68,7 +46,7 @@ export interface AddTicketToIssueResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-/**  Type */
+/** Type */
 export interface BaseResponse {
   __typename?: "BaseResponse";
   code: Scalars["String"]["output"];
@@ -83,13 +61,7 @@ export interface Breed {
   species: SpeciesEnum;
 }
 
-export type CancelReasonCodeEnum =
-  | "DO_NOT_USE"
-  | "DO_NOT_WORK_PROPERLY"
-  | "MISSING_PET"
-  | "NOT_SUITABLE"
-  | "OTHER"
-  | "TOO_EXPENSIVE";
+export type CancelReasonCodeEnum = "DO_NOT_USE" | "DO_NOT_WORK_PROPERLY" | "MISSING_PET" | "NOT_SUITABLE" | "OTHER" | "TOO_EXPENSIVE";
 
 export interface Card {
   __typename?: "Card";
@@ -133,7 +105,7 @@ export interface Coupon {
   name: Scalars["String"]["output"];
 }
 
-/**  Enum */
+/** Enum */
 export type CouponSetMode = "apply" | "simulate";
 
 export interface CreateIssueResponse {
@@ -188,11 +160,7 @@ export interface CreditNote {
   username: Scalars["String"]["output"];
 }
 
-export type CreditNoteStatusTypeEnum =
-  | "adjusted"
-  | "refund_due"
-  | "refunded"
-  | "voided";
+export type CreditNoteStatusTypeEnum = "adjusted" | "refund_due" | "refunded" | "voided";
 
 export interface Customer {
   __typename?: "Customer";
@@ -210,11 +178,7 @@ export interface Customer {
   surname: Scalars["String"]["output"];
 }
 
-export type CustomerMood =
-  | "COLLABORATIVE"
-  | "CRITICAL"
-  | "NON_COOPERATIVE"
-  | "VERY_CRITICAL";
+export type CustomerMood = "COLLABORATIVE" | "CRITICAL" | "NON_COOPERATIVE" | "VERY_CRITICAL";
 
 export interface DateFilterInput {
   gte?: InputMaybe<Scalars["String"]["input"]>;
@@ -248,7 +212,7 @@ export interface Device {
   lastOperationInAppDate?: Maybe<Scalars["String"]["output"]>;
   lastPurchasedSubscriptionExpiringDate?: Maybe<Scalars["String"]["output"]>;
   lastPurchasedSubscriptionId?: Maybe<Scalars["String"]["output"]>;
-  /**   non so se è un enum */
+  /** non so se è un enum */
   lat?: Maybe<Scalars["Float"]["output"]>;
   lng?: Maybe<Scalars["Float"]["output"]>;
   logEnabled?: Maybe<Scalars["Boolean"]["output"]>;
@@ -261,7 +225,7 @@ export interface Device {
   simManufacturer?: Maybe<Scalars["String"]["output"]>;
   simStatus: SimStatusEnum;
   testingDate?: Maybe<Scalars["String"]["output"]>;
-  /**   check which object is this */
+  /** check which object is this */
   timezone?: Maybe<Scalars["String"]["output"]>;
   updateFrequency?: Maybe<Scalars["Float"]["output"]>;
   vodafoneCountry?: Maybe<Scalars["String"]["output"]>;
@@ -683,23 +647,9 @@ export interface InvoiceItem {
   unitPrice: Scalars["Int"]["output"];
 }
 
-export type InvoiceReasonCodeEnum =
-  | "order_cancellation"
-  | "order_change"
-  | "other"
-  | "product_unsatisfactory"
-  | "service_unsatisfactory"
-  | "waiver";
+export type InvoiceReasonCodeEnum = "order_cancellation" | "order_change" | "other" | "product_unsatisfactory" | "service_unsatisfactory" | "waiver";
 
-export type InvoiceStatusEnum =
-  | "non_paying"
-  | "not_paid"
-  | "paid"
-  | "paid_externally"
-  | "payment_due"
-  | "pending"
-  | "posted"
-  | "voided";
+export type InvoiceStatusEnum = "non_paying" | "not_paid" | "paid" | "paid_externally" | "payment_due" | "pending" | "posted" | "voided";
 
 export interface Issue {
   __typename?: "Issue";
@@ -1054,16 +1004,7 @@ export interface PetProtectionShortInfo {
   status: PetProtectionStatus;
 }
 
-export type PetProtectionStatus =
-  | "ACTIVE"
-  | "CANCELLED"
-  | "EXPIRED"
-  | "IN_PROGRESS"
-  | "IN_REVIEW"
-  | "OPEN"
-  | "REFUNDED"
-  | "REJECTED"
-  | "TO_UPDATE";
+export type PetProtectionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "IN_PROGRESS" | "IN_REVIEW" | "OPEN" | "REFUNDED" | "REJECTED" | "TO_UPDATE";
 
 export interface PetlinkSubscription {
   __typename?: "PetlinkSubscription";
@@ -1316,7 +1257,7 @@ export interface RefundItem {
   chargebeeInvoiceItemId: Scalars["String"]["output"];
 }
 
-/**  Input */
+/** Input */
 export interface RefundItemInput {
   amount: Scalars["Int"]["input"];
   chargebeeInvoiceItemId: Scalars["String"]["input"];
@@ -1449,17 +1390,7 @@ export interface ShelterOrderRecap {
   orderCount: Scalars["Int"]["output"];
 }
 
-export type SimStatusEnum =
-  | "inactive"
-  | "live"
-  | "other"
-  | "ready"
-  | "sleep"
-  | "standBy"
-  | "stopped"
-  | "suspended"
-  | "terminated"
-  | "test";
+export type SimStatusEnum = "inactive" | "live" | "other" | "ready" | "sleep" | "standBy" | "stopped" | "suspended" | "terminated" | "test";
 
 export type SpeciesEnum = "CAT" | "DOG" | "OTHER";
 
@@ -1495,17 +1426,7 @@ export interface SubscriptionItem {
   unitPrice: Scalars["Int"]["output"];
 }
 
-export type SubscriptionStatusEnum =
-  | "active"
-  | "cancelled"
-  | "closed"
-  | "future"
-  | "in_trial"
-  | "non_renewing"
-  | "paused"
-  | "to_stop_renew"
-  | "to_stop_renew_addon"
-  | "transferred";
+export type SubscriptionStatusEnum = "active" | "cancelled" | "closed" | "future" | "in_trial" | "non_renewing" | "paused" | "to_stop_renew" | "to_stop_renew_addon" | "transferred";
 
 export interface Ticket {
   __typename?: "Ticket";
@@ -1515,7 +1436,7 @@ export interface Ticket {
   customerMood: CustomerMood;
   id: Scalars["String"]["output"];
   inspectionRequired?: Maybe<Scalars["Boolean"]["output"]>;
-  /**   Withdrawn for inspection */
+  /** Withdrawn for inspection */
   negativeReview?: Maybe<Scalars["Boolean"]["output"]>;
   notes?: Maybe<Scalars["String"]["output"]>;
   productId?: Maybe<Scalars["String"]["output"]>;
@@ -1549,12 +1470,12 @@ export interface TicketChangeStatusResponse {
 }
 
 export interface TicketInput {
-  /**   default OPEN */
+  /** default OPEN */
   action?: InputMaybe<TicketAction>;
   actionReason: Array<TicketActionReason>;
   customerMood: CustomerMood;
   inspectionRequired?: InputMaybe<Scalars["Boolean"]["input"]>;
-  /**   Withdrawn for inspection */
+  /** Withdrawn for inspection */
   negativeReview?: InputMaybe<Scalars["Boolean"]["input"]>;
   notes?: InputMaybe<Scalars["String"]["input"]>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
@@ -1639,14 +1560,7 @@ export interface User {
   vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
 }
 
-export type VodafoneCountryVisibilityEnum =
-  | "DE"
-  | "ES"
-  | "EU"
-  | "GB"
-  | "IE"
-  | "IT"
-  | "PT";
+export type VodafoneCountryVisibilityEnum = "DE" | "ES" | "EU" | "GB" | "IE" | "IT" | "PT";
 
 export interface SetPlanProfilesResponse {
   __typename?: "setPlanProfilesResponse";
@@ -1656,24 +1570,11 @@ export interface SetPlanProfilesResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type SdkFunctionWrapper = <T>(
-  action: (requestHeaders?: Record<string, string>) => Promise<T>,
-  operationName: string,
-  operationType?: string,
-  variables?: any,
-) => Promise<T>;
+export type SdkFunctionWrapper = <T>(action: (requestHeaders?: Record<string, string>) => Promise<T>, operationName: string, operationType?: string, variables?: any) => Promise<T>;
 
-const defaultWrapper: SdkFunctionWrapper = (
-  action,
-  _operationName,
-  _operationType,
-  _variables,
-) => action();
+const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationType, _variables) => action();
 
-export function getSdk(
-  client: GraphQLClient,
-  withWrapper: SdkFunctionWrapper = defaultWrapper,
-) {
+export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {};
 }
 export type Sdk = ReturnType<typeof getSdk>;
