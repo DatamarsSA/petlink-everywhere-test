@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { PetIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fixtures } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
@@ -36,10 +36,7 @@ describe("Pet Registration", () => {
   });
 
   it("Create DOG and CAT for the user", async () => {
-    const [dogResponse, catResponse] = await Promise.all([
-      petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
-      petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
-    ]);
+    const [dogResponse, catResponse] = await Promise.all([petlink.core.graphql.authJwt.createPet({ pet: dogPayload }), petlink.core.graphql.authJwt.createPet({ pet: catPayload })]);
 
     // Assert DOG
     expect(dogResponse.createPet.code).toBe("200");
@@ -184,7 +181,46 @@ describe("Pet Registration", () => {
     expect(deletedPet).toBeUndefined();
   });
 
-  it("Pet should not be removable if he has device associated", () => {
-    //TODO: Pet should not be removable if he has device associated
+  it("Pet should not be removable if he has device associated", async () => {
+    // STEP 1: Create a temporary PET for this test
+    const tempPetData = {
+      ...dogPayload,
+      name: "Pet with Device Test",
+    } as PetIn;
+
+    const createPetResponse = await petlink.core.graphql.authJwt.createPet({
+      pet: tempPetData,
+    });
+
+    expect(createPetResponse.createPet.code).toBe("200");
+    expect(createPetResponse.createPet.pet).toBeDefined();
+    const petId = createPetResponse.createPet.pet!.id;
+
+    // STEP 2: Associate a device to the PET (brand-agnostic: works for both PETLINK and KIPPY)
+    const devicePayload = {
+      serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
+      countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
+      timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
+      petId: petId,
+    };
+
+    const createDeviceResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
+      petlinkGps: devicePayload,
+      appBrand: fixtures.appBrand,
+    });
+
+    expect(createDeviceResponse.createPetlinkGps.code).toBe("200");
+    expect(createDeviceResponse.createPetlinkGps.petlinkGps).toBeDefined();
+
+    // STEP 3: Try to delete the PET while it has a device associated (should FAIL)
+    const deleteWithDeviceResponse = await petlink.core.graphql.authJwt.deletePet({
+      petId,
+    });
+    expect(deleteWithDeviceResponse.deletePet.code).not.toBe("200");
+
+    // Verify the PET still exists
+    const petsAfterFailedDelete = await petlink.core.graphql.authJwt.getPets();
+    const petStillExists = petsAfterFailedDelete.getPets.pets?.find((p) => p.id === petId);
+    expect(petStillExists).toBeDefined();
   });
 });
