@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { PetIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { fixtures } from "../../../fixtures/fixtures.js";
+import { fixtureCurrentBrand, appBrand } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
@@ -8,27 +8,27 @@ describe("Pet Registration", () => {
   let testUser: User;
 
   const dogPayload = {
-    name: fixtures.pet.defaultDog.name,
-    species: fixtures.pet.defaultDog.species,
-    breedType: fixtures.pet.defaultDog.breedType,
-    breeds: fixtures.pet.defaultDog.breeds,
-    gender: fixtures.pet.defaultDog.gender,
-    weight: fixtures.pet.defaultDog.weight,
-    birthDate: fixtures.pet.defaultDog.birthDate,
-    livingEnvironment: fixtures.pet.defaultDog.livingEnvironment,
-    primaryColor: fixtures.pet.defaultDog.primaryColor,
+    name: fixtureCurrentBrand.pet.defaultDog.name,
+    species: fixtureCurrentBrand.pet.defaultDog.species,
+    breedType: fixtureCurrentBrand.pet.defaultDog.breedType,
+    breeds: fixtureCurrentBrand.pet.defaultDog.breeds,
+    gender: fixtureCurrentBrand.pet.defaultDog.gender,
+    weight: fixtureCurrentBrand.pet.defaultDog.weight,
+    birthDate: fixtureCurrentBrand.pet.defaultDog.birthDate,
+    livingEnvironment: fixtureCurrentBrand.pet.defaultDog.livingEnvironment,
+    primaryColor: fixtureCurrentBrand.pet.defaultDog.primaryColor,
   } as PetIn;
 
   const catPayload = {
-    name: fixtures.pet.defaultCat.name,
-    species: fixtures.pet.defaultCat.species,
-    breedType: fixtures.pet.defaultCat.breedType,
-    breeds: fixtures.pet.defaultCat.breeds,
-    gender: fixtures.pet.defaultCat.gender,
-    weight: fixtures.pet.defaultCat.weight,
-    birthDate: fixtures.pet.defaultCat.birthDate,
-    livingEnvironment: fixtures.pet.defaultCat.livingEnvironment,
-    primaryColor: fixtures.pet.defaultCat.primaryColor,
+    name: fixtureCurrentBrand.pet.defaultCat.name,
+    species: fixtureCurrentBrand.pet.defaultCat.species,
+    breedType: fixtureCurrentBrand.pet.defaultCat.breedType,
+    breeds: fixtureCurrentBrand.pet.defaultCat.breeds,
+    gender: fixtureCurrentBrand.pet.defaultCat.gender,
+    weight: fixtureCurrentBrand.pet.defaultCat.weight,
+    birthDate: fixtureCurrentBrand.pet.defaultCat.birthDate,
+    livingEnvironment: fixtureCurrentBrand.pet.defaultCat.livingEnvironment,
+    primaryColor: fixtureCurrentBrand.pet.defaultCat.primaryColor,
   } as PetIn;
 
   beforeAll(async () => {
@@ -40,7 +40,7 @@ describe("Pet Registration", () => {
 
     // Assert DOG
     expect(dogResponse.createPet.code).toBe("200");
-    expect(dogResponse.createPet.pet).toMatchObject({
+    expect(dogResponse.createPet.pet, "Created dog should match input payload").toMatchObject({
       name: dogPayload.name,
       species: dogPayload.species,
       breedType: dogPayload.breedType,
@@ -51,11 +51,11 @@ describe("Pet Registration", () => {
       livingEnvironment: dogPayload.livingEnvironment,
       primaryColor: dogPayload.primaryColor,
     });
-    expect(dogResponse.createPet.pet?.id).toBeDefined();
+    expect(dogResponse.createPet.pet?.id, "Dog ID auto-generated should be present").toBeDefined();
 
     // Assert CAT
     expect(catResponse.createPet.code).toBe("200");
-    expect(catResponse.createPet.pet).toMatchObject({
+    expect(catResponse.createPet.pet, "Created cat should match input payload").toMatchObject({
       name: catPayload.name,
       species: catPayload.species,
       breedType: catPayload.breedType,
@@ -66,7 +66,7 @@ describe("Pet Registration", () => {
       livingEnvironment: catPayload.livingEnvironment,
       primaryColor: catPayload.primaryColor,
     });
-    expect(catResponse.createPet.pet?.id).toBeDefined();
+    expect(catResponse.createPet.pet?.id, "Cat ID auto-generated should be present").toBeDefined();
   });
 
   it("Try to create PETs with wrong combinations data", async () => {
@@ -123,11 +123,11 @@ describe("Pet Registration", () => {
       }),
     ]);
     // Assert all requests failed with validation error (400)
-    expect(dogPurebreedWithTwoBreeds.createPet.code).toBe("400");
-    expect(dogMixedbreedWithOneBreed.createPet.code).toBe("400");
-    expect(dogMixedbreedWithTwoEqualsBreed.createPet.code).toBe("400");
-    expect(catWithDogBreed.createPet.code).toBe("400");
-    expect(dogWithCatBreed.createPet.code).toBe("400");
+    expect(dogPurebreedWithTwoBreeds.createPet.code, "PUREBREED with 2 breeds should fail validation").toBe("400");
+    expect(dogMixedbreedWithOneBreed.createPet.code, "MIXED_BREED with 1 breed should fail validation").toBe("400");
+    expect(dogMixedbreedWithTwoEqualsBreed.createPet.code, "MIXED_BREED with 2 identical breeds should fail validation").toBe("400");
+    expect(catWithDogBreed.createPet.code, "CAT with DOG breed should fail validation").toBe("400");
+    expect(dogWithCatBreed.createPet.code, "DOG with CAT breed should fail validation").toBe("400");
   });
 
   it("Update and Delete PET should work correctly", async () => {
@@ -141,10 +141,10 @@ describe("Pet Registration", () => {
       pet: tempPetData,
     });
 
-    expect(createResponse.createPet).toBeDefined();
+    expect(createResponse.createPet, "Create pet response should be defined").toBeDefined();
     expect(createResponse.createPet.code).toBe("200");
-    expect(createResponse.createPet.pet).toBeDefined();
-    expect(createResponse.createPet.pet?.name).toBe(tempPetData.name);
+    expect(createResponse.createPet.pet, "Created pet should be defined").toBeDefined();
+    expect(createResponse.createPet.pet?.name, "Created pet name should match input").toBe(tempPetData.name);
 
     const petId = createResponse.createPet.pet?.id!;
 
@@ -160,25 +160,25 @@ describe("Pet Registration", () => {
       },
     });
 
-    expect(updateResponse.updatePet).toBeDefined();
+    expect(updateResponse.updatePet, "Update pet response should be defined").toBeDefined();
     expect(updateResponse.updatePet.code).toBe("200");
-    expect(updateResponse.updatePet.pet).toBeDefined();
-    expect(updateResponse.updatePet.pet?.id).toBe(petId);
-    expect(updateResponse.updatePet.pet?.name).toBe(updatedName);
-    expect(updateResponse.updatePet.pet?.weight).toBe(updatedWeight);
+    expect(updateResponse.updatePet.pet, "Updated pet should be defined").toBeDefined();
+    expect(updateResponse.updatePet.pet?.id, "Pet ID should remain unchanged after update").toBe(petId);
+    expect(updateResponse.updatePet.pet?.name, "Pet name should be updated").toBe(updatedName);
+    expect(updateResponse.updatePet.pet?.weight, "Pet weight should be updated").toBe(updatedWeight);
 
     // TEST DELETE: Remove the temporary PET
     const deleteResponse = await petlink.core.graphql.authJwt.deletePet({
       petId,
     });
 
-    expect(deleteResponse.deletePet).toBeDefined();
+    expect(deleteResponse.deletePet, "Delete pet response should be defined").toBeDefined();
     expect(deleteResponse.deletePet.code).toBe("200");
 
     // Verify the PET no longer exists
     const petsAfterDelete = await petlink.core.graphql.authJwt.getPets();
     const deletedPet = petsAfterDelete.getPets.pets?.find((p) => p.id === petId);
-    expect(deletedPet).toBeUndefined();
+    expect(deletedPet, "Pet should not exist after deletion").toBeUndefined();
   });
 
   it("Pet should not be removable if he has device associated", async () => {
@@ -193,20 +193,20 @@ describe("Pet Registration", () => {
     });
 
     expect(createPetResponse.createPet.code).toBe("200");
-    expect(createPetResponse.createPet.pet).toBeDefined();
+    expect(createPetResponse.createPet.pet, "Created pet should be defined").toBeDefined();
     const petId = createPetResponse.createPet.pet!.id;
 
     // STEP 2: Associate a device to the PET (brand-agnostic: works for both PETLINK and KIPPY)
     const devicePayload = {
-      serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
-      countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
-      timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
+      serialNumber: fixtureCurrentBrand.devices.DOG.serialNumber,
+      countryCode: fixtureCurrentBrand.devices.DOG.countryCode,
+      timezone: fixtureCurrentBrand.devices.DOG.timezone,
       petId: petId,
     };
 
     const createDeviceResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
       petlinkGps: devicePayload,
-      appBrand: fixtures.appBrand,
+      appBrand: appBrand,
     });
 
     expect(createDeviceResponse.createPetlinkGps.code).toBe("200");
@@ -216,11 +216,11 @@ describe("Pet Registration", () => {
     const deleteWithDeviceResponse = await petlink.core.graphql.authJwt.deletePet({
       petId,
     });
-    expect(deleteWithDeviceResponse.deletePet.code).not.toBe("200");
+    expect(deleteWithDeviceResponse.deletePet.code, "Pet deletion should fail when device is associated").not.toBe("200");
 
     // Verify the PET still exists
     const petsAfterFailedDelete = await petlink.core.graphql.authJwt.getPets();
     const petStillExists = petsAfterFailedDelete.getPets.pets?.find((p) => p.id === petId);
-    expect(petStillExists).toBeDefined();
+    expect(petStillExists, "Pet should still exist after failed deletion attempt").toBeDefined();
   });
 });

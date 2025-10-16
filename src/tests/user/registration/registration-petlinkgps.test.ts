@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { fixtures } from "../../../fixtures/fixtures.js";
+import { fixtures, fixtureCurrentBrand, appBrand, isKippyRun } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { CreatePetlinkGpsMutation, Pet, PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { AppBrand } from "../../../clients/petlink-infrastructure/types.js";
@@ -15,7 +15,7 @@ describe("PetlinkGPS Registration", () => {
   beforeAll(async () => {
     const builder = testHelper.setupBuilder().withUser().withDog().withCat();
 
-    if (fixtures.appBrand === AppBrand.KIPPY) {
+    if (isKippyRun) {
       builder.withDogForEvo();
     }
 
@@ -24,80 +24,80 @@ describe("PetlinkGPS Registration", () => {
 
   it("Associate PetlinkGPS to both DOG and CAT", async () => {
     const dogDevicePayload = {
-      serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
-      countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
-      timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
+      serialNumber: fixtureCurrentBrand.devices.DOG.serialNumber,
+      countryCode: fixtureCurrentBrand.devices.DOG.countryCode,
+      timezone: fixtureCurrentBrand.devices.DOG.timezone,
       petId: setup.pets.dog!.id,
     } as PetlinkGpsIn;
 
     const catDevicePayload = {
-      serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.serialNumber,
-      countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.countryCode,
-      timezone: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.timezone,
+      serialNumber: fixtureCurrentBrand.devices.CAT.serialNumber,
+      countryCode: fixtureCurrentBrand.devices.CAT.countryCode,
+      timezone: fixtureCurrentBrand.devices.CAT.timezone,
       petId: setup.pets.cat!.id,
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: dogDevicePayload,
-        appBrand: fixtures.appBrand,
+        appBrand: appBrand,
       }),
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: catDevicePayload,
-        appBrand: fixtures.appBrand,
+        appBrand: appBrand,
       }),
     ]);
 
     // Assert DOG device
     expect(dogResponse.createPetlinkGps.code).toBe("200");
-    expect(dogResponse.createPetlinkGps.petlinkGps).toMatchObject({
+    expect(dogResponse.createPetlinkGps.petlinkGps, "Dog DEVICE payload should match input payload").toMatchObject({
       serialNumber: dogDevicePayload.serialNumber,
       petId: dogDevicePayload.petId,
       countryCode: dogDevicePayload.countryCode,
       timezone: dogDevicePayload.timezone,
       userId: setup.user!.id,
     });
-    expect(dogResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
+    expect(dogResponse.createPetlinkGps.petlinkGps?.id, "Dog device ID auto-generated should be present").toBeDefined();
 
     // Assert CAT device
     expect(catResponse.createPetlinkGps.code).toBe("200");
-    expect(catResponse.createPetlinkGps.petlinkGps).toMatchObject({
+    expect(catResponse.createPetlinkGps.petlinkGps, "Cat DEVICE payload should match input payload").toMatchObject({
       serialNumber: catDevicePayload.serialNumber,
       petId: catDevicePayload.petId,
       countryCode: catDevicePayload.countryCode,
       timezone: catDevicePayload.timezone,
       userId: setup.user!.id,
     });
-    expect(catResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
+    expect(catResponse.createPetlinkGps.petlinkGps?.id, "Cat device ID auto-generated should be present").toBeDefined();
 
     // Salva i dispositivi per i test successivi
     dogDevice = dogResponse.createPetlinkGps.petlinkGps!;
     catDevice = catResponse.createPetlinkGps.petlinkGps!;
   });
 
-  it.runIf(fixtures.appBrand == AppBrand.KIPPY)("Associate EVO device to DOG", async () => {
+  it.runIf(isKippyRun)("Associate EVO device to DOG", async () => {
     const evoDevicePayload = {
-      serialNumber: fixtures.devices.petlinkGps.KIPPY.EVO.serialNumber,
-      countryCode: fixtures.devices.petlinkGps.KIPPY.EVO.countryCode,
-      timezone: fixtures.devices.petlinkGps.KIPPY.EVO.timezone,
+      serialNumber: fixtures.KIPPY.devices.EVO.serialNumber,
+      countryCode: fixtures.KIPPY.devices.EVO.countryCode,
+      timezone: fixtures.KIPPY.devices.EVO.timezone,
       petId: setup.pets.dogForEvo!.id,
     } as PetlinkGpsIn;
 
     const evoResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
       petlinkGps: evoDevicePayload,
-      appBrand: fixtures.appBrand,
+      appBrand: appBrand,
     });
 
     // Assert EVO device
     expect(evoResponse.createPetlinkGps.code).toBe("200");
-    expect(evoResponse.createPetlinkGps.petlinkGps).toMatchObject({
+    expect(evoResponse.createPetlinkGps.petlinkGps, "EVO device should match input payload").toMatchObject({
       serialNumber: evoDevicePayload.serialNumber,
       petId: evoDevicePayload.petId,
       countryCode: evoDevicePayload.countryCode,
       timezone: evoDevicePayload.timezone,
       userId: setup.user!.id,
     });
-    expect(evoResponse.createPetlinkGps.petlinkGps?.id).toBeDefined();
+    expect(evoResponse.createPetlinkGps.petlinkGps?.id, "EVO device ID auto-generated should be present").toBeDefined();
 
     // Salva per eventuali test successivi
     evoDevice = evoResponse.createPetlinkGps.petlinkGps!;
@@ -106,32 +106,32 @@ describe("PetlinkGPS Registration", () => {
   it("PetlinkGPS should not be available anymore", async () => {
     // Payload puliti per test duplicazione
     const dogDevicePayload = {
-      serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.serialNumber,
-      countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.countryCode,
-      timezone: fixtures.devices.petlinkGps[fixtures.appBrand].DOG.timezone,
+      serialNumber: fixtureCurrentBrand.devices.DOG.serialNumber,
+      countryCode: fixtureCurrentBrand.devices.DOG.countryCode,
+      timezone: fixtureCurrentBrand.devices.DOG.timezone,
       petId: setup.pets.dog!.id,
     } as PetlinkGpsIn;
 
     const catDevicePayload = {
-      serialNumber: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.serialNumber,
-      countryCode: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.countryCode,
-      timezone: fixtures.devices.petlinkGps[fixtures.appBrand].CAT.timezone,
+      serialNumber: fixtureCurrentBrand.devices.CAT.serialNumber,
+      countryCode: fixtureCurrentBrand.devices.CAT.countryCode,
+      timezone: fixtureCurrentBrand.devices.CAT.timezone,
       petId: setup.pets.cat!.id,
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: dogDevicePayload,
-        appBrand: fixtures.appBrand,
+        appBrand: appBrand,
       }),
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: catDevicePayload,
-        appBrand: fixtures.appBrand,
+        appBrand: appBrand,
       }),
     ]);
 
-    expect(dogResponse.createPetlinkGps.code).not.toBe("200");
-    expect(catResponse.createPetlinkGps.code).not.toBe("200");
+    expect(dogResponse.createPetlinkGps.code, "Dog device should not be registered twice").not.toBe("200");
+    expect(catResponse.createPetlinkGps.code, "Cat device should not be registered twice").not.toBe("200");
   });
 
   it("Update PetlinkGps should work correctly", async () => {
@@ -143,7 +143,7 @@ describe("PetlinkGPS Registration", () => {
         timezone: newTimezone,
       },
     });
-    expect(updateResponse.updatePetlinkGps).toBeDefined();
+    expect(updateResponse.updatePetlinkGps, "Update device response should be defined").toBeDefined();
     expect(updateResponse.updatePetlinkGps.code).toBe("200");
 
     // STEP 2: GET - Verifica che l'update sia persistito
@@ -151,6 +151,6 @@ describe("PetlinkGPS Registration", () => {
       id: dogDevice.id,
     });
     expect(getUpdatedResponse.getPetlinkGps.code).toBe("200");
-    expect(getUpdatedResponse.getPetlinkGps.petlinkGps?.timezone).toBe(newTimezone);
+    expect(getUpdatedResponse.getPetlinkGps.petlinkGps?.timezone, "Device timezone should be updated and persisted").toBe(newTimezone);
   });
 });

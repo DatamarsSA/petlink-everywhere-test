@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { fixtures } from "../../../fixtures/fixtures.js";
+import { fixtureCurrentBrand, appBrand } from "../../../fixtures/fixtures.js";
 import type { UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { waitFor } from "../../../helpers/helper-waitfor.js";
@@ -10,17 +10,17 @@ import { testHelper } from "../../../clients/client-test-helper.js";
 describe("User Registration", () => {
   // Payload per la registrazione utente
   const signUpPayload = {
-    email: fixtures.user.email,
-    name: fixtures.user.name,
-    surname: fixtures.user.surname,
-    city: fixtures.user.city,
-    countryCode: fixtures.user.countryCode,
-    zipCode: fixtures.user.zipCode,
-    streetAddress: fixtures.user.streetAddress,
-    phone: fixtures.user.phone,
-    password: fixtures.user.password,
-    confirmPassword: fixtures.user.confirmPassword,
-    languageId: fixtures.user.languageId,
+    email: fixtureCurrentBrand.user.email,
+    name: fixtureCurrentBrand.user.name,
+    surname: fixtureCurrentBrand.user.surname,
+    city: fixtureCurrentBrand.user.city,
+    countryCode: fixtureCurrentBrand.user.countryCode,
+    zipCode: fixtureCurrentBrand.user.zipCode,
+    streetAddress: fixtureCurrentBrand.user.streetAddress,
+    phone: fixtureCurrentBrand.user.phone,
+    password: fixtureCurrentBrand.user.password,
+    confirmPassword: fixtureCurrentBrand.user.confirmPassword,
+    languageId: fixtureCurrentBrand.user.languageId,
   } as UserIn;
 
   // Variabili condivise tra i test
@@ -43,7 +43,7 @@ describe("User Registration", () => {
       languageId: signUpPayload.languageId,
     });
 
-    expect(response.sendOtp.verificationId).toBeDefined();
+    expect(response.sendOtp.verificationId, "VerificationId should be returned after sending OTP").toBeDefined();
 
     // Salva il verificationId per i test successivi
     verificationId = response.sendOtp.verificationId as string;
@@ -56,7 +56,7 @@ describe("User Registration", () => {
       timeoutError: `OTP not received for ${signUpPayload.phone}`,
     });
 
-    expect(otp).toMatch(/^\d{4,6}$/);
+    expect(otp, "OTP should match 4-6 digit pattern").toMatch(/^\d{4,6}$/);
     receivedOtp = otp;
   }, 70000);
 
@@ -77,7 +77,7 @@ describe("User Registration", () => {
         otp: receivedOtp!,
         verificationId,
       },
-      appBrand: fixtures.appBrand,
+      appBrand: appBrand,
     });
 
     expect(response.signUpUser.code).toBe("200");
@@ -87,9 +87,9 @@ describe("User Registration", () => {
     await petlink.loginWithPhone(signUpPayload.phone, signUpPayload.password);
     const userResponse = await petlink.core.graphql.authJwt.getUser();
 
-    expect(userResponse.getUser.user?.phone).toBe(signUpPayload.phone);
-    expect(userResponse.getUser.user?.contactVerified?.phone).toBe(true);
-    expect(userResponse.getUser.user?.contactVerified?.email).toBe(false);
+    expect(userResponse.getUser.user?.phone, "Logged in user phone should match signup payload").toBe(signUpPayload.phone);
+    expect(userResponse.getUser.user?.contactVerified?.phone, "Phone should be verified after OTP confirmation").toBe(true);
+    expect(userResponse.getUser.user?.contactVerified?.email, "Email should not be verified yet").toBe(false);
   });
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
@@ -99,10 +99,10 @@ describe("User Registration", () => {
       timeoutError: "Verification email not received",
     });
 
-    expect(linkUrlToOpen).toBeDefined();
-    expect(linkUrlToOpen).toContain("uuid=");
-    expect(linkUrlToOpen).toContain("otp=");
-    expect(linkUrlToOpen).toContain("verificationId=");
+    expect(linkUrlToOpen, "Verification link should be received via email").toBeDefined();
+    expect(linkUrlToOpen, "Verification link should contain uuid parameter").toContain("uuid=");
+    expect(linkUrlToOpen, "Verification link should contain otp parameter").toContain("otp=");
+    expect(linkUrlToOpen, "Verification link should contain verificationId parameter").toContain("verificationId=");
 
     // Salva il link per i test successivi
     verificationLink = linkUrlToOpen;
@@ -124,7 +124,7 @@ describe("User Registration", () => {
       otp: params.otp!,
       verificationId: params.verificationId!,
     });
-    expect(response.verifyEmail).toBeDefined();
+    expect(response.verifyEmail, "Email verification response should be defined").toBeDefined();
     expect(response.verifyEmail!.code).toBe("200");
   });
 
@@ -132,17 +132,17 @@ describe("User Registration", () => {
     await petlink.loginWithEmail(signUpPayload.email, signUpPayload.password);
     const user = await petlink.core.graphql.authJwt.getUser();
 
-    expect(user.getUser.user).toBeDefined();
-    expect(user.getUser.user?.email).toBe(signUpPayload.email);
-    expect(user.getUser.user?.phone).toBe(signUpPayload.phone);
-    expect(user.getUser.user?.contactVerified?.phone).toBe(true);
-    expect(user.getUser.user?.contactVerified?.email).toBe(true);
+    expect(user.getUser.user, "User should be defined after login with email").toBeDefined();
+    expect(user.getUser.user?.email, "Logged in user email should match signup payload").toBe(signUpPayload.email);
+    expect(user.getUser.user?.phone, "Logged in user phone should match signup payload").toBe(signUpPayload.phone);
+    expect(user.getUser.user?.contactVerified?.phone, "Phone should remain verified").toBe(true);
+    expect(user.getUser.user?.contactVerified?.email, "Email should now be verified").toBe(true);
   });
 
   it("Verify user created has all value equals to input payload", async () => {
     const userResponse = await petlink.core.graphql.authJwt.getUser();
     // Verifica campi specifici dell'input
-    expect(userResponse.getUser.user).toMatchObject({
+    expect(userResponse.getUser.user, "Created user should match input payload").toMatchObject({
       email: signUpPayload.email,
       name: signUpPayload.name,
       surname: signUpPayload.surname,
@@ -154,9 +154,9 @@ describe("User Registration", () => {
       languageId: signUpPayload.languageId,
     });
     // Verifica anche i campi generati dal backend
-    expect(userResponse.getUser.user?.id).toBeDefined();
-    expect(userResponse.getUser.user?.creationDate).toBeDefined();
-    expect(userResponse.getUser.user?.updateDate).toBeDefined();
+    expect(userResponse.getUser.user?.id, "User ID auto-generated should be present").toBeDefined();
+    expect(userResponse.getUser.user?.creationDate, "Creation date should be set").toBeDefined();
+    expect(userResponse.getUser.user?.updateDate, "Update date should be set").toBeDefined();
   });
 
   it("Verify contacts (Phone & Email) are no longer available", async () => {
@@ -171,8 +171,8 @@ describe("User Registration", () => {
       }),
     ]);
 
-    expect(phoneCheck.checkContact.code).toBe("400");
-    expect(emailCheck.checkContact.code).toBe("400");
+    expect(phoneCheck.checkContact.code, "Phone should no longer be available").toBe("400");
+    expect(emailCheck.checkContact.code, "Email should no longer be available").toBe("400");
   });
 
   it("Test RESET email, phone number and password", async () => {

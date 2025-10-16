@@ -4,107 +4,147 @@ import { env } from "../config/env-schema-validation.js";
 
 const currentAppBrand = env.APP_BRAND;
 
-export const fixtures = {
-  appBrand: currentAppBrand,
-  isKippyRun: currentAppBrand === AppBrand.KIPPY,
-  isPetlinkRun: currentAppBrand === AppBrand.PETLINK,
+// ============================================
+// COMMON (non-exported, internal use only)
+// ============================================
 
-  user: {
-    name: "Test",
-    surname: "User",
-    city: "Milano",
-    countryCode: "IT",
-    zipCode: "20100",
-    streetAddress: "Via Test 123",
-    languageId: "IT" as LanguageId,
-    phone: "+18777804236",
-    email: "t90086085@gmail.com",
-    password: "Ciaokippy3!",
-    confirmPassword: "Ciaokippy3!",
-  } as UserIn,
-  card: {
-    valid: {
-      cardNumber: "4111111111111111",
-      expiryMonth: 3,
-      expiryYear: 2030,
-      cvv: "737",
-    },
-    insufficientFunds: {
-      //todo: change insufficientFunds data
-      cardNumber: "4111111111111111",
-      expiryMonth: 3,
-      expiryYear: 2030,
-      cvv: "737",
-    },
-    expiredCard: {
-      //todo: change expiredCard data
-      cardNumber: "4111111111111111",
-      expiryMonth: 3,
-      expiryYear: 2030,
-      cvv: "737",
-    },
-  },
-
-  pet: {
-    defaultDog: {
-      name: "TestDog",
-      species: "DOG" as SpeciesEnum,
-      breedType: "PUREBREED" as BreedTypeEnum,
-      breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], //Labrador Retriever
-      gender: "MALE" as Gender,
-      weight: 15000, //in grammi
-      birthDate: "2023-12-25T14:30:00.000Z",
-      livingEnvironment: "INDOORS_AND_OUTOORS" as PetLivingEnvironment,
-      primaryColor: "07f20c17-1fae-45f3-bbce-149a79aad7b4", //Black Bay
-    } as PetIn,
-
-    defaultCat: {
-      name: "TestCat",
-      species: "CAT" as SpeciesEnum,
-      breedType: "PUREBREED" as BreedTypeEnum,
-      breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], //Siamese
-      gender: "FEMALE" as Gender,
-      weight: 4200, //in grammi
-      birthDate: "2023-12-25T14:30:00.000Z",
-      livingEnvironment: "ALWAYS_AT_HOME" as PetLivingEnvironment,
-      primaryColor: "009f64c1-8fbb-4084-a962-696de40bc5e5", //Tiger Brown
-    } as PetIn,
-  },
-
-  devices: {
-    petlinkGps: {
-      PETLINK: {
-        CAT: {
-          serialNumber: "UTEST04",
-          countryCode: "US",
-          timezone: "Europe/Rome",
-        },
-        DOG: {
-          serialNumber: "UTEST05",
-          countryCode: "US",
-          timezone: "Europe/Rome",
-        },
-      },
-      KIPPY: {
-        CAT: {
-          serialNumber: "UTEST01",
-          countryCode: "IT",
-          timezone: "Europe/Rome",
-        },
-        DOG: {
-          serialNumber: "UTEST02",
-          countryCode: "IT",
-          timezone: "Europe/Rome",
-        },
-        EVO: {
-          serialNumber: "UTEST03",
-          countryCode: "IT",
-          timezone: "Europe/Rome",
-        },
-      },
-    },
-  },
-
-  subscriptions: {},
-  //todo: foreach BRAND test => 1 device cat, 1device dog, (if KIPPY => 1device evo)
+const commonUser = {
+  name: "Test",
+  surname: "User",
+  password: "Ciaokippy3!",
+  confirmPassword: "Ciaokippy3!",
+  email: "t90086085@gmail.com",
+  streetAddress: "Via Test 123",
+  phone: "+18777804236",
 };
+
+const commonPet = {
+  defaultDog: {
+    name: "TestDog",
+    species: "DOG" as SpeciesEnum,
+    breedType: "PUREBREED" as BreedTypeEnum,
+    breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever
+    gender: "MALE" as Gender,
+    weight: 15000, // in grammi
+    birthDate: "2023-12-25T14:30:00.000Z",
+    livingEnvironment: "INDOORS_AND_OUTOORS" as PetLivingEnvironment,
+    primaryColor: "07f20c17-1fae-45f3-bbce-149a79aad7b4", // Black Bay
+  } as PetIn,
+
+  defaultCat: {
+    name: "TestCat",
+    species: "CAT" as SpeciesEnum,
+    breedType: "PUREBREED" as BreedTypeEnum,
+    breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese
+    gender: "FEMALE" as Gender,
+    weight: 4200, // in grammi
+    birthDate: "2023-12-25T14:30:00.000Z",
+    livingEnvironment: "ALWAYS_AT_HOME" as PetLivingEnvironment,
+    primaryColor: "009f64c1-8fbb-4084-a962-696de40bc5e5", // Tiger Brown
+  } as PetIn,
+};
+
+const commonCard = {
+  valid: {
+    cardNumber: "4111111111111111",
+    expiryMonth: 3,
+    expiryYear: 2030,
+    cvv: "737",
+  },
+  insufficientFunds: {
+    cardNumber: "4000000000009995",
+    expiryMonth: 3,
+    expiryYear: 2030,
+    cvv: "737",
+  },
+  expiredCard: {
+    cardNumber: "4000000000000069",
+    expiryMonth: 3,
+    expiryYear: 2030,
+    cvv: "737",
+  },
+};
+
+// ============================================
+// EXPORTED FIXTURES
+// ============================================
+
+export const fixtures = {
+  // Brand-specific configurations
+  // KIPPY (EU)
+  KIPPY: {
+    user: {
+      ...commonUser,
+      city: "Milano",
+      countryCode: "IT",
+      zipCode: "20100",
+      languageId: "IT" as LanguageId,
+    } as UserIn,
+
+    pet: {
+      defaultDog: { ...commonPet.defaultDog },
+      defaultCat: { ...commonPet.defaultCat },
+    },
+
+    devices: {
+      CAT: {
+        serialNumber: "UTEST01",
+        countryCode: "IT",
+        timezone: "Europe/Rome",
+      },
+      DOG: {
+        serialNumber: "UTEST02",
+        countryCode: "IT",
+        timezone: "Europe/Rome",
+      },
+      EVO: {
+        serialNumber: "UTEST03",
+        countryCode: "IT",
+        timezone: "Europe/Rome",
+      },
+    },
+
+    card: commonCard,
+  },
+
+  // PETLINK (USA..)
+  PETLINK: {
+    user: {
+      ...commonUser,
+      city: "New York",
+      countryCode: "US",
+      zipCode: "10001",
+      languageId: "EN" as LanguageId,
+    } as UserIn,
+
+    pet: {
+      defaultDog: { ...commonPet.defaultDog },
+      defaultCat: { ...commonPet.defaultCat },
+    },
+
+    devices: {
+      CAT: {
+        serialNumber: "UTEST04",
+        countryCode: "US",
+        timezone: "America/New_York",
+      },
+      DOG: {
+        serialNumber: "UTEST05",
+        countryCode: "US",
+        timezone: "America/New_York",
+      },
+    },
+
+    card: commonCard,
+  },
+};
+
+// ============================================
+// CONVENIENCE EXPORTS
+// ============================================
+
+// Current brand fixtures (automatically selected based on APP_BRAND env var)
+export const fixtureCurrentBrand = fixtures[currentAppBrand];
+export const appBrand = currentAppBrand;
+export const isKippyRun = currentAppBrand === AppBrand.KIPPY;
+export const isPetlinkRun = currentAppBrand === AppBrand.PETLINK;

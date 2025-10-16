@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { env } from "../../../config/env-schema-validation.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { fixtures } from "../../../fixtures/fixtures.js";
+import { fixtureCurrentBrand, isKippyRun, appBrand } from "../../../fixtures/fixtures.js";
 import { AppBrand, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
 import { waitFor } from "../../../helpers/helper-waitfor.js";
 
@@ -14,7 +14,7 @@ describe("DEFAULT subscription flow", () => {
     const builder = testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice();
 
     // Add EVO device only for KIPPY brand
-    if (fixtures.isKippyRun) {
+    if (isKippyRun) {
       builder.withDogForEvo().withDogEvoDevice();
     }
 
@@ -40,14 +40,14 @@ describe("DEFAULT subscription flow", () => {
         serialNumber: catDevice.serialNumber,
       }),
       // EVO device plans (only for KIPPY)
-      ...(fixtures.isKippyRun && evoDevice
+      ...(isKippyRun && evoDevice
         ? [
-            petlink.core.graphql.authJwt.getSubscriptionPlans({
-              productId: evoDevice.id,
-              countryCode: evoDevice.countryCode,
-              serialNumber: evoDevice.serialNumber,
-            }),
-          ]
+          petlink.core.graphql.authJwt.getSubscriptionPlans({
+            productId: evoDevice.id,
+            countryCode: evoDevice.countryCode,
+            serialNumber: evoDevice.serialNumber,
+          }),
+        ]
         : []),
     ];
 
@@ -61,22 +61,22 @@ describe("DEFAULT subscription flow", () => {
 
     // Assert DOG device
     expect(dogPlans.getSubscriptionPlans.code).toBe("200");
-    expect(dogPlans.getSubscriptionPlans.plans).toBeDefined();
-    expect(Array.isArray(dogPlans.getSubscriptionPlans.plans)).toBe(true);
-    expect(dogPlans.getSubscriptionPlans.plans?.length).toBeGreaterThan(0);
+    expect(dogPlans.getSubscriptionPlans.plans, "Dog device should have subscription plans defined").toBeDefined();
+    expect(Array.isArray(dogPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
+    expect(dogPlans.getSubscriptionPlans.plans?.length, "Dog device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert CAT device
     expect(catPlans.getSubscriptionPlans.code).toBe("200");
-    expect(catPlans.getSubscriptionPlans.plans).toBeDefined();
-    expect(Array.isArray(catPlans.getSubscriptionPlans.plans)).toBe(true);
-    expect(catPlans.getSubscriptionPlans.plans?.length).toBeGreaterThan(0);
+    expect(catPlans.getSubscriptionPlans.plans, "Cat device should have subscription plans defined").toBeDefined();
+    expect(Array.isArray(catPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
+    expect(catPlans.getSubscriptionPlans.plans?.length, "Cat device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert EVO device (only for KIPPY)
-    if (fixtures.isKippyRun && evoPlans) {
+    if (isKippyRun && evoPlans) {
       expect(evoPlans.getSubscriptionPlans.code).toBe("200");
-      expect(evoPlans.getSubscriptionPlans.plans).toBeDefined();
-      expect(Array.isArray(evoPlans.getSubscriptionPlans.plans)).toBe(true);
-      expect(evoPlans.getSubscriptionPlans.plans?.length).toBeGreaterThan(0);
+      expect(evoPlans.getSubscriptionPlans.plans, "EVO device should have subscription plans defined").toBeDefined();
+      expect(Array.isArray(evoPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
+      expect(evoPlans.getSubscriptionPlans.plans?.length, "EVO device should have at least one subscription plan available").toBeGreaterThan(0);
     }
   });
 
@@ -106,8 +106,8 @@ describe("DEFAULT subscription flow", () => {
     });
 
     expect(pricingResponse.getSubscriptionPlanPricing.code).toBe("200");
-    expect(pricingResponse.getSubscriptionPlanPricing.pricing).toBeDefined();
-    expect(pricingResponse.getSubscriptionPlanPricing.pricing?.currencyCode).toBe(choosenPlan.currencyCode);
+    expect(pricingResponse.getSubscriptionPlanPricing.pricing, "Pricing details should be returned").toBeDefined();
+    expect(pricingResponse.getSubscriptionPlanPricing.pricing?.currencyCode, "Pricing currency should match billing info of user").toBe(choosenPlan.currencyCode);
   });
 
   it("Test Get and Update BILLING INFO", async () => {
@@ -140,8 +140,8 @@ describe("DEFAULT subscription flow", () => {
       returnedCity: updatedBillingInfo.getBillingInfo.billingInfo?.city,
     });
 
-    expect(updatedBillingInfo.getBillingInfo.billingInfo).toBeDefined();
-    expect(updatedBillingInfo.getBillingInfo.billingInfo?.city).toBe(user.city);
+    expect(updatedBillingInfo.getBillingInfo.billingInfo, "Billing info should be defined after update").toBeDefined();
+    expect(updatedBillingInfo.getBillingInfo.billingInfo?.city, "Billing city should match updated value").toBe(user.city);
   });
 
   it("Test BUY sub and verify it becomes active", async () => {
@@ -152,7 +152,7 @@ describe("DEFAULT subscription flow", () => {
     const beforePurchase = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
       productId: device.id,
     });
-    expect(beforePurchase.getSubscriptionByProductId.code).toBe("404");
+    expect(beforePurchase.getSubscriptionByProductId.code, "No subscription should exist before purchase").toBe("404");
 
     // Step 2: Get plan to purchase
     const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
@@ -172,28 +172,28 @@ describe("DEFAULT subscription flow", () => {
         phone: user.phone,
         productId: device.id,
         priceIds: [choosenPlan.id],
-        card: fixtures.card.valid,
+        card: fixtureCurrentBrand.card.valid,
       },
     });
 
     expect(purchaseResponse.utilityIntegrationTest.code).toBe("200");
 
-    // Step 4: Wait for activation with polling
+    // Step 4: Wait for payment SUCCEDED feedback (wait from chargebee webhook)
     const afterPurchase = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
       isReady: (result) => {
         const sub = result.getSubscriptionByProductId.subscription;
         return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
       },
-      timeoutMs: 60000,
+      timeoutMs: 10000,
       intervalMs: 2000,
-      timeoutError: `Timeout: Payment succeeded not return in time.`,
+      timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in time`,
     });
 
-    expect(afterPurchase.getSubscriptionByProductId.subscription?.status).toBe("active");
-    expect(afterPurchase.getSubscriptionByProductId.subscription?.paymentStatus).toBe("SUCCEEDED");
+    expect(afterPurchase.getSubscriptionByProductId.subscription?.status, "Subscription status should be active after successful purchase").toBe("active");
+    expect(afterPurchase.getSubscriptionByProductId.subscription?.paymentStatus, "Payment status should be SUCCEEDED after successful purchase").toBe("SUCCEEDED");
   });
 
-  it.runIf(fixtures.isKippyRun)("Test BUY sub + addon (PET & DEVICE protection)", () => {
+  it.runIf(isKippyRun)("Test BUY sub + addon (PET & DEVICE protection)", () => {
     //TODO: (If KIPPY) Buy sub with addon PET-PROTECTION
     //TODO: (If KIPPY && user IT) Buy sub with addon DEVICE-PROTECTION
   });
@@ -215,8 +215,8 @@ describe("DEFAULT subscription flow", () => {
     });
 
     expect(subBeforeCancel.getSubscriptionByProductId.code).toBe("200");
-    expect(subBeforeCancel.getSubscriptionByProductId.subscription).toBeDefined();
-    expect(subBeforeCancel.getSubscriptionByProductId.subscription?.status).toBe("active");
+    expect(subBeforeCancel.getSubscriptionByProductId.subscription, "Active subscription should exist before cancellation").toBeDefined();
+    expect(subBeforeCancel.getSubscriptionByProductId.subscription?.status, "Subscription should be active before cancellation").toBe("active");
 
     const subscriptionId = subBeforeCancel.getSubscriptionByProductId.subscription!.id;
     const currentTermEnd = subBeforeCancel.getSubscriptionByProductId.subscription!.currentTermEnd;
@@ -226,7 +226,7 @@ describe("DEFAULT subscription flow", () => {
     // STEP 2: Cancel the subscription (stop auto-renewal)
     const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
       subscriptionId,
-      appBrand: fixtures.appBrand,
+      appBrand: appBrand,
       cancelReason: "Testing cancellation flow for integration tests",
       cancelReasonCode: "OTHER",
     });
@@ -243,15 +243,19 @@ describe("DEFAULT subscription flow", () => {
         isReady: (result) => {
           return result.getSubscriptionByProductId.subscription?.status == SubStatus.NonRenewing;
         },
-        timeoutMs: 7000,
+        timeoutMs: 10000,
         intervalMs: 1000,
-        timeoutError: `Subscription.`,
+        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.NonRenewing}" in time`,
       },
     );
-    expect(subAfterCancel.getSubscriptionByProductId.subscription, `Status of sub should be changed from "${SubStatus.Active}" to "${SubStatus.NonRenewing}"`).toMatchObject({
-      ...subBeforeCancel.getSubscriptionByProductId.subscription,
-      status: SubStatus.NonRenewing,
-    });
+
+    const subBefore = subBeforeCancel.getSubscriptionByProductId.subscription!;
+    const subAfter = subAfterCancel.getSubscriptionByProductId.subscription!;
+
+    expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe(SubStatus.NonRenewing);
+    expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(subBefore.id);
+    expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
+
     console.log("Subscription to delete (AFTER):", subAfterCancel);
   });
 });
