@@ -53,27 +53,27 @@ describe("DEFAULT subscription flow", () => {
 
     const [dogPlans, catPlans, evoPlans] = await Promise.all(plansPromises);
 
-    console.log("Plans availability for each devices:", {
-      DOG: dogPlans.getSubscriptionPlans,
-      CAT: catPlans.getSubscriptionPlans,
-      EVO: evoPlans.getSubscriptionPlans,
-    });
+    // console.log("Plans availability for each devices:", {
+    //   DOG: dogPlans.getSubscriptionPlans,
+    //   CAT: catPlans.getSubscriptionPlans,
+    //   EVO: evoPlans.getSubscriptionPlans,
+    // });
 
     // Assert DOG device
-    expect(dogPlans.getSubscriptionPlans.code).toBe("200");
+    expect(dogPlans.getSubscriptionPlans.code, "getSubscriptionPlans endpoint should return success for dog device").toBe("200");
     expect(dogPlans.getSubscriptionPlans.plans, "Dog device should have subscription plans defined").toBeDefined();
     expect(Array.isArray(dogPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
     expect(dogPlans.getSubscriptionPlans.plans?.length, "Dog device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert CAT device
-    expect(catPlans.getSubscriptionPlans.code).toBe("200");
+    expect(catPlans.getSubscriptionPlans.code, "getSubscriptionPlans endpoint should return success for cat device").toBe("200");
     expect(catPlans.getSubscriptionPlans.plans, "Cat device should have subscription plans defined").toBeDefined();
     expect(Array.isArray(catPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
     expect(catPlans.getSubscriptionPlans.plans?.length, "Cat device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert EVO device (only for KIPPY)
     if (isKippyRun && evoPlans) {
-      expect(evoPlans.getSubscriptionPlans.code).toBe("200");
+      expect(evoPlans.getSubscriptionPlans.code, "getSubscriptionPlans endpoint should return success for EVO device").toBe("200");
       expect(evoPlans.getSubscriptionPlans.plans, "EVO device should have subscription plans defined").toBeDefined();
       expect(Array.isArray(evoPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
       expect(evoPlans.getSubscriptionPlans.plans?.length, "EVO device should have at least one subscription plan available").toBeGreaterThan(0);
@@ -105,7 +105,7 @@ describe("DEFAULT subscription flow", () => {
       pricingCurrency: pricingResponse.getSubscriptionPlanPricing.pricing?.currencyCode,
     });
 
-    expect(pricingResponse.getSubscriptionPlanPricing.code).toBe("200");
+    expect(pricingResponse.getSubscriptionPlanPricing.code, "getSubscriptionPlanPricing endpoint should return success").toBe("200");
     expect(pricingResponse.getSubscriptionPlanPricing.pricing, "Pricing details should be returned").toBeDefined();
     expect(pricingResponse.getSubscriptionPlanPricing.pricing?.currencyCode, "Pricing currency should match billing info of user").toBe(choosenPlan.currencyCode);
   });
@@ -129,7 +129,7 @@ describe("DEFAULT subscription flow", () => {
       },
     });
 
-    expect(updateResponse.updateBillingInfo.code).toBe("200");
+    expect(updateResponse.updateBillingInfo.code, "updateBillingInfo endpoint should return success").toBe("200");
 
     // Retrieve to verify
     const updatedBillingInfo = await petlink.core.graphql.authJwt.getBillingInfo();
@@ -152,7 +152,7 @@ describe("DEFAULT subscription flow", () => {
     const beforePurchase = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
       productId: device.id,
     });
-    expect(beforePurchase.getSubscriptionByProductId.code, "No subscription should exist before purchase").toBe("404");
+    expect(beforePurchase.getSubscriptionByProductId.code, "getSubscriptionByProductId endpoint should return not found - No subscription should exist before purchase").toBe("404");
 
     // Step 2: Get plan to purchase
     const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
@@ -176,7 +176,7 @@ describe("DEFAULT subscription flow", () => {
       },
     });
 
-    expect(purchaseResponse.utilityIntegrationTest.code).toBe("200");
+    expect(purchaseResponse.utilityIntegrationTest.code, "utilityIntegrationTest endpoint should return success for subscription purchase").toBe("200");
 
     // Step 4: Wait for payment SUCCEDED feedback (wait from chargebee webhook)
     const afterPurchase = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
@@ -184,7 +184,7 @@ describe("DEFAULT subscription flow", () => {
         const sub = result.getSubscriptionByProductId.subscription;
         return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
       },
-      timeoutMs: 10000,
+      timeoutMs: 60000,
       intervalMs: 2000,
       timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in time`,
     });
@@ -214,7 +214,7 @@ describe("DEFAULT subscription flow", () => {
       productId: device.id,
     });
 
-    expect(subBeforeCancel.getSubscriptionByProductId.code).toBe("200");
+    expect(subBeforeCancel.getSubscriptionByProductId.code, "getSubscriptionByProductId endpoint should return success").toBe("200");
     expect(subBeforeCancel.getSubscriptionByProductId.subscription, "Active subscription should exist before cancellation").toBeDefined();
     expect(subBeforeCancel.getSubscriptionByProductId.subscription?.status, "Subscription should be active before cancellation").toBe("active");
 
@@ -231,7 +231,7 @@ describe("DEFAULT subscription flow", () => {
       cancelReasonCode: "OTHER",
     });
 
-    expect(cancelResponse.stopRenewingSubscription?.code).toBe("200");
+    expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
 
     // STEP 3: Verify subscription is now "non_renewing" but still active until term end
     const subAfterCancel = await waitFor(
@@ -243,7 +243,7 @@ describe("DEFAULT subscription flow", () => {
         isReady: (result) => {
           return result.getSubscriptionByProductId.subscription?.status == SubStatus.NonRenewing;
         },
-        timeoutMs: 10000,
+        timeoutMs: 60000,
         intervalMs: 1000,
         timeoutError: `Timeout: Subscription status did not change to "${SubStatus.NonRenewing}" in time`,
       },

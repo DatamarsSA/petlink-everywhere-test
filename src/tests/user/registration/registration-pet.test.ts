@@ -39,7 +39,7 @@ describe("Pet Registration", () => {
     const [dogResponse, catResponse] = await Promise.all([petlink.core.graphql.authJwt.createPet({ pet: dogPayload }), petlink.core.graphql.authJwt.createPet({ pet: catPayload })]);
 
     // Assert DOG
-    expect(dogResponse.createPet.code).toBe("200");
+    expect(dogResponse.createPet.code, "createPet endpoint should return success for dog").toBe("200");
     expect(dogResponse.createPet.pet, "Created dog should match input payload").toMatchObject({
       name: dogPayload.name,
       species: dogPayload.species,
@@ -54,7 +54,7 @@ describe("Pet Registration", () => {
     expect(dogResponse.createPet.pet?.id, "Dog ID auto-generated should be present").toBeDefined();
 
     // Assert CAT
-    expect(catResponse.createPet.code).toBe("200");
+    expect(catResponse.createPet.code, "createPet endpoint should return success for cat").toBe("200");
     expect(catResponse.createPet.pet, "Created cat should match input payload").toMatchObject({
       name: catPayload.name,
       species: catPayload.species,
@@ -123,11 +123,11 @@ describe("Pet Registration", () => {
       }),
     ]);
     // Assert all requests failed with validation error (400)
-    expect(dogPurebreedWithTwoBreeds.createPet.code, "PUREBREED with 2 breeds should fail validation").toBe("400");
-    expect(dogMixedbreedWithOneBreed.createPet.code, "MIXED_BREED with 1 breed should fail validation").toBe("400");
-    expect(dogMixedbreedWithTwoEqualsBreed.createPet.code, "MIXED_BREED with 2 identical breeds should fail validation").toBe("400");
-    expect(catWithDogBreed.createPet.code, "CAT with DOG breed should fail validation").toBe("400");
-    expect(dogWithCatBreed.createPet.code, "DOG with CAT breed should fail validation").toBe("400");
+    expect(dogPurebreedWithTwoBreeds.createPet.code, "createPet endpoint should return validation error - PUREBREED with 2 breeds should fail").toBe("400");
+    expect(dogMixedbreedWithOneBreed.createPet.code, "createPet endpoint should return validation error - MIXED_BREED with 1 breed should fail").toBe("400");
+    expect(dogMixedbreedWithTwoEqualsBreed.createPet.code, "createPet endpoint should return validation error - MIXED_BREED with 2 identical breeds should fail").toBe("400");
+    expect(catWithDogBreed.createPet.code, "createPet endpoint should return validation error - CAT with DOG breed should fail").toBe("400");
+    expect(dogWithCatBreed.createPet.code, "createPet endpoint should return validation error - DOG with CAT breed should fail").toBe("400");
   });
 
   it("Update and Delete PET should work correctly", async () => {
@@ -142,7 +142,7 @@ describe("Pet Registration", () => {
     });
 
     expect(createResponse.createPet, "Create pet response should be defined").toBeDefined();
-    expect(createResponse.createPet.code).toBe("200");
+    expect(createResponse.createPet.code, "createPet endpoint should return success").toBe("200");
     expect(createResponse.createPet.pet, "Created pet should be defined").toBeDefined();
     expect(createResponse.createPet.pet?.name, "Created pet name should match input").toBe(tempPetData.name);
 
@@ -161,7 +161,7 @@ describe("Pet Registration", () => {
     });
 
     expect(updateResponse.updatePet, "Update pet response should be defined").toBeDefined();
-    expect(updateResponse.updatePet.code).toBe("200");
+    expect(updateResponse.updatePet.code, "updatePet endpoint should return success").toBe("200");
     expect(updateResponse.updatePet.pet, "Updated pet should be defined").toBeDefined();
     expect(updateResponse.updatePet.pet?.id, "Pet ID should remain unchanged after update").toBe(petId);
     expect(updateResponse.updatePet.pet?.name, "Pet name should be updated").toBe(updatedName);
@@ -173,7 +173,7 @@ describe("Pet Registration", () => {
     });
 
     expect(deleteResponse.deletePet, "Delete pet response should be defined").toBeDefined();
-    expect(deleteResponse.deletePet.code).toBe("200");
+    expect(deleteResponse.deletePet.code, "deletePet endpoint should return success").toBe("200");
 
     // Verify the PET no longer exists
     const petsAfterDelete = await petlink.core.graphql.authJwt.getPets();
@@ -192,7 +192,7 @@ describe("Pet Registration", () => {
       pet: tempPetData,
     });
 
-    expect(createPetResponse.createPet.code).toBe("200");
+    expect(createPetResponse.createPet.code, "createPet endpoint should return success").toBe("200");
     expect(createPetResponse.createPet.pet, "Created pet should be defined").toBeDefined();
     const petId = createPetResponse.createPet.pet!.id;
 
@@ -209,14 +209,14 @@ describe("Pet Registration", () => {
       appBrand: appBrand,
     });
 
-    expect(createDeviceResponse.createPetlinkGps.code).toBe("200");
+    expect(createDeviceResponse.createPetlinkGps.code, "createPetlinkGps endpoint should return success").toBe("200");
     expect(createDeviceResponse.createPetlinkGps.petlinkGps).toBeDefined();
 
     // STEP 3: Try to delete the PET while it has a device associated (should FAIL)
     const deleteWithDeviceResponse = await petlink.core.graphql.authJwt.deletePet({
       petId,
     });
-    expect(deleteWithDeviceResponse.deletePet.code, "Pet deletion should fail when device is associated").not.toBe("200");
+    expect(deleteWithDeviceResponse.deletePet.code, "deletePet endpoint should return error - Pet deletion should fail when device is associated").not.toBe("200");
 
     // Verify the PET still exists
     const petsAfterFailedDelete = await petlink.core.graphql.authJwt.getPets();
