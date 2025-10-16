@@ -1,7 +1,5 @@
-import { SpeciesEnum as GeneratedSpeciesEnum, DeviceTypeEnum as GeneratedDeviceTypeEnum } from "./endpoints/graphql/generated/core_schema.js";
-
 // ============================================================================
-// UTILITY TEST TYPES
+// UTILITIES
 // ============================================================================
 
 export enum AppBrand {
@@ -24,44 +22,34 @@ export enum LanguageId {
 }
 
 // ============================================================================
-// PET & DEVICE TYPES (Type-safe with GraphQL schema)
+// PET & DEVICE
 // ============================================================================
 
-/**
- * PetType enum synchronized with GraphQL SpeciesEnum.
- * If the GraphQL schema changes, TypeScript will catch the mismatch at build time.
- */
 export enum PetType {
   DOG = "DOG",
   CAT = "CAT",
   OTHER = "OTHER",
 }
 
-/**
- * DeviceType enum synchronized with GraphQL DeviceTypeEnum.
- * If the GraphQL schema changes, TypeScript will catch the mismatch at build time.
- */
 export enum DeviceType {
   DOG = "DOG",
   CAT = "CAT",
   EVO = "EVO",
 }
 
-// Type assertions to ensure our enums match the generated types
-// If these fail, it means the GraphQL schema has changed and we need to update our enums
-type AssertPetTypeMatchesSchema = {
-  [K in PetType]: K extends GeneratedSpeciesEnum ? true : never;
-};
+// ============================================================================
+// SUBSCRIPTIONS
+// ============================================================================
 
-type AssertDeviceTypeMatchesSchema = {
-  [K in DeviceType]: K extends GeneratedDeviceTypeEnum ? true : never;
-};
-
-// Verify the reverse direction too (all generated values are in our enum)
-type AssertSchemaMatchesPetType = {
-  [K in GeneratedSpeciesEnum]: K extends PetType ? true : never;
-};
-
-type AssertSchemaMatchesDeviceType = {
-  [K in GeneratedDeviceTypeEnum]: K extends DeviceType ? true : never;
-};
+export enum SubStatus {
+  Active = "active",
+  Cancelled = "cancelled",
+  Closed = "closed",
+  Future = "future",
+  InTrial = "in_trial",
+  NonRenewing = "non_renewing",
+  Paused = "paused",
+  ToStopRenew = "to_stop_renew",
+  ToStopRenewAddon = "to_stop_renew_addon",
+  Transferred = "transferred",
+}

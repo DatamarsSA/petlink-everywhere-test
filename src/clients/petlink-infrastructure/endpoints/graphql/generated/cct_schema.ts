@@ -46,7 +46,7 @@ export interface AddTicketToIssueResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-/** Type */
+/**  Type */
 export interface BaseResponse {
   __typename?: "BaseResponse";
   code: Scalars["String"]["output"];
@@ -105,7 +105,7 @@ export interface Coupon {
   name: Scalars["String"]["output"];
 }
 
-/** Enum */
+/**  Enum */
 export type CouponSetMode = "apply" | "simulate";
 
 export interface CreateIssueResponse {
@@ -212,7 +212,7 @@ export interface Device {
   lastOperationInAppDate?: Maybe<Scalars["String"]["output"]>;
   lastPurchasedSubscriptionExpiringDate?: Maybe<Scalars["String"]["output"]>;
   lastPurchasedSubscriptionId?: Maybe<Scalars["String"]["output"]>;
-  /** non so se è un enum */
+  /**   non so se è un enum */
   lat?: Maybe<Scalars["Float"]["output"]>;
   lng?: Maybe<Scalars["Float"]["output"]>;
   logEnabled?: Maybe<Scalars["Boolean"]["output"]>;
@@ -225,7 +225,7 @@ export interface Device {
   simManufacturer?: Maybe<Scalars["String"]["output"]>;
   simStatus: SimStatusEnum;
   testingDate?: Maybe<Scalars["String"]["output"]>;
-  /** check which object is this */
+  /**   check which object is this */
   timezone?: Maybe<Scalars["String"]["output"]>;
   updateFrequency?: Maybe<Scalars["Float"]["output"]>;
   vodafoneCountry?: Maybe<Scalars["String"]["output"]>;
@@ -1257,7 +1257,7 @@ export interface RefundItem {
   chargebeeInvoiceItemId: Scalars["String"]["output"];
 }
 
-/** Input */
+/**  Input */
 export interface RefundItemInput {
   amount: Scalars["Int"]["input"];
   chargebeeInvoiceItemId: Scalars["String"]["input"];
@@ -1271,7 +1271,7 @@ export interface ReplacementHistory {
   expirationDate?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
   model?: Maybe<Scalars["String"]["output"]>;
-  newSerialNumber: Scalars["String"]["output"];
+  newSerialNumber?: Maybe<Scalars["String"]["output"]>;
   oldSerialNumber: Scalars["String"]["output"];
   petId: Scalars["String"]["output"];
   planProfileId?: Maybe<Scalars["String"]["output"]>;
@@ -1436,18 +1436,18 @@ export interface Ticket {
   customerMood: CustomerMood;
   id: Scalars["String"]["output"];
   inspectionRequired?: Maybe<Scalars["Boolean"]["output"]>;
-  /** Withdrawn for inspection */
+  /**   Withdrawn for inspection */
   negativeReview?: Maybe<Scalars["Boolean"]["output"]>;
   notes?: Maybe<Scalars["String"]["output"]>;
   productId?: Maybe<Scalars["String"]["output"]>;
   status: TicketStatus;
-  supectedIssues: Array<TicketIssue>;
+  suspectedIssues: Array<TicketIssue>;
   techNotes?: Maybe<Scalars["String"]["output"]>;
   userId: Scalars["String"]["output"];
   username: Scalars["String"]["output"];
 }
 
-export type TicketAction = "REPLACEMENT" | "RETURNED";
+export type TicketAction = "REPLACEMENT" | "RETURN";
 
 export type TicketActionReason =
   | "BATTERY_BLOCK"
@@ -1470,17 +1470,17 @@ export interface TicketChangeStatusResponse {
 }
 
 export interface TicketInput {
-  /** default OPEN */
+  /**   default OPEN */
   action?: InputMaybe<TicketAction>;
   actionReason: Array<TicketActionReason>;
   customerMood: CustomerMood;
   inspectionRequired?: InputMaybe<Scalars["Boolean"]["input"]>;
-  /** Withdrawn for inspection */
+  /**   Withdrawn for inspection */
   negativeReview?: InputMaybe<Scalars["Boolean"]["input"]>;
   notes?: InputMaybe<Scalars["String"]["input"]>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
   status: TicketStatus;
-  supectedIssues: Array<TicketIssue>;
+  suspectedIssues: Array<TicketIssue>;
   techNotes?: InputMaybe<Scalars["String"]["input"]>;
 }
 
@@ -1500,16 +1500,21 @@ export type TicketIssue =
   | "GPS_LOCATION_PERFORMANCE"
   | "LED"
   | "LOST"
+  /** suspectedIssues */
+  | "NO_CUSTOMER_CARE"
   | "NO_SOUND"
   | "SIM"
   | "UNKNOWN"
   | "WATER_INFILTRATION"
   | "WIFI_HOME"
-  | "WIFI_LOCATION";
+  | "WIFI_LOCATION"
+  | "available"
+  | "for"
+  | "only";
 
 export type TicketStatus = "CLOSED" | "OPEN";
 
-export type TypeActionEnum = "REPLACEMENT" | "RESET" | "RETURNED";
+export type TypeActionEnum = "REPLACEMENT" | "RESET" | "RETURN";
 
 export interface UpdateCustomerInput {
   confermationEmail: Scalars["Boolean"]["input"];

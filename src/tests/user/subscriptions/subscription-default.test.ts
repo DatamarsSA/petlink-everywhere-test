@@ -3,7 +3,7 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { env } from "../../../config/env-schema-validation.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fixtures } from "../../../fixtures/fixtures.js";
-import { AppBrand, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
+import { AppBrand, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
 import { waitFor } from "../../../helpers/helper-waitfor.js";
 
 describe("DEFAULT subscription flow", () => {
@@ -234,12 +234,24 @@ describe("DEFAULT subscription flow", () => {
     expect(cancelResponse.stopRenewingSubscription?.code).toBe("200");
 
     // STEP 3: Verify subscription is now "non_renewing" but still active until term end
-    const subAfterCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-      productId: device.id,
+    const subAfterCancel = await waitFor(
+      async () =>
+        petlink.core.graphql.authJwt.getSubscriptionByProductId({
+          productId: device.id,
+        }),
+      {
+        isReady: (result) => {
+          return result.getSubscriptionByProductId.subscription?.status == SubStatus.NonRenewing;
+        },
+        timeoutMs: 7000,
+        intervalMs: 1000,
+        timeoutError: `Subscription.`,
+      },
+    );
+    expect(subAfterCancel.getSubscriptionByProductId.subscription, `Status of sub should be changed from "${SubStatus.Active}" to "${SubStatus.NonRenewing}"`).toMatchObject({
+      ...subBeforeCancel.getSubscriptionByProductId.subscription,
+      status: SubStatus.NonRenewing,
     });
     console.log("Subscription to delete (AFTER):", subAfterCancel);
-
-    expect(subAfterCancel.getSubscriptionByProductId.code).toBe("200");
-    //TODO: how to check if is real deleted automatic renewal?
   });
 });
