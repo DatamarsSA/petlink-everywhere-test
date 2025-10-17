@@ -3,7 +3,7 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { env } from "../../../config/env-schema-validation.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fixtureCurrentBrand, isKippyRun, appBrand } from "../../../fixtures/fixtures.js";
-import { AppBrand, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
+import { AppBrand, LanguageId, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
 import { waitFor } from "../../../helpers/helper-waitfor.js";
 
 describe("DEFAULT subscription flow", () => {
@@ -42,12 +42,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(isKippyRun && evoDevice
         ? [
-          petlink.core.graphql.authJwt.getSubscriptionPlans({
-            productId: evoDevice.id,
-            countryCode: evoDevice.countryCode,
-            serialNumber: evoDevice.serialNumber,
-          }),
-        ]
+            petlink.core.graphql.authJwt.getSubscriptionPlans({
+              productId: evoDevice.id,
+              countryCode: evoDevice.countryCode,
+              serialNumber: evoDevice.serialNumber,
+            }),
+          ]
         : []),
     ];
 
@@ -80,7 +80,7 @@ describe("DEFAULT subscription flow", () => {
     }
   });
 
-  it("Should return price adjusted to user's currency", async () => {
+  it("Should return the price adjusted to the user's billing currency", async () => {
     const device = setup.devices.dogStandard!;
 
     const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
@@ -88,26 +88,22 @@ describe("DEFAULT subscription flow", () => {
       countryCode: device.countryCode,
       serialNumber: device.serialNumber,
     });
+    const choosenPlanBeforeConversion = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
-    const choosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-    console.log("Testing pricing for plan:", choosenPlan.id);
-
-    // Fetch specific pricing
-    const pricingResponse = await petlink.core.graphql.authJwt.getSubscriptionPlanPricing({
-      planPriceId: choosenPlan.id,
-      countryCode: device.countryCode!,
+    const planResponse = await petlink.core.graphql.authJwt.getSubscriptionPlanPricing({
+      planPriceId: choosenPlanBeforeConversion.id,
+      countryCode: "CH",
       productId: device.id,
     });
 
-    // Debug log
-    console.log("Pricing returned:", {
-      planCurrency: choosenPlan.currencyCode,
-      pricingCurrency: pricingResponse.getSubscriptionPlanPricing.pricing?.currencyCode,
-    });
+    const chosenPlanAfterConvesion = planResponse.getSubscriptionPlanPricing.pricing;
 
-    expect(pricingResponse.getSubscriptionPlanPricing.code, "getSubscriptionPlanPricing endpoint should return success").toBe("200");
-    expect(pricingResponse.getSubscriptionPlanPricing.pricing, "Pricing details should be returned").toBeDefined();
-    expect(pricingResponse.getSubscriptionPlanPricing.pricing?.currencyCode, "Pricing currency should match billing info of user").toBe(choosenPlan.currencyCode);
+    expect(planResponse.getSubscriptionPlanPricing.code, "getSubscriptionPlanPricing endpoint should return success").toBe("200");
+    expect(chosenPlanAfterConvesion, "Pricing details should be returned").toBeDefined();
+    expect(chosenPlanAfterConvesion?.currencyCode, "Pricing currency should match billing info of user").toBe("CHF");
+    expect(chosenPlanAfterConvesion?.itemId, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.itemId);
+    expect(chosenPlanAfterConvesion?.periodUnit, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.periodUnit);
+    expect(chosenPlanAfterConvesion?.period, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.period);
   });
 
   it("Test Get and Update BILLING INFO", async () => {
@@ -193,9 +189,12 @@ describe("DEFAULT subscription flow", () => {
     expect(afterPurchase.getSubscriptionByProductId.subscription?.paymentStatus, "Payment status should be SUCCEEDED after successful purchase").toBe("SUCCEEDED");
   });
 
-  it.runIf(isKippyRun)("Test BUY sub + addon (PET & DEVICE protection)", () => {
-    //TODO: (If KIPPY) Buy sub with addon PET-PROTECTION
-    //TODO: (If KIPPY && user IT) Buy sub with addon DEVICE-PROTECTION
+  it.runIf(isKippyRun)("Test BUY sub + PET & DEVICE protection", () => {
+    //TODO: (If KIPPY) Buy sub with addon DEVICE-PROTECTION
+    if (fixtureCurrentBrand.user.languageId == LanguageId.IT) {
+      //TODO: Buy sub with PET-PROTECTION
+      //TODO: Buy PET-PROTECTION alone
+    }
   });
 
   it("Test CHANGE (Upgrade/Downgrade) sub", () => {
