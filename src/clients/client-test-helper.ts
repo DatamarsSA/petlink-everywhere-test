@@ -136,15 +136,11 @@ class TestSetupBuilder {
 }
 
 export class TestHelper {
+  constructor() {}
+
   async cleanupAll(): Promise<void> {
     // console.log("🧹 Cleaning up test environment...");
-
-    // Clear all cached authentication and clients first
     // petlink.clearAllCache();
-
-    // Login with IAM for cleanup operations
-    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-
     await Promise.all([
       petlink.core.graphql.authIam
         .utilityIntegrationTest({
@@ -176,8 +172,6 @@ export class TestHelper {
   }
 
   async createUser(): Promise<User> {
-    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
-
     const userPayload: UserIn = {
       email: fixtureCurrentBrand.user.email,
       name: fixtureCurrentBrand.user.name,

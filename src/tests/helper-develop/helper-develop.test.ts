@@ -7,6 +7,7 @@ import { User } from "../../clients/petlink-infrastructure/endpoints/graphql/gen
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { waitFor } from "../../helpers/helper-waitfor.js";
+import { env } from "../../config/env-schema-validation.js";
 
 describe("Utilyties fro developing features", () => {
   let setup: TestSetup = {} as TestSetup;

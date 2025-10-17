@@ -100,7 +100,7 @@ describe("DEFAULT subscription flow", () => {
 
     expect(planResponse.getSubscriptionPlanPricing.code, "getSubscriptionPlanPricing endpoint should return success").toBe("200");
     expect(chosenPlanAfterConvesion, "Pricing details should be returned").toBeDefined();
-    expect(chosenPlanAfterConvesion?.currencyCode, "Pricing currency should match billing info of user").toBe("CHF");
+    expect(chosenPlanAfterConvesion?.currencyCode, "Pricing currency should match billing info of user").toBe(isKippyRun ? "CHF" : "USD");
     expect(chosenPlanAfterConvesion?.itemId, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.itemId);
     expect(chosenPlanAfterConvesion?.periodUnit, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.periodUnit);
     expect(chosenPlanAfterConvesion?.period, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.period);
@@ -161,7 +161,6 @@ describe("DEFAULT subscription flow", () => {
     console.log("Purchasing plan:", { planId: choosenPlan.id, price: choosenPlan.price, currency: choosenPlan.currencyCode });
 
     // Step 3: Purchase
-    petlink.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
     const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
       input: {
         utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
@@ -189,13 +188,50 @@ describe("DEFAULT subscription flow", () => {
     expect(afterPurchase.getSubscriptionByProductId.subscription?.paymentStatus, "Payment status should be SUCCEEDED after successful purchase").toBe("SUCCEEDED");
   });
 
-  it.runIf(isKippyRun)("Test BUY sub + PET & DEVICE protection", () => {
-    //TODO: (If KIPPY) Buy sub with addon DEVICE-PROTECTION
-    if (fixtureCurrentBrand.user.languageId == LanguageId.IT) {
-      //TODO: Buy sub with PET-PROTECTION
-      //TODO: Buy PET-PROTECTION alone
-    }
-  });
+  // it.runIf(isKippyRun)("Test BUY sub + PET & DEVICE protection", async () => {
+  //   //TODO: (If KIPPY) Buy sub with addon DEVICE-PROTECTION
+  //
+  //   await testHelper.cleanupAll();
+  //   const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+  //   const device = setup.devices.dogStandard!;
+  //   const user = setup.user!;
+  //
+  //   // Step 2: Get plan to purchase
+  //   const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
+  //     productId: device.id,
+  //     countryCode: setup.user?.countryCode,
+  //     serialNumber: device.serialNumber,
+  //   });
+  //   const choosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
+  //   const petProtection = plansResponse.getSubscriptionPlans.careProtectionPlans![0].pricings[0]!;
+  //
+  //   // Step 3: Purchase
+  //   const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
+  //     input: {
+  //       utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+  //       phone: user.phone,
+  //       productId: device.id,
+  //       priceIds: [petProtection.id],
+  //       card: fixtureCurrentBrand.card.valid,
+  //     },
+  //   });
+  //
+  //   // Step 4: Wait for payment SUCCEDED feedback (wait from chargebee webhook)
+  //   const afterPurchase = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+  //     isReady: (result) => {
+  //       const sub = result.getSubscriptionByProductId.subscription;
+  //       return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+  //     },
+  //     timeoutMs: 60000,
+  //     intervalMs: 2000,
+  //     timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in time`,
+  //   });
+  //
+  //   if (fixtureCurrentBrand.user.languageId == LanguageId.IT) {
+  //     //TODO: Buy sub with PET-PROTECTION
+  //     //TODO: Buy PET-PROTECTION alone
+  //   }
+  // });
 
   it("Test CHANGE (Upgrade/Downgrade) sub", () => {
     //TODO: Test CHANGE (Upgrade/Downgrade) sub

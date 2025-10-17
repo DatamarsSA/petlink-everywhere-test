@@ -463,6 +463,7 @@ export class PetLinkInfrastructure {
   readonly cct: CctService;
 
   constructor() {
+    this.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
     this.core = new CoreService();
     this.cct = new CctService();
   }
