@@ -1,21 +1,13 @@
 import { GraphQLClient, RequestMiddleware } from "graphql-request";
-import {
-  getSdk as getCoreSdk,
-  Sdk as CoreSdk,
-} from "./endpoints/graphql/generated/core_schema.js";
-import {
-  getSdk as getCctSdk,
-  Sdk as CctSdk,
-} from "./endpoints/graphql/generated/cct_schema.js";
-import {
-  CognitoIdentityProviderClient,
-  InitiateAuthCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
+import { getSdk as getCoreSdk, Sdk as CoreSdk } from "./endpoints/graphql/generated/core_schema.js";
+import { getSdk as getCctSdk, Sdk as CctSdk } from "./endpoints/graphql/generated/cct_schema.js";
+import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
 import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
+import { appBrand } from "../../fixtures/fixtures.js";
 
 // ------------------------------
 // HTTP header constants
@@ -114,9 +106,7 @@ class AuthHeadersBuilder {
     switch (authType) {
       case AuthType.JWT: {
         if (!AuthManager.hasValidJwtToken()) {
-          throw new Error(
-            "No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.",
-          );
+          throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
         }
         const token = AuthManager.getJwtToken();
         return {
@@ -127,9 +117,7 @@ class AuthHeadersBuilder {
 
       case AuthType.IAM: {
         if (!AuthManager.hasIamCredentials()) {
-          throw new Error(
-            "No IAM credentials available. Please login first with loginWithIam.",
-          );
+          throw new Error("No IAM credentials available. Please login first with loginWithIam.");
         }
         const credentials = AuthManager.getIamCredentials();
         return {
@@ -139,9 +127,7 @@ class AuthHeadersBuilder {
       }
 
       case AuthType.API_KEY: {
-        const apiKey = EnvConfig.getApiKey(
-          serviceName as unknown as ServiceType,
-        );
+        const apiKey = EnvConfig.getApiKey(serviceName as unknown as ServiceType);
         if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
         return {
           cacheKey: `apiKey:${apiKey}`,
@@ -160,12 +146,7 @@ class AuthHeadersBuilder {
  * Wraps any SDK with automatic performance monitoring.
  */
 class ProxyFactory {
-  static create<TSdk extends object>(config: {
-    getClient: () => Promise<TSdk>;
-    serviceName: string;
-    protocolName: string;
-    authType: AuthType;
-  }): TSdk {
+  static create<TSdk extends object>(config: { getClient: () => Promise<TSdk>; serviceName: string; protocolName: string; authType: AuthType }): TSdk {
     return new Proxy({} as TSdk, {
       get: (_target, prop) => {
         return async (...args: any[]) => {
@@ -177,6 +158,16 @@ class ProxyFactory {
           const startTime = performance.now();
           try {
             return await member(...args);
+          } catch (error: any) {
+            console.error(`[${config.serviceName}/${config.protocolName}/${config.authType}] Error in ${String(prop)}:`, {
+              operation: String(prop),
+              error: error.message,
+              stack: error.stack,
+              response: error.response?.errors || null,
+              statusCode: error.response?.status || null,
+            });
+
+            throw error;
           } finally {
             const duration = Math.round(performance.now() - startTime);
             performanceTracker.recordPerformance({
@@ -206,37 +197,42 @@ class AuthManager {
   /**
    * Authenticate via Cognito user pools and cache the ID token.
    */
-  static async authenticateWithJwt(
-    username: string,
-    password: string,
-    authMethod: "email" | "phone_number",
-  ): Promise<void> {
-    const config = EnvConfig.getCognitoConfig();
-    const client = new CognitoIdentityProviderClient({ region: config.region });
+  static async authenticateWithJwt(username: string, password: string, authMethod: "email" | "phone_number"): Promise<void> {
+    try {
+      const config = EnvConfig.getCognitoConfig();
+      const client = new CognitoIdentityProviderClient({ region: config.region });
 
-    const command = new InitiateAuthCommand({
-      ClientId: config.clientId,
-      AuthFlow: "USER_PASSWORD_AUTH",
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-      },
-      ClientMetadata: {
-        method: authMethod,
-        username: username,
-      },
-    });
+      const command = new InitiateAuthCommand({
+        ClientId: config.clientId,
+        AuthFlow: "USER_PASSWORD_AUTH",
+        AuthParameters: {
+          USERNAME: username,
+          PASSWORD: password,
+        },
+        ClientMetadata: {
+          // appBrand: appBrand,
+          method: authMethod,
+          username: username,
+        },
+      });
 
-    const response = await client.send(command);
-    const token = response.AuthenticationResult?.IdToken;
+      const response = await client.send(command);
+      const token = response.AuthenticationResult?.IdToken;
 
-    if (!token) {
-      throw new Error(
-        `Failed to get ID token from Cognito for user: ${username}`,
-      );
+      if (!token) {
+        throw new Error(`Failed to get ID token from Cognito for user: ${username}`);
+      }
+
+      this.jwtToken = this.createTokenCacheEntry(token);
+    } catch (error: any) {
+      console.error(`[AUTH] Failed to authenticate user ${username} via ${authMethod}:`, {
+        error: error.message,
+        code: error.code || error.name,
+        username,
+        authMethod,
+      });
+      throw error;
     }
-
-    this.jwtToken = this.createTokenCacheEntry(token);
   }
 
   /**
@@ -293,9 +289,7 @@ class AuthManager {
 
   static getIamCredentials(): IamCredentials {
     if (!this.hasIamCredentials()) {
-      throw new Error(
-        "IAM credentials not set. Please call loginWithIam first.",
-      );
+      throw new Error("IAM credentials not set. Please call loginWithIam first.");
     }
     return this.iamCredentials!;
   }
@@ -303,10 +297,7 @@ class AuthManager {
   /**
    * Build SigV4 headers for AppSync request.
    */
-  static async generateIamAuthHeaders(
-    endpoint: string,
-    body: string,
-  ): Promise<Record<string, string>> {
+  static async generateIamAuthHeaders(endpoint: string, body: string): Promise<Record<string, string>> {
     const credentials = this.getIamCredentials();
 
     const signer = new SignatureV4({
@@ -402,11 +393,7 @@ class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
   private endpoint: string;
   private sdkFactory: (client: GraphQLClient) => TSdk;
 
-  constructor(
-    serviceName: string,
-    endpoint: string,
-    sdkFactory: (client: GraphQLClient) => TSdk,
-  ) {
+  constructor(serviceName: string, endpoint: string, sdkFactory: (client: GraphQLClient) => TSdk) {
     super(serviceName, "graphql");
     this.endpoint = endpoint;
     this.sdkFactory = sdkFactory;
@@ -414,10 +401,7 @@ class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
 
   protected async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
     // Use AuthHeadersBuilder to get auth config (eliminates duplication)
-    const authConfig = await AuthHeadersBuilder.build(
-      authType,
-      this.serviceName,
-    );
+    const authConfig = await AuthHeadersBuilder.build(authType, this.serviceName);
 
     // Use CacheManager to get or create SDK (eliminates cache duplication)
     return this.cache.getOrCreate(authConfig.cacheKey, async () => {
@@ -429,14 +413,8 @@ class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
       // IAM requires middleware because signature depends on request body
       if (authType === AuthType.IAM) {
         clientOptions.requestMiddleware = async (request) => {
-          const body =
-            typeof request.body === "string"
-              ? request.body
-              : JSON.stringify(request.body) || "";
-          const signedHeaders = await AuthManager.generateIamAuthHeaders(
-            this.endpoint,
-            body,
-          );
+          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+          const signedHeaders = await AuthManager.generateIamAuthHeaders(this.endpoint, body);
           return {
             ...request,
             headers: { ...request.headers, ...signedHeaders },
@@ -457,11 +435,7 @@ class CoreService {
   readonly graphql: GraphQLProtocol<CoreSdk>;
 
   constructor() {
-    this.graphql = new GraphQLProtocol(
-      "CORE",
-      EnvConfig.getEndpoint(ServiceType.CORE),
-      (client) => getCoreSdk(client),
-    );
+    this.graphql = new GraphQLProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
   }
 
   clearCache(): void {
@@ -473,11 +447,7 @@ class CctService {
   readonly graphql: GraphQLProtocol<CctSdk>;
 
   constructor() {
-    this.graphql = new GraphQLProtocol(
-      "CCT",
-      EnvConfig.getEndpoint(ServiceType.CCT),
-      (client) => getCctSdk(client),
-    );
+    this.graphql = new GraphQLProtocol("CCT", EnvConfig.getEndpoint(ServiceType.CCT), (client) => getCctSdk(client));
   }
 
   clearCache(): void {
