@@ -609,6 +609,7 @@ export interface Mutation {
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
+  setReadPopupMigratedUser: Response;
   setSafetyTermsCat: Response;
   /**   sso */
   setSsoToken: ResponseSsoUrl;
@@ -2409,6 +2410,7 @@ export interface User {
   name: Scalars["String"]["output"];
   notificationSettings: NotificationSettings;
   phone: Scalars["String"]["output"];
+  readPopupMigrated?: Maybe<Scalars["Boolean"]["output"]>;
   safetyTermsCat?: Maybe<Scalars["Boolean"]["output"]>;
   settings: UserSettings;
   stateCode?: Maybe<Scalars["String"]["output"]>;
@@ -3073,6 +3075,56 @@ export type GetSubscriptionByProductIdQuery = {
     } | null;
   };
 };
+
+export type ChangePasswordMutationVariables = Exact<{
+  oldPassword: Scalars["String"]["input"];
+  password: Scalars["String"]["input"];
+}>;
+
+export type ChangePasswordMutation = { __typename?: "Mutation"; changePassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+
+export type UpdateEmailUserMutationVariables = Exact<{
+  email: Scalars["String"]["input"];
+  languageId?: InputMaybe<LanguageId>;
+  appBrand: AppBrand;
+}>;
+
+export type UpdateEmailUserMutation = { __typename?: "Mutation"; updateEmailUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+
+export type UpdatePhoneNumberUserMutationVariables = Exact<{
+  phone: Scalars["String"]["input"];
+  languageId?: InputMaybe<LanguageId>;
+  verificationId: Scalars["String"]["input"];
+  otp: Scalars["String"]["input"];
+}>;
+
+export type UpdatePhoneNumberUserMutation = { __typename?: "Mutation"; updatePhoneNumberUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+
+export type SendOtpForgotPasswordMutationVariables = Exact<{
+  contact: Scalars["String"]["input"];
+  languageId?: InputMaybe<LanguageId>;
+}>;
+
+export type SendOtpForgotPasswordMutation = {
+  __typename?: "Mutation";
+  sendOtpForgotPassword: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+};
+
+export type ChangeForgotPasswordMutationVariables = Exact<{
+  otp: Scalars["String"]["input"];
+  verificationId: Scalars["String"]["input"];
+  password: Scalars["String"]["input"];
+}>;
+
+export type ChangeForgotPasswordMutation = { __typename?: "Mutation"; changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+
+export type ForgotEmailMutationVariables = Exact<{
+  productNumber: Scalars["String"]["input"];
+  entityType?: InputMaybe<ProductTypeEnum>;
+  languageId?: InputMaybe<LanguageId>;
+}>;
+
+export type ForgotEmailMutation = { __typename?: "Mutation"; forgotEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null };
 
 export const SendOtpDocument = {
   kind: "Document",
@@ -4730,6 +4782,275 @@ export const GetSubscriptionByProductIdDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const ChangePasswordDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "changePassword" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "oldPassword" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "password" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "changePassword" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "oldPassword" }, value: { kind: "Variable", name: { kind: "Name", value: "oldPassword" } } },
+              { kind: "Argument", name: { kind: "Name", value: "password" }, value: { kind: "Variable", name: { kind: "Name", value: "password" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateEmailUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateEmailUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "email" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateEmailUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "email" }, value: { kind: "Variable", name: { kind: "Name", value: "email" } } },
+              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePhoneNumberUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePhoneNumberUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "phone" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePhoneNumberUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "phone" }, value: { kind: "Variable", name: { kind: "Name", value: "phone" } } },
+              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "verificationId" }, value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SendOtpForgotPasswordDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "sendOtpForgotPassword" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "contact" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "sendOtpForgotPassword" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "contact" }, value: { kind: "Variable", name: { kind: "Name", value: "contact" } } },
+              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "verificationId" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ChangeForgotPasswordDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "changeForgotPassword" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "password" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "changeForgotPassword" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
+              { kind: "Argument", name: { kind: "Name", value: "verificationId" }, value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "password" }, value: { kind: "Variable", name: { kind: "Name", value: "password" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ForgotEmailDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "forgotEmail" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productNumber" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "entityType" } }, type: { kind: "NamedType", name: { kind: "Name", value: "ProductTypeEnum" } } },
+        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "forgotEmail" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "productNumber" }, value: { kind: "Variable", name: { kind: "Name", value: "productNumber" } } },
+              { kind: "Argument", name: { kind: "Name", value: "entityType" }, value: { kind: "Variable", name: { kind: "Name", value: "entityType" } } },
+              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(action: (requestHeaders?: Record<string, string>) => Promise<T>, operationName: string, operationType?: string, variables?: any) => Promise<T>;
 
@@ -4944,6 +5265,57 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
           client.request<GetSubscriptionByProductIdQuery>({ document: GetSubscriptionByProductIdDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getSubscriptionByProductId",
         "query",
+        variables,
+      );
+    },
+    changePassword(variables: ChangePasswordMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ChangePasswordMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) => client.request<ChangePasswordMutation>({ document: ChangePasswordDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "changePassword",
+        "mutation",
+        variables,
+      );
+    },
+    updateEmailUser(variables: UpdateEmailUserMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdateEmailUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) => client.request<UpdateEmailUserMutation>({ document: UpdateEmailUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "updateEmailUser",
+        "mutation",
+        variables,
+      );
+    },
+    updatePhoneNumberUser(variables: UpdatePhoneNumberUserMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdatePhoneNumberUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePhoneNumberUserMutation>({ document: UpdatePhoneNumberUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "updatePhoneNumberUser",
+        "mutation",
+        variables,
+      );
+    },
+    sendOtpForgotPassword(variables: SendOtpForgotPasswordMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<SendOtpForgotPasswordMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SendOtpForgotPasswordMutation>({ document: SendOtpForgotPasswordDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "sendOtpForgotPassword",
+        "mutation",
+        variables,
+      );
+    },
+    changeForgotPassword(variables: ChangeForgotPasswordMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ChangeForgotPasswordMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ChangeForgotPasswordMutation>({ document: ChangeForgotPasswordDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "changeForgotPassword",
+        "mutation",
+        variables,
+      );
+    },
+    forgotEmail(variables: ForgotEmailMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ForgotEmailMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) => client.request<ForgotEmailMutation>({ document: ForgotEmailDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "forgotEmail",
+        "mutation",
         variables,
       );
     },
