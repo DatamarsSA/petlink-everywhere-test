@@ -371,3 +371,59 @@ query getSubscriptionByProductId($productId: String!) {
     }
   }
 }
+
+
+# mange User credentials #
+
+#CHANGE flows (authenticated - JWT required)
+
+mutation changePassword($oldPassword: String!, $password: String!) {
+  changePassword(oldPassword: $oldPassword, password: $password) {
+    code
+    translationCode
+    message
+  }
+}
+
+mutation updateEmailUser($email: String!, $languageId: LanguageId, $appBrand: AppBrand!) {
+  updateEmailUser(email: $email, languageId: $languageId, appBrand: $appBrand) {
+    code
+    translationCode
+    message
+  }
+}
+
+mutation updatePhoneNumberUser($phone: String!, $languageId: LanguageId, $verificationId: String!, $otp: String!) {
+  updatePhoneNumberUser(phone: $phone, languageId: $languageId, verificationId: $verificationId, otp: $otp) {
+    code
+    translationCode
+    message
+  }
+}
+
+#FORGOT/RECOVERY flows (public - NO auth)
+
+mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId) {
+  sendOtpForgotPassword(contact: $contact, languageId: $languageId) {
+    code
+    translationCode
+    message
+    verificationId
+  }
+}
+
+mutation changeForgotPassword($otp: String!, $verificationId: String!, $password: String!) {
+  changeForgotPassword(otp: $otp, verificationId: $verificationId, password: $password) {
+    code
+    translationCode
+    message
+  }
+}
+
+mutation forgotEmail($productNumber: String!, $entityType: ProductTypeEnum, $languageId: LanguageId) {
+  forgotEmail(productNumber: $productNumber, entityType: $entityType, languageId: $languageId) {
+    code
+    translationCode
+    message
+  }
+}

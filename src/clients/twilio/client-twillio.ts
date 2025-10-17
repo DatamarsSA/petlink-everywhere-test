@@ -8,10 +8,7 @@ export class TwilioClient {
     this.client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
   }
 
-  async getMessagesSentTo(
-    phoneNumber: string,
-    limit: number = 10,
-  ): Promise<any[]> {
+  async getMessagesSentTo(phoneNumber: string, limit: number = 10): Promise<any[]> {
     try {
       // console.log(`🔍 Cerco messaggi inviati a ${phoneNumber}...`);
 
@@ -20,10 +17,7 @@ export class TwilioClient {
         limit: limit,
       });
 
-      const sortedMessages = messages.sort(
-        (a: any, b: any) =>
-          new Date(b.dateSent!).getTime() - new Date(a.dateSent!).getTime(),
-      );
+      const sortedMessages = messages.sort((a: any, b: any) => new Date(b.dateSent!).getTime() - new Date(a.dateSent!).getTime());
 
       // console.log(`📱 Trovati ${sortedMessages.length} messaggi`);
       return sortedMessages;
@@ -38,7 +32,7 @@ export class TwilioClient {
    * Returns null if no OTP is found.
    * Use with waitFor() utility for polling behavior.
    */
-  async getLatestOtp(phoneNumber: string): Promise<string | null> {
+  async getOtpFromReceivedSms(phoneNumber: string): Promise<string | null> {
     const messages = await this.getMessagesSentTo(phoneNumber, 1);
 
     for (const message of messages) {
@@ -57,10 +51,7 @@ export class TwilioClient {
     return null;
   }
 
-  async deleteAllMessagesSentoToNumber(
-    phoneNumber: string,
-    limit: number = 50,
-  ): Promise<number> {
+  async deleteAllMessagesSentoToNumber(phoneNumber: string, limit: number = 50): Promise<number> {
     try {
       const messages = await this.client.messages.list({
         to: phoneNumber,

@@ -243,7 +243,7 @@ describe("DEFAULT subscription flow", () => {
           return result.getSubscriptionByProductId.subscription?.status == SubStatus.NonRenewing;
         },
         timeoutMs: 60000,
-        intervalMs: 1000,
+        intervalMs: 2000,
         timeoutError: `Timeout: Subscription status did not change to "${SubStatus.NonRenewing}" in time`,
       },
     );
