@@ -161,10 +161,8 @@ class ProxyFactory {
           } catch (error: any) {
             console.error(`[${config.serviceName}/${config.protocolName}/${config.authType}] Error in ${String(prop)}:`, {
               operation: String(prop),
-              error: error.message,
-              stack: error.stack,
-              response: error.response?.errors || null,
-              statusCode: error.response?.status || null,
+              response: error.response?.errors,
+              statusCode: error.response?.status,
             });
 
             throw error;

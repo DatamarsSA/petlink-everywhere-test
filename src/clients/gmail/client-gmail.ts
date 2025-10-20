@@ -129,30 +129,32 @@ export class GmailClient {
    * Delete up to 100 recent messages (moves them to Trash).
    */
   async deleteAllEmails(): Promise<number> {
-    try {
-      const authClient = await this.authenticate();
-      const gmail = google.gmail({ version: "v1", auth: authClient });
+    const authClient = await this.authenticate();
+    const gmail = google.gmail({ version: "v1", auth: authClient });
 
-      const list = await gmail.users.messages.list({
-        userId: "me",
-        maxResults: 100,
-      });
-      const messages = list.data.messages ?? [];
-      if (messages.length === 0) return 0;
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      maxResults: 100,
+    });
+    const messages = list.data.messages ?? [];
+    if (messages.length === 0) return 0;
 
-      let deleted = 0;
-      for (const msg of messages) {
-        try {
-          await gmail.users.messages.trash({ userId: "me", id: msg.id! });
-          deleted++;
-        } catch {}
+    let deleted = 0;
+    for (const msg of messages) {
+      try {
+        await gmail.users.messages.trash({ userId: "me", id: msg.id! });
+        deleted++;
+      } catch (err) {
+        // Silently skip individual failures, continue with next message
       }
-      return deleted;
-    } catch (error: any) {
-      const status = error?.code ?? error?.response?.status ?? 0;
-      if (status === 401 || status === 403) this.authClient = null;
-      return 0;
     }
+
+    // If there were messages but none were deleted, throw error
+    if (messages.length > 0 && deleted === 0) {
+      throw new Error(`Failed to delete all ${messages.length} emails`);
+    }
+
+    return deleted;
   }
 
   /**

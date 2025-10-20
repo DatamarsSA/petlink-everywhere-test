@@ -139,32 +139,36 @@ export class TestHelper {
   constructor() {}
 
   async cleanupAll(): Promise<void> {
-    // console.log("🧹 Cleaning up test environment...");
-    // petlink.clearAllCache();
-    await Promise.all([
-      petlink.core.graphql.authIam
-        .utilityIntegrationTest({
-          input: {
-            phone: fixtureCurrentBrand.user.phone,
-            utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
-          },
-        })
-        .then(
-          () => {},
-          // console.log("✅ Deleted User and all related entities")
-        ),
-      gmailClient.deleteAllEmails().then(
-        () => {},
-        // console.log("✅ Deleted all emails")
-      ),
-      twilioClient.deleteAllMessagesSentoToNumber(fixtureCurrentBrand.user.phone).then(
-        () => {},
-        // console.log(`✅ Deleted all SMS for ${fixtureCurrentBrand.user.phone}`),
-      ),
-    ]);
+    const operations = [
+      {
+        name: "Petlink - CLEAN_UP_USER",
+        fn: () =>
+          petlink.core.graphql.authIam
+            .utilityIntegrationTest({
+              input: {
+                phone: fixtureCurrentBrand.user.phone,
+                utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
+              },
+            })
+            .then((response) => {
+              if (response.utilityIntegrationTest.code !== "200") {
+                throw new Error(response.utilityIntegrationTest.message);
+              }
+            }),
+      },
+      { name: "Gmail - deleteAllEmails()", fn: () => gmailClient.deleteAllEmails() },
+      { name: "Twilio - deleteAllMessagesSentoToNumber()", fn: () => twilioClient.deleteAllMessagesSentoToNumber(fixtureCurrentBrand.user.phone) },
+    ];
 
-    // Clear cache again after cleanup to ensure fresh state for next test
-    // petlink.clearAllCache();
+    const results = await Promise.allSettled(operations.map(({ fn }) => fn()));
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(`${operations[index].name} - failed: ${result.reason?.message}`);
+      } else {
+        console.log(`${operations[index].name} - succeeded`);
+      }
+    });
   }
 
   async clearAuthCache(): Promise<void> {

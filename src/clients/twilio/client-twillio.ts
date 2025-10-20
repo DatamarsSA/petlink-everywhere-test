@@ -52,27 +52,26 @@ export class TwilioClient {
   }
 
   async deleteAllMessagesSentoToNumber(phoneNumber: string, limit: number = 50): Promise<number> {
-    try {
-      const messages = await this.client.messages.list({
-        to: phoneNumber,
-        limit: limit,
-      });
+    const messages = await this.client.messages.list({
+      to: phoneNumber,
+      limit: limit,
+    });
 
-      let deletedCount = 0;
-      for (const message of messages) {
-        try {
-          await this.client.messages(message.sid).remove();
-          deletedCount++;
-        } catch (err) {
-          console.error(`❌ Impossibile eliminare messaggio ${message.sid}`);
-        }
+    let deletedCount = 0;
+    for (const message of messages) {
+      try {
+        await this.client.messages(message.sid).remove();
+        deletedCount++;
+      } catch (err) {
+        // Silently skip individual failures, continue with next message
       }
-
-      return deletedCount;
-    } catch (error) {
-      console.error("❌ Errore nell'eliminazione dei messaggi:", error);
-      return 0;
     }
+    // If there were messages but none were deleted, throw error
+    if (messages.length > 0 && deletedCount === 0) {
+      throw new Error(`Failed to delete all ${messages.length} messages`);
+    }
+
+    return deletedCount;
   }
 }
 
