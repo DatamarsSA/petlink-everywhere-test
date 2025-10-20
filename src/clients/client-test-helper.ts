@@ -277,6 +277,24 @@ export class TestHelper {
     return response.createPetlinkGps.petlinkGps!;
   }
 
+  /**
+   * Find the first plan pricing that has addon pricings.
+   * Returns a pricing object with addon property, or null if none found.
+   */
+  findPlanWithAddonDeviceprotection(plans: any[]): any {
+    for (const plan of plans) {
+      for (const pricing of plan.pricings) {
+        if (pricing.addonPricings && pricing.addonPricings.length > 0) {
+          return {
+            ...pricing,
+            addon: pricing.addonPricings[0],
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   setupBuilder(): TestSetupBuilder {
     return new TestSetupBuilder(this);
   }

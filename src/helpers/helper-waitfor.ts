@@ -16,8 +16,8 @@
  * const otp = await waitFor(
  *   () => twilioClient.getLatestOtp(phoneNumber),
  *   {
- *     timeoutMs: 60000,
- *     intervalMs: 3000,
+ *     timeoutMs: pollingTimeoutMs,
+ *     intervalMs: pollingIntervalMs,
  *     timeoutError: 'OTP not received in time'
  *   }
  * );
@@ -37,8 +37,8 @@
  *         sub?.paymentStatus === "SUCCEEDED"
  *       ) ?? false;
  *     },
- *     timeoutMs: 30000,
- *     intervalMs: 2000,
+ *     timeoutMs: pollingTimeoutMs,
+ *     intervalMs: pollingIntervalMs,
  *     timeoutError: 'Subscription did not become active in time'
  *   }
  * );
@@ -49,8 +49,8 @@
  *   () => api.getDevices(userId),
  *   {
  *     isReady: (result) => result.devices.length >= 3,
- *     timeoutMs: 20000,
- *     intervalMs: 1000
+ *     timeoutMs: pollingTimeoutMs,
+ *     intervalMs: pollingIntervalMs
  *   }
  * );
  */

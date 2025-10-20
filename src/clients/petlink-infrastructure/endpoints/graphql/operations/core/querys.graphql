@@ -83,6 +83,7 @@ query getPet($id: String!) {
       neutered
       length
       dateMarkedAsLost
+      petProtectionId
     }
   }
 }
@@ -107,6 +108,7 @@ query getPets {
       neutered
       length
       dateMarkedAsLost
+      petProtectionId
     }
   }
 }
@@ -210,6 +212,20 @@ query getSubscriptionPlans(
     plans {
       itemId
       pricings {
+        addonPricings {
+          id
+          name
+          externalName
+          itemId
+          price
+          period
+          currencyCode
+          periodUnit
+          itemFamilyId
+          status
+          trialPeriod
+          trialPeriodUnit
+        }
         id
         name
         externalName
@@ -372,6 +388,65 @@ query getSubscriptionByProductId($productId: String!) {
   }
 }
 
+query getPetProtection($petProtectionId: String!) {
+  getPetProtection(petProtectionId: $petProtectionId) {
+    code
+    translationCode
+    message
+    petProtection {
+      id
+      petId
+      userId
+      chargebeeSubscriptionId
+      currentTermStart
+      currentTermEnd
+      status
+      petOwner {
+        name
+        surname
+        email
+        fiscalCode
+        city
+        zipCode
+        streetAddress
+        countryCode
+        provinceCode
+        homePhone
+        mobilePhone
+      }
+      pet {
+        species
+        breed
+        gender
+        name
+        birthDate
+        microchip
+      }
+      petFlag {
+        country
+        age
+      }
+      codiceTessera
+      fileName
+      name
+      price
+      currencyCode
+      period
+      periodUnit
+      reservedCoupon
+      reservedCouponPercent
+      customerServiceContact
+      card {
+        expiryMonth
+        expiryYear
+        maskedNumber
+        type
+        brand
+        paymentMethod
+      }
+    }
+  }
+}
 
 # mange User credentials #
 

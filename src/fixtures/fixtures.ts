@@ -144,7 +144,9 @@ export const fixtures = {
 // ============================================
 
 // Current brand fixtures (automatically selected based on APP_BRAND env var)
-export const fixtureCurrentBrand = fixtures[currentAppBrand];
 export const appBrand = currentAppBrand;
 export const isKippyRun = currentAppBrand === AppBrand.KIPPY;
 export const isPetlinkRun = currentAppBrand === AppBrand.PETLINK;
+export const pollingTimeoutMs = 40000;
+export const pollingIntervalMs = 1000;
+export const fixtureCurrentBrand = fixtures[currentAppBrand];

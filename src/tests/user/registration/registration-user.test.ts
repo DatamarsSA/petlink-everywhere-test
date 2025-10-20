@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, describe, expect, it, beforeEach } from "vitest";
-import { fixtureCurrentBrand, appBrand } from "../../../fixtures/fixtures.js";
+import { fixtureCurrentBrand, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
 import type { UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { waitFor } from "../../../helpers/helper-waitfor.js";
@@ -52,8 +52,8 @@ describe("User Registration", () => {
 
   it("Wait to receive OTP via SMS", async () => {
     const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(signUpPayload.phone), {
-      timeoutMs: 15000,
-      intervalMs: 500,
+      timeoutMs: pollingTimeoutMs,
+      intervalMs: pollingIntervalMs,
       timeoutError: `OTP not received for ${signUpPayload.phone}`,
     });
 
@@ -95,8 +95,8 @@ describe("User Registration", () => {
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
     const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
-      timeoutMs: 15000,
-      intervalMs: 500,
+      timeoutMs: pollingTimeoutMs,
+      intervalMs: pollingIntervalMs,
       timeoutError: "Verification email not received",
     });
 
@@ -190,17 +190,6 @@ describe("User Registration", () => {
  *   ✓ FORGOT/RECOVERY flows (public)
  *     ✓ 4. Reset PASSWORD (User forgot password) → OTP flow
  *     ✓ 5. Recovery EMAIL (User forgot email) → Serial number device flow
- *
- * //CHANGE flows (authenticated - JWT required)
- * - mutation changePassword($oldPassword: String!, $password: String!)
- * - mutation updateEmailUser($email: String!, $languageId: LanguageId, $appBrand: AppBrand!)
- * - mutation updatePhoneNumberUser($phone: String!, $languageId: LanguageId, $verificationId: String!, $otp: String!)
- *
- *
- * //FORGOT/RECOVERY flows (public - NO auth)
- * - mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId)
- * - mutation changeForgotPassword($otp: String!, $verificationId: String!, $password: String!)
- * - mutation forgotEmail($productNumber: String!, $entityType: ProductTypeEnum, $languageId: LanguageId)
  *
  * ------ CHANGE flows (authenticated) ------
  *
@@ -314,8 +303,8 @@ describe("User Registration", () => {
 //
 //       // STEP 2: Get OTP from SMS (using Twilio client)
 //       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(fixtureCurrentBrand.user.phone), {
-//         timeoutMs: 30000,
-//         intervalMs: 500,
+//         timeoutMs: pollingTimeoutMs,
+//         intervalMs: pollingIntervalMs,
 //         timeoutError: `OTP not received for ${fixtureCurrentBrand.user.phone}`,
 //       });
 //
@@ -359,8 +348,8 @@ describe("User Registration", () => {
 //
 //       // STEP 2: Get OTP from PHONE
 //       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(setup.user!.phone), {
-//         timeoutMs: 30000,
-//         intervalMs: 500,
+//         timeoutMs: pollingTimeoutMs,
+//         intervalMs: pollingIntervalMs,
 //         timeoutError: `OTP not received for ${setup.user!.phone}`,
 //       });
 //       // console.log("Received otp", otp);
