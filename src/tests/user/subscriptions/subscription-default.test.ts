@@ -4,6 +4,7 @@ import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fixtureCurrentBrand, isKippyRun, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
 import { LanguageId, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
 import { waitFor } from "../../../helpers/helper-waitfor.js";
+import { logger } from "../../../config/logger.js";
 
 describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -41,12 +42,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(isKippyRun && evoDevice
         ? [
-            petlink.core.graphql.authJwt.getSubscriptionPlans({
-              productId: evoDevice.id,
-              countryCode: evoDevice.countryCode,
-              serialNumber: evoDevice.serialNumber,
-            }),
-          ]
+          petlink.core.graphql.authJwt.getSubscriptionPlans({
+            productId: evoDevice.id,
+            countryCode: evoDevice.countryCode,
+            serialNumber: evoDevice.serialNumber,
+          }),
+        ]
         : []),
     ];
 
@@ -130,7 +131,7 @@ describe("DEFAULT subscription flow", () => {
     const updatedBillingInfo = await petlink.core.graphql.authJwt.getBillingInfo();
 
     // Debug
-    console.log("Billing info updated:", {
+    logger.debug("Billing info updated", {
       sentCity: user.city,
       returnedCity: updatedBillingInfo.getBillingInfo.billingInfo?.city,
     });
@@ -178,8 +179,16 @@ describe("DEFAULT subscription flow", () => {
       availablePetProtectionForThisPet = availablePlansForThisDeviceResponse.getSubscriptionPlans.careProtectionPlans!;
     });
 
-    it("BUY sub alone and verify it becomes active", async () => {
+    it("BUY sub and verify it becomes active", async () => {
       const choosenPlan = availablePlansForThisDevice![0].pricings[0]!;
+
+      logger.info("Testing subscription purchase", {
+        planId: choosenPlan.id,
+        price: choosenPlan.price,
+        period: choosenPlan.period,
+        periodUnit: choosenPlan.periodUnit,
+      });
+
       // Purchase
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
@@ -202,6 +211,12 @@ describe("DEFAULT subscription flow", () => {
         timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${pollingTimeoutMs}ms`,
       });
       const subscription = subsActiveForThisDevice.getSubscriptionByProductId.subscription!;
+
+      logger.info("Subscription activated successfully", {
+        subscriptionId: subscription.id,
+        status: subscription.status,
+        paymentStatus: subscription.paymentStatus,
+      });
 
       // Verify purchase status
       expect(subscription.status, "Subscription status should be active after successful purchase").toBe("active");
@@ -227,9 +242,16 @@ describe("DEFAULT subscription flow", () => {
       // TODO: Verify start+period => assert termEnd, nextBillingPriod (tolerance?)
     });
 
-    it.runIf(isKippyRun)("BUY sub + addOn DEVICE protection", async () => {
+    it.runIf(isKippyRun)("BUY sub + addOn DEVICE-protection", async () => {
       const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
       expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
+
+      logger.info("Testing subscription purchase with device protection addon", {
+        planId: chosenPlan.id,
+        addonId: chosenPlan.addon.id,
+        planPrice: chosenPlan.price,
+        addonPrice: chosenPlan.addon.price,
+      });
 
       const purchasePlanWithAddonResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
@@ -253,6 +275,12 @@ describe("DEFAULT subscription flow", () => {
       });
 
       const subscription = purchasedSubscriptions.getSubscriptionByProductId.subscription!;
+
+      logger.info("Subscription with addon activated successfully", {
+        subscriptionId: subscription.id,
+        itemsCount: subscription.subscriptionItems.length,
+      });
+
       // Verifica che ci siano 2 item (plan + addon)
       expect(subscription.subscriptionItems).toHaveLength(2);
       expect(subscription).toMatchObject({
@@ -275,11 +303,10 @@ describe("DEFAULT subscription flow", () => {
       });
     });
 
-    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY sub + PET protection", async () => {
+    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY sub + PET-protection", async () => {
       const chosenPlan = availablePlansForThisDevice![0].pricings[0]!;
       const chosenPetProtection = availablePetProtectionForThisPet![0].pricings[0]!;
-      console.log("chosenPlan: ", chosenPlan);
-      console.log("chosenPetProtection: ", chosenPetProtection);
+      logger.debug("Chosen plans for test", { chosenPlan, chosenPetProtection });
 
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
@@ -332,7 +359,7 @@ describe("DEFAULT subscription flow", () => {
       expect(petProtection.periodUnit, "Pet protection period unit should be year").toBe("year");
     });
 
-    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY PET protection alone", async () => {
+    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
 
@@ -477,10 +504,10 @@ describe("DEFAULT subscription flow", () => {
         timeoutError: `Timeout: Subscription not active in beforeAll setup`,
       });
 
-      console.log("✅ EDIT subscriptions setup complete - subscription active and ready");
+      logger.info("✓ EDIT subscriptions setup complete - subscription active and ready");
     });
 
-    it("Test CANCEL active subscription", async () => {
+    it("CANCEL active subscription", async () => {
       // STEP 1: Get the active subscription (purchased in beforeAll)
       const subBeforeCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
         productId: editDevice.id,
@@ -493,10 +520,9 @@ describe("DEFAULT subscription flow", () => {
       const subscriptionId = subBeforeCancel.getSubscriptionByProductId.subscription!.id;
       const currentTermEnd = subBeforeCancel.getSubscriptionByProductId.subscription!.currentTermEnd;
 
-      console.log("Subscription to cancel (BEFORE):", {
-        id: subscriptionId,
-        status: subBeforeCancel.getSubscriptionByProductId.subscription?.status,
-        currentTermEnd: currentTermEnd,
+      logger.info("Testing subscription cancellation", {
+        subscriptionId,
+        currentStatus: subBeforeCancel.getSubscriptionByProductId.subscription?.status,
       });
 
       // STEP 2: Cancel the subscription (stop auto-renewal)
@@ -528,15 +554,15 @@ describe("DEFAULT subscription flow", () => {
       const subBefore = subBeforeCancel.getSubscriptionByProductId.subscription!;
       const subAfter = subAfterCancel.getSubscriptionByProductId.subscription!;
 
+      logger.info("Subscription cancelled successfully", {
+        subscriptionId: subAfter.id,
+        oldStatus: subBefore.status,
+        newStatus: subAfter.status,
+      });
+
       expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe(SubStatus.NonRenewing);
       expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(subBefore.id);
       expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
-
-      console.log("Subscription to cancel (AFTER):", {
-        id: subAfter.id,
-        status: subAfter.status,
-        currentTermEnd: subAfter.currentTermEnd,
-      });
     });
 
     // Placeholder per test futuri

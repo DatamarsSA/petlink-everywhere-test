@@ -1,4 +1,5 @@
 import { z, ZodError } from "zod";
+import { logger } from "./logger.js";
 
 // ------------------------------
 // Schema Zod per le variabili d'ambiente
@@ -34,10 +35,10 @@ function validateEnv(): EnvConfig {
   try {
     return envSchemaValidation.parse(process.env);
   } catch (error) {
-    console.error("Environment validation failed:");
+    logger.error("Environment validation failed");
     if (error instanceof ZodError) {
       error.issues.forEach((issue) => {
-        console.error(`   ${issue.path.join(".")}: ${issue.message}`);
+        logger.error(`Environment validation error: ${issue.path.join(".")}: ${issue.message}`);
       });
     }
     throw error;

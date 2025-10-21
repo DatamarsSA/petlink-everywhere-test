@@ -8,6 +8,7 @@ import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { waitFor } from "../../helpers/helper-waitfor.js";
 import { env } from "../../config/env-schema-validation.js";
+import { logger } from "../../config/logger.js";
 
 describe("Utilyties fro developing features", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -21,30 +22,30 @@ describe("Utilyties fro developing features", () => {
     //  * - login con mail data da loro, settano
     //  * - flow cambio password ecc
     //  */
-    // console.log("=== START DATA MIGRATION TEST ===\n");
+    // logger.info("=== START DATA MIGRATION TEST ===");
     //
     // // 1. Login with existing user
-    // console.log("1️⃣ Logging in with user email...");
+    // logger.debug("1️⃣ Logging in with user email...");
     // await petlink.loginWithPhone(fixtureCurrentBrand.user.phone, fixtureCurrentBrand.user.password);
-    // console.log("✅ Login successful\n");
+    // logger.info("✓ Login successful");
     //
     // // 2. Get User data
-    // console.log("2️⃣ Fetching user data...");
+    // logger.debug("2️⃣ Fetching user data...");
     // const userResponse = await petlink.core.graphql.authJwt.getUser();
-    // console.log("User:", JSON.stringify(userResponse.getUser.user, null, 2));
-    // console.log("✅ User data fetched\n");
+    // logger.debug("User data", { user: userResponse.getUser.user });
+    // logger.info("✓ User data fetched");
     //
     // // 3. Get all Pets
-    // console.log("\n3️⃣ Fetching all pets...");
+    // logger.debug("3️⃣ Fetching all pets...");
     // const petsResponse = await petlink.core.graphql.authJwt.getPets();
-    // console.log(`Found ${petsResponse.getPets.pets?.length || 0} pets`);
+    // logger.info(`Found ${petsResponse.getPets.pets?.length || 0} pets`);
     // petsResponse.getPets.pets?.forEach((pet, i) => {
-    //   console.log(`  Pet ${i + 1}: ${pet.name} (${pet.species}) - ID: ${pet.id} - ${JSON.stringify(pet, null, 2)}`);
+    //   logger.debug(`Pet ${i + 1}`, { name: pet.name, species: pet.species, id: pet.id, pet });
     // });
-    // console.log("✅ Pets data fetched\n");
+    // logger.info("✓ Pets data fetched");
     //
     // // 4. Get all Devices (one for each pet if petId is available)
     //
-    // console.log("\n=== DATA MIGRATION TEST COMPLETED ===");
+    // logger.info("=== DATA MIGRATION TEST COMPLETED ===");
   });
 });

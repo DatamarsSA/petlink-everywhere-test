@@ -19,7 +19,7 @@
     "@graphql-codegen/typescript": "^4.0.6",
     "@graphql-codegen/typescript-graphql-request": "^6.2.0",
     "@graphql-codegen/typescript-operations": "^4.2.0",
-    "@types/node": "20.14.2",
+    "@types/node": "^20.19.23",
     "@types/twilio": "^3.19.3",
     "@vitest/ui": "^3.2.4",
     "dotenv": "^17.2.2",
@@ -42,6 +42,7 @@
     "googleapis": "^160.0.0",
     "ts-node": "^10.9.2",
     "twilio": "^5.9.0",
+    "winston": "^3.18.3",
     "zod": "^4.1.11"
   }
 }

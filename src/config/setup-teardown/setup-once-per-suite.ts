@@ -1,9 +1,11 @@
+import { logger } from "../logger.js";
+
 export default async function setup() {
   // una volta PRIMA di tutta la run
-  // console.log("----- INIZIO SUITE (globalSetup) -----");
+  logger.debug("→ Global Setup: Test suite initialization started");
 
   // ritorna la funzione di teardown UNA volta a FINE run
   return async () => {
-    // console.log("----- FINE SUITE (global teardown) -----");
+    logger.debug("← Global Teardown: Test suite cleanup completed");
   };
 }

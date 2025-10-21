@@ -7,6 +7,7 @@ import { twilioClient } from "../../../clients/twilio/client-twillio.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { logger } from "../../../config/logger.js";
 
 describe("User Registration", () => {
   // Payload per la registrazione utente
@@ -341,7 +342,7 @@ describe("User Registration", () => {
 //         contact: setup.user!.phone,
 //         languageId: fixtureCurrentBrand.user.languageId,
 //       });
-//       console.log("changeForgotPassword() response: ", otpResponse);
+//       logger.debug("changeForgotPassword() response", { otpResponse });
 //
 //       expect(otpResponse.sendOtpForgotPassword.code, "OTP send request should succeed").toBe("200");
 //       expect(otpResponse.sendOtpForgotPassword.verificationId, "Should receive verificationId").toBeDefined();
@@ -352,7 +353,7 @@ describe("User Registration", () => {
 //         intervalMs: pollingIntervalMs,
 //         timeoutError: `OTP not received for ${setup.user!.phone}`,
 //       });
-//       // console.log("Received otp", otp);
+//       logger.debug("Received OTP", { otp });
 //
 //       // STEP 3: Change password using OTP
 //       const newPassword = "ResetPassword123!";
@@ -361,7 +362,7 @@ describe("User Registration", () => {
 //         verificationId: otpResponse.sendOtpForgotPassword.verificationId!,
 //         password: newPassword,
 //       });
-//       console.log("changeForgotPassword() response: ", changeResponse);
+//       logger.debug("changeForgotPassword() response", { changeResponse });
 //
 //       expect(changeResponse.changeForgotPassword.code, "Password reset should succeed").toBe("200");
 //
@@ -392,8 +393,10 @@ describe("User Registration", () => {
 //
 //       // Note: Email will be sent to the registered address
 //       // User needs to check their mailbox to find which email received the message
-//       console.log(`Email recovery requested for device: ${device.serialNumber}`);
-//       console.log(`Email will be sent to: ${testUser.email}`);
+//       logger.info("Email recovery requested", {
+//         deviceSerial: device.serialNumber,
+//         emailSentTo: testUser.email,
+//       });
 //     });
 //   });
 // });

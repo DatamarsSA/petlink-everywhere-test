@@ -8,6 +8,7 @@ import { HttpRequest } from "@aws-sdk/protocol-http";
 import { env } from "../../config/env-schema-validation.js";
 import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 import { appBrand } from "../../fixtures/fixtures.js";
+import { logger } from "../../config/logger.js";
 
 // ------------------------------
 // HTTP header constants
@@ -159,10 +160,11 @@ class ProxyFactory {
           try {
             return await member(...args);
           } catch (error: any) {
-            console.error(`[${config.serviceName}/${config.protocolName}/${config.authType}] Error in ${String(prop)}:`, {
+            logger.error(`[${config.serviceName}/${config.protocolName}/${config.authType}] Error in ${String(prop)}`, {
               operation: String(prop),
               response: error.response?.errors,
               statusCode: error.response?.status,
+              message: error.message,
             });
 
             throw error;
@@ -223,7 +225,7 @@ class AuthManager {
 
       this.jwtToken = this.createTokenCacheEntry(token);
     } catch (error: any) {
-      console.error(`[AUTH] Failed to authenticate user ${username} via ${authMethod}:`, {
+      logger.error(`[AUTH] Failed to authenticate user ${username} via ${authMethod}`, {
         error: error.message,
         code: error.code || error.name,
         username,

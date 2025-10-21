@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync, appendFileSync, readFileSync, existsSync, unlinkSync } from "fs";
 import { dirname } from "path";
+import { logger } from "../config/logger.js";
 
 // ============================================================================
 // TYPES

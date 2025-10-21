@@ -1,10 +1,16 @@
 import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
+import { logger } from "./src/config/logger.js";
 
 export default defineConfig(({ mode }) => {
   const environment = process.env.TEST_ENV || "develop";
 
-  console.log(`🔧 Vitest Config - Mode: ${mode}, NODE_ENV: ${process.env.NODE_ENV}, TEST_ENV: ${process.env.TEST_ENV}, Using: ${environment}`);
+  logger.info("Vitest Config initialized", {
+    mode,
+    NODE_ENV: process.env.NODE_ENV,
+    TEST_ENV: process.env.TEST_ENV,
+    environment,
+  });
 
   // Carica le variabili d'ambiente dal file .env.{environment}
   const rawEnv = loadEnv(environment, process.cwd(), "");

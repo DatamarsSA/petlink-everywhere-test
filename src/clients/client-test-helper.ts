@@ -5,6 +5,7 @@ import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fixtures, fixtureCurrentBrand, appBrand, isKippyRun } from "../fixtures/fixtures.js";
 import { PetType, DeviceType, UtilityTestTypeEnum } from "./petlink-infrastructure/types.js";
+import { logger } from "../config/logger.js";
 
 export interface TestSetup {
   user?: User;
@@ -139,6 +140,8 @@ export class TestHelper {
   constructor() {}
 
   async cleanupAll(): Promise<void> {
+    logger.debug("→ Starting cleanup operations");
+
     const operations = [
       {
         name: "Petlink - CLEAN_UP_USER",
@@ -164,11 +167,13 @@ export class TestHelper {
 
     results.forEach((result, index) => {
       if (result.status === "rejected") {
-        console.error(`${operations[index].name} - failed: ${result.reason?.message}`);
+        logger.debug(`✗ ${operations[index].name}`, { error: result.reason?.message });
       } else {
-        console.log(`${operations[index].name} - succeeded`);
+        logger.debug(`✓ ${operations[index].name}`);
       }
     });
+
+    logger.debug("← Cleanup operations completed");
   }
 
   async clearAuthCache(): Promise<void> {
@@ -176,6 +181,8 @@ export class TestHelper {
   }
 
   async createUser(): Promise<User> {
+    logger.debug("→ Creating test user");
+
     const userPayload: UserIn = {
       email: fixtureCurrentBrand.user.email,
       name: fixtureCurrentBrand.user.name,
@@ -208,11 +215,19 @@ export class TestHelper {
     if (!userResponse.getUser.user) {
       throw new Error("User not found after creation");
     }
-    // console.log(JSON.stringify(userResponse.getUser.user));
+
+    logger.debug("✓ Created User", {
+      email: userResponse.getUser.user.email,
+      phone: userResponse.getUser.user.phone,
+      id: userResponse.getUser.user.id,
+    });
+
     return userResponse.getUser.user;
   }
 
   async createPet(petType: SpeciesEnum): Promise<Pet> {
+    logger.debug(`→ Creating test pet (${petType})`);
+
     let petFixture: PetIn;
 
     if (petType === PetType.DOG) {
@@ -243,10 +258,18 @@ export class TestHelper {
       throw new Error(`Failed to create ${petType}: ${response.createPet.message}`);
     }
 
+    logger.debug("✓ Created Pet", {
+      name: response.createPet.pet!.name,
+      species: response.createPet.pet!.species,
+      id: response.createPet.pet!.id,
+    });
+
     return response.createPet.pet!;
   }
 
   async createDeviceForPet(petId: string, deviceType: DeviceType): Promise<PetlinkGps> {
+    logger.debug(`→ Creating device (${deviceType}) for pet ${petId}`);
+
     // Validate EVO can only be created with KIPPY brand
     if (deviceType === DeviceType.EVO && !isKippyRun) {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
@@ -273,6 +296,13 @@ export class TestHelper {
     if (response.createPetlinkGps.code !== "200") {
       throw new Error(`Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}`);
     }
+
+    logger.debug("✓ Created Device", {
+      serialNumber: response.createPetlinkGps.petlinkGps!.serialNumber,
+      deviceType,
+      petId,
+      id: response.createPetlinkGps.petlinkGps!.id,
+    });
 
     return response.createPetlinkGps.petlinkGps!;
   }

@@ -1,5 +1,6 @@
 import twilio from "twilio";
 import { env } from "../../config/env-schema-validation.js";
+import { logger } from "../../config/logger.js";
 
 export class TwilioClient {
   private client: twilio.Twilio;
@@ -10,7 +11,7 @@ export class TwilioClient {
 
   async getMessagesSentTo(phoneNumber: string, limit: number = 10): Promise<any[]> {
     try {
-      // console.log(`🔍 Cerco messaggi inviati a ${phoneNumber}...`);
+      logger.debug(`Searching messages sent to ${phoneNumber}`);
 
       const messages = await this.client.messages.list({
         to: phoneNumber,
@@ -19,10 +20,10 @@ export class TwilioClient {
 
       const sortedMessages = messages.sort((a: any, b: any) => new Date(b.dateSent!).getTime() - new Date(a.dateSent!).getTime());
 
-      // console.log(`📱 Trovati ${sortedMessages.length} messaggi`);
+      logger.debug(`Found ${sortedMessages.length} messages for ${phoneNumber}`);
       return sortedMessages;
     } catch (error) {
-      // console.error("❌ Errore nel recupero messaggi:", error);
+      logger.error("Error retrieving Twilio messages", { error, phoneNumber });
       throw error;
     }
   }
@@ -36,18 +37,18 @@ export class TwilioClient {
     const messages = await this.getMessagesSentTo(phoneNumber, 1);
 
     for (const message of messages) {
-      // console.log(`📄 Analizzo messaggio: "${message.body}"`);
+      logger.debug(`Analyzing message: "${message.body}"`);
 
       // Pattern comuni per OTP
       const otpMatch = message.body.match(/\b(\d{4,6})\b/);
       if (otpMatch) {
         const otp = otpMatch[1];
-        // console.log(`✅ OTP trovato: ${otp}`);
+        logger.debug(`OTP found: ${otp}`);
         return otp;
       }
     }
 
-    // console.log("❌ Nessun OTP trovato");
+    logger.debug("No OTP found in messages");
     return null;
   }
 
