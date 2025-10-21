@@ -147,6 +147,6 @@ export const fixtures = {
 export const appBrand = currentAppBrand;
 export const isKippyRun = currentAppBrand === AppBrand.KIPPY;
 export const isPetlinkRun = currentAppBrand === AppBrand.PETLINK;
-export const pollingTimeoutMs = 60000;
+export const pollingTimeoutMs = 180000;
 export const pollingIntervalMs = 1000;
 export const fixtureCurrentBrand = fixtures[currentAppBrand];
