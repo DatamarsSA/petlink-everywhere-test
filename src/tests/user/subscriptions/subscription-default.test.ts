@@ -415,68 +415,133 @@ describe("DEFAULT subscription flow", () => {
     });
   });
 
-  it("Test CHANGE (Upgrade) sub", () => {
-    //TODO: Test CHANGE (Upgrade) sub
-  });
+  describe("EDIT purchased subscriptions", () => {
+    let editSetup: TestSetup = {} as TestSetup;
+    let editUser: NonNullable<typeof editSetup.user>;
+    let editDevice: NonNullable<typeof editSetup.devices.dogStandard>;
 
-  it("Test CHANGE (Downgrade) sub", () => {
-    //TODO: Test CHANGE (Downgrade) sub
-  });
+    beforeAll(async () => {
+      // Cleanup e setup completo
+      await testHelper.cleanupAll();
+      editSetup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
 
-  it("Test AUTMATIC RENEWAL active sub", () => {
-    //TODO: Test AUTMATIC RENEWAL active sub
-  });
+      editUser = editSetup.user!;
+      editDevice = editSetup.devices.dogStandard!;
 
-  it("Test CANCEL active sub", async () => {
-    const device = setup.devices.dogStandard!;
+      // Update billing info
+      await petlink.core.graphql.authJwt.updateBillingInfo({
+        updateBillingInfoInput: {
+          billingInfo: {
+            address: editUser.streetAddress!,
+            city: editUser.city!,
+            country: editUser.countryCode!,
+            zip: editUser.zipCode!,
+          },
+          email: editUser.email!,
+          firstName: editUser.name!,
+          lastName: editUser.surname!,
+          phone: editUser.phone!,
+        },
+      });
 
-    // STEP 1: Get the active subscription (purchased in previous test)
-    const subBeforeCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-      productId: device.id,
-    });
+      // Get available plans
+      const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
+        productId: editDevice.id,
+        countryCode: editDevice.countryCode,
+        serialNumber: editDevice.serialNumber,
+      });
 
-    expect(subBeforeCancel.getSubscriptionByProductId.code, "getSubscriptionByProductId endpoint should return success").toBe("200");
-    expect(subBeforeCancel.getSubscriptionByProductId.subscription, "Active subscription should exist before cancellation").toBeDefined();
-    expect(subBeforeCancel.getSubscriptionByProductId.subscription?.status, "Subscription should be active before cancellation").toBe("active");
+      const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
-    const subscriptionId = subBeforeCancel.getSubscriptionByProductId.subscription!.id;
-    const currentTermEnd = subBeforeCancel.getSubscriptionByProductId.subscription!.currentTermEnd;
+      // Purchase subscription
+      const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          phone: editUser.phone,
+          productId: editDevice.id,
+          priceIds: [chosenPlan.id],
+          card: fixtureCurrentBrand.card.valid,
+        },
+      });
 
-    console.log("Subscription to delete (BEFORE):", subBeforeCancel);
+      expect(purchaseResponse.utilityIntegrationTest.code, "Subscription purchase in beforeAll should succeed").toBe("200");
 
-    // STEP 2: Cancel the subscription (stop auto-renewal)
-    const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
-      subscriptionId,
-      appBrand: appBrand,
-      cancelReason: "Testing cancellation flow for integration tests",
-      cancelReasonCode: "OTHER",
-    });
-
-    expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
-
-    // STEP 3: Verify subscription is now "non_renewing" but still active until term end
-    const subAfterCancel = await waitFor(
-      async () =>
-        petlink.core.graphql.authJwt.getSubscriptionByProductId({
-          productId: device.id,
-        }),
-      {
+      // Wait for subscription to become active
+      await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: editDevice.id }), {
         isReady: (result) => {
-          return result.getSubscriptionByProductId.subscription?.status == SubStatus.NonRenewing;
+          const sub = result.getSubscriptionByProductId.subscription;
+          return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
         },
         timeoutMs: pollingTimeoutMs,
         intervalMs: pollingIntervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.NonRenewing}" in ${pollingTimeoutMs}ms`,
-      },
-    );
+        timeoutError: `Timeout: Subscription not active in beforeAll setup`,
+      });
 
-    const subBefore = subBeforeCancel.getSubscriptionByProductId.subscription!;
-    const subAfter = subAfterCancel.getSubscriptionByProductId.subscription!;
+      console.log("✅ EDIT subscriptions setup complete - subscription active and ready");
+    });
 
-    expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe(SubStatus.NonRenewing);
-    expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(subBefore.id);
-    expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
+    it("Test CANCEL active subscription", async () => {
+      // STEP 1: Get the active subscription (purchased in beforeAll)
+      const subBeforeCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
+        productId: editDevice.id,
+      });
 
-    console.log("Subscription to delete (AFTER):", subAfterCancel);
+      expect(subBeforeCancel.getSubscriptionByProductId.code, "getSubscriptionByProductId endpoint should return success").toBe("200");
+      expect(subBeforeCancel.getSubscriptionByProductId.subscription, "Active subscription should exist before cancellation").toBeDefined();
+      expect(subBeforeCancel.getSubscriptionByProductId.subscription?.status, "Subscription should be active before cancellation").toBe("active");
+
+      const subscriptionId = subBeforeCancel.getSubscriptionByProductId.subscription!.id;
+      const currentTermEnd = subBeforeCancel.getSubscriptionByProductId.subscription!.currentTermEnd;
+
+      console.log("Subscription to cancel (BEFORE):", {
+        id: subscriptionId,
+        status: subBeforeCancel.getSubscriptionByProductId.subscription?.status,
+        currentTermEnd: currentTermEnd,
+      });
+
+      // STEP 2: Cancel the subscription (stop auto-renewal)
+      const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
+        subscriptionId,
+        appBrand: appBrand,
+        cancelReason: "Testing cancellation flow for integration tests",
+        cancelReasonCode: "OTHER",
+      });
+
+      expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
+
+      // STEP 3: Verify subscription is now "non_renewing" but still active until term end
+      const subAfterCancel = await waitFor(
+        async () =>
+          petlink.core.graphql.authJwt.getSubscriptionByProductId({
+            productId: editDevice.id,
+          }),
+        {
+          isReady: (result) => {
+            return result.getSubscriptionByProductId.subscription?.status === SubStatus.NonRenewing;
+          },
+          timeoutMs: pollingTimeoutMs,
+          intervalMs: pollingIntervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "${SubStatus.NonRenewing}" in ${pollingTimeoutMs}ms`,
+        },
+      );
+
+      const subBefore = subBeforeCancel.getSubscriptionByProductId.subscription!;
+      const subAfter = subAfterCancel.getSubscriptionByProductId.subscription!;
+
+      expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe(SubStatus.NonRenewing);
+      expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(subBefore.id);
+      expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
+
+      console.log("Subscription to cancel (AFTER):", {
+        id: subAfter.id,
+        status: subAfter.status,
+        currentTermEnd: subAfter.currentTermEnd,
+      });
+    });
+
+    // Placeholder per test futuri
+    it.todo("Test UPGRADE subscription plan");
+    it.todo("Test DOWNGRADE subscription plan");
+    it.todo("Test AUTOMATIC RENEWAL of active subscription");
   });
 });
