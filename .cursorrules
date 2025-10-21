@@ -1,0 +1,471 @@
+# Petlink/Kippy Test Suite - Cursor Rules
+
+## Architecture Reference
+
+**📚 For complete system architecture, data flows, and component details, see [README.md](./README.md)**
+
+This file contains project-specific rules and conventions for the test suite only.
+
+---
+
+## Quick Repository Reference
+
+Use this quick reference to know where to look when debugging or implementing tests:
+
+- **petlink-everywhere-core**: Main backend GraphQL/REST API, subscription orchestration, notifications
+- **petlink-everywhere-sentinel**: Device TCP communication (Rust), position/activity processing, command handling
+- **subscriptions-manager**: Chargebee integration, payment webhooks, subscription lifecycle
+- **petlink-everywhere-cct-core**: Customer Care backend, proxies to core/subscriptions-manager
+- **petlink-everywhere-mobile**: Flutter mobile apps (Petlink/Kippy), GraphQL client
+- **petlink-everywhere-web**: Public React web app, user-facing subscription flows
+- **petlink-everywhere-cct**: Internal React support tool
+- **petlink-everywhere-types**: Shared TypeScript types across services
+
+💡 **When in doubt about architecture**: Read the README.md in this repository first!
+
+---
+
+## Test Suite Guidelines
+
+### Project Structure
+
+```
+src/
+├── tests/              # Test files organized by feature
+│   ├── auth/          # Authentication tests
+│   ├── devices/       # Device registration and management
+│   ├── subscriptions/ # Subscription lifecycle tests
+│   └── pets/          # Pet management tests
+├── utils/             # Test utilities and helpers
+├── graphql/           # GraphQL queries and mutations
+└── config/            # Test configuration
+```
+
+### Naming Conventions
+
+#### Test Files
+- Use descriptive names: `user-registration.test.ts`, `subscription-purchase-flow.test.ts`
+- Group related tests in the same file
+- Use `.test.ts` suffix for all test files
+
+#### Test Cases
+```typescript
+// ✅ Good: Descriptive, includes context
+describe('User Registration Flow', () => {
+  it('should successfully register a new user with valid phone number', async () => {
+    // test implementation
+  });
+
+  it('should reject registration with invalid email format', async () => {
+    // test implementation
+  });
+});
+
+// ❌ Bad: Vague, hard to understand
+describe('User', () => {
+  it('works', async () => {
+    // test implementation
+  });
+});
+```
+
+#### Variables and Functions
+- Test data: Use prefix `test*` or `mock*` (e.g., `testUser`, `mockDevice`)
+- Helper functions: Use verb-first naming (e.g., `createTestUser`, `cleanupTestData`)
+- GraphQL operations: Match backend resolver names exactly
+
+---
+
+## Testing Best Practices
+
+### 1. Test Isolation
+
+**Always clean up after tests:**
+
+```typescript
+import { afterEach } from 'vitest';
+
+describe('Device Registration', () => {
+  let testDeviceId: string;
+
+  afterEach(async () => {
+    // Clean up test data
+    if (testDeviceId) {
+      await cleanupTestDevice(testDeviceId);
+    }
+  });
+
+  it('should register device', async () => {
+    // test implementation
+  });
+});
+```
+
+### 2. Use Meaningful Assertions
+
+```typescript
+// ✅ Good: Clear what we're testing and why
+expect(response.data.signUp.code).toBe('200');
+expect(response.data.signUp.user.email).toBe(testEmail);
+expect(response.data.signUp.user.subscriptions).toHaveLength(0);
+
+// ❌ Bad: Unclear, not specific
+expect(response).toBeTruthy();
+expect(response.data).toBeDefined();
+```
+
+### 3. Test Data Management
+
+**Use factories for test data:**
+
+```typescript
+// utils/factories.ts
+export function createTestUser(overrides = {}) {
+  return {
+    email: `test-${Date.now()}@example.com`,
+    phone: `+1555${Math.floor(Math.random() * 10000000)}`,
+    name: 'Test',
+    surname: 'User',
+    ...overrides,
+  };
+}
+```
+
+**Use unique identifiers to avoid conflicts:**
+
+```typescript
+// ✅ Good: Unique per test run
+const testEmail = `test-${Date.now()}-${Math.random()}@example.com`;
+
+// ❌ Bad: Hard-coded, causes conflicts
+const testEmail = 'test@example.com';
+```
+
+### 4. Async/Await Best Practices
+
+```typescript
+// ✅ Good: Proper error handling
+it('should handle failed payment', async () => {
+  try {
+    await purchaseSubscription(invalidCard);
+    expect.fail('Should have thrown an error');
+  } catch (error) {
+    expect(error.code).toBe('PAYMENT_FAILED');
+  }
+});
+
+// ❌ Bad: No error handling
+it('should handle failed payment', async () => {
+  const result = await purchaseSubscription(invalidCard);
+  expect(result.error).toBeTruthy();
+});
+```
+
+### 5. Environment-Specific Configuration
+
+**Always use environment variables for configuration:**
+
+```typescript
+// ✅ Good: Environment-based
+const apiUrl = process.env.GRAPHQL_ENDPOINT;
+const testUserPool = process.env.TEST_USER_POOL_ID;
+
+// ❌ Bad: Hard-coded
+const apiUrl = 'https://api.petlink.com/graphql';
+```
+
+---
+
+## GraphQL Testing Patterns
+
+### Query/Mutation Structure
+
+Store GraphQL operations in `src/graphql/` directory:
+
+```typescript
+// src/graphql/user.graphql.ts
+export const SIGN_UP_MUTATION = gql`
+  mutation SignUp($user: UserInput!, $otpData: OtpDataInput!) {
+    signUp(user: $user, otpData: $otpData) {
+      code
+      message
+      user {
+        id
+        email
+        name
+      }
+    }
+  }
+`;
+```
+
+### Testing GraphQL Operations
+
+```typescript
+import { executeGraphQL } from '../utils/graphql-client';
+import { SIGN_UP_MUTATION } from '../graphql/user.graphql';
+
+it('should sign up new user', async () => {
+  const variables = {
+    user: createTestUser(),
+    otpData: { otp: '123456', verificationId: 'test-id' },
+  };
+
+  const response = await executeGraphQL(SIGN_UP_MUTATION, variables);
+
+  expect(response.errors).toBeUndefined();
+  expect(response.data.signUp.code).toBe('200');
+});
+```
+
+---
+
+## Common Test Scenarios
+
+### Testing Subscription Flows
+
+When testing subscriptions, always consider:
+1. **Brand differences**: Kippy has device/pet protection, Petlink doesn't
+2. **Region differences**: Pet protection only for Kippy IT
+3. **Pre-registration**: Subscription before device activation
+4. **Webhook timing**: Async Chargebee webhooks may take time
+
+```typescript
+describe('Subscription Purchase Flow', () => {
+  it('should purchase Kippy subscription with device protection', async () => {
+    // 1. Create user and device
+    const user = await createTestUser({ countryCode: 'IT' });
+    const device = await registerTestDevice(user.id);
+
+    // 2. Purchase subscription with addon
+    const subscription = await purchaseSubscription({
+      userId: user.id,
+      deviceId: device.id,
+      planId: 'kippy-yearly',
+      addons: ['device-protection'],
+    });
+
+    // 3. Wait for webhook processing
+    await waitForWebhookProcessing(subscription.id);
+
+    // 4. Verify subscription is active
+    const deviceStatus = await getDeviceStatus(device.id);
+    expect(deviceStatus.subscriptionActive).toBe(true);
+  });
+});
+```
+
+### Testing Device Communication
+
+When testing device-related features:
+1. Check Sentinel connection status
+2. Verify SQS message delivery
+3. Confirm MongoDB updates
+4. Validate GraphQL subscription broadcasts
+
+```typescript
+describe('Device Position Update', () => {
+  it('should update device position and notify user', async () => {
+    // 1. Setup: Create device with active subscription
+    const device = await createActiveDevice();
+
+    // 2. Simulate position update from Sentinel
+    await sendPositionUpdate({
+      serialNumber: device.serialNumber,
+      latitude: 45.4642,
+      longitude: 9.1900,
+    });
+
+    // 3. Wait for processing
+    await sleep(2000);
+
+    // 4. Verify position updated in database
+    const updatedDevice = await getDevice(device.id);
+    expect(updatedDevice.lastKnownPosition.latitude).toBe(45.4642);
+  });
+});
+```
+
+---
+
+## Debugging Tips
+
+### When Tests Fail
+
+1. **Check environment variables**: Ensure `.env` is properly configured
+2. **Verify test data cleanup**: Old test data may cause conflicts
+3. **Check AWS resources**: Lambda, SQS, MongoDB connection issues
+4. **Review logs**: CloudWatch logs for backend services
+5. **Webhook timing**: Add longer waits for async operations
+
+### Common Issues
+
+**GraphQL Errors:**
+```typescript
+// Always log full error for debugging
+if (response.errors) {
+  console.error('GraphQL Errors:', JSON.stringify(response.errors, null, 2));
+}
+```
+
+**Timeout Issues:**
+```typescript
+// Increase timeout for slow operations
+it('should process subscription webhook', async () => {
+  // test code
+}, 30000); // 30 second timeout
+```
+
+**Authentication Failures:**
+```typescript
+// Ensure Cognito token is fresh
+const token = await refreshAuthToken();
+```
+
+---
+
+## Code Quality
+
+### TypeScript
+
+- Always use strict type checking
+- Define interfaces for test data structures
+- Use type guards for response validation
+
+```typescript
+// ✅ Good: Type-safe
+interface TestUser {
+  id: string;
+  email: string;
+  phone: string;
+}
+
+function isValidUser(user: any): user is TestUser {
+  return user && typeof user.id === 'string' && typeof user.email === 'string';
+}
+
+// ❌ Bad: Untyped
+function createUser(data: any) {
+  return data;
+}
+```
+
+### Error Handling
+
+```typescript
+// ✅ Good: Specific error handling
+try {
+  await dangerousOperation();
+} catch (error) {
+  if (error instanceof GraphQLError) {
+    console.error('GraphQL Error:', error.message);
+  } else if (error instanceof NetworkError) {
+    console.error('Network Error:', error.message);
+  } else {
+    throw error; // Re-throw unexpected errors
+  }
+}
+
+// ❌ Bad: Silent failures
+try {
+  await dangerousOperation();
+} catch (error) {
+  // nothing
+}
+```
+
+---
+
+## Test Organization
+
+### Feature-Based Structure
+
+Organize tests by user-facing features, not by technical layers:
+
+```
+✅ Good:
+tests/
+├── user-registration/
+├── device-activation/
+├── subscription-purchase/
+└── pet-management/
+
+❌ Bad:
+tests/
+├── graphql/
+├── database/
+├── api/
+└── integration/
+```
+
+### Test Suites
+
+Group related tests using `describe` blocks:
+
+```typescript
+describe('Subscription Management', () => {
+  describe('Purchase Flow', () => {
+    it('should purchase monthly plan', async () => {});
+    it('should purchase yearly plan', async () => {});
+  });
+
+  describe('Cancellation Flow', () => {
+    it('should cancel auto-renewal', async () => {});
+    it('should refund unused portion', async () => {});
+  });
+});
+```
+
+---
+
+## Performance Considerations
+
+- **Parallel execution**: Use `test.concurrent` for independent tests
+- **Setup/teardown**: Use `beforeAll`/`afterAll` for expensive operations
+- **Mock external services**: When appropriate, mock Chargebee/Twilio/SendGrid
+- **Database connections**: Reuse connections, don't create new ones per test
+
+---
+
+## CI/CD Integration
+
+Tests are run automatically on:
+- Pull request creation
+- Merge to main branch
+- Scheduled nightly runs
+
+**Environment-specific test runs:**
+- `npm test` - runs all tests
+- `npm test:unit` - unit tests only
+- `npm test:integration` - integration tests only
+- `npm test:e2e` - end-to-end tests only
+
+---
+
+## Additional Resources
+
+- **Architecture Documentation**: [README.md](./README.md)
+- **GraphQL Schema**: Auto-generated from backend services
+- **Environment Setup**: See `.env.example`
+- **Test Coverage**: Run `npm run coverage`
+
+---
+
+## When to Update This File
+
+Update `.cursorrules` when:
+- Adding new testing patterns or conventions
+- Discovering common pitfalls
+- Changing test structure or organization
+- Adding new test utilities or helpers
+
+Update `README.md` when:
+- System architecture changes
+- New services or components are added
+- Data flows are modified
+- External integrations change
+
+---
+
+**Remember**: Tests should be readable, maintainable, and provide clear feedback when they fail. Write tests that document how the system should behave!
+
