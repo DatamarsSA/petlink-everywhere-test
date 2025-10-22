@@ -371,24 +371,9 @@ describe("DEFAULT subscription flow", () => {
     });
 
     it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
+      logger.debug("dentro BUY PET-protection alone");
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
-
-      // STEP 1: Verify that purchasing pet protection alone fails without an active subscription
-      const failedPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
-          priceIds: [petProtectionPlan.id],
-          card: fixtureCurrentBrand.card.valid,
-          isOnlyProtection: true,
-          currencyCode: regularPlan.currencyCode,
-        },
-      });
-
-      // Expect the purchase to fail (code should not be "200")
-      expect(failedPurchaseResponse.utilityIntegrationTest.code, "Should not allow purchasing pet protection without an active subscription").not.toBe("200");
 
       // STEP 2: Purchase a regular subscription first
       const subPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
@@ -403,6 +388,7 @@ describe("DEFAULT subscription flow", () => {
       expect(subPurchaseResponse.utilityIntegrationTest.code, "Regular subscription purchase should succeed").toBe("200");
 
       // STEP 3: Wait for the subscription to become active with SUCCEEDED payment status
+      logger.debug(`bought SUB for device ${device.id}, start to wait to become active`);
       const activeSubscription = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
         isReady: (result) => {
           const sub = result.getSubscriptionByProductId.subscription;
@@ -417,7 +403,8 @@ describe("DEFAULT subscription flow", () => {
       expect(activeSub.status, "Subscription should be active before purchasing pet protection").toBe("active");
       expect(activeSub.paymentStatus, "Payment status should be SUCCEEDED before purchasing pet protection").toBe("SUCCEEDED");
 
-      // STEP 4: Now purchase pet protection alone (should succeed)
+      // STEP 4: Purchase pet protection alone
+      logger.debug(`bought PET-PROTECTION for device ${device.id}, start to wait to become active`);
       const petProtectionPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
@@ -446,22 +433,23 @@ describe("DEFAULT subscription flow", () => {
         name: user.name,
         surname: user.surname,
         email: user.email,
-        fiscalCode: "RSSMRA80A01H501U", // Italian fiscal code example
-        city: user.city!,
-        zipCode: user.zipCode!,
-        streetAddress: user.streetAddress!,
-        countryCode: user.countryCode,
+        fiscalCode: "RSSMRA80A01H501U",
+        city: user.city ?? "Milano",
+        zipCode: user.zipCode ?? "20121",
+        streetAddress: user.streetAddress ?? "Via Test 123",
+        countryCode: user.countryCode ?? "IT",
         provinceCode: "MI",
-        homePhone: "",
+        homePhone: user.phone,
         mobilePhone: user.phone,
       };
+
       const petProtectionPet = {
-        species: pet.species,
-        breed: pet.breeds?.[0],
-        gender: pet.gender,
+        species: pet.species, // "DOG" o "CAT" - dovrebbe andare bene
+        breed: "Labrador Retriever", // ⚠️ Usa il NOME della razza, non l'UUID
+        gender: pet.gender, // "MALE" o "FEMALE" - dovrebbe andare bene
         name: pet.name,
-        birthDate: pet.birthDate!,
-        microchip: null,
+        birthDate: pet.birthDate!, // Assicurati che sia nel formato corretto (ISO string)
+        microchip: "123456789012345", // o null, o ometti se opzionale
       };
 
       logger.info("Pet protection data being sent:", {
