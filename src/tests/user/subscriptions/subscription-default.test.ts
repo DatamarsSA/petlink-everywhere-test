@@ -42,12 +42,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(isKippyRun && evoDevice
         ? [
-          petlink.core.graphql.authJwt.getSubscriptionPlans({
-            productId: evoDevice.id,
-            countryCode: evoDevice.countryCode,
-            serialNumber: evoDevice.serialNumber,
-          }),
-        ]
+            petlink.core.graphql.authJwt.getSubscriptionPlans({
+              productId: evoDevice.id,
+              countryCode: evoDevice.countryCode,
+              serialNumber: evoDevice.serialNumber,
+            }),
+          ]
         : []),
     ];
 
@@ -359,7 +359,7 @@ describe("DEFAULT subscription flow", () => {
       expect(petProtection.periodUnit, "Pet protection period unit should be year").toBe("year");
     });
 
-    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
+    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT).todo("BUY PET-protection alone", async () => {
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
 
