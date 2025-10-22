@@ -438,9 +438,51 @@ describe("DEFAULT subscription flow", () => {
         intervalMs: pollingIntervalMs,
         timeoutError: `Timeout: petProtectionId not assigned to pet`,
       });
-
       const pet = petProtectionResult.getPet.pet!;
       expect(pet.petProtectionId, "Pet should have a petProtectionId assigned").toBeDefined();
+
+      // Step 5.5 Update pet protection data (form submission simulation)
+      const petProtectionOwner = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        fiscalCode: "RSSMRA80A01H501U", // Italian fiscal code example
+        city: user.city!,
+        zipCode: user.zipCode!,
+        streetAddress: user.streetAddress!,
+        countryCode: user.countryCode,
+        provinceCode: "MI",
+        homePhone: "",
+        mobilePhone: user.phone,
+      };
+      const petProtectionPet = {
+        species: pet.species,
+        breed: pet.breeds?.[0],
+        gender: pet.gender,
+        name: pet.name,
+        birthDate: pet.birthDate!,
+        microchip: null,
+      };
+
+      logger.info("Pet protection data being sent:", {
+        petProtectionOwner,
+        petProtectionPet,
+        petProtectionId: pet.petProtectionId,
+      });
+
+      const updateResponse = await petlink.core.graphql.authJwt.updatePetProtectionData({
+        petProtectionId: pet.petProtectionId!,
+        owner: petProtectionOwner, //PetProtectionOwnerIn
+        pet: petProtectionPet, //PetProtectionPetIn
+      });
+      logger.info("Update response:", updateResponse);
+      // Prima verifica che la response esista (fa parte del test!)
+      expect(updateResponse.updatePetProtectionData).toBeDefined();
+
+      const updateResult = updateResponse.updatePetProtectionData!;
+      expect(updateResult.code, "Pet protection data update should succeed").toBe("200");
+      expect(updateResult.petProtection?.petOwner?.fiscalCode, "Owner fiscal code should be updated").toBe(petProtectionOwner.fiscalCode);
+      expect(updateResult.petProtection?.pet?.name, "Pet name should be updated").toBe(petProtectionPet.name);
 
       // STEP 6: Verify pet protection details
       const petProtectionResponse = await petlink.core.graphql.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
@@ -457,17 +499,19 @@ describe("DEFAULT subscription flow", () => {
     });
   });
 
-  describe.skip("EDIT purchased subscriptions", () => {
-    let editSetup: TestSetup = {} as TestSetup;
-    let editUser: NonNullable<typeof editSetup.user>;
-    let editDevice: NonNullable<typeof editSetup.devices.dogStandard>;
-    let availablePlans: any[] = [];
+  describe.todo("EDIT purchased subscriptions", () => {
+    let setup: TestSetup = {} as TestSetup;
+    let availablePlansForThisDevice: any[] = [];
+    let availablePetProtectionForThisPet: any[] = [];
+    let user: NonNullable<typeof setup.user>;
+    let device: NonNullable<typeof setup.devices.dogStandard>;
+
     let currentSubscription: any; // ← Subscription disponibile per tutti i test
 
     beforeEach(async () => {
+      // STEP 1: Cleanup e setup base
       await testHelper.cleanupAll(); // ~2s
 
-      // Già parallelizzato internamente!
       setup = await testHelper
         .setupBuilder()
         .withUser() // User: ~5s
@@ -480,7 +524,7 @@ describe("DEFAULT subscription flow", () => {
       user = setup.user!;
       device = setup.devices.dogStandard!;
 
-      // Billing + Plans in parallelo: ~0.5s
+      // STEP 2: Billing + Plans in parallelo: ~0.5s
       const [_, plansResponse] = await Promise.all([
         petlink.core.graphql.authJwt.updateBillingInfo({
           updateBillingInfoInput: {
@@ -505,6 +549,45 @@ describe("DEFAULT subscription flow", () => {
 
       availablePlansForThisDevice = plansResponse.getSubscriptionPlans.plans!;
       availablePetProtectionForThisPet = plansResponse.getSubscriptionPlans.careProtectionPlans!;
+
+      // 🆕 STEP 3: Purchase a subscription that will be available for all tests
+      const chosenPlan = availablePlansForThisDevice[0].pricings[0]!;
+      logger.debug("Purchasing subscription for EDIT tests", { chosenPlan });
+
+      const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          phone: user.phone,
+          productId: device.id,
+          priceIds: [chosenPlan.id],
+          card: fixtureCurrentBrand.card.valid,
+        },
+      });
+
+      expect(purchaseResponse.utilityIntegrationTest.code, "Subscription purchase should succeed in beforeEach").toBe("200");
+
+      // 🆕 STEP 4: Wait for subscription to become active and store it
+      const subscriptionResult = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+        isReady: (result) => {
+          const sub = result.getSubscriptionByProductId.subscription;
+          return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+        },
+        timeoutMs: pollingTimeoutMs,
+        intervalMs: pollingIntervalMs,
+        timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
+      });
+
+      currentSubscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+
+      logger.info("Subscription ready for EDIT tests", {
+        subscriptionId: currentSubscription.id,
+        status: currentSubscription.status,
+        paymentStatus: currentSubscription.paymentStatus,
+      });
+
+      // Validazione che la subscription sia pronta
+      expect(currentSubscription.status, "Subscription should be active before each test").toBe("active");
+      expect(currentSubscription.paymentStatus, "Payment should be SUCCEEDED before each test").toBe("SUCCEEDED");
     });
 
     it("CANCEL active subscription", async () => {
@@ -520,7 +603,7 @@ describe("DEFAULT subscription flow", () => {
         currentStatus: currentSubscription.status,
       });
 
-      // STEP 2: Cancel the subscription (stop auto-renewal)
+      // STEP 1: Cancel the subscription (stop auto-renewal)
       const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
         subscriptionId,
         appBrand: appBrand,
@@ -530,19 +613,19 @@ describe("DEFAULT subscription flow", () => {
 
       expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
 
-      // STEP 3: Verify subscription is now "non_renewing" but still active until term end
+      // STEP 2: Verify subscription is now "non_renewing" but still active until term end
       const subAfterCancel = await waitFor(
         async () =>
           petlink.core.graphql.authJwt.getSubscriptionByProductId({
-            productId: editDevice.id,
+            productId: device.id, // 👈 usa 'device' invece di 'editDevice'
           }),
         {
           isReady: (result) => {
-            return result.getSubscriptionByProductId.subscription?.status === SubStatus.NonRenewing;
+            return result.getSubscriptionByProductId.subscription?.status === "non_renewing";
           },
           timeoutMs: pollingTimeoutMs,
           intervalMs: pollingIntervalMs,
-          timeoutError: `Timeout: Subscription status did not change to "${SubStatus.NonRenewing}" in ${pollingTimeoutMs}ms`,
+          timeoutError: `Timeout: Subscription status did not change to "non_renewing" in ${pollingTimeoutMs}ms`,
         },
       );
 
@@ -554,7 +637,7 @@ describe("DEFAULT subscription flow", () => {
         newStatus: subAfter.status,
       });
 
-      expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe(SubStatus.NonRenewing);
+      expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe("non_renewing");
       expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(currentSubscription.id);
       expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
     });
@@ -564,196 +647,5 @@ describe("DEFAULT subscription flow", () => {
     it.todo("DOWNGRADE subscription plan");
     it.todo("AUTOMATIC RENEWAL of active subscription");
     it.todo("DUNNING for active subscription");
-  });
-});
-
-describe.skip("DEBUG: REMOVE_ALL_SUBSCRIPTION endpoint", () => {
-  let debugSetup: TestSetup = {} as TestSetup;
-  let debugUser: NonNullable<typeof debugSetup.user>;
-  let debugDevice: NonNullable<typeof debugSetup.devices.dogStandard>;
-
-  beforeAll(async () => {
-    await testHelper.cleanupAll();
-    debugSetup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
-    debugUser = debugSetup.user!;
-    debugDevice = debugSetup.devices.dogStandard!;
-
-    // Update billing info
-    await petlink.core.graphql.authJwt.updateBillingInfo({
-      updateBillingInfoInput: {
-        billingInfo: {
-          address: debugUser.streetAddress!,
-          city: debugUser.city!,
-          country: debugUser.countryCode!,
-          zip: debugUser.zipCode!,
-        },
-        email: debugUser.email!,
-        firstName: debugUser.name!,
-        lastName: debugUser.surname!,
-        phone: debugUser.phone!,
-      },
-    });
-  });
-
-  it("should successfully remove all subscriptions", async () => {
-    // STEP 1: Get available plans
-    const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
-      productId: debugDevice.id,
-      countryCode: debugDevice.countryCode,
-      serialNumber: debugDevice.serialNumber,
-    });
-    const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-
-    // STEP 2: Purchase a subscription
-    console.log("📦 Purchasing subscription...");
-    const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-        phone: debugUser.phone,
-        productId: debugDevice.id,
-        priceIds: [chosenPlan.id],
-        card: fixtureCurrentBrand.card.valid,
-      },
-    });
-    expect(purchaseResponse.utilityIntegrationTest.code).toBe("200");
-
-    // STEP 3: Wait for subscription to become active
-    console.log("⏳ Waiting for subscription to become active...");
-    const activeSub = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: debugDevice.id }), {
-      isReady: (result) => {
-        const sub = result.getSubscriptionByProductId.subscription;
-        return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
-      },
-      timeoutMs: pollingTimeoutMs,
-      intervalMs: pollingIntervalMs,
-      timeoutError: `Timeout: Subscription not active`,
-    });
-
-    const subscription = activeSub.getSubscriptionByProductId.subscription!;
-    console.log("✅ Subscription active:", subscription.id);
-    expect(subscription.status).toBe("active");
-
-    // STEP 4: Verify subscription exists before removal
-    const subBeforeRemoval = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-      productId: debugDevice.id,
-    });
-    expect(subBeforeRemoval.getSubscriptionByProductId.subscription).toBeDefined();
-    expect(subBeforeRemoval.getSubscriptionByProductId.subscription?.id).toBe(subscription.id);
-
-    // STEP 5: Call REMOVE_ALL_SUBSCRIPTION and measure time
-    console.log("🧹 Removing all subscriptions...");
-    console.time("⏱️  REMOVE_ALL_SUBSCRIPTION duration");
-
-    const removeResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.REMOVE_ALL_SUBSCRIPTION,
-        phone: debugUser.phone,
-      },
-    });
-
-    console.timeEnd("⏱️  REMOVE_ALL_SUBSCRIPTION duration");
-    expect(removeResponse.utilityIntegrationTest.code).toBe("200");
-
-    // STEP 6: Verify no subscriptions remain
-    const subAfterRemoval = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-      productId: debugDevice.id,
-    });
-    console.log("📊 Subscription after removal:", subAfterRemoval.getSubscriptionByProductId.subscription);
-    expect(subAfterRemoval.getSubscriptionByProductId.subscription).toBeNull();
-
-    // STEP 7: Verify user/pet/device still exist
-    const userCheck = await petlink.core.graphql.authJwt.getUser();
-    const petCheck = await petlink.core.graphql.authJwt.getPet({ id: debugSetup.pets.dog!.id! });
-    const deviceCheck = await petlink.core.graphql.authJwt.getPetlinkGps({ id: debugDevice.id });
-
-    expect(userCheck.getUser.user).toBeDefined();
-    expect(userCheck.getUser.user?.id).toBe(debugUser.id);
-    expect(petCheck.getPet.pet).toBeDefined();
-    expect(petCheck.getPet.pet?.id).toBe(debugSetup.pets.dog!.id);
-    expect(deviceCheck.getPetlinkGps.petlinkGps).toBeDefined();
-    expect(deviceCheck.getPetlinkGps.petlinkGps?.id).toBe(debugDevice.id);
-
-    console.log("✅ All checks passed: user/pet/device intact, subscriptions removed");
-  });
-
-  it("should handle multiple subscription removals", async () => {
-    // STEP 1: Purchase first subscription
-    const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
-      productId: debugDevice.id,
-      countryCode: debugDevice.countryCode,
-      serialNumber: debugDevice.serialNumber,
-    });
-    const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-
-    console.log("📦 Purchasing first subscription...");
-    await petlink.core.graphql.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-        phone: debugUser.phone,
-        productId: debugDevice.id,
-        priceIds: [chosenPlan.id],
-        card: fixtureCurrentBrand.card.valid,
-      },
-    });
-
-    await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: debugDevice.id }), {
-      isReady: (result) => result.getSubscriptionByProductId.subscription?.status === "active",
-      timeoutMs: pollingTimeoutMs,
-      intervalMs: pollingIntervalMs,
-      timeoutError: `Timeout waiting for first subscription`,
-    });
-
-    console.log("✅ First subscription active");
-
-    // STEP 2: Remove subscriptions (first time)
-    console.log("🧹 First removal...");
-    console.time("⏱️  First REMOVE_ALL_SUBSCRIPTION");
-    await petlink.core.graphql.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.REMOVE_ALL_SUBSCRIPTION,
-        phone: debugUser.phone,
-      },
-    });
-    console.timeEnd("⏱️  First REMOVE_ALL_SUBSCRIPTION");
-
-    // STEP 3: Purchase second subscription
-    console.log("📦 Purchasing second subscription...");
-    await petlink.core.graphql.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-        phone: debugUser.phone,
-        productId: debugDevice.id,
-        priceIds: [chosenPlan.id],
-        card: fixtureCurrentBrand.card.valid,
-      },
-    });
-
-    await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: debugDevice.id }), {
-      isReady: (result) => result.getSubscriptionByProductId.subscription?.status === "active",
-      timeoutMs: pollingTimeoutMs,
-      intervalMs: pollingIntervalMs,
-      timeoutError: `Timeout waiting for second subscription`,
-    });
-
-    console.log("✅ Second subscription active");
-
-    // STEP 4: Remove subscriptions (second time)
-    console.log("🧹 Second removal...");
-    console.time("⏱️  Second REMOVE_ALL_SUBSCRIPTION");
-    await petlink.core.graphql.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.REMOVE_ALL_SUBSCRIPTION,
-        phone: debugUser.phone,
-      },
-    });
-    console.timeEnd("⏱️  Second REMOVE_ALL_SUBSCRIPTION");
-
-    // STEP 5: Verify clean state
-    const finalCheck = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
-      productId: debugDevice.id,
-    });
-    expect(finalCheck.getSubscriptionByProductId.subscription).toBeNull();
-
-    console.log("✅ Multiple removal cycles completed successfully");
   });
 });
