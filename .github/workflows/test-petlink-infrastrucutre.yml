@@ -19,11 +19,11 @@ on:
 jobs:
   run-integration-tests:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'develop' }}
-    
+    environment: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
+
     env:
       # Environment
-      NODE_ENV: ${{ github.event.inputs.environment || 'develop' }}
+      NODE_ENV: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
@@ -46,7 +46,7 @@ jobs:
       GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
       # App Brand
       APP_BRAND: ${{ matrix.app_brand }}
-    
+
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -61,6 +61,37 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Add Trigger Info to Summary
+        run: |
+          echo "## 🔔 Test Suite Execution Info" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "**Triggered by:** \`repository_dispatch\` (push on external repos)" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** [\`${{ github.event.client_payload.repo }}\`](https://github.com/${{ github.event.client_payload.repo }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Source Branch:** \`${{ github.event.client_payload.branch }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.event.client_payload.repo }}/commit/${{ github.event.client_payload.sha }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit Author:** [@${{ github.event.client_payload.actor }}](https://github.com/${{ github.event.client_payload.actor }})" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "**Triggered by:** \`workflow_dispatch\` (manual trigger)" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
+            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Triggered by:** \`push\` (push on this repo)" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
+            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "**Test Brands:** \`PETLINK\`, \`KIPPY\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Log trigger info
         run: |
@@ -79,7 +110,7 @@ jobs:
         run: |
           # Crea directory per estrarre i report (separata per ogni brand)
           mkdir -p ./test-reports-${{ matrix.app_brand }}
-          
+
           # Esegui i test nel container con volume mapping per estrarre i report
           docker run \
             -e CORE_GRAPHQL_API_URL \
