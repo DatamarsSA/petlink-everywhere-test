@@ -42,12 +42,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(isKippyRun && evoDevice
         ? [
-            petlink.core.graphql.authJwt.getSubscriptionPlans({
-              productId: evoDevice.id,
-              countryCode: evoDevice.countryCode,
-              serialNumber: evoDevice.serialNumber,
-            }),
-          ]
+          petlink.core.graphql.authJwt.getSubscriptionPlans({
+            productId: evoDevice.id,
+            countryCode: evoDevice.countryCode,
+            serialNumber: evoDevice.serialNumber,
+          }),
+        ]
         : []),
     ];
 
@@ -147,33 +147,44 @@ describe("DEFAULT subscription flow", () => {
     let user: NonNullable<typeof setup.user>;
     let device: NonNullable<typeof setup.devices.dogStandard>;
 
-    beforeEach(async () => {
+    beforeAll(async () => {
       await testHelper.cleanupAll();
       setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
       user = setup.user!;
       device = setup.devices.dogStandard!;
 
-      const [updatedBillingInfoResponse, availablePlansForThisDeviceResponse] = await Promise.all([
-        petlink.core.graphql.authJwt.updateBillingInfo({
-          updateBillingInfoInput: {
-            billingInfo: {
-              address: user.streetAddress!,
-              city: user.city!,
-              country: user.countryCode!,
-              zip: user.zipCode!,
-            },
-            email: user.email!,
-            firstName: user.name!,
-            lastName: user.surname!,
-            phone: user.phone!,
+      // Update billing info once
+      await petlink.core.graphql.authJwt.updateBillingInfo({
+        updateBillingInfoInput: {
+          billingInfo: {
+            address: user.streetAddress!,
+            city: user.city!,
+            country: user.countryCode!,
+            zip: user.zipCode!,
           },
-        }),
-        petlink.core.graphql.authJwt.getSubscriptionPlans({
-          productId: device.id,
-          countryCode: device.countryCode,
-          serialNumber: device.serialNumber,
-        }),
-      ]);
+          email: user.email!,
+          firstName: user.name!,
+          lastName: user.surname!,
+          phone: user.phone!,
+        },
+      });
+    });
+
+    beforeEach(async () => {
+      // Remove all subscriptions before each test
+      await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.REMOVE_ALL_SUBSCRIPTION,
+          phone: user.phone,
+        },
+      });
+
+      // Fetch available plans for this test
+      const availablePlansForThisDeviceResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
+        productId: device.id,
+        countryCode: device.countryCode,
+        serialNumber: device.serialNumber,
+      });
 
       availablePlansForThisDevice = availablePlansForThisDeviceResponse.getSubscriptionPlans.plans!;
       availablePetProtectionForThisPet = availablePlansForThisDeviceResponse.getSubscriptionPlans.careProtectionPlans!;
@@ -448,14 +459,14 @@ describe("DEFAULT subscription flow", () => {
     let editDevice: NonNullable<typeof editSetup.devices.dogStandard>;
 
     beforeAll(async () => {
-      // Cleanup e setup completo
+      // Cleanup and setup user/pet/device once
       await testHelper.cleanupAll();
       editSetup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
 
       editUser = editSetup.user!;
       editDevice = editSetup.devices.dogStandard!;
 
-      // Update billing info
+      // Update billing info once
       await petlink.core.graphql.authJwt.updateBillingInfo({
         updateBillingInfoInput: {
           billingInfo: {
@@ -471,6 +482,18 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
+      logger.info("✓ EDIT subscriptions setup complete - user/pet/device ready");
+    });
+
+    beforeEach(async () => {
+      // Remove all subscriptions before each test
+      await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.REMOVE_ALL_SUBSCRIPTION,
+          phone: editUser.phone,
+        },
+      });
+
       // Get available plans
       const plansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
         productId: editDevice.id,
@@ -480,7 +503,7 @@ describe("DEFAULT subscription flow", () => {
 
       const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
-      // Purchase subscription
+      // Purchase fresh subscription for this test
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
@@ -491,7 +514,7 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
-      expect(purchaseResponse.utilityIntegrationTest.code, "Subscription purchase in beforeAll should succeed").toBe("200");
+      expect(purchaseResponse.utilityIntegrationTest.code, "Subscription purchase in beforeEach should succeed").toBe("200");
 
       // Wait for subscription to become active
       await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: editDevice.id }), {
@@ -501,14 +524,14 @@ describe("DEFAULT subscription flow", () => {
         },
         timeoutMs: pollingTimeoutMs,
         intervalMs: pollingIntervalMs,
-        timeoutError: `Timeout: Subscription not active in beforeAll setup`,
+        timeoutError: `Timeout: Subscription not active in beforeEach setup`,
       });
 
-      logger.info("✓ EDIT subscriptions setup complete - subscription active and ready");
+      logger.debug("✓ Fresh subscription activated for test");
     });
 
     it("CANCEL active subscription", async () => {
-      // STEP 1: Get the active subscription (purchased in beforeAll)
+      // STEP 1: Get the active subscription (purchased in beforeEach)
       const subBeforeCancel = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
         productId: editDevice.id,
       });
@@ -566,8 +589,9 @@ describe("DEFAULT subscription flow", () => {
     });
 
     // Placeholder per test futuri
-    it.todo("Test UPGRADE subscription plan");
-    it.todo("Test DOWNGRADE subscription plan");
-    it.todo("Test AUTOMATIC RENEWAL of active subscription");
+    it.todo("UPGRADE subscription plan");
+    it.todo("DOWNGRADE subscription plan");
+    it.todo("AUTOMATIC RENEWAL of active subscription");
+    it.todo("DUNNING for active subscription");
   });
 });

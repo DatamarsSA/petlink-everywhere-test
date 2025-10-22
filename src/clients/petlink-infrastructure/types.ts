@@ -11,6 +11,7 @@ export enum UtilityTestTypeEnum {
   BUY_NEW_SUBSCRIPTION = "BUY_NEW_SUBSCRIPTION",
   CLEAN_UP_USER = "CLEAN_UP_USER",
   SIGN_UP = "SIGN_UP",
+  REMOVE_ALL_SUBSCRIPTION = "REMOVE_ALL_SUBSCRIPTION",
 }
 
 export enum LanguageId {
