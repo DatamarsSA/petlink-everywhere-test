@@ -249,6 +249,73 @@ mutation updateBillingInfo($updateBillingInfoInput: UpdateBillingInfoInput!) {
   }
 }
 
+mutation updatePetProtectionData(
+  $petProtectionId: String!
+  $owner: PetProtectionOwnerIn!
+  $pet: PetProtectionPetIn!
+) {
+  updatePetProtectionData(
+    petProtectionId: $petProtectionId
+    owner: $owner
+    pet: $pet
+  ) {
+    code
+    translationCode
+    message
+    petProtection {
+      id
+      petId
+      userId
+      chargebeeSubscriptionId
+      currentTermStart
+      currentTermEnd
+      status
+      petOwner {
+        name
+        surname
+        email
+        fiscalCode
+        city
+        zipCode
+        streetAddress
+        countryCode
+        provinceCode
+        homePhone
+        mobilePhone
+      }
+      pet {
+        species
+        breed
+        gender
+        name
+        birthDate
+        microchip
+      }
+      petFlag {
+        country
+        age
+      }
+      codiceTessera
+      fileName
+      name
+      price
+      currencyCode
+      period
+      periodUnit
+      reservedCoupon
+      reservedCouponPercent
+      customerServiceContact
+      card {
+        expiryMonth
+        expiryYear
+        maskedNumber
+        type
+        brand
+        paymentMethod
+      }
+    }
+  }
+}
 
 mutation stopRenewingSubscription(
   $subscriptionId: String!

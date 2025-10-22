@@ -2,13 +2,15 @@ name: test-petlink-infrastrucutre
 
 on:
   push:
-    branches: [ develop ]
+    branches: [develop]
+  repository_dispatch:
+    types: [backend-updated]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to test against'
+        description: "Environment to test against"
         required: true
-        default: 'develop'
+        default: "develop"
         type: choice
         options:
           - develop
@@ -60,6 +62,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Log trigger info
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Repository: ${{ github.event.client_payload.repo || 'self' }}"
+          echo "Branch: ${{ github.event.client_payload.ref || github.ref }}"
+          echo "Commit: ${{ github.event.client_payload.sha || github.sha }}"
+          echo "Actor: ${{ github.event.client_payload.actor || github.actor }}"
+          echo "Brand: ${{ matrix.app_brand }}"
+          echo "Environment: ${{ env.NODE_ENV }}"
+
       - name: Build Docker image
         run: docker build -t petlink-everywhere-test .
 
@@ -94,7 +106,7 @@ jobs:
         uses: mikepenz/action-junit-report@v5
         if: always()
         with:
-          report_paths: 'test-reports-${{ matrix.app_brand }}/junit.xml'
+          report_paths: "test-reports-${{ matrix.app_brand }}/junit.xml"
           check_name: "Report integration test (${{ matrix.app_brand }} on env ${{ env.NODE_ENV }})"
           fail_on_failure: true
           require_tests: true

@@ -1277,9 +1277,9 @@ export interface ReplacementHistory {
   planProfileId?: Maybe<Scalars["String"]["output"]>;
   planProfileType?: Maybe<Scalars["String"]["output"]>;
   productId?: Maybe<Scalars["String"]["output"]>;
-  reasonCode?: Maybe<Array<Scalars["String"]["output"]>>;
+  reasonCode?: Maybe<Array<TicketActionReason>>;
   registrationDate: Scalars["String"]["output"];
-  typeAction?: Maybe<TypeActionEnum>;
+  typeAction?: Maybe<TicketAction>;
   userId?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -1447,7 +1447,7 @@ export interface Ticket {
   username: Scalars["String"]["output"];
 }
 
-export type TicketAction = "REPLACEMENT" | "RETURN";
+export type TicketAction = "REPLACEMENT" | "RESET" | "RETURN";
 
 export type TicketActionReason =
   | "BATTERY_BLOCK"
@@ -1458,6 +1458,7 @@ export type TicketActionReason =
   | "GPS_PERFORMANCE"
   | "KIPPY_CARE_DEVICE_PROTECTION"
   | "LOST"
+  | "NO_CUSTOMER_CARE"
   | "OUT_OF_WARRANTY_RETURN"
   | "SUBSCRIPTION";
 
@@ -1500,21 +1501,14 @@ export type TicketIssue =
   | "GPS_LOCATION_PERFORMANCE"
   | "LED"
   | "LOST"
-  /** suspectedIssues */
-  | "NO_CUSTOMER_CARE"
   | "NO_SOUND"
   | "SIM"
   | "UNKNOWN"
   | "WATER_INFILTRATION"
   | "WIFI_HOME"
-  | "WIFI_LOCATION"
-  | "available"
-  | "for"
-  | "only";
+  | "WIFI_LOCATION";
 
 export type TicketStatus = "CLOSED" | "OPEN";
-
-export type TypeActionEnum = "REPLACEMENT" | "RESET" | "RETURN";
 
 export interface UpdateCustomerInput {
   confermationEmail: Scalars["Boolean"]["input"];

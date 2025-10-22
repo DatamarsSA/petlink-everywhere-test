@@ -2400,6 +2400,7 @@ export interface User {
   creationDate: Scalars["String"]["output"];
   email: Scalars["String"]["output"];
   entityType: EntityTypeEnum;
+  forceSetPhoneNumber?: Maybe<Scalars["Boolean"]["output"]>;
   gender?: Maybe<Gender>;
   haveMicrochip?: Maybe<Scalars["Boolean"]["output"]>;
   id: Scalars["String"]["output"];
@@ -2460,6 +2461,8 @@ export interface UtilityIntegrationTestCardInput {
 export interface UtilityIntegrationTestInput {
   appBrand?: InputMaybe<AppBrand>;
   card?: InputMaybe<UtilityIntegrationTestCardInput>;
+  currencyCode?: InputMaybe<Scalars["String"]["input"]>;
+  isOnlyProtection?: InputMaybe<Scalars["Boolean"]["input"]>;
   phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
@@ -2692,6 +2695,59 @@ export type UpdateBillingInfoMutationVariables = Exact<{
 }>;
 
 export type UpdateBillingInfoMutation = { __typename?: "Mutation"; updateBillingInfo: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+
+export type UpdatePetProtectionDataMutationVariables = Exact<{
+  petProtectionId: Scalars["String"]["input"];
+  owner: PetProtectionOwnerIn;
+  pet: PetProtectionPetIn;
+}>;
+
+export type UpdatePetProtectionDataMutation = {
+  __typename?: "Mutation";
+  updatePetProtectionData?: {
+    __typename?: "ResponseUpdatePetProtectionData";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petProtection?: {
+      __typename?: "PetProtection";
+      id: string;
+      petId?: string | null;
+      userId: string;
+      chargebeeSubscriptionId?: string | null;
+      currentTermStart: string;
+      currentTermEnd: string;
+      status: PetProtectionStatus;
+      codiceTessera?: string | null;
+      fileName?: string | null;
+      name: string;
+      price: number;
+      currencyCode: string;
+      period: number;
+      periodUnit: string;
+      reservedCoupon: string;
+      reservedCouponPercent: number;
+      customerServiceContact: string;
+      petOwner?: {
+        __typename?: "PetProtectionOwnerData";
+        name: string;
+        surname: string;
+        email: string;
+        fiscalCode: string;
+        city: string;
+        zipCode: string;
+        streetAddress: string;
+        countryCode: string;
+        provinceCode: string;
+        homePhone: string;
+        mobilePhone: string;
+      } | null;
+      pet?: { __typename?: "PetProtectionPetData"; species: string; breed: string; gender: string; name: string; birthDate?: string | null; microchip?: string | null } | null;
+      petFlag: { __typename?: "PetProtectionFlag"; country: boolean; age: boolean };
+      card?: { __typename?: "Card"; expiryMonth?: number | null; expiryYear?: number | null; maskedNumber?: string | null; type?: string | null; brand?: string | null; paymentMethod: string } | null;
+    } | null;
+  } | null;
+};
 
 export type StopRenewingSubscriptionMutationVariables = Exact<{
   subscriptionId: Scalars["String"]["input"];
@@ -3922,6 +3978,142 @@ export const UpdateBillingInfoDocument = {
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePetProtectionDataDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePetProtectionData" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "owner" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetProtectionOwnerIn" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetProtectionPetIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePetProtectionData" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "petProtectionId" }, value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "owner" }, value: { kind: "Variable", name: { kind: "Name", value: "owner" } } },
+              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petProtection" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petOwner" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "surname" } },
+                            { kind: "Field", name: { kind: "Name", value: "email" } },
+                            { kind: "Field", name: { kind: "Name", value: "fiscalCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "city" } },
+                            { kind: "Field", name: { kind: "Name", value: "zipCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "streetAddress" } },
+                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "provinceCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "homePhone" } },
+                            { kind: "Field", name: { kind: "Name", value: "mobilePhone" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pet" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "species" } },
+                            { kind: "Field", name: { kind: "Name", value: "breed" } },
+                            { kind: "Field", name: { kind: "Name", value: "gender" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "microchip" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petFlag" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "country" } },
+                            { kind: "Field", name: { kind: "Name", value: "age" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "codiceTessera" } },
+                      { kind: "Field", name: { kind: "Name", value: "fileName" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "price" } },
+                      { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "period" } },
+                      { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                      { kind: "Field", name: { kind: "Name", value: "reservedCoupon" } },
+                      { kind: "Field", name: { kind: "Name", value: "reservedCouponPercent" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerServiceContact" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "card" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                            { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                            { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "type" } },
+                            { kind: "Field", name: { kind: "Name", value: "brand" } },
+                            { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -5365,6 +5557,19 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         (wrappedRequestHeaders) =>
           client.request<UpdateBillingInfoMutation>({ document: UpdateBillingInfoDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "updateBillingInfo",
+        "mutation",
+        variables,
+      );
+    },
+    updatePetProtectionData(
+      variables: UpdatePetProtectionDataMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetProtectionDataMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetProtectionDataMutation>({ document: UpdatePetProtectionDataDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "updatePetProtectionData",
         "mutation",
         variables,
       );

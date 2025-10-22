@@ -434,37 +434,29 @@ describe("DEFAULT subscription flow", () => {
         surname: user.surname,
         email: user.email,
         fiscalCode: "RSSMRA80A01H501U",
-        city: user.city ?? "Milano",
-        zipCode: user.zipCode ?? "20121",
-        streetAddress: user.streetAddress ?? "Via Test 123",
-        countryCode: user.countryCode ?? "IT",
+        city: user.city!,
+        zipCode: user.zipCode!,
+        streetAddress: user.streetAddress!,
+        countryCode: user.countryCode,
         provinceCode: "MI",
         homePhone: user.phone,
         mobilePhone: user.phone,
       };
 
       const petProtectionPet = {
-        species: pet.species, // "DOG" o "CAT" - dovrebbe andare bene
-        breed: "Labrador Retriever", // ⚠️ Usa il NOME della razza, non l'UUID
-        gender: pet.gender, // "MALE" o "FEMALE" - dovrebbe andare bene
+        species: pet.species,
+        breed: pet.breeds?.[0],
+        gender: pet.gender,
         name: pet.name,
-        birthDate: pet.birthDate!, // Assicurati che sia nel formato corretto (ISO string)
-        microchip: "123456789012345", // o null, o ometti se opzionale
+        birthDate: pet.birthDate!,
+        microchip: "123456789012345", //if dog required, at least 15 characters
       };
-
-      logger.info("Pet protection data being sent:", {
-        petProtectionOwner,
-        petProtectionPet,
-        petProtectionId: pet.petProtectionId,
-      });
 
       const updateResponse = await petlink.core.graphql.authJwt.updatePetProtectionData({
         petProtectionId: pet.petProtectionId!,
-        owner: petProtectionOwner, //PetProtectionOwnerIn
-        pet: petProtectionPet, //PetProtectionPetIn
+        owner: petProtectionOwner,
+        pet: petProtectionPet,
       });
-      logger.info("Update response:", updateResponse);
-      // Prima verifica che la response esista (fa parte del test!)
       expect(updateResponse.updatePetProtectionData).toBeDefined();
 
       const updateResult = updateResponse.updatePetProtectionData!;
@@ -476,14 +468,21 @@ describe("DEFAULT subscription flow", () => {
       const petProtectionResponse = await petlink.core.graphql.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
 
+      // Core metadata
       expect(petProtection.userId, "Pet protection should link to correct user").toBe(setup.user!.id);
       expect(petProtection.petId, "Pet protection should link to correct pet").toBe(pet.id);
       expect(petProtection.status, "Pet protection should be in OPEN status").toBe("OPEN");
+
+      // Plan Pet-Protection details
       expect(petProtection.name, "Pet protection name should match plan").toBe(petProtectionPlan.externalName);
       expect(petProtection.price, "Pet protection price should match plan").toBe(petProtectionPlan.price);
       expect(petProtection.currencyCode, "Pet protection currency should match plan").toBe(petProtectionPlan.currencyCode);
-      expect(petProtection.period, "Pet protection period should be 1").toBe(1);
-      expect(petProtection.periodUnit, "Pet protection period unit should be year").toBe("year");
+      expect(petProtection.period, "Pet protection period should match plan").toBe(petProtectionPlan.period);
+      expect(petProtection.periodUnit, "Pet protection period unit should match plan").toBe(petProtectionPlan.periodUnit);
+
+      // Owner & Pet match
+      expect(petProtection.petOwner, "Owner data should match").toEqual(petProtectionOwner);
+      expect(petProtection.pet, "Pet data should match").toEqual(petProtectionPet);
     });
   });
 
