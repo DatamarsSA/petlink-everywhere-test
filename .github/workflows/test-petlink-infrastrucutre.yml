@@ -19,19 +19,16 @@ on:
 jobs:
   run-integration-tests:
     runs-on: ubuntu-latest
-    environment: ${{
-      github.event.client_payload.branch ||     # 1. If repository_dispatch: use branch where other repos has pushed
-      github.event.inputs.environment ||        # 2. If workflow_dispatch: use value chosen manual
-      'develop'                                 # 3. Default 'develop'
-    }}
+    # 1. If repository_dispatch: use branch where other repos has pushed
+    # 2. If workflow_dispatch: use value chosen manually
+    # 3. Default 'develop'
+    environment: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
 
     env:
-      # Environment
-      NODE_ENV: ${{
-        github.event.client_payload.branch ||     # 1. If repository_dispatch: use branch where other repos has pushed
-        github.event.inputs.environment ||        # 2. If workflow_dispatch: use value chosen manual
-        'develop'                                 # 3. Default 'develop'
-      }}
+      # 1. If repository_dispatch: use branch where other repos has pushed
+      # 2. If workflow_dispatch: use value chosen manually
+      # 3. Default 'develop'
+      NODE_ENV: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
