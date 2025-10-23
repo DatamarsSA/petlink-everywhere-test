@@ -5,7 +5,8 @@ import { twilioClient } from "./twilio/client-twillio.js";
 import { fixtures, fixtureCurrentBrand, appBrand, isKippyRun } from "../fixtures/fixtures.js";
 import { PetType, DeviceType, UtilityTestTypeEnum } from "./petlink-infrastructure/types.js";
 import { logger } from "../config/logger.js";
-import { existsSync, rmSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
+import { unlinkSync } from "node:fs";
 
 export interface TestSetup {
   user?: User;
@@ -139,19 +140,29 @@ class TestSetupBuilder {
 export class TestHelper {
   constructor() {}
 
-  /**
-   * Clean test-reports/ directory
-   * Should be called once at the start of the test suite (e.g., in globalSetup)
-   */
   cleanTestReports(): void {
     const reportsDir = "./test-reports";
 
-    if (existsSync(reportsDir)) {
-      rmSync(reportsDir, { recursive: true, force: true });
-      logger.debug("🧹 test-reports/ cleaned");
+    // Assicurati che la directory esista
+    if (!existsSync(reportsDir)) {
+      mkdirSync(reportsDir, { recursive: true });
+      logger.debug("📁 Created test-reports/ directory");
+      return;
     }
 
-    mkdirSync(reportsDir, { recursive: true });
+    // Pulisci solo i file di performance (NON junit.xml/results.json)
+    const filesToClean = [`${reportsDir}/performance-records.jsonl`, `${reportsDir}/performance-report.txt`];
+
+    filesToClean.forEach((file) => {
+      if (existsSync(file)) {
+        try {
+          unlinkSync(file);
+          logger.debug(`🧹 Cleaned ${file}`);
+        } catch (error) {
+          logger.debug(`⚠️ Could not clean ${file}: ${error}`);
+        }
+      }
+    });
   }
 
   async cleanupAll(): Promise<void> {
