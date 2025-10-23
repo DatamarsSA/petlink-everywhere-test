@@ -484,6 +484,93 @@ describe("DEFAULT subscription flow", () => {
       expect(petProtection.petOwner, "Owner data should match").toEqual(petProtectionOwner);
       expect(petProtection.pet, "Pet data should match").toEqual(petProtectionPet);
     });
+
+    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY sub + addOn DEVICE-protection + PET-protection", async () => {
+      // select plan with device addon
+      const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
+      expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
+
+      // select a pet protection plan for the pet
+      const chosenPetProtection = availablePetProtectionForThisPet?.[0]?.pricings?.[0];
+      expect(chosenPetProtection, "Should find a pet protection pricing for this pet").toBeDefined();
+
+      logger.info("Testing subscription purchase with device addon + pet protection", {
+        planId: chosenPlan.id,
+        addonId: chosenPlan.addon.id,
+        petProtectionId: chosenPetProtection.id,
+        planPrice: chosenPlan.price,
+        addonPrice: chosenPlan.addon.price,
+        petProtectionPrice: chosenPetProtection.price,
+      });
+
+      // Purchase: plan + addon + pet protection (price ids array)
+      const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          phone: user.phone,
+          productId: device.id,
+          priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
+          card: fixtureCurrentBrand.card.valid,
+        },
+      });
+
+      expect(purchaseResponse.utilityIntegrationTest.code, "Purchase should succeed").toBe("200");
+
+      // Wait for both subscription active and petProtection assignment
+      const [subscriptionResult, petProtectionResult] = await Promise.all([
+        waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+          isReady: (result) => {
+            const sub = result.getSubscriptionByProductId.subscription;
+            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+          },
+          timeoutMs: pollingTimeoutMs,
+          intervalMs: pollingIntervalMs,
+          timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
+        }),
+        waitFor(async () => petlink.core.graphql.authJwt.getPet({ id: setup.pets.dog!.id! }), {
+          isReady: (result) => result.getPet.pet!.petProtectionId != null,
+          timeoutMs: pollingTimeoutMs,
+          intervalMs: pollingIntervalMs,
+          timeoutError: `Timeout: petProtectionId not assigned to pet`,
+        }),
+      ]);
+
+      const subscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+      const pet = petProtectionResult.getPet.pet!;
+
+      logger.info("Combined subscription + pet protection activated", {
+        subscriptionId: subscription.id,
+        itemsCount: subscription.subscriptionItems.length,
+        petProtectionId: pet.petProtectionId,
+      });
+
+      // subscription state
+      expect(subscription.status, "Subscription should be active").toBe("active");
+      expect(subscription.paymentStatus, "Payment should be SUCCEEDED").toBe("SUCCEEDED");
+
+      // subscription items: plan + addon should be present
+      expect(subscription.subscriptionItems, "Should have subscription items").toBeDefined();
+      // at least plan and addon present (depending on system representation)
+      const planItem = subscription.subscriptionItems.find((i) => i.itemType === "plan");
+      const addonItem = subscription.subscriptionItems.find((i) => i.itemType === "addon");
+      expect(planItem, "Plan item should exist").toBeDefined();
+      expect(addonItem, "Addon item should exist").toBeDefined();
+      expect(planItem?.itemPriceId, "Plan itemPriceId should match chosen plan").toBe(chosenPlan.id);
+      expect(addonItem?.itemPriceId, "Addon itemPriceId should match chosen addon").toBe(chosenPlan.addon.id);
+
+      // pet protection assigned and details
+      expect(pet.petProtectionId, "Pet should have a petProtectionId assigned").toBeDefined();
+      const petProtectionResponse = await petlink.core.graphql.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
+      const petProtection = petProtectionResponse.getPetProtection.petProtection!;
+      expect(petProtection.userId, "Pet protection should link to correct user").toBe(setup.user!.id);
+      expect(petProtection.petId, "Pet protection should link to correct pet").toBe(pet.id);
+      expect(petProtection.status, "Pet protection should be in OPEN status").toBe("OPEN");
+      expect(petProtection.name, "Pet protection name should match plan").toBe(chosenPetProtection.externalName);
+      expect(petProtection.price, "Pet protection price should match plan").toBe(chosenPetProtection.price);
+      expect(petProtection.currencyCode, "Pet protection currency should match plan").toBe(chosenPetProtection.currencyCode);
+      expect(petProtection.period, "Pet protection period should be 1").toBe(chosenPetProtection.period);
+      expect(petProtection.periodUnit, "Pet protection period unit should be year").toBe(chosenPetProtection.periodUnit);
+    });
   });
 
   describe.todo("EDIT purchased subscriptions", () => {
