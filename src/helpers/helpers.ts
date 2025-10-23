@@ -1,3 +1,5 @@
+import { expect } from "vitest";
+
 /**
  * Poll a function until a condition is met or timeout occurs.
  * Use this when waiting for asynchronous data/events (OTP arrival, email verification, subscription activation, etc.)
@@ -91,4 +93,30 @@ export async function waitFor<T>(
   // Lancia l'errore finale con i dettagli
   const errorInfo = lastError ? `\nCaused by: ${lastError.message}` : "";
   throw new Error(`${timeoutError} (${attempts} attempts)${errorInfo}`);
+}
+
+/**
+ * Assert that two ISO date strings are within a specified tolerance in hours
+ *
+ * @param date1 - ISO date string to check
+ * @param date2 - ISO date string expected
+ * @param toleranceHours - Maximum allowed difference in hours
+ * @param message - Custom error message
+ *
+ * @example
+ * assertDatesWithinTolerance(
+ *   futureSub.currentTermStart,
+ *   currentSub.currentTermEnd,
+ *   24, // ±24 hours (1 day)
+ *   "Future should start when current ends"
+ * );
+ */
+export function assertDatesWithinTolerance(date1: string, date2: string, toleranceHours: number, message: string): void {
+  const actual = new Date(date1.replace(/\.\d{3}Z$/, "Z")).getTime();
+  const expected = new Date(date2.replace(/\.\d{3}Z$/, "Z")).getTime();
+
+  const diffMs = Math.abs(actual - expected);
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  expect(diffHours, `${message}. Date1: ${date1}, Date2: ${date2}, ` + `Actual diff: ${diffHours.toFixed(2)} hours (Expected tolerance: ±${toleranceHours}h)`).toBeLessThanOrEqual(toleranceHours);
 }

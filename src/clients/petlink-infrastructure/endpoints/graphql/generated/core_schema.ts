@@ -3149,6 +3149,47 @@ export type GetSubscriptionByProductIdQuery = {
   };
 };
 
+export type GetSubscriptionsQueryVariables = Exact<{
+  productId: Scalars["String"]["input"];
+}>;
+
+export type GetSubscriptionsQuery = {
+  __typename?: "Query";
+  getSubscriptions: {
+    __typename?: "ResponseGetSubscriptions";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    subscriptions?: Array<{
+      __typename?: "SubscriptionShortInfo";
+      id: string;
+      status: SubscriptionStatusEnum;
+      creationDate: string;
+      currentTermStart?: string | null;
+      currentTermEnd?: string | null;
+      billingPeriod: number;
+      billingPeriodUnit: string;
+      currencyCode: string;
+      paymentStatus?: PaymentStatusTypeEnum | null;
+      planChangeNotAllowed: boolean;
+      totalAmount: number;
+      addonToStopIds?: Array<string> | null;
+      card?: { __typename?: "Card"; expiryMonth?: number | null; expiryYear?: number | null; maskedNumber?: string | null; type?: string | null; brand?: string | null; paymentMethod: string } | null;
+      subscriptionItems: Array<{ __typename?: "SubscriptionShortInfoItem"; amount: number; name?: string | null; itemPriceId: string; itemType: string; itemId: string; quantity: number }>;
+      invoice?: {
+        __typename?: "InvoiceShortInfo";
+        id: string;
+        status: InvoiceStatusEnum;
+        creationDate: string;
+        currencyCode: string;
+        total: number;
+        items: Array<{ __typename?: "InvoiceItemShortInfo"; itemId: string; itemType: string; description: string; quantity: number; unitPrice: number; amount: number }>;
+        discountItems?: Array<{ __typename?: "DiscoutItem"; couponId: string; chargebeeInvoiceItemId: string; discountType: string; discountPercentage?: number | null; amount: number }> | null;
+      } | null;
+    }> | null;
+  };
+};
+
 export type GetPetProtectionQueryVariables = Exact<{
   petProtectionId: Scalars["String"]["input"];
 }>;
@@ -5065,6 +5106,135 @@ export const GetSubscriptionByProductIdDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetSubscriptionsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getSubscriptions" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getSubscriptions" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "subscriptions" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "billingPeriod" } },
+                      { kind: "Field", name: { kind: "Name", value: "billingPeriodUnit" } },
+                      { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "paymentStatus" } },
+                      { kind: "Field", name: { kind: "Name", value: "planChangeNotAllowed" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalAmount" } },
+                      { kind: "Field", name: { kind: "Name", value: "addonToStopIds" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "card" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                            { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                            { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "type" } },
+                            { kind: "Field", name: { kind: "Name", value: "brand" } },
+                            { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionItems" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "amount" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemPriceId" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "invoice" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "total" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "items" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "description" } },
+                                  { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                                  { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                ],
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "discountItems" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "couponId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceItemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "discountType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetPetProtectionDocument = {
   kind: "Document",
   definitions: [
@@ -5682,6 +5852,14 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         (wrappedRequestHeaders) =>
           client.request<GetSubscriptionByProductIdQuery>({ document: GetSubscriptionByProductIdDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getSubscriptionByProductId",
+        "query",
+        variables,
+      );
+    },
+    getSubscriptions(variables: GetSubscriptionsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetSubscriptionsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) => client.request<GetSubscriptionsQuery>({ document: GetSubscriptionsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        "getSubscriptions",
         "query",
         variables,
       );

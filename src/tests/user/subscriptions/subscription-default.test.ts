@@ -3,7 +3,7 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fixtureCurrentBrand, isKippyRun, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
 import { LanguageId, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
-import { waitFor } from "../../../helpers/helper-waitfor.js";
+import { assertDatesWithinTolerance, waitFor } from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
 
 describe("DEFAULT subscription flow", () => {
@@ -573,7 +573,7 @@ describe("DEFAULT subscription flow", () => {
     });
   });
 
-  describe.todo("EDIT purchased subscriptions", () => {
+  describe("EDIT purchased subscriptions", () => {
     let setup: TestSetup = {} as TestSetup;
     let availablePlansForThisDevice: any[] = [];
     let availablePetProtectionForThisPet: any[] = [];
@@ -584,7 +584,7 @@ describe("DEFAULT subscription flow", () => {
 
     beforeEach(async () => {
       // STEP 1: Cleanup e setup base
-      await testHelper.cleanupAll(); // ~2s
+      await testHelper.cleanupAll();
 
       setup = await testHelper
         .setupBuilder()
@@ -664,7 +664,7 @@ describe("DEFAULT subscription flow", () => {
       expect(currentSubscription.paymentStatus, "Payment should be SUCCEEDED before each test").toBe("SUCCEEDED");
     });
 
-    it("CANCEL active subscription", async () => {
+    it.skip("CANCEL active subscription", async () => {
       // Use currentSubscription directly (already available from beforeEach)
       expect(currentSubscription).toBeDefined();
       expect(currentSubscription.status).toBe("active");
@@ -717,9 +717,112 @@ describe("DEFAULT subscription flow", () => {
     });
 
     // Placeholder per test futuri
-    it.todo("UPGRADE subscription plan");
-    it.todo("DOWNGRADE subscription plan");
-    it.todo("AUTOMATIC RENEWAL of active subscription");
+    it("EDIT sub (Upgrade/Downgrade): Buy MONTHLY → Buy YEARLY (creates future sub)", async () => {
+      logger.info("Testing subscription UPGRADE flow", {
+        currentSubscriptionId: currentSubscription.id,
+        currentStatus: currentSubscription.status,
+        currentTermEnd: currentSubscription.currentTermEnd,
+      });
+
+      // STEP 1: Get updated plans available AFTER first subscription bought
+      const updatedPlansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
+        productId: device.id,
+        countryCode: device.countryCode,
+        serialNumber: device.serialNumber,
+      });
+
+      // STEP 2: Find YEARLY plan to buy
+      const yearlyPlan = updatedPlansResponse.getSubscriptionPlans.plans!.flatMap((item) => item.pricings).find((pricing) => pricing!.periodUnit === "year");
+
+      logger.info("Yearly plan selected for upgrade", {
+        planId: yearlyPlan!.id,
+        planName: yearlyPlan!.name,
+        price: yearlyPlan!.price,
+        period: yearlyPlan!.period,
+        periodUnit: yearlyPlan!.periodUnit,
+      });
+
+      // STEP 3: Buy YEARLY subscription (should create FUTURE)
+      const purchaseYearlyResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          phone: user.phone,
+          productId: device.id,
+          priceIds: [yearlyPlan!.id],
+          card: fixtureCurrentBrand.card.valid,
+        },
+      });
+
+      // STEP 4: Get ALL subscriptions (current + future) via getSubscriptions
+      expect(purchaseYearlyResponse.utilityIntegrationTest.code, "Yearly subscription purchase should succeed").toBe("200");
+      logger.info("Yearly subscription purchased successfully");
+
+      // // STEP 4: Wait for payment to complete
+      const subscriptionsResponse = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: device.id }), {
+        isReady: (result) => {
+          return result.getSubscriptions.subscriptions!.length == 2;
+        },
+        timeoutMs: pollingTimeoutMs,
+        intervalMs: pollingIntervalMs,
+        timeoutError: `Timeout: New subscription just purchased not found in ${pollingTimeoutMs}`,
+      });
+
+      expect(subscriptionsResponse.getSubscriptions.code, "getSubscriptions should succeed").toBe("200");
+
+      const allSubscriptions = subscriptionsResponse.getSubscriptions.subscriptions;
+      expect(allSubscriptions, "Should have subscriptions array").toBeDefined();
+      expect(allSubscriptions!.length, "Should have 2 subscriptions (current + future)").toBe(2);
+
+      logger.info("📋 All subscriptions retrieved", {
+        count: allSubscriptions!.length,
+        subscriptions: allSubscriptions!.map((sub) => ({
+          id: sub.id,
+          status: sub.status,
+          billingPeriodUnit: sub.billingPeriodUnit,
+          currentTermStart: sub.currentTermStart,
+          currentTermEnd: sub.currentTermEnd,
+          subscriptionItemsCount: sub.subscriptionItems.length,
+          items: sub.subscriptionItems.map((item) => ({
+            name: item.name,
+            itemType: item.itemType,
+            itemPriceId: item.itemPriceId,
+          })),
+        })),
+      });
+
+      // STEP 6: Find current (active) and future subscriptions
+      const currentSub = allSubscriptions!.find((sub) => sub.status === "active");
+      const futureSub = allSubscriptions!.find((sub) => sub.status === "future");
+      expect(currentSub, "Should have current active subscription").toBeDefined();
+      expect(futureSub, "Should have future subscription").toBeDefined();
+
+      logger.info("✅ Subscriptions identified", {
+        current: {
+          id: currentSub!.id,
+          status: currentSub!.status,
+          billingPeriodUnit: currentSub!.billingPeriodUnit,
+          currentTermEnd: currentSub!.currentTermEnd,
+        },
+        future: {
+          id: futureSub!.id,
+          status: futureSub!.status,
+          billingPeriodUnit: futureSub!.billingPeriodUnit,
+          currentTermStart: futureSub!.currentTermStart,
+        },
+      });
+
+      // STEP 7: Assertions on subscription structure
+      expect(futureSub!.billingPeriodUnit, "Future subscription should be yearly").toBe(yearlyPlan!.periodUnit);
+      expect(futureSub!.billingPeriod, "Future subscription should have items").toBe(yearlyPlan!.period);
+      const futurePlanItem = futureSub!.subscriptionItems.find((item) => item.itemType === "plan");
+      expect(futurePlanItem, "Future subscription should have plan item").toBeDefined();
+      expect(futurePlanItem!.itemPriceId, "Future plan should match purchased yearly plan").toBe(yearlyPlan!.id);
+      assertDatesWithinTolerance(futureSub!.currentTermStart!, currentSub!.currentTermEnd!, 0.5, "Future sub should start when current ends");
+    });
+
+    it.todo("REFUND sub");
+    it.todo("REFUND sub + buy new after refund");
     it.todo("DUNNING for active subscription");
+    it.todo("AUTOMATIC RENEWAL of active subscription");
   });
 });

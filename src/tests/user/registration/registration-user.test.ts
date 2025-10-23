@@ -2,7 +2,7 @@ import { beforeAll, afterAll, describe, expect, it, beforeEach } from "vitest";
 import { fixtureCurrentBrand, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
 import type { UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { waitFor } from "../../../helpers/helper-waitfor.js";
+import { waitFor } from "../../../helpers/helpers.js";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 import { testHelper } from "../../../clients/client-test-helper.js";

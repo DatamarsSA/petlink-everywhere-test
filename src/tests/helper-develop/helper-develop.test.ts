@@ -6,7 +6,7 @@ import { PetlinkGps } from "../../clients/petlink-infrastructure/endpoints/graph
 import { User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
-import { waitFor } from "../../helpers/helper-waitfor.js";
+import { waitFor } from "../../helpers/helpers.js";
 import { logger } from "../../config/logger.js";
 
 describe("Utilyties fro developing features", () => {

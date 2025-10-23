@@ -388,6 +388,66 @@ query getSubscriptionByProductId($productId: String!) {
   }
 }
 
+query getSubscriptions($productId: String!) {
+  getSubscriptions(productId: $productId) {
+    code
+    translationCode
+    message
+    subscriptions {
+      id
+      status
+      creationDate
+      currentTermStart
+      currentTermEnd
+      billingPeriod
+      billingPeriodUnit
+      currencyCode
+      paymentStatus
+      planChangeNotAllowed
+      totalAmount
+      addonToStopIds
+      card {
+        expiryMonth
+        expiryYear
+        maskedNumber
+        type
+        brand
+        paymentMethod
+      }
+      subscriptionItems {
+        amount
+        name
+        itemPriceId
+        itemType
+        itemId
+        quantity
+      }
+      invoice {
+        id
+        status
+        creationDate
+        currencyCode
+        total
+        items {
+          itemId
+          itemType
+          description
+          quantity
+          unitPrice
+          amount
+        }
+        discountItems {
+          couponId
+          chargebeeInvoiceItemId
+          discountType
+          discountPercentage
+          amount
+        }
+      }
+    }
+  }
+}
+
 query getPetProtection($petProtectionId: String!) {
   getPetProtection(petProtectionId: $petProtectionId) {
     code
