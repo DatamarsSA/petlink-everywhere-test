@@ -19,11 +19,19 @@ on:
 jobs:
   run-integration-tests:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
+    environment: ${{
+      github.event.client_payload.branch ||     # 1. If repository_dispatch: use branch where other repos has pushed
+      github.event.inputs.environment ||        # 2. If workflow_dispatch: use value chosen manual
+      'develop'                                 # 3. Default 'develop'
+    }}
 
     env:
       # Environment
-      NODE_ENV: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
+      NODE_ENV: ${{
+        github.event.client_payload.branch ||     # 1. If repository_dispatch: use branch where other repos has pushed
+        github.event.inputs.environment ||        # 2. If workflow_dispatch: use value chosen manual
+        'develop'                                 # 3. Default 'develop'
+      }}
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
@@ -81,7 +89,7 @@ jobs:
             echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
             echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
             echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
-          else
+          elif [ "${{ github.event_name }}" = "push" ]; then
             echo "**Triggered by:** \`push\` (push on this repo)" >> $GITHUB_STEP_SUMMARY
             echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
             echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
@@ -90,7 +98,6 @@ jobs:
             echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
           fi
 
-          echo "**Test Brands:** \`PETLINK\`, \`KIPPY\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Log trigger info
