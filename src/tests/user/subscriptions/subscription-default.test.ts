@@ -140,7 +140,7 @@ describe("DEFAULT subscription flow", () => {
     expect(updatedBillingInfo.getBillingInfo.billingInfo?.city, "Billing city should match updated value").toBe(user.city);
   });
 
-  describe.todo("PURCHASE flows", () => {
+  describe("PURCHASE flows", () => {
     let setup: TestSetup = {} as TestSetup;
     let availablePlansForThisDevice: any[] = [];
     let availablePetProtectionForThisPet: any[] = [];

@@ -21,10 +21,10 @@ export default defineConfig(({ mode }) => {
   // ============================================================================
   const envSchema = z.object({
     // CORE API
-    CORE_GRAPHQL_API_URL: z.string().url("CORE_GRAPHQL_API_URL deve essere un URL valido"),
+    CORE_GRAPHQL_API_URL: z.url("CORE_GRAPHQL_API_URL deve essere un URL valido"),
     CORE_GRAPHQL_API_KEY: z.string().min(1, "CORE_GRAPHQL_API_KEY è richiesta"),
     // CCT API
-    CCT_GRAPHQL_API_URL: z.string().url("CCT_GRAPHQL_API_URL deve essere un URL valido"),
+    CCT_GRAPHQL_API_URL: z.url("CCT_GRAPHQL_API_URL deve essere un URL valido"),
     CCT_GRAPHQL_API_KEY: z.string().min(1, "CCT_GRAPHQL_API_KEY è richiesta"),
     // AWS Cognito (for LOGIN)
     COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
@@ -40,18 +40,19 @@ export default defineConfig(({ mode }) => {
     GMAIL_CLIENT_ID: z.string().min(1, "GMAIL_CLIENT_ID è richiesto"),
     GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
     GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
-    // App Configuration
-    LOG_LEVEL: z.enum(["error", "warn", "info", "verbose", "debug", "silly"]).default("info"),
-    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).default("KIPPY"),
+    // App Brand
+    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
+    // log level console
+    LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
   });
 
   try {
     const validatedEnv = envSchema.parse(process.env);
     // Merge validated values back (garantisce i default)
     Object.assign(process.env, validatedEnv);
-    console.log("✅ Environment validated successfully");
+    console.log("✅ Envs validated successfully");
   } catch (error) {
-    console.error("❌ Environment validation failed");
+    console.error("❌ Envs validation failed");
     if (error instanceof z.ZodError) {
       error.issues.forEach((issue) => {
         console.error(`  ${issue.path.join(".")}: ${issue.message}`);
