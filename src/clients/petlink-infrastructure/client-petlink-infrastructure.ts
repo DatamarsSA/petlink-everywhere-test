@@ -5,7 +5,6 @@ import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/cli
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
-import { env } from "../../config/env-schema-validation.js";
 import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 import { appBrand } from "../../fixtures/fixtures.js";
 import { logger } from "../../config/logger.js";
@@ -47,22 +46,22 @@ type IamCredentials = {
 // ------------------------------
 class EnvConfig {
   static getEndpoint(service: ServiceType): string {
-    return env[`${service}_GRAPHQL_API_URL`];
+    return process.env[`${service}_GRAPHQL_API_URL`]!;
   }
 
   static getApiKey(service: ServiceType): string {
-    return env[`${service}_GRAPHQL_API_KEY`];
+    return process.env[`${service}_GRAPHQL_API_KEY`]!;
   }
 
   static getCognitoConfig() {
     return {
-      region: env.COGNITO_REGION,
-      clientId: env.COGNITO_CLIENT_ID,
+      region: process.env.COGNITO_REGION!,
+      clientId: process.env.COGNITO_CLIENT_ID!,
     };
   }
 
   static getAwsRegion(): string {
-    return env.AWS_REGION;
+    return process.env.AWS_REGION!;
   }
 }
 
@@ -463,7 +462,7 @@ export class PetLinkInfrastructure {
   readonly cct: CctService;
 
   constructor() {
-    this.loginWithIam(env.AWS_ACCESS_KEY_ID, env.AWS_SECRET_ACCESS_KEY);
+    this.loginWithIam(process.env.AWS_ACCESS_KEY_ID!, process.env.AWS_SECRET_ACCESS_KEY!);
     this.core = new CoreService();
     this.cct = new CctService();
   }

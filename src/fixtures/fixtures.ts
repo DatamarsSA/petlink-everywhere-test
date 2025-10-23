@@ -1,8 +1,8 @@
 import { PetIn, SpeciesEnum, BreedTypeEnum, Gender, PetLivingEnvironment, UserIn } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { AppBrand, LanguageId } from "../clients/petlink-infrastructure/types.js";
-import { env } from "../config/env-schema-validation.js";
 
-const currentAppBrand = env.APP_BRAND;
+// APP_BRAND is validated in vitest.config.ts and defaults to "KIPPY"
+const currentAppBrand = process.env.APP_BRAND as "PETLINK" | "KIPPY";
 
 // ============================================
 // COMMON (non-exported, internal use only)

@@ -1,11 +1,11 @@
 import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
-import { logger } from "./src/config/logger.js";
+import { z } from "zod";
 
 export default defineConfig(({ mode }) => {
   const environment = process.env.TEST_ENV || "develop";
 
-  logger.info("Vitest Config initialized", {
+  console.log("Vitest Config initialized", {
     mode,
     NODE_ENV: process.env.NODE_ENV,
     TEST_ENV: process.env.TEST_ENV,
@@ -14,6 +14,51 @@ export default defineConfig(({ mode }) => {
 
   // Carica le variabili d'ambiente dal file .env.{environment}
   const rawEnv = loadEnv(environment, process.cwd(), "");
+  Object.assign(process.env, rawEnv);
+
+  // ============================================================================
+  // ENVIRONMENT VALIDATION (Zod)
+  // ============================================================================
+  const envSchema = z.object({
+    // CORE API
+    CORE_GRAPHQL_API_URL: z.string().url("CORE_GRAPHQL_API_URL deve essere un URL valido"),
+    CORE_GRAPHQL_API_KEY: z.string().min(1, "CORE_GRAPHQL_API_KEY è richiesta"),
+    // CCT API
+    CCT_GRAPHQL_API_URL: z.string().url("CCT_GRAPHQL_API_URL deve essere un URL valido"),
+    CCT_GRAPHQL_API_KEY: z.string().min(1, "CCT_GRAPHQL_API_KEY è richiesta"),
+    // AWS Cognito (for LOGIN)
+    COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
+    COGNITO_CLIENT_ID: z.string().min(1, "COGNITO_CLIENT_ID è richiesto"),
+    // AWS IAM
+    AWS_REGION: z.string().min(1, "AWS_REGION è richiesta"),
+    AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID è richiesta"),
+    AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY è richiesta"),
+    // Twilio
+    TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
+    TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
+    // Gmail
+    GMAIL_CLIENT_ID: z.string().min(1, "GMAIL_CLIENT_ID è richiesto"),
+    GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
+    GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
+    // App Configuration
+    LOG_LEVEL: z.enum(["error", "warn", "info", "verbose", "debug", "silly"]).default("info"),
+    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).default("KIPPY"),
+  });
+
+  try {
+    const validatedEnv = envSchema.parse(process.env);
+    // Merge validated values back (garantisce i default)
+    Object.assign(process.env, validatedEnv);
+    console.log("✅ Environment validated successfully");
+  } catch (error) {
+    console.error("❌ Environment validation failed");
+    if (error instanceof z.ZodError) {
+      error.issues.forEach((issue) => {
+        console.error(`  ${issue.path.join(".")}: ${issue.message}`);
+      });
+    }
+    process.exit(1);
+  }
 
   return {
     test: {

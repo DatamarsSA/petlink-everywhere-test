@@ -1,7 +1,6 @@
 // src/clients/gmail/client-gmail.ts
 import { google } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
-import { env } from "../../config/env-schema-validation.js";
 
 // Minimal scope for reading and deleting/moving messages to Trash
 const GMAIL_QUERY = "is:unread";
@@ -23,12 +22,9 @@ export class GmailClient {
 
     this.refreshInProgress = true;
     try {
-      const oAuth2 = new google.auth.OAuth2(
-        env.GMAIL_CLIENT_ID,
-        env.GMAIL_CLIENT_SECRET,
-      );
+      const oAuth2 = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID!, process.env.GMAIL_CLIENT_SECRET!);
 
-      oAuth2.setCredentials({ refresh_token: env.GMAIL_REFRESH_TOKEN });
+      oAuth2.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN! });
       // Optional: force-mint an access token now to fail fast in case RT is invalid
       await oAuth2.getAccessToken();
 
@@ -39,9 +35,7 @@ export class GmailClient {
       this.refreshInProgress = false;
       // Normalize and surface a concise error
       const msg = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Gmail OAuth2 authentication failed (refresh_token flow): ${msg}`,
-      );
+      throw new Error(`Gmail OAuth2 authentication failed (refresh_token flow): ${msg}`);
     }
   }
 
@@ -104,8 +98,7 @@ export class GmailClient {
       const decoded = Buffer.from(part.body.data, "base64").toString("utf8");
       return [decoded];
     }
-    if (part.parts)
-      return part.parts.flatMap((p: any) => this.extractTextParts(p));
+    if (part.parts) return part.parts.flatMap((p: any) => this.extractTextParts(p));
     return [];
   }
 

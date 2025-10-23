@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, appendFileSync, readFileSync, existsSync, unlinkSync } from "fs";
+import { writeFileSync, mkdirSync, appendFileSync, readFileSync, existsSync } from "fs";
 import { dirname } from "path";
 import { logger } from "../config/logger.js";
 
@@ -30,7 +30,7 @@ export class PerformanceTracker {
 
   /**
    * Record a performance measurement
-   * Automatically cleans old files on first call, then appends to JSONL and regenerates the report
+   * Appends to JSONL and regenerates the report
    */
   recordPerformance(data: Omit<PerformanceRecord, "timestamp">): void {
     const newRecord: PerformanceRecord = {

@@ -9,7 +9,7 @@
     "fetch:schemas": "tsx src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts ALL",
     "codegen:generate-sdk": "graphql-codegen --config codegen.yaml",
     "fetch-schemas:generate-sdk": "yarn fetch:schemas && yarn codegen:generate-sdk",
-    "test": "rm -rf test-reports 2>/dev/null || true && vitest run",
+    "test": "vitest run",
     "pipeline": "yarn fetch:schemas && yarn codegen:generate-sdk && yarn test",
     "pipeline:develop": "TEST_ENV=develop yarn pipeline",
     "pipeline:test": "TEST_ENV=test yarn pipeline"

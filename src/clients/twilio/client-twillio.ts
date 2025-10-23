@@ -1,12 +1,11 @@
 import twilio from "twilio";
-import { env } from "../../config/env-schema-validation.js";
 import { logger } from "../../config/logger.js";
 
 export class TwilioClient {
   private client: twilio.Twilio;
 
   constructor() {
-    this.client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
+    this.client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
   }
 
   async getMessagesSentTo(phoneNumber: string, limit: number = 10): Promise<any[]> {

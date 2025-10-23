@@ -1,11 +1,11 @@
 import { User, UserIn, PetIn, Pet, PetlinkGps, PetlinkGpsIn, SpeciesEnum } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { env } from "../config/env-schema-validation.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fixtures, fixtureCurrentBrand, appBrand, isKippyRun } from "../fixtures/fixtures.js";
 import { PetType, DeviceType, UtilityTestTypeEnum } from "./petlink-infrastructure/types.js";
 import { logger } from "../config/logger.js";
+import { existsSync, rmSync, mkdirSync } from "fs";
 
 export interface TestSetup {
   user?: User;
@@ -138,6 +138,21 @@ class TestSetupBuilder {
 
 export class TestHelper {
   constructor() {}
+
+  /**
+   * Clean test-reports/ directory
+   * Should be called once at the start of the test suite (e.g., in globalSetup)
+   */
+  cleanTestReports(): void {
+    const reportsDir = "./test-reports";
+
+    if (existsSync(reportsDir)) {
+      rmSync(reportsDir, { recursive: true, force: true });
+      logger.debug("🧹 test-reports/ cleaned");
+    }
+
+    mkdirSync(reportsDir, { recursive: true });
+  }
 
   async cleanupAll(): Promise<void> {
     logger.debug("→ Starting cleanup operations");
