@@ -42,12 +42,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(isKippyRun && evoDevice
         ? [
-            petlink.core.graphql.authJwt.getSubscriptionPlans({
-              productId: evoDevice.id,
-              countryCode: evoDevice.countryCode,
-              serialNumber: evoDevice.serialNumber,
-            }),
-          ]
+          petlink.core.graphql.authJwt.getSubscriptionPlans({
+            productId: evoDevice.id,
+            countryCode: evoDevice.countryCode,
+            serialNumber: evoDevice.serialNumber,
+          }),
+        ]
         : []),
     ];
 
@@ -60,20 +60,29 @@ describe("DEFAULT subscription flow", () => {
     // });
 
     // Assert DOG device
-    expect(dogPlans.getSubscriptionPlans.code, "getSubscriptionPlans endpoint should return success for dog device").toBe("200");
+    expect(
+      dogPlans.getSubscriptionPlans.code,
+      `getSubscriptionPlans should succeed for dog device - Error: ${dogPlans.getSubscriptionPlans.message}${dogPlans.getSubscriptionPlans.translationCode ? ` (${dogPlans.getSubscriptionPlans.translationCode})` : ""}`,
+    ).toBe("200");
     expect(dogPlans.getSubscriptionPlans.plans, "Dog device should have subscription plans defined").toBeDefined();
     expect(Array.isArray(dogPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
     expect(dogPlans.getSubscriptionPlans.plans?.length, "Dog device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert CAT device
-    expect(catPlans.getSubscriptionPlans.code, "getSubscriptionPlans endpoint should return success for cat device").toBe("200");
+    expect(
+      catPlans.getSubscriptionPlans.code,
+      `getSubscriptionPlans should succeed for cat device - Error: ${catPlans.getSubscriptionPlans.message}${catPlans.getSubscriptionPlans.translationCode ? ` (${catPlans.getSubscriptionPlans.translationCode})` : ""}`,
+    ).toBe("200");
     expect(catPlans.getSubscriptionPlans.plans, "Cat device should have subscription plans defined").toBeDefined();
     expect(Array.isArray(catPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
     expect(catPlans.getSubscriptionPlans.plans?.length, "Cat device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert EVO device (only for KIPPY)
     if (isKippyRun && evoPlans) {
-      expect(evoPlans.getSubscriptionPlans.code, "getSubscriptionPlans endpoint should return success for EVO device").toBe("200");
+      expect(
+        evoPlans.getSubscriptionPlans.code,
+        `getSubscriptionPlans should succeed for EVO device - Error: ${evoPlans.getSubscriptionPlans.message}${evoPlans.getSubscriptionPlans.translationCode ? ` (${evoPlans.getSubscriptionPlans.translationCode})` : ""}`,
+      ).toBe("200");
       expect(evoPlans.getSubscriptionPlans.plans, "EVO device should have subscription plans defined").toBeDefined();
       expect(Array.isArray(evoPlans.getSubscriptionPlans.plans), "Subscription plans should be returned as an array").toBe(true);
       expect(evoPlans.getSubscriptionPlans.plans?.length, "EVO device should have at least one subscription plan available").toBeGreaterThan(0);
@@ -98,7 +107,10 @@ describe("DEFAULT subscription flow", () => {
 
     const chosenPlanAfterConvesion = planResponse.getSubscriptionPlanPricing.pricing;
 
-    expect(planResponse.getSubscriptionPlanPricing.code, "getSubscriptionPlanPricing endpoint should return success").toBe("200");
+    expect(
+      planResponse.getSubscriptionPlanPricing.code,
+      `getSubscriptionPlanPricing should succeed - Error: ${planResponse.getSubscriptionPlanPricing.message}${planResponse.getSubscriptionPlanPricing.translationCode ? ` (${planResponse.getSubscriptionPlanPricing.translationCode})` : ""}`,
+    ).toBe("200");
     expect(chosenPlanAfterConvesion, "Pricing details should be returned").toBeDefined();
     expect(chosenPlanAfterConvesion?.currencyCode, "Pricing currency should match billing info of user").toBe(isKippyRun ? "CHF" : "USD");
     expect(chosenPlanAfterConvesion?.itemId, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.itemId);
@@ -125,7 +137,10 @@ describe("DEFAULT subscription flow", () => {
       },
     });
 
-    expect(updateResponse.updateBillingInfo.code, "updateBillingInfo endpoint should return success").toBe("200");
+    expect(
+      updateResponse.updateBillingInfo.code,
+      `updateBillingInfo should succeed - Error: ${updateResponse.updateBillingInfo.message}${updateResponse.updateBillingInfo.translationCode ? ` (${updateResponse.updateBillingInfo.translationCode})` : ""}`,
+    ).toBe("200");
 
     // Retrieve to verify
     const updatedBillingInfo = await petlink.core.graphql.authJwt.getBillingInfo();
@@ -205,7 +220,7 @@ describe("DEFAULT subscription flow", () => {
           card: fixtureCurrentBrand.card.valid,
         },
       });
-      expect(purchaseResponse.utilityIntegrationTest.code, "utilityIntegrationTest endpoint should return success for subscription purchase").toBe("200");
+      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed for subscription purchase - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
       // Wait for payment SUCCEDED feedback (wait from chargebee webhook)
       const subsActiveForThisDevice = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
@@ -251,7 +266,7 @@ describe("DEFAULT subscription flow", () => {
           card: fixtureCurrentBrand.card.valid,
         },
       });
-      expect(purchasePlanWithAddonResponse.utilityIntegrationTest.code).toBe("200");
+      expect(purchasePlanWithAddonResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchasePlanWithAddonResponse.utilityIntegrationTest.message}`).toBe("200");
 
       const purchasedSubscriptions = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
@@ -317,7 +332,7 @@ describe("DEFAULT subscription flow", () => {
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
 
       // Purchase response
-      expect(purchaseResponse.utilityIntegrationTest.code, "Purchase should succeed").toBe("200");
+      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
 
       // Verify subscription matches plan
       expectSubBoughtMatchSubToBuy(sub, chosenPlan, {
@@ -348,7 +363,9 @@ describe("DEFAULT subscription flow", () => {
           card: fixtureCurrentBrand.card.valid,
         },
       });
-      expect(subPurchaseResponse.utilityIntegrationTest.code, "Regular subscription purchase should succeed").toBe("200");
+      expect(subPurchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed for regular subscription - Error: ${subPurchaseResponse.utilityIntegrationTest.message}`).toBe(
+        "200",
+      );
 
       // STEP 3: Wait for the subscription to become active with SUCCEEDED payment status
       logger.debug(`bought SUB for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
@@ -379,7 +396,10 @@ describe("DEFAULT subscription flow", () => {
           currencyCode: regularPlan.currencyCode,
         },
       });
-      expect(petProtectionPurchaseResponse.utilityIntegrationTest.code, "Pet protection purchase should succeed when subscription is active").toBe("200");
+      expect(
+        petProtectionPurchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed for pet protection - Error: ${petProtectionPurchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
 
       // STEP 5: Wait for pet protection to be assigned to the pet
       const petProtectionResult = await waitFor(async () => petlink.core.graphql.authJwt.getPet({ id: setup.pets.dog!.id! }), {
@@ -423,7 +443,7 @@ describe("DEFAULT subscription flow", () => {
       expect(updateResponse.updatePetProtectionData).toBeDefined();
 
       const updateResult = updateResponse.updatePetProtectionData!;
-      expect(updateResult.code, "Pet protection data update should succeed").toBe("200");
+      expect(updateResult.code, `updatePetProtectionData should succeed - Error: ${updateResult.message}${updateResult.translationCode ? ` (${updateResult.translationCode})` : ""}`).toBe("200");
       expect(updateResult.petProtection?.petOwner?.fiscalCode, "Owner fiscal code should be updated").toBe(petProtectionOwner.fiscalCode);
       expect(updateResult.petProtection?.pet?.name, "Pet name should be updated").toBe(petProtectionPet.name);
 
@@ -472,7 +492,7 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
-      expect(purchaseResponse.utilityIntegrationTest.code, "Purchase should succeed").toBe("200");
+      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
 
       // Wait for both subscription active and petProtection assignment
       const [subscriptionResult, petProtectionResult] = await Promise.all([
@@ -569,7 +589,7 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
-      expect(purchaseResponse.utilityIntegrationTest.code, "Subscription purchase should succeed in beforeEach").toBe("200");
+      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed in beforeEach - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
 
       // STEP 4: Wait for subscription to become active and store it
       const subscriptionResult = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
@@ -632,10 +652,12 @@ describe("DEFAULT subscription flow", () => {
       });
 
       // STEP 4: Get ALL subscriptions (current + future) via getSubscriptions
-      expect(purchaseYearlyResponse.utilityIntegrationTest.code, "Yearly subscription purchase should succeed").toBe("200");
+      expect(
+        purchaseYearlyResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed for yearly subscription - Error: ${purchaseYearlyResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
       logger.info("Yearly subscription purchased successfully");
 
-      // // STEP 4: Wait for payment to complete
       const subscriptionsResponse = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
           const subs = result.getSubscriptions.subscriptions!;
@@ -648,7 +670,10 @@ describe("DEFAULT subscription flow", () => {
         timeoutError: `Timeout: New subscription just purchased not found in ${pollingTimeoutMs}`,
       });
 
-      expect(subscriptionsResponse.getSubscriptions.code, "getSubscriptions should succeed").toBe("200");
+      expect(
+        subscriptionsResponse.getSubscriptions.code,
+        `getSubscriptions should succeed - Error: ${subscriptionsResponse.getSubscriptions.message}${subscriptionsResponse.getSubscriptions.translationCode ? ` (${subscriptionsResponse.getSubscriptions.translationCode})` : ""}`,
+      ).toBe("200");
 
       const allSubscriptions = subscriptionsResponse.getSubscriptions.subscriptions;
       expect(allSubscriptions!.length, "Should have 2 subscriptions (current + future)").toBe(2);
@@ -722,7 +747,10 @@ describe("DEFAULT subscription flow", () => {
         cancelReasonCode: "OTHER",
       });
 
-      expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
+      expect(
+        cancelResponse.stopRenewingSubscription?.code,
+        `stopRenewingSubscription should succeed - Error: ${cancelResponse.stopRenewingSubscription?.message}${cancelResponse.stopRenewingSubscription?.translationCode ? ` (${cancelResponse.stopRenewingSubscription?.translationCode})` : ""}`,
+      ).toBe("200");
 
       // STEP 2: Verify subscription is now "non_renewing" but still active until term end
       const subAfterCancel = await waitFor(

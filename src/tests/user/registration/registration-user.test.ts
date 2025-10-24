@@ -36,7 +36,10 @@ describe("User Registration", () => {
       contactType: "PHONE",
     });
 
-    expect(response.checkContact.code, "checkContact endpoint should return success").toBe("200");
+    expect(
+      response.checkContact.code,
+      `checkContact should succeed - Error: ${response.checkContact.message}${response.checkContact.translationCode ? ` (${response.checkContact.translationCode})` : ''}`
+    ).toBe("200");
   });
 
   it("Send OTP to phone", async () => {
@@ -69,7 +72,10 @@ describe("User Registration", () => {
       contact: signUpPayload.phone,
     });
 
-    expect(response.checkOtp.code, "checkOtp endpoint should return success").toBe("200");
+    expect(
+      response.checkOtp.code,
+      `checkOtp should succeed - Error: ${response.checkOtp.message}${response.checkOtp.translationCode ? ` (${response.checkOtp.translationCode})` : ''}`
+    ).toBe("200");
   });
 
   it("Register User", async () => {
@@ -82,7 +88,10 @@ describe("User Registration", () => {
       appBrand: appBrand,
     });
 
-    expect(response.signUpUser.code, "signUpUser endpoint should return success").toBe("200");
+    expect(
+      response.signUpUser.code,
+      `signUpUser should succeed - Error: ${response.signUpUser.message}${response.signUpUser.translationCode ? ` (${response.signUpUser.translationCode})` : ''}`
+    ).toBe("200");
   });
 
   it("Try login new user (with PHONE)", async () => {
@@ -127,7 +136,10 @@ describe("User Registration", () => {
       verificationId: params.verificationId!,
     });
     expect(response.verifyEmail, "Email verification response should be defined").toBeDefined();
-    expect(response.verifyEmail!.code, "verifyEmail endpoint should return success").toBe("200");
+    expect(
+      response.verifyEmail!.code,
+      `verifyEmail should succeed - Error: ${response.verifyEmail!.message}${response.verifyEmail!.translationCode ? ` (${response.verifyEmail!.translationCode})` : ''}`
+    ).toBe("200");
   });
 
   it("Try login new user (with EMAIL)", async () => {
@@ -173,8 +185,14 @@ describe("User Registration", () => {
       }),
     ]);
 
-    expect(phoneCheck.checkContact.code, "checkContact endpoint should return error - Phone should no longer be available").toBe("400");
-    expect(emailCheck.checkContact.code, "checkContact endpoint should return error - Email should no longer be available").toBe("400");
+    expect(
+      phoneCheck.checkContact.code,
+      `checkContact should fail - phone no longer available - Error: ${phoneCheck.checkContact.message}${phoneCheck.checkContact.translationCode ? ` (${phoneCheck.checkContact.translationCode})` : ''}`
+    ).toBe("400");
+    expect(
+      emailCheck.checkContact.code,
+      `checkContact should fail - email no longer available - Error: ${emailCheck.checkContact.message}${emailCheck.checkContact.translationCode ? ` (${emailCheck.checkContact.translationCode})` : ''}`
+    ).toBe("400");
   });
 
   it("Test RESET email, phone number and password", async () => {

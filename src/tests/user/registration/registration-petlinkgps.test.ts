@@ -49,7 +49,10 @@ describe("PetlinkGPS Registration", () => {
     ]);
 
     // Assert DOG device
-    expect(dogResponse.createPetlinkGps.code, "createPetlinkGps endpoint should return success for dog device").toBe("200");
+    expect(
+      dogResponse.createPetlinkGps.code,
+      `createPetlinkGps should succeed for dog device - Error: ${dogResponse.createPetlinkGps.message}${dogResponse.createPetlinkGps.translationCode ? ` (${dogResponse.createPetlinkGps.translationCode})` : ''}`
+    ).toBe("200");
     expect(dogResponse.createPetlinkGps.petlinkGps, "Dog DEVICE payload should match input payload").toMatchObject({
       serialNumber: dogDevicePayload.serialNumber,
       petId: dogDevicePayload.petId,
@@ -60,7 +63,10 @@ describe("PetlinkGPS Registration", () => {
     expect(dogResponse.createPetlinkGps.petlinkGps?.id, "Dog device ID auto-generated should be present").toBeDefined();
 
     // Assert CAT device
-    expect(catResponse.createPetlinkGps.code, "createPetlinkGps endpoint should return success for cat device").toBe("200");
+    expect(
+      catResponse.createPetlinkGps.code,
+      `createPetlinkGps should succeed for cat device - Error: ${catResponse.createPetlinkGps.message}${catResponse.createPetlinkGps.translationCode ? ` (${catResponse.createPetlinkGps.translationCode})` : ''}`
+    ).toBe("200");
     expect(catResponse.createPetlinkGps.petlinkGps, "Cat DEVICE payload should match input payload").toMatchObject({
       serialNumber: catDevicePayload.serialNumber,
       petId: catDevicePayload.petId,
@@ -89,7 +95,10 @@ describe("PetlinkGPS Registration", () => {
     });
 
     // Assert EVO device
-    expect(evoResponse.createPetlinkGps.code, "createPetlinkGps endpoint should return success for EVO device").toBe("200");
+    expect(
+      evoResponse.createPetlinkGps.code,
+      `createPetlinkGps should succeed for EVO device - Error: ${evoResponse.createPetlinkGps.message}${evoResponse.createPetlinkGps.translationCode ? ` (${evoResponse.createPetlinkGps.translationCode})` : ''}`
+    ).toBe("200");
     expect(evoResponse.createPetlinkGps.petlinkGps, "EVO device should match input payload").toMatchObject({
       serialNumber: evoDevicePayload.serialNumber,
       petId: evoDevicePayload.petId,
@@ -130,8 +139,14 @@ describe("PetlinkGPS Registration", () => {
       }),
     ]);
 
-    expect(dogResponse.createPetlinkGps.code, "createPetlinkGps endpoint should return error - Dog device should not be registered twice").not.toBe("200");
-    expect(catResponse.createPetlinkGps.code, "createPetlinkGps endpoint should return error - Cat device should not be registered twice").not.toBe("200");
+    expect(
+      dogResponse.createPetlinkGps.code,
+      `createPetlinkGps should fail - dog device already registered - Error: ${dogResponse.createPetlinkGps.message}${dogResponse.createPetlinkGps.translationCode ? ` (${dogResponse.createPetlinkGps.translationCode})` : ''}`
+    ).not.toBe("200");
+    expect(
+      catResponse.createPetlinkGps.code,
+      `createPetlinkGps should fail - cat device already registered - Error: ${catResponse.createPetlinkGps.message}${catResponse.createPetlinkGps.translationCode ? ` (${catResponse.createPetlinkGps.translationCode})` : ''}`
+    ).not.toBe("200");
   });
 
   it("Update PetlinkGps should work correctly", async () => {
@@ -144,13 +159,19 @@ describe("PetlinkGPS Registration", () => {
       },
     });
     expect(updateResponse.updatePetlinkGps, "Update device response should be defined").toBeDefined();
-    expect(updateResponse.updatePetlinkGps.code, "updatePetlinkGps endpoint should return success").toBe("200");
+    expect(
+      updateResponse.updatePetlinkGps.code,
+      `updatePetlinkGps should succeed - Error: ${updateResponse.updatePetlinkGps.message}${updateResponse.updatePetlinkGps.translationCode ? ` (${updateResponse.updatePetlinkGps.translationCode})` : ''}`
+    ).toBe("200");
 
     // STEP 2: GET - Verifica che l'update sia persistito
     const getUpdatedResponse = await petlink.core.graphql.authJwt.getPetlinkGps({
       id: dogDevice.id,
     });
-    expect(getUpdatedResponse.getPetlinkGps.code, "getPetlinkGps endpoint should return success").toBe("200");
+    expect(
+      getUpdatedResponse.getPetlinkGps.code,
+      `getPetlinkGps should succeed - Error: ${getUpdatedResponse.getPetlinkGps.message}${getUpdatedResponse.getPetlinkGps.translationCode ? ` (${getUpdatedResponse.getPetlinkGps.translationCode})` : ''}`
+    ).toBe("200");
     expect(getUpdatedResponse.getPetlinkGps.petlinkGps?.timezone, "Device timezone should be updated and persisted").toBe(newTimezone);
   });
 });
