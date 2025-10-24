@@ -154,6 +154,41 @@ jobs:
           annotations_limit: 200
           include_passed: false
 
+      # Add Skipped Tests Report to Summary
+      - name: Add Skipped Tests Report to Summary
+        if: always()
+        run: |
+          if [ -f "test-reports-${{ matrix.app_brand }}/results.json" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## ⏭️ Skipped Tests (${{ matrix.app_brand }})" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Conta i test skippati
+            SKIPPED_COUNT=$(jq '[.testResults[].assertionResults[] | select(.status == "pending")] | length' test-reports-${{ matrix.app_brand }}/results.json)
+            
+            if [ "$SKIPPED_COUNT" -eq "0" ]; then
+              echo "✅ **No tests were skipped**" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Total skipped: $SKIPPED_COUNT tests**" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              
+              # Estrai dettagli di ogni test skippato in lista ordinata
+              jq -r '.testResults[] as $file | 
+                $file.assertionResults[] | 
+                select(.status == "pending") | 
+                "1. **" + ($file.name | gsub(".*/src/"; "src/")) + "**\n   - " + ((.ancestorTitles | join(" › ")) + " › _" + .title + "_")' \
+                test-reports-${{ matrix.app_brand }}/results.json >> $GITHUB_STEP_SUMMARY
+              
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "_Tests are skipped when they are brand-specific (KIPPY/PETLINK only) or marked as TODO_" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## ⏭️ Skipped Tests (${{ matrix.app_brand }})" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Results JSON not found - cannot extract skipped tests details" >> $GITHUB_STEP_SUMMARY
+          fi
+
       # Add Performance Report to Summary
       - name: Add Performance Report to Summary
         if: always()
