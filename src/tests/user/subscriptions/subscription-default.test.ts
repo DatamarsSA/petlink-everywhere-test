@@ -144,8 +144,6 @@ describe("DEFAULT subscription flow", () => {
     let setup: TestSetup = {} as TestSetup;
     let availablePlansForThisDevice: any[] = [];
     let availablePetProtectionForThisPet: any[] = [];
-    let user: NonNullable<typeof setup.user>;
-    let device: NonNullable<typeof setup.devices.dogStandard>;
 
     beforeEach(async () => {
       await testHelper.cleanupAll(); // ~2s
@@ -160,29 +158,26 @@ describe("DEFAULT subscription flow", () => {
         .withCatDevice()
         .build(); // Total: ~5-7s (user) + ~2s (pets parallel) + ~2s (devices parallel) = ~9-11s
 
-      user = setup.user!;
-      device = setup.devices.dogStandard!;
-
       // Billing + Plans in parallelo: ~0.5s
       const [_, plansResponse] = await Promise.all([
         petlink.core.graphql.authJwt.updateBillingInfo({
           updateBillingInfoInput: {
             billingInfo: {
-              address: user.streetAddress!,
-              city: user.city!,
-              country: user.countryCode!,
-              zip: user.zipCode!,
+              address: setup.user!.streetAddress!,
+              city: setup.user!.city!,
+              country: setup.user!.countryCode!,
+              zip: setup.user!.zipCode!,
             },
-            email: user.email!,
-            firstName: user.name!,
-            lastName: user.surname!,
-            phone: user.phone!,
+            email: setup.user!.email!,
+            firstName: setup.user!.name!,
+            lastName: setup.user!.surname!,
+            phone: setup.user!.phone!,
           },
         }),
         petlink.core.graphql.authJwt.getSubscriptionPlans({
-          productId: device.id,
-          countryCode: device.countryCode,
-          serialNumber: device.serialNumber,
+          productId: setup.devices.dogStandard!.id,
+          countryCode: setup.devices.dogStandard!.countryCode,
+          serialNumber: setup.devices.dogStandard!.serialNumber,
         }),
       ]);
 
@@ -204,15 +199,15 @@ describe("DEFAULT subscription flow", () => {
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [choosenPlan.id],
           card: fixtureCurrentBrand.card.valid,
         },
       });
       expect(purchaseResponse.utilityIntegrationTest.code, "utilityIntegrationTest endpoint should return success for subscription purchase").toBe("200");
       // Wait for payment SUCCEDED feedback (wait from chargebee webhook)
-      const subsActiveForThisDevice = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      const subsActiveForThisDevice = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
@@ -250,15 +245,15 @@ describe("DEFAULT subscription flow", () => {
       const purchasePlanWithAddonResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPlan.addon.id],
           card: fixtureCurrentBrand.card.valid,
         },
       });
       expect(purchasePlanWithAddonResponse.utilityIntegrationTest.code).toBe("200");
 
-      const purchasedSubscriptions = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      const purchasedSubscriptions = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
@@ -291,15 +286,15 @@ describe("DEFAULT subscription flow", () => {
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPetProtection.id],
           card: fixtureCurrentBrand.card.valid,
         },
       });
 
       const [subscription, petProtectionResult] = await Promise.all([
-        waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+        waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
           isReady: (result) => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
@@ -347,8 +342,8 @@ describe("DEFAULT subscription flow", () => {
       const subPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [regularPlan.id],
           card: fixtureCurrentBrand.card.valid,
         },
@@ -356,8 +351,8 @@ describe("DEFAULT subscription flow", () => {
       expect(subPurchaseResponse.utilityIntegrationTest.code, "Regular subscription purchase should succeed").toBe("200");
 
       // STEP 3: Wait for the subscription to become active with SUCCEEDED payment status
-      logger.debug(`bought SUB for device ${device.id}, start to wait to become active`);
-      const activeSubscription = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      logger.debug(`bought SUB for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
+      const activeSubscription = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
@@ -372,12 +367,12 @@ describe("DEFAULT subscription flow", () => {
       expect(activeSub.paymentStatus, "Payment status should be SUCCEEDED before purchasing pet protection").toBe("SUCCEEDED");
 
       // STEP 4: Purchase pet protection alone
-      logger.debug(`bought PET-PROTECTION for device ${device.id}, start to wait to become active`);
+      logger.debug(`bought PET-PROTECTION for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
       const petProtectionPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [petProtectionPlan.id],
           card: fixtureCurrentBrand.card.valid,
           isOnlyProtection: true,
@@ -398,17 +393,17 @@ describe("DEFAULT subscription flow", () => {
 
       // Step 5.5 Update pet protection data (form submission simulation)
       const petProtectionOwner = {
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
+        name: setup.user!.name,
+        surname: setup.user!.surname,
+        email: setup.user!.email,
         fiscalCode: "RSSMRA80A01H501U",
-        city: user.city!,
-        zipCode: user.zipCode!,
-        streetAddress: user.streetAddress!,
-        countryCode: user.countryCode,
+        city: setup.user!.city!,
+        zipCode: setup.user!.zipCode!,
+        streetAddress: setup.user!.streetAddress!,
+        countryCode: setup.user!.countryCode,
         provinceCode: "MI",
-        homePhone: user.phone,
-        mobilePhone: user.phone,
+        homePhone: setup.user!.phone,
+        mobilePhone: setup.user!.phone,
       };
 
       const petProtectionPet = {
@@ -470,8 +465,8 @@ describe("DEFAULT subscription flow", () => {
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
           card: fixtureCurrentBrand.card.valid,
         },
@@ -481,7 +476,7 @@ describe("DEFAULT subscription flow", () => {
 
       // Wait for both subscription active and petProtection assignment
       const [subscriptionResult, petProtectionResult] = await Promise.all([
-        waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+        waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
           isReady: (result) => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
@@ -529,64 +524,46 @@ describe("DEFAULT subscription flow", () => {
 
   describe("EDIT purchased subscriptions", () => {
     let setup: TestSetup = {} as TestSetup;
-    let availablePlansForThisDevice: any[] = [];
-    let availablePetProtectionForThisPet: any[] = [];
-    let user: NonNullable<typeof setup.user>;
-    let device: NonNullable<typeof setup.devices.dogStandard>;
-
-    let currentSubscription: any; // ← Subscription disponibile per tutti i test
+    let currentSubscription: any;
 
     beforeEach(async () => {
       // STEP 1: Cleanup e setup base
       await testHelper.cleanupAll();
 
-      setup = await testHelper
-        .setupBuilder()
-        .withUser() // User: ~5s
-        .withDog() // Dog + Cat in parallelo
-        .withCat()
-        .withDogDevice() // Devices in parallelo
-        .withCatDevice()
-        .build(); // Total: ~5-7s (user) + ~2s (pets parallel) + ~2s (devices parallel) = ~9-11s
-
-      user = setup.user!;
-      device = setup.devices.dogStandard!;
+      setup = await testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice().build();
 
       // STEP 2: Billing + Plans in parallelo: ~0.5s
       const [_, plansResponse] = await Promise.all([
         petlink.core.graphql.authJwt.updateBillingInfo({
           updateBillingInfoInput: {
             billingInfo: {
-              address: user.streetAddress!,
-              city: user.city!,
-              country: user.countryCode!,
-              zip: user.zipCode!,
+              address: setup.user!.streetAddress!,
+              city: setup.user!.city!,
+              country: setup.user!.countryCode!,
+              zip: setup.user!.zipCode!,
             },
-            email: user.email!,
-            firstName: user.name!,
-            lastName: user.surname!,
-            phone: user.phone!,
+            email: setup.user!.email!,
+            firstName: setup.user!.name!,
+            lastName: setup.user!.surname!,
+            phone: setup.user!.phone!,
           },
         }),
         petlink.core.graphql.authJwt.getSubscriptionPlans({
-          productId: device.id,
-          countryCode: device.countryCode,
-          serialNumber: device.serialNumber,
+          productId: setup.devices.dogStandard!.id,
+          countryCode: setup.devices.dogStandard!.countryCode,
+          serialNumber: setup.devices.dogStandard!.serialNumber,
         }),
       ]);
 
-      availablePlansForThisDevice = plansResponse.getSubscriptionPlans.plans!;
-      availablePetProtectionForThisPet = plansResponse.getSubscriptionPlans.careProtectionPlans!;
-
-      // 🆕 STEP 3: Purchase a subscription that will be available for all tests
-      const chosenPlan = availablePlansForThisDevice[0].pricings[0]!;
+      // STEP 3: Purchase a subscription that will be available for all tests
+      const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
       logger.debug("Purchasing subscription for EDIT tests", { chosenPlan });
 
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id],
           card: fixtureCurrentBrand.card.valid,
         },
@@ -594,8 +571,8 @@ describe("DEFAULT subscription flow", () => {
 
       expect(purchaseResponse.utilityIntegrationTest.code, "Subscription purchase should succeed in beforeEach").toBe("200");
 
-      // 🆕 STEP 4: Wait for subscription to become active and store it
-      const subscriptionResult = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      // STEP 4: Wait for subscription to become active and store it
+      const subscriptionResult = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
@@ -618,59 +595,6 @@ describe("DEFAULT subscription flow", () => {
       expect(currentSubscription.paymentStatus, "Payment should be SUCCEEDED before each test").toBe("SUCCEEDED");
     });
 
-    it.skip("CANCEL active subscription", async () => {
-      // Use currentSubscription directly (already available from beforeEach)
-      expect(currentSubscription).toBeDefined();
-      expect(currentSubscription.status).toBe("active");
-
-      const subscriptionId = currentSubscription.id;
-      const currentTermEnd = currentSubscription.currentTermEnd;
-
-      logger.info("Testing subscription cancellation", {
-        subscriptionId,
-        currentStatus: currentSubscription.status,
-      });
-
-      // STEP 1: Cancel the subscription (stop auto-renewal)
-      const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
-        subscriptionId,
-        appBrand: appBrand,
-        cancelReason: "Testing cancellation flow for integration tests",
-        cancelReasonCode: "OTHER",
-      });
-
-      expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
-
-      // STEP 2: Verify subscription is now "non_renewing" but still active until term end
-      const subAfterCancel = await waitFor(
-        async () =>
-          petlink.core.graphql.authJwt.getSubscriptionByProductId({
-            productId: device.id, // 👈 usa 'device' invece di 'editDevice'
-          }),
-        {
-          isReady: (result) => {
-            return result.getSubscriptionByProductId.subscription?.status === "non_renewing";
-          },
-          timeoutMs: pollingTimeoutMs,
-          intervalMs: pollingIntervalMs,
-          timeoutError: `Timeout: Subscription status did not change to "non_renewing" in ${pollingTimeoutMs}ms`,
-        },
-      );
-
-      const subAfter = subAfterCancel.getSubscriptionByProductId.subscription!;
-
-      logger.info("Subscription cancelled successfully", {
-        subscriptionId: subAfter.id,
-        oldStatus: currentSubscription.status,
-        newStatus: subAfter.status,
-      });
-
-      expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe("non_renewing");
-      expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(currentSubscription.id);
-      expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
-    });
-
-    // Placeholder per test futuri
     it("CHANGE sub: Buy MONTHLY → Buy YEARLY (creates future sub)", async () => {
       logger.info("Testing subscription UPGRADE flow", {
         currentSubscriptionId: currentSubscription.id,
@@ -680,9 +604,9 @@ describe("DEFAULT subscription flow", () => {
 
       // STEP 1: Get updated plans available AFTER first subscription bought
       const updatedPlansResponse = await petlink.core.graphql.authJwt.getSubscriptionPlans({
-        productId: device.id,
-        countryCode: device.countryCode,
-        serialNumber: device.serialNumber,
+        productId: setup.devices.dogStandard!.id,
+        countryCode: setup.devices.dogStandard!.countryCode,
+        serialNumber: setup.devices.dogStandard!.serialNumber,
       });
 
       // STEP 2: Find YEARLY plan to buy
@@ -700,8 +624,8 @@ describe("DEFAULT subscription flow", () => {
       const purchaseYearlyResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
-          phone: user.phone,
-          productId: device.id,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
           priceIds: [yearlyPlan!.id],
           card: fixtureCurrentBrand.card.valid,
         },
@@ -712,7 +636,7 @@ describe("DEFAULT subscription flow", () => {
       logger.info("Yearly subscription purchased successfully");
 
       // // STEP 4: Wait for payment to complete
-      const subscriptionsResponse = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: device.id }), {
+      const subscriptionsResponse = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }), {
         isReady: (result) => {
           const subs = result.getSubscriptions.subscriptions!;
           if (subs.length !== 2) return false;
@@ -775,6 +699,58 @@ describe("DEFAULT subscription flow", () => {
 
       // Verify future subscription starts when current ends
       assertDatesWithinTolerance(futureSub!.currentTermStart!, currentSub!.currentTermEnd!, 0.5, "Future sub should start when current ends");
+    });
+
+    it.todo("CANCEL active sub (with & without fee)", async () => {
+      // Use currentSubscription directly (already available from beforeEach)
+      expect(currentSubscription).toBeDefined();
+      expect(currentSubscription.status).toBe("active");
+
+      const subscriptionId = currentSubscription.id;
+      const currentTermEnd = currentSubscription.currentTermEnd;
+
+      logger.info("Testing subscription cancellation", {
+        subscriptionId,
+        currentStatus: currentSubscription.status,
+      });
+
+      // STEP 1: Cancel the subscription (stop auto-renewal)
+      const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
+        subscriptionId,
+        appBrand: appBrand,
+        cancelReason: "Testing cancellation flow for integration tests",
+        cancelReasonCode: "OTHER",
+      });
+
+      expect(cancelResponse.stopRenewingSubscription?.code, "stopRenewingSubscription endpoint should return success").toBe("200");
+
+      // STEP 2: Verify subscription is now "non_renewing" but still active until term end
+      const subAfterCancel = await waitFor(
+        async () =>
+          petlink.core.graphql.authJwt.getSubscriptionByProductId({
+            productId: setup.devices.dogStandard!.id,
+          }),
+        {
+          isReady: (result) => {
+            return result.getSubscriptionByProductId.subscription?.status === "non_renewing";
+          },
+          timeoutMs: pollingTimeoutMs,
+          intervalMs: pollingIntervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "non_renewing" in ${pollingTimeoutMs}ms`,
+        },
+      );
+
+      const subAfter = subAfterCancel.getSubscriptionByProductId.subscription!;
+
+      logger.info("Subscription cancelled successfully", {
+        subscriptionId: subAfter.id,
+        oldStatus: currentSubscription.status,
+        newStatus: subAfter.status,
+      });
+
+      expect(subAfter.status, `Subscription status should change from active to non_renewing`).toBe("non_renewing");
+      expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(currentSubscription.id);
+      expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
     });
 
     it.todo("REFUND sub");
