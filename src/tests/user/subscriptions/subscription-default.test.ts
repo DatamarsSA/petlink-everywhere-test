@@ -3,7 +3,7 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fixtureCurrentBrand, isKippyRun, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
 import { LanguageId, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
-import { assertDatesWithinTolerance, waitFor } from "../../../helpers/helpers.js";
+import { assertDatesWithinTolerance, expectSubBoughtMatchSubToBuy, expectPetProtBoughtMatchesPetProtToBuy, waitFor } from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
 
 describe("DEFAULT subscription flow", () => {
@@ -229,28 +229,11 @@ describe("DEFAULT subscription flow", () => {
         paymentStatus: subscription.paymentStatus,
       });
 
-      // Verify purchase status
-      expect(subscription.status, "Subscription status should be active after successful purchase").toBe("active");
-      expect(subscription.paymentStatus, "Payment status should be SUCCEEDED after successful purchase").toBe("SUCCEEDED");
-
-      // Verify subscription matches the chosen plan
-      expect(subscription.currencyCode, "Currency should match chosen plan").toBe(choosenPlan.currencyCode);
-      expect(subscription.billingPeriod, "Billing period should match chosen plan").toBe(choosenPlan.period);
-      expect(subscription.billingPeriodUnit, "Billing period unit should match chosen plan").toBe(choosenPlan.periodUnit);
-
-      // Verify subscription items
-      expect(subscription.subscriptionItems, "Should have subscription items").toBeDefined();
-      expect(subscription.subscriptionItems.length, "Should have exactly 1 subscription item (the plan)").toBe(1);
-
-      const planItem = subscription.subscriptionItems[0];
-      expect(planItem.itemType, "Item should be of type 'plan'").toBe("plan");
-      expect(planItem.itemPriceId, "Item price ID should match chosen plan").toBe(choosenPlan.id);
-      expect(planItem.itemId, "Item ID should match chosen plan").toBe(choosenPlan.itemId);
-      expect(planItem.unitPrice, "Unit price should match chosen plan").toBe(choosenPlan.price);
-      expect(planItem.quantity, "Plan quantity should be 1").toBe(1);
-      expect(planItem.amount, "Amount should match unit price * quantity").toBe(choosenPlan.price);
-
-      // TODO: Verify start+period => assert termEnd, nextBillingPriod (tolerance?)
+      // Verify subscription matches the purchased plan
+      expectSubBoughtMatchSubToBuy(subscription, choosenPlan, {
+        expectedStatus: "active",
+        expectedPaymentStatus: "SUCCEEDED",
+      });
     });
 
     it.runIf(isKippyRun)("BUY sub + addOn DEVICE-protection", async () => {
@@ -292,25 +275,11 @@ describe("DEFAULT subscription flow", () => {
         itemsCount: subscription.subscriptionItems.length,
       });
 
-      // Verifica che ci siano 2 item (plan + addon)
-      expect(subscription.subscriptionItems).toHaveLength(2);
-      expect(subscription).toMatchObject({
-        billingPeriodUnit: chosenPlan.periodUnit,
-        billingPeriod: chosenPlan.period,
-      });
-      // Trova e verifica il plan
-      const planItem = subscription.subscriptionItems.find((item) => item.itemType === "plan");
-      expect(planItem?.itemPriceId).toBe(chosenPlan.id);
-      expect(planItem).toMatchObject({
-        itemPriceId: chosenPlan.id,
-        unitPrice: chosenPlan.price,
-      });
-      // Trova e verifica l'addon
-      const addonItem = subscription.subscriptionItems.find((item) => item.itemType === "addon");
-      expect(addonItem?.itemPriceId).toBe(chosenPlan.addon.id);
-      expect(addonItem).toMatchObject({
-        itemPriceId: chosenPlan.addon.id,
-        unitPrice: chosenPlan.addon.price,
+      // Verify subscription with addon matches the purchased plan
+      expectSubBoughtMatchSubToBuy(subscription, chosenPlan, {
+        expectedStatus: "active",
+        expectedPaymentStatus: "SUCCEEDED",
+        addonToBuy: chosenPlan.addon,
       });
     });
 
@@ -355,19 +324,18 @@ describe("DEFAULT subscription flow", () => {
       // Purchase response
       expect(purchaseResponse.utilityIntegrationTest.code, "Purchase should succeed").toBe("200");
 
-      // Subscription state
-      expect(sub.status, "Subscription should be active").toBe("active");
-      expect(sub.paymentStatus, "Payment should be succeeded").toBe("SUCCEEDED");
+      // Verify subscription matches plan
+      expectSubBoughtMatchSubToBuy(sub, chosenPlan, {
+        expectedStatus: "active",
+        expectedPaymentStatus: "SUCCEEDED",
+      });
 
-      // Pet Protection details
-      expect(petProtection.userId, "Pet protection should link to correct user").toBe(setup.user!.id);
-      expect(petProtection.petId, "Pet protection should link to correct pet").toBe(pet.id);
-      expect(petProtection.status, "Pet protection should be in OPEN status").toBe("OPEN");
-      expect(petProtection.name, "Pet protection name should match plan").toBe(chosenPetProtection.externalName);
-      expect(petProtection.price, "Pet protection price should match plan").toBe(chosenPetProtection.price);
-      expect(petProtection.currencyCode, "Pet protection currency should match plan").toBe(chosenPetProtection.currencyCode);
-      expect(petProtection.period, "Pet protection period should be 1").toBe(1);
-      expect(petProtection.periodUnit, "Pet protection period unit should be year").toBe("year");
+      // Verify pet protection matches plan
+      expectPetProtBoughtMatchesPetProtToBuy(petProtection, chosenPetProtection, {
+        expectedPetId: pet.id,
+        expectedUserId: setup.user!.id,
+        expectedStatus: "OPEN",
+      });
     });
 
     it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
@@ -468,17 +436,12 @@ describe("DEFAULT subscription flow", () => {
       const petProtectionResponse = await petlink.core.graphql.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
 
-      // Core metadata
-      expect(petProtection.userId, "Pet protection should link to correct user").toBe(setup.user!.id);
-      expect(petProtection.petId, "Pet protection should link to correct pet").toBe(pet.id);
-      expect(petProtection.status, "Pet protection should be in OPEN status").toBe("OPEN");
-
-      // Plan Pet-Protection details
-      expect(petProtection.name, "Pet protection name should match plan").toBe(petProtectionPlan.externalName);
-      expect(petProtection.price, "Pet protection price should match plan").toBe(petProtectionPlan.price);
-      expect(petProtection.currencyCode, "Pet protection currency should match plan").toBe(petProtectionPlan.currencyCode);
-      expect(petProtection.period, "Pet protection period should match plan").toBe(petProtectionPlan.period);
-      expect(petProtection.periodUnit, "Pet protection period unit should match plan").toBe(petProtectionPlan.periodUnit);
+      // Verify pet protection matches plan
+      expectPetProtBoughtMatchesPetProtToBuy(petProtection, petProtectionPlan, {
+        expectedPetId: pet.id,
+        expectedUserId: setup.user!.id,
+        expectedStatus: "OPEN",
+      });
 
       // Owner & Pet match
       expect(petProtection.petOwner, "Owner data should match").toEqual(petProtectionOwner);
@@ -544,32 +507,23 @@ describe("DEFAULT subscription flow", () => {
         petProtectionId: pet.petProtectionId,
       });
 
-      // subscription state
-      expect(subscription.status, "Subscription should be active").toBe("active");
-      expect(subscription.paymentStatus, "Payment should be SUCCEEDED").toBe("SUCCEEDED");
+      // Verify subscription with addon matches plan
+      expectSubBoughtMatchSubToBuy(subscription, chosenPlan, {
+        expectedStatus: "active",
+        expectedPaymentStatus: "SUCCEEDED",
+        addonToBuy: chosenPlan.addon,
+      });
 
-      // subscription items: plan + addon should be present
-      expect(subscription.subscriptionItems, "Should have subscription items").toBeDefined();
-      // at least plan and addon present (depending on system representation)
-      const planItem = subscription.subscriptionItems.find((i) => i.itemType === "plan");
-      const addonItem = subscription.subscriptionItems.find((i) => i.itemType === "addon");
-      expect(planItem, "Plan item should exist").toBeDefined();
-      expect(addonItem, "Addon item should exist").toBeDefined();
-      expect(planItem?.itemPriceId, "Plan itemPriceId should match chosen plan").toBe(chosenPlan.id);
-      expect(addonItem?.itemPriceId, "Addon itemPriceId should match chosen addon").toBe(chosenPlan.addon.id);
-
-      // pet protection assigned and details
+      // Verify pet protection assigned and matches plan
       expect(pet.petProtectionId, "Pet should have a petProtectionId assigned").toBeDefined();
       const petProtectionResponse = await petlink.core.graphql.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
-      expect(petProtection.userId, "Pet protection should link to correct user").toBe(setup.user!.id);
-      expect(petProtection.petId, "Pet protection should link to correct pet").toBe(pet.id);
-      expect(petProtection.status, "Pet protection should be in OPEN status").toBe("OPEN");
-      expect(petProtection.name, "Pet protection name should match plan").toBe(chosenPetProtection.externalName);
-      expect(petProtection.price, "Pet protection price should match plan").toBe(chosenPetProtection.price);
-      expect(petProtection.currencyCode, "Pet protection currency should match plan").toBe(chosenPetProtection.currencyCode);
-      expect(petProtection.period, "Pet protection period should be 1").toBe(chosenPetProtection.period);
-      expect(petProtection.periodUnit, "Pet protection period unit should be year").toBe(chosenPetProtection.periodUnit);
+
+      expectPetProtBoughtMatchesPetProtToBuy(petProtection, chosenPetProtection, {
+        expectedPetId: pet.id,
+        expectedUserId: setup.user!.id,
+        expectedStatus: "OPEN",
+      });
     });
   });
 
@@ -717,7 +671,7 @@ describe("DEFAULT subscription flow", () => {
     });
 
     // Placeholder per test futuri
-    it("EDIT sub (Upgrade/Downgrade): Buy MONTHLY → Buy YEARLY (creates future sub)", async () => {
+    it("CHANGE sub: Buy MONTHLY → Buy YEARLY (creates future sub)", async () => {
       logger.info("Testing subscription UPGRADE flow", {
         currentSubscriptionId: currentSubscription.id,
         currentStatus: currentSubscription.status,
@@ -760,7 +714,10 @@ describe("DEFAULT subscription flow", () => {
       // // STEP 4: Wait for payment to complete
       const subscriptionsResponse = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: device.id }), {
         isReady: (result) => {
-          return result.getSubscriptions.subscriptions!.length == 2;
+          const subs = result.getSubscriptions.subscriptions!;
+          if (subs.length !== 2) return false;
+          const futureSub = subs.find((sub) => sub.status === "future");
+          return futureSub?.paymentStatus === "SUCCEEDED";
         },
         timeoutMs: pollingTimeoutMs,
         intervalMs: pollingIntervalMs,
@@ -770,7 +727,6 @@ describe("DEFAULT subscription flow", () => {
       expect(subscriptionsResponse.getSubscriptions.code, "getSubscriptions should succeed").toBe("200");
 
       const allSubscriptions = subscriptionsResponse.getSubscriptions.subscriptions;
-      expect(allSubscriptions, "Should have subscriptions array").toBeDefined();
       expect(allSubscriptions!.length, "Should have 2 subscriptions (current + future)").toBe(2);
 
       logger.info("📋 All subscriptions retrieved", {
@@ -811,12 +767,13 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
-      // STEP 7: Assertions on subscription structure
-      expect(futureSub!.billingPeriodUnit, "Future subscription should be yearly").toBe(yearlyPlan!.periodUnit);
-      expect(futureSub!.billingPeriod, "Future subscription should have items").toBe(yearlyPlan!.period);
-      const futurePlanItem = futureSub!.subscriptionItems.find((item) => item.itemType === "plan");
-      expect(futurePlanItem, "Future subscription should have plan item").toBeDefined();
-      expect(futurePlanItem!.itemPriceId, "Future plan should match purchased yearly plan").toBe(yearlyPlan!.id);
+      // STEP 7: Verify future subscription matches purchased yearly plan
+      expectSubBoughtMatchSubToBuy(futureSub!, yearlyPlan!, {
+        expectedStatus: "future",
+        expectedPaymentStatus: "SUCCEEDED",
+      });
+
+      // Verify future subscription starts when current ends
       assertDatesWithinTolerance(futureSub!.currentTermStart!, currentSub!.currentTermEnd!, 0.5, "Future sub should start when current ends");
     });
 
