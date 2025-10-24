@@ -155,7 +155,6 @@ jobs:
           include_passed: false
 
       # Add Skipped Tests Report to Summary
-      # Add Skipped Tests Report to Summary
       - name: Add Skipped Tests Report to Summary
         if: always()
         run: |
@@ -163,49 +162,65 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "## ⏭️ Skipped Tests (${{ matrix.app_brand }})" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-
-            # Conta i test skippati dal JUnit XML (escludi i testcase con nome uguale al file)
-            SKIPPED_COUNT=$(grep '<testcase' test-reports-${{ matrix.app_brand }}/junit.xml | grep -v 'name="src/tests/' | grep -c '<skipped/>' || echo "0")
-
+          
+            # Conta i test skippati (escludendo i testcase con nome uguale al file)
+            SKIPPED_COUNT=$(awk '
+              /<testcase/ { in_testcase=1; testcase_line=$0 }
+              /<skipped/ && in_testcase {
+                if (testcase_line !~ /name="src\/tests\//) count++
+              }
+              /<\/testcase>/ { in_testcase=0 }
+              END { print count+0 }
+            ' test-reports-${{ matrix.app_brand }}/junit.xml)
+          
             if [ "$SKIPPED_COUNT" -eq "0" ]; then
               echo "✅ **No tests were skipped**" >> $GITHUB_STEP_SUMMARY
             else
               echo "**Total skipped: $SKIPPED_COUNT tests**" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-
+          
               # Estrai e raggruppa per file
-              grep -A 1 '<testcase' test-reports-${{ matrix.app_brand }}/junit.xml | \
-                grep -v 'name="src/tests/' | \
-                awk '
-                  BEGIN { RS="--"; last_file="" }
-                  /<testcase.*<skipped/ {
+              awk '
+                /<testcase/ {
+                  # Salva la riga del testcase
+                  testcase_line = $0
+                  in_testcase = 1
+                }
+                /<skipped/ && in_testcase {
+                  # Controlla che non sia un testcase "fake" (nome = file path)
+                  if (testcase_line !~ /name="src\/tests\//) {
                     # Estrai classname e name
-                    match($0, /classname="([^"]*)"/, class)
-                    match($0, /name="([^"]*)"/, name)
-
+                    match(testcase_line, /classname="([^"]*)"/, class)
+                    match(testcase_line, /name="([^"]*)"/, name)
+          
                     file = class[1]
                     test = name[1]
-
+          
                     # Decodifica HTML entities
                     gsub(/&gt;/, ">", test)
                     gsub(/&lt;/, "<", test)
                     gsub(/&amp;/, "\\&", test)
                     gsub(/&apos;/, "'"'"'", test)
                     gsub(/&quot;/, "\"", test)
-
+          
                     # Raggruppa per file
                     if (file != last_file) {
                       if (last_file != "") print ""
                       print "**" file "**"
                       last_file = file
                     }
-
+          
                     # Stampa test
                     print "- _" test "_"
                   }
-                ' >> $GITHUB_STEP_SUMMARY
-
+                }
+                /<\/testcase>/ {
+                  in_testcase = 0
+                }
+              ' test-reports-${{ matrix.app_brand }}/junit.xml >> $GITHUB_STEP_SUMMARY
+          
               echo "" >> $GITHUB_STEP_SUMMARY
+              echo "_💡 Tests are skipped when brand-specific conditions are not met (KIPPY-only or PETLINK-only features) or marked as TODO_" >> $GITHUB_STEP_SUMMARY
             fi
           else
             echo "" >> $GITHUB_STEP_SUMMARY
