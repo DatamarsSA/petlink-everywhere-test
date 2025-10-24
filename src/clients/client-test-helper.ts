@@ -168,38 +168,44 @@ export class TestHelper {
   async cleanupAll(): Promise<void> {
     logger.debug("→ Starting cleanup operations");
 
-    const operations = [
-      {
-        name: "Petlink - CLEAN_UP_USER",
-        fn: () =>
-          petlink.core.graphql.authIam
-            .utilityIntegrationTest({
-              input: {
-                phone: fixtureCurrentBrand.user.phone,
-                utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
-              },
-            })
-            .then((response) => {
-              if (response.utilityIntegrationTest.code !== "200") {
-                throw new Error(response.utilityIntegrationTest.message);
-              }
-            }),
-      },
-      { name: "Gmail - deleteAllEmails()", fn: () => gmailClient.deleteAllEmails() },
-      { name: "Twilio - deleteAllMessagesSentoToNumber()", fn: () => twilioClient.deleteAllMessagesSentoToNumber(fixtureCurrentBrand.user.phone) },
-    ];
+    const errors: Array<{ operation: string; error: any }> = [];
 
-    const results = await Promise.allSettled(operations.map(({ fn }) => fn()));
+    await Promise.all([
+      // 1. Petlink user & related entity cleanup
+      petlink.core.graphql.authIam
+        .utilityIntegrationTest({
+          input: {
+            phone: fixtureCurrentBrand.user.phone,
+            utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
+          },
+        })
+        .then((response) => {
+          if (response.utilityIntegrationTest.code !== "200") {
+            throw new Error(response.utilityIntegrationTest.message);
+          }
+        })
+        .catch((error) => {
+          errors.push({ operation: "Petlink-CLEAN_UP_USER", error });
+        }),
 
-    results.forEach((result, index) => {
-      if (result.status === "rejected") {
-        logger.debug(`✗ ${operations[index].name}`, { error: result.reason?.message });
-      } else {
-        logger.debug(`✓ ${operations[index].name}`);
-      }
-    });
+      // 2. Gmail cleanup
+      gmailClient.deleteAllEmails().catch((error) => {
+        errors.push({ operation: "Gmail-deleteAllEmails()", error });
+      }),
 
-    logger.debug("← Cleanup operations completed");
+      // 3. Twilio cleanup
+      twilioClient.deleteAllMessagesSentoToNumber(fixtureCurrentBrand.user.phone).catch((error) => {
+        errors.push({ operation: "Twilio-deleteAllMessages()", error });
+      }),
+    ]);
+
+    // Se QUALSIASI operazione è fallita, throw (skippa test)
+    if (errors.length > 0) {
+      const errorSummary = errors.map((e) => `\n  - ${e.operation}: ${e.error.message}`).join("");
+      throw new Error(`Cleanup failed: ${errorSummary}`);
+    }
+
+    logger.debug("✓ Cleanup operations completed successfully");
   }
 
   async clearAuthCache(): Promise<void> {
