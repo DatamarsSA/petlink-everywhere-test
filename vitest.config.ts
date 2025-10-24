@@ -79,6 +79,7 @@ export default defineConfig(({ mode }) => {
       reporters: [
         "default", // Console output (per sviluppo locale)
         "junit", // Per GitHub Actions annotations
+        "json", // Per skipped tests details in GitHub Actions summary
       ],
 
       outputFile: {
