@@ -1,0 +1,159 @@
+# Petlink Everywhere Test - Cursor Rules (Concise)
+
+## 1. Quick Reference & Architecture
+
+**📚 System Architecture**: See [README.md](../README.md) for full diagrams, data flows, and component responsibilities.
+
+**💡 Repository Overview**:
+- **`petlink-everywhere-core`**: Main backend (GraphQL API), user/pet/device management.
+- **`subscriptions-manager`**: Payment processing and subscription lifecycle (Chargebee).
+- **`petlink-everywhere-sentinel`**: Device communication (TCP) and GPS data processing.
+- **`petlink-everywhere-cct-core`**: Backend for the Customer Care Tool.
+- **`petlink-everywhere-mobile`**: Flutter mobile apps (Petlink/Kippy).
+- **`petlink-everywhere-web`**: React web app for public users.
+- **`petlink-everywhere-cct`**: React app for the internal support team.
+
+---
+
+## 2. Test Philosophy: User-Centric Flows
+
+Our tests validate the system through **end-to-end user journeys**, not isolated technical layers.
+
+**Core Entity Flow**: The system follows a clear entity sequence. Tests must respect this dependency:
+1.  **User**: A user is created first.
+2.  **Pet**: A pet is created and associated with a user.
+3.  **Device**: A device is registered and associated with a pet.
+4.  **Subscription**: A subscription is purchased to activate a device.
+5.  **Activities**: Now activities of pet (through device) can be tracked.
+
+Tests are organized by actor (`user/`, `cct/`) and journey (`registration/`, `subscriptions/`).
+
+---
+
+## 3. How to Write a Test: A Practical Guide
+
+Follow this structure for consistency and clarity.
+
+### Step 1: Setup with `TestSetupBuilder` in `beforeAll`
+
+Use the `testHelper` builder to create a clean state before tests run. This is the **only** recommended way to set up test entities.
+
+```typescript
+// in src/tests/user/subscriptions/default-purchase.test.ts
+
+import { describe, expect, it, beforeAll } from "vitest";
+import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+
+describe.sequential("User Subscription Purchase Flow", () => {
+  let setup: TestSetup;
+
+  beforeAll(async () => {
+    // 1. Clean previous test runs' data
+    await testHelper.cleanupAll();
+    
+    // 2. Build the necessary entities for this test flow
+    setup = await testHelper.setupBuilder()
+      .withUser()
+      .withDog()
+      .withDogDevice()
+      .build();
+  });
+
+  // Access created entities via setup.user, setup.pets.dog, setup.devices.dogStandard
+});
+```
+
+**Key Principles**:
+- **Clean First**: `cleanupAll()` runs *before* tests, ensuring a fresh start and allowing manual inspection of the database after a run.
+- **Use the Builder**: `.withUser()`, `.withDog()`, `.withCatDevice()`, etc. abstract away the complexity of entity creation. Access results via the `setup` object.
+- **Sequential Execution**: Use `describe.sequential` when tests in a file depend on each other to form a complete user flow.
+
+### Step 2: Define Explicit Payloads (No Spread Operator)
+
+At the top of your `describe` block, define all API payloads by explicitly listing each required field. **Never use the spread operator (`...`) with fixtures.**
+
+```typescript
+// At the top of your describe block
+import { fixtures } from "../../../fixtures/fixtures.js";
+import type { PetIn } from "../../../generated/core_schema.js";
+
+const catPayload: PetIn = {
+  name: fixtures.pet.cat.name,
+  species: fixtures.pet.cat.species,
+  breedType: fixtures.pet.cat.breedType,
+  breeds: fixtures.pet.cat.breeds,
+  gender: fixtures.pet.cat.gender,
+  weight: fixtures.pet.cat.weight,
+  birthDate: fixtures.pet.cat.birthDate,
+  // ... and other required fields
+};
+```
+
+**Why?** This prevents tests from breaking if the global `fixtures` object is updated with new properties not relevant to the payload. It ensures payloads are stable and explicit.
+
+### Step 3: Write Assertions
+
+#### General Assertions
+
+Use built-in Vitest matchers to verify responses. Be explicit and clear.
+
+```typescript
+// Check for object structure and partial content
+expect(response.getUser.user).toMatchObject({
+  email: signUpPayload.email,
+  name: signUpPayload.name,
+});
+
+// Check for existence and type
+expect(response.getUser.user?.id).toBeDefined();
+expect(response.getUser.user?.id).toEqual(expect.any(String));
+```
+
+#### Status Code Assertions (MANDATORY FORMAT)
+
+**All API response code checks MUST follow this format.** It provides essential debugging information directly in the test failure output.
+
+```typescript
+// ✅ CORRECT: For a success case
+expect(
+  response.createPet.code,
+  `createPet should succeed - Error: ${response.createPet.message}${response.createPet.translationCode ? ` (${response.createPet.translationCode})` : ''}`
+).toBe("200");
+
+// ✅ CORRECT: For an expected failure case
+expect(
+  response.deletePet.code,
+  `deletePet should fail - Error: ${response.deletePet.message}${response.createPet.translationCode ? ` (${response.createPet.translationCode})` : ''}`
+).not.toBe("200");
+```
+
+**Why this format?**
+1.  **Endpoint Name**: Instantly identifies which API call failed.
+2.  **API Error Message**: Shows the backend error for immediate context.
+
+---
+
+## 4. Core Principles & TypeScript Usage
+
+- **Clients are the Interface**: Interact with the backend **only** through the provided clients (`petlink`, `testHelper`). The client abstracts away authentication, performance tracking, and protocol details. The pattern is `petlink.<service>.<protocol>.<auth>.<endpoint>`.
+  - `petlink.core.graphql.authJwt.getUser()`
+  - `petlink.core.graphql.public.signUp()`
+
+- **TypeScript Best Practices**:
+  - **Always Type Payloads**: Use `as TypeName` to ensure all payloads match the API schema (e.g., `as UserIn`, `as PetIn`).
+  - **Use Enums**: For values like species or device types, always import and use the TypeScript `enum` (e.g., `SpeciesEnum.DOG`). Avoid raw strings.
+  - **Prefer `type` or `interface`**: Do not use `const` objects for defining complex type structures.
+
+- **Logging**:
+  - Use the central `logger` (`logger.info`, `logger.debug`). **Do not use `console.log`**.
+  - `logger.info()`: High-level business events (e.g., "Testing subscription purchase").
+  - `logger.debug()`: Internal operations, setup steps, detailed flow tracing.
+
+---
+
+## 5. Anti-Patterns to Avoid (Top 5)
+
+1.  **❌ Don't use spread operators (`...fixtures`) for payloads.** Always define fields explicitly.
+2.  **❌ Don't create opaque assertion helpers.** All `expect` statements must be visible and explicit within the test. Clarity over DRYness.
+3.  **❌ Don't bypass the clients.** Never make direct `fetch` or `axios` calls.
+4.  **❌ Don't write silent `catch` blocks.** If an operation is expected to fail, assert the failure. Don't just swallow errors.

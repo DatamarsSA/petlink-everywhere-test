@@ -36,11 +36,6 @@ logs/
 *.log
 
 
-# AI agents
-.zencoder/
-.cursor/
-.copilot/
-
 # Local test
 debug/
 
