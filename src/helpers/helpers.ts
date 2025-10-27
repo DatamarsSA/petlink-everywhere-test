@@ -19,8 +19,8 @@ import type { Pricing, AddonPricing, PetProtection } from "../clients/petlink-in
  * const otp = await waitFor(
  *   () => twilioClient.getLatestOtp(phoneNumber),
  *   {
- *     timeoutMs: pollingTimeoutMs,
- *     intervalMs: pollingIntervalMs,
+ *     timeoutMs: fixtures.polling.timeoutMs,
+ *     intervalMs: fixtures.polling.intervalMs,
  *     timeoutError: 'OTP not received in time'
  *   }
  * );
@@ -40,8 +40,8 @@ import type { Pricing, AddonPricing, PetProtection } from "../clients/petlink-in
  *         sub?.paymentStatus === "SUCCEEDED"
  *       ) ?? false;
  *     },
- *     timeoutMs: pollingTimeoutMs,
- *     intervalMs: pollingIntervalMs,
+ *     timeoutMs: fixtures.polling.timeoutMs,
+ *     intervalMs: fixtures.polling.intervalMs,
  *     timeoutError: 'Subscription did not become active in time'
  *   }
  * );
@@ -52,8 +52,8 @@ import type { Pricing, AddonPricing, PetProtection } from "../clients/petlink-in
  *   () => api.getDevices(userId),
  *   {
  *     isReady: (result) => result.devices.length >= 3,
- *     timeoutMs: pollingTimeoutMs,
- *     intervalMs: pollingIntervalMs
+ *     timeoutMs: fixtures.polling.timeoutMs,
+ *     timeoutMs: fixtures.polling.intervalMs
  *   }
  * );
  */

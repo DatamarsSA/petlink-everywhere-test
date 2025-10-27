@@ -1,6 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
-import { fixtureCurrentBrand, isKippyRun } from "../../fixtures/fixtures.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { PetlinkGps } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -25,7 +24,7 @@ describe("Utilyties fro developing features", () => {
   //
   // // 1. Login with existing user
   // logger.debug("1️⃣ Logging in with user email...");
-  // await petlink.loginWithPhone(fixtureCurrentBrand.user.phone, fixtureCurrentBrand.user.password);
+  // await petlink.loginWithPhone(fixtures.current.user.phone, fixtures.current.user.password);
   // logger.info("✓ Login successful");
   //
   // // 2. Get User data

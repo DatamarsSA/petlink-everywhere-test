@@ -2,7 +2,7 @@ import { User, UserIn, PetIn, Pet, PetlinkGps, PetlinkGpsIn, SpeciesEnum } from 
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
-import { fixtures, fixtureCurrentBrand, appBrand, isKippyRun } from "../fixtures/fixtures.js";
+import { fxt } from "../fixtures/fixtures.js";
 import { PetType, DeviceType, UtilityTestTypeEnum } from "./petlink-infrastructure/types.js";
 import { logger } from "../config/logger.js";
 import { existsSync, mkdirSync } from "fs";
@@ -60,7 +60,7 @@ class TestSetupBuilder {
   }
 
   withDogEvoDevice(): this {
-    if (!isKippyRun) {
+    if (!fxt.isKippyRun) {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
     this.includeDogEvoDevice = true;
@@ -175,7 +175,7 @@ export class TestHelper {
       petlink.core.graphql.authIam
         .utilityIntegrationTest({
           input: {
-            phone: fixtureCurrentBrand.user.phone,
+            phone: fxt.current.user.phone,
             utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
           },
         })
@@ -194,7 +194,7 @@ export class TestHelper {
       }),
 
       // 3. Twilio cleanup
-      twilioClient.deleteAllMessagesSentoToNumber(fixtureCurrentBrand.user.phone).catch((error) => {
+      twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone).catch((error) => {
         errors.push({ operation: "Twilio-deleteAllMessages()", error });
       }),
     ]);
@@ -216,24 +216,24 @@ export class TestHelper {
     logger.debug("→ Creating test user");
 
     const userPayload: UserIn = {
-      email: fixtureCurrentBrand.user.email,
-      name: fixtureCurrentBrand.user.name,
-      surname: fixtureCurrentBrand.user.surname,
-      city: fixtureCurrentBrand.user.city,
-      countryCode: fixtureCurrentBrand.user.countryCode,
-      zipCode: fixtureCurrentBrand.user.zipCode,
-      streetAddress: fixtureCurrentBrand.user.streetAddress,
-      phone: fixtureCurrentBrand.user.phone,
-      password: fixtureCurrentBrand.user.password,
-      confirmPassword: fixtureCurrentBrand.user.confirmPassword,
-      languageId: fixtureCurrentBrand.user.languageId,
+      email: fxt.current.user.email,
+      name: fxt.current.user.name,
+      surname: fxt.current.user.surname,
+      city: fxt.current.user.city,
+      countryCode: fxt.current.user.countryCode,
+      zipCode: fxt.current.user.zipCode,
+      streetAddress: fxt.current.user.streetAddress,
+      phone: fxt.current.user.phone,
+      password: fxt.current.user.password,
+      confirmPassword: fxt.current.user.confirmPassword,
+      languageId: fxt.current.user.languageId,
     };
 
     const response = await petlink.core.graphql.authIam.utilityIntegrationTest({
       input: {
         utilityType: UtilityTestTypeEnum.SIGN_UP,
         userIn: userPayload,
-        appBrand: appBrand,
+        appBrand: fxt.current.appBrand,
       },
     });
 
@@ -263,9 +263,9 @@ export class TestHelper {
     let petFixture: PetIn;
 
     if (petType === PetType.DOG) {
-      petFixture = fixtureCurrentBrand.pet.defaultDog;
+      petFixture = fxt.current.pet.defaultDog;
     } else if (petType === PetType.CAT) {
-      petFixture = fixtureCurrentBrand.pet.defaultCat;
+      petFixture = fxt.current.pet.defaultCat;
     } else {
       throw new Error(`Invalid pet type: ${petType}.`);
     }
@@ -303,14 +303,14 @@ export class TestHelper {
     logger.debug(`→ Creating device (${deviceType}) for pet ${petId}`);
 
     // Validate EVO can only be created with KIPPY brand
-    if (deviceType === DeviceType.EVO && !isKippyRun) {
+    if (deviceType === DeviceType.EVO && !fxt.isKippyRun) {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
 
-    const deviceFixture = deviceType === DeviceType.EVO ? fixtures.KIPPY.devices.EVO : fixtureCurrentBrand.devices[deviceType];
+    const deviceFixture = deviceType === DeviceType.EVO ? fxt.KIPPY.devices.EVO : fxt.current.devices[deviceType];
 
     if (!deviceFixture) {
-      throw new Error(`Device fixture not found for brand ${appBrand} and type ${deviceType}`);
+      throw new Error(`Device fixture not found for brand ${fxt.current.appBrand} and type ${deviceType}`);
     }
 
     const devicePayload: PetlinkGpsIn = {
@@ -322,7 +322,7 @@ export class TestHelper {
 
     const response = await petlink.core.graphql.authJwt.createPetlinkGps({
       petlinkGps: devicePayload,
-      appBrand: appBrand,
+      appBrand: fxt.current.appBrand,
     });
 
     if (response.createPetlinkGps.code !== "200") {

@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { fixtureCurrentBrand, isKippyRun, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
+import { fxt } from "../../../fixtures/fixtures.js";
 import { LanguageId, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
 import { assertDatesWithinTolerance, expectSubBoughtMatchSubToBuy, expectPetProtBoughtMatchesPetProtToBuy, waitFor } from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
@@ -14,7 +14,7 @@ describe("DEFAULT subscription flow", () => {
     const builder = testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice();
 
     // Add EVO device only for KIPPY brand
-    if (isKippyRun) {
+    if (fxt.isKippyRun) {
       builder.withDogForEvo().withDogEvoDevice();
     }
 
@@ -40,14 +40,14 @@ describe("DEFAULT subscription flow", () => {
         serialNumber: catDevice.serialNumber,
       }),
       // EVO device plans (only for KIPPY)
-      ...(isKippyRun && evoDevice
+      ...(fxt.isKippyRun && evoDevice
         ? [
-          petlink.core.graphql.authJwt.getSubscriptionPlans({
-            productId: evoDevice.id,
-            countryCode: evoDevice.countryCode,
-            serialNumber: evoDevice.serialNumber,
-          }),
-        ]
+            petlink.core.graphql.authJwt.getSubscriptionPlans({
+              productId: evoDevice.id,
+              countryCode: evoDevice.countryCode,
+              serialNumber: evoDevice.serialNumber,
+            }),
+          ]
         : []),
     ];
 
@@ -78,7 +78,7 @@ describe("DEFAULT subscription flow", () => {
     expect(catPlans.getSubscriptionPlans.plans?.length, "Cat device should have at least one subscription plan available").toBeGreaterThan(0);
 
     // Assert EVO device (only for KIPPY)
-    if (isKippyRun && evoPlans) {
+    if (fxt.isKippyRun && evoPlans) {
       expect(
         evoPlans.getSubscriptionPlans.code,
         `getSubscriptionPlans should succeed for EVO device - Error: ${evoPlans.getSubscriptionPlans.message}${evoPlans.getSubscriptionPlans.translationCode ? ` (${evoPlans.getSubscriptionPlans.translationCode})` : ""}`,
@@ -112,7 +112,7 @@ describe("DEFAULT subscription flow", () => {
       `getSubscriptionPlanPricing should succeed - Error: ${planResponse.getSubscriptionPlanPricing.message}${planResponse.getSubscriptionPlanPricing.translationCode ? ` (${planResponse.getSubscriptionPlanPricing.translationCode})` : ""}`,
     ).toBe("200");
     expect(chosenPlanAfterConvesion, "Pricing details should be returned").toBeDefined();
-    expect(chosenPlanAfterConvesion?.currencyCode, "Pricing currency should match billing info of user").toBe(isKippyRun ? "CHF" : "USD");
+    expect(chosenPlanAfterConvesion?.currencyCode, "Pricing currency should match billing info of user").toBe(fxt.isKippyRun ? "CHF" : "USD");
     expect(chosenPlanAfterConvesion?.itemId, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.itemId);
     expect(chosenPlanAfterConvesion?.periodUnit, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.periodUnit);
     expect(chosenPlanAfterConvesion?.period, "Plan adjust should be the same as the previous one").toBe(choosenPlanBeforeConversion.period);
@@ -217,7 +217,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [choosenPlan.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
       expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed for subscription purchase - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
@@ -227,9 +227,9 @@ describe("DEFAULT subscription flow", () => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
         },
-        timeoutMs: pollingTimeoutMs,
-        intervalMs: pollingIntervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${pollingTimeoutMs}ms`,
+        timeoutMs: fxt.polling.timeoutMs,
+        intervalMs: fxt.polling.intervalMs,
+        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${fxt.polling.timeoutMs}ms`,
       });
       const subscription = subsActiveForThisDevice.getSubscriptionByProductId.subscription!;
 
@@ -246,7 +246,7 @@ describe("DEFAULT subscription flow", () => {
       });
     });
 
-    it.runIf(isKippyRun)("BUY sub + addOn DEVICE-protection", async () => {
+    it.runIf(fxt.isKippyRun)("BUY sub + addOn DEVICE-protection", async () => {
       const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
       expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
 
@@ -263,7 +263,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPlan.addon.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
       expect(purchasePlanWithAddonResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchasePlanWithAddonResponse.utilityIntegrationTest.message}`).toBe("200");
@@ -273,9 +273,9 @@ describe("DEFAULT subscription flow", () => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
         },
-        timeoutMs: pollingTimeoutMs,
-        intervalMs: pollingIntervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${pollingTimeoutMs}ms`,
+        timeoutMs: fxt.polling.timeoutMs,
+        intervalMs: fxt.polling.intervalMs,
+        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${fxt.polling.timeoutMs}ms`,
       });
 
       const subscription = purchasedSubscriptions.getSubscriptionByProductId.subscription!;
@@ -293,7 +293,7 @@ describe("DEFAULT subscription flow", () => {
       });
     });
 
-    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY sub + PET-protection", async () => {
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.IT)("BUY sub + PET-protection", async () => {
       const chosenPlan = availablePlansForThisDevice![0].pricings[0]!;
       const chosenPetProtection = availablePetProtectionForThisPet![0].pricings[0]!;
       logger.debug("Chosen plans for test", { chosenPlan, chosenPetProtection });
@@ -304,7 +304,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPetProtection.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
 
@@ -314,14 +314,14 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: pollingTimeoutMs,
-          intervalMs: pollingIntervalMs,
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription status did not change to "active"`,
         }),
         waitFor(async () => petlink.core.graphql.authJwt.getPet({ id: setup.pets.dog!.id! }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
-          timeoutMs: pollingTimeoutMs,
-          intervalMs: pollingIntervalMs,
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: petProtectionId not assigned to pet`,
         }),
       ]);
@@ -348,7 +348,7 @@ describe("DEFAULT subscription flow", () => {
       });
     });
 
-    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
       logger.debug("dentro BUY PET-protection alone");
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
@@ -360,7 +360,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [regularPlan.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
       expect(subPurchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed for regular subscription - Error: ${subPurchaseResponse.utilityIntegrationTest.message}`).toBe(
@@ -374,8 +374,8 @@ describe("DEFAULT subscription flow", () => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
         },
-        timeoutMs: pollingTimeoutMs,
-        intervalMs: pollingIntervalMs,
+        timeoutMs: fxt.polling.timeoutMs,
+        intervalMs: fxt.polling.intervalMs,
         timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
       });
 
@@ -391,7 +391,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [petProtectionPlan.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
           isOnlyProtection: true,
           currencyCode: regularPlan.currencyCode,
         },
@@ -404,8 +404,8 @@ describe("DEFAULT subscription flow", () => {
       // STEP 5: Wait for pet protection to be assigned to the pet
       const petProtectionResult = await waitFor(async () => petlink.core.graphql.authJwt.getPet({ id: setup.pets.dog!.id! }), {
         isReady: (result) => result.getPet.pet!.petProtectionId != null,
-        timeoutMs: pollingTimeoutMs,
-        intervalMs: pollingIntervalMs,
+        timeoutMs: fxt.polling.timeoutMs,
+        intervalMs: fxt.polling.intervalMs,
         timeoutError: `Timeout: petProtectionId not assigned to pet`,
       });
       const pet = petProtectionResult.getPet.pet!;
@@ -463,7 +463,7 @@ describe("DEFAULT subscription flow", () => {
       expect(petProtection.pet, "Pet data should match").toEqual(petProtectionPet);
     });
 
-    it.runIf(isKippyRun && fixtureCurrentBrand.user.languageId == LanguageId.IT)("BUY sub + addOn DEVICE-protection + PET-protection", async () => {
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.IT)("BUY sub + addOn DEVICE-protection + PET-protection", async () => {
       // select plan with device addon
       const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
       expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
@@ -488,7 +488,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
 
@@ -501,14 +501,14 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: pollingTimeoutMs,
-          intervalMs: pollingIntervalMs,
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
         }),
         waitFor(async () => petlink.core.graphql.authJwt.getPet({ id: setup.pets.dog!.id! }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
-          timeoutMs: pollingTimeoutMs,
-          intervalMs: pollingIntervalMs,
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: petProtectionId not assigned to pet`,
         }),
       ]);
@@ -585,7 +585,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
 
@@ -597,8 +597,8 @@ describe("DEFAULT subscription flow", () => {
           const sub = result.getSubscriptionByProductId.subscription;
           return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
         },
-        timeoutMs: pollingTimeoutMs,
-        intervalMs: pollingIntervalMs,
+        timeoutMs: fxt.polling.timeoutMs,
+        intervalMs: fxt.polling.intervalMs,
         timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
       });
 
@@ -647,7 +647,7 @@ describe("DEFAULT subscription flow", () => {
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [yearlyPlan!.id],
-          card: fixtureCurrentBrand.card.valid,
+          card: fxt.current.card.valid,
         },
       });
 
@@ -665,9 +665,9 @@ describe("DEFAULT subscription flow", () => {
           const futureSub = subs.find((sub) => sub.status === "future");
           return futureSub?.paymentStatus === "SUCCEEDED";
         },
-        timeoutMs: pollingTimeoutMs,
-        intervalMs: pollingIntervalMs,
-        timeoutError: `Timeout: New subscription just purchased not found in ${pollingTimeoutMs}`,
+        timeoutMs: fxt.polling.timeoutMs,
+        intervalMs: fxt.polling.intervalMs,
+        timeoutError: `Timeout: New subscription just purchased not found in ${fxt.polling.timeoutMs} `,
       });
 
       expect(
@@ -742,7 +742,7 @@ describe("DEFAULT subscription flow", () => {
       // STEP 1: Cancel the subscription (stop auto-renewal)
       const cancelResponse = await petlink.core.graphql.authJwt.stopRenewingSubscription({
         subscriptionId,
-        appBrand: appBrand,
+        appBrand: fxt.current.appBrand,
         cancelReason: "Testing cancellation flow for integration tests",
         cancelReasonCode: "OTHER",
       });
@@ -762,9 +762,9 @@ describe("DEFAULT subscription flow", () => {
           isReady: (result) => {
             return result.getSubscriptionByProductId.subscription?.status === "non_renewing";
           },
-          timeoutMs: pollingTimeoutMs,
-          intervalMs: pollingIntervalMs,
-          timeoutError: `Timeout: Subscription status did not change to "non_renewing" in ${pollingTimeoutMs}ms`,
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "non_renewing" in ${fxt.polling.timeoutMs} ms`,
         },
       );
 

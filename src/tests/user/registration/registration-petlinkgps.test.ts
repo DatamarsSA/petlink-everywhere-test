@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { fixtures, fixtureCurrentBrand, appBrand, isKippyRun } from "../../../fixtures/fixtures.js";
+import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { CreatePetlinkGpsMutation, Pet, PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { AppBrand } from "../../../clients/petlink-infrastructure/types.js";
+import { PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe("PetlinkGPS Registration", () => {
   let setup: TestSetup;
@@ -15,7 +14,7 @@ describe("PetlinkGPS Registration", () => {
   beforeAll(async () => {
     const builder = testHelper.setupBuilder().withUser().withDog().withCat();
 
-    if (isKippyRun) {
+    if (fxt.isKippyRun) {
       builder.withDogForEvo();
     }
 
@@ -24,34 +23,34 @@ describe("PetlinkGPS Registration", () => {
 
   it("Associate PetlinkGPS to both DOG and CAT", async () => {
     const dogDevicePayload = {
-      serialNumber: fixtureCurrentBrand.devices.DOG.serialNumber,
-      countryCode: fixtureCurrentBrand.devices.DOG.countryCode,
-      timezone: fixtureCurrentBrand.devices.DOG.timezone,
+      serialNumber: fxt.current.devices.DOG.serialNumber,
+      countryCode: fxt.current.devices.DOG.countryCode,
+      timezone: fxt.current.devices.DOG.timezone,
       petId: setup.pets.dog!.id,
     } as PetlinkGpsIn;
 
     const catDevicePayload = {
-      serialNumber: fixtureCurrentBrand.devices.CAT.serialNumber,
-      countryCode: fixtureCurrentBrand.devices.CAT.countryCode,
-      timezone: fixtureCurrentBrand.devices.CAT.timezone,
+      serialNumber: fxt.current.devices.CAT.serialNumber,
+      countryCode: fxt.current.devices.CAT.countryCode,
+      timezone: fxt.current.devices.CAT.timezone,
       petId: setup.pets.cat!.id,
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: dogDevicePayload,
-        appBrand: appBrand,
+        appBrand: fxt.current.appBrand,
       }),
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: catDevicePayload,
-        appBrand: appBrand,
+        appBrand: fxt.current.appBrand,
       }),
     ]);
 
     // Assert DOG device
     expect(
       dogResponse.createPetlinkGps.code,
-      `createPetlinkGps should succeed for dog device - Error: ${dogResponse.createPetlinkGps.message}${dogResponse.createPetlinkGps.translationCode ? ` (${dogResponse.createPetlinkGps.translationCode})` : ''}`
+      `createPetlinkGps should succeed for dog device - Error: ${dogResponse.createPetlinkGps.message}${dogResponse.createPetlinkGps.translationCode ? ` (${dogResponse.createPetlinkGps.translationCode})` : ""}`,
     ).toBe("200");
     expect(dogResponse.createPetlinkGps.petlinkGps, "Dog DEVICE payload should match input payload").toMatchObject({
       serialNumber: dogDevicePayload.serialNumber,
@@ -65,7 +64,7 @@ describe("PetlinkGPS Registration", () => {
     // Assert CAT device
     expect(
       catResponse.createPetlinkGps.code,
-      `createPetlinkGps should succeed for cat device - Error: ${catResponse.createPetlinkGps.message}${catResponse.createPetlinkGps.translationCode ? ` (${catResponse.createPetlinkGps.translationCode})` : ''}`
+      `createPetlinkGps should succeed for cat device - Error: ${catResponse.createPetlinkGps.message}${catResponse.createPetlinkGps.translationCode ? ` (${catResponse.createPetlinkGps.translationCode})` : ""}`,
     ).toBe("200");
     expect(catResponse.createPetlinkGps.petlinkGps, "Cat DEVICE payload should match input payload").toMatchObject({
       serialNumber: catDevicePayload.serialNumber,
@@ -81,23 +80,23 @@ describe("PetlinkGPS Registration", () => {
     catDevice = catResponse.createPetlinkGps.petlinkGps!;
   });
 
-  it.runIf(isKippyRun)("Associate EVO device to DOG", async () => {
+  it.runIf(fxt.isKippyRun)("Associate EVO device to DOG", async () => {
     const evoDevicePayload = {
-      serialNumber: fixtures.KIPPY.devices.EVO.serialNumber,
-      countryCode: fixtures.KIPPY.devices.EVO.countryCode,
-      timezone: fixtures.KIPPY.devices.EVO.timezone,
+      serialNumber: fxt.KIPPY.devices.EVO.serialNumber,
+      countryCode: fxt.KIPPY.devices.EVO.countryCode,
+      timezone: fxt.KIPPY.devices.EVO.timezone,
       petId: setup.pets.dogForEvo!.id,
     } as PetlinkGpsIn;
 
     const evoResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
       petlinkGps: evoDevicePayload,
-      appBrand: appBrand,
+      appBrand: fxt.current.appBrand,
     });
 
     // Assert EVO device
     expect(
       evoResponse.createPetlinkGps.code,
-      `createPetlinkGps should succeed for EVO device - Error: ${evoResponse.createPetlinkGps.message}${evoResponse.createPetlinkGps.translationCode ? ` (${evoResponse.createPetlinkGps.translationCode})` : ''}`
+      `createPetlinkGps should succeed for EVO device - Error: ${evoResponse.createPetlinkGps.message}${evoResponse.createPetlinkGps.translationCode ? ` (${evoResponse.createPetlinkGps.translationCode})` : ""}`,
     ).toBe("200");
     expect(evoResponse.createPetlinkGps.petlinkGps, "EVO device should match input payload").toMatchObject({
       serialNumber: evoDevicePayload.serialNumber,
@@ -115,37 +114,37 @@ describe("PetlinkGPS Registration", () => {
   it("PetlinkGPS should not be available anymore", async () => {
     // Payload puliti per test duplicazione
     const dogDevicePayload = {
-      serialNumber: fixtureCurrentBrand.devices.DOG.serialNumber,
-      countryCode: fixtureCurrentBrand.devices.DOG.countryCode,
-      timezone: fixtureCurrentBrand.devices.DOG.timezone,
+      serialNumber: fxt.current.devices.DOG.serialNumber,
+      countryCode: fxt.current.devices.DOG.countryCode,
+      timezone: fxt.current.devices.DOG.timezone,
       petId: setup.pets.dog!.id,
     } as PetlinkGpsIn;
 
     const catDevicePayload = {
-      serialNumber: fixtureCurrentBrand.devices.CAT.serialNumber,
-      countryCode: fixtureCurrentBrand.devices.CAT.countryCode,
-      timezone: fixtureCurrentBrand.devices.CAT.timezone,
+      serialNumber: fxt.current.devices.CAT.serialNumber,
+      countryCode: fxt.current.devices.CAT.countryCode,
+      timezone: fxt.current.devices.CAT.timezone,
       petId: setup.pets.cat!.id,
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: dogDevicePayload,
-        appBrand: appBrand,
+        appBrand: fxt.current.appBrand,
       }),
       petlink.core.graphql.authJwt.createPetlinkGps({
         petlinkGps: catDevicePayload,
-        appBrand: appBrand,
+        appBrand: fxt.current.appBrand,
       }),
     ]);
 
     expect(
       dogResponse.createPetlinkGps.code,
-      `createPetlinkGps should fail - dog device already registered - Error: ${dogResponse.createPetlinkGps.message}${dogResponse.createPetlinkGps.translationCode ? ` (${dogResponse.createPetlinkGps.translationCode})` : ''}`
+      `createPetlinkGps should fail - dog device already registered - Error: ${dogResponse.createPetlinkGps.message}${dogResponse.createPetlinkGps.translationCode ? ` (${dogResponse.createPetlinkGps.translationCode})` : ""}`,
     ).not.toBe("200");
     expect(
       catResponse.createPetlinkGps.code,
-      `createPetlinkGps should fail - cat device already registered - Error: ${catResponse.createPetlinkGps.message}${catResponse.createPetlinkGps.translationCode ? ` (${catResponse.createPetlinkGps.translationCode})` : ''}`
+      `createPetlinkGps should fail - cat device already registered - Error: ${catResponse.createPetlinkGps.message}${catResponse.createPetlinkGps.translationCode ? ` (${catResponse.createPetlinkGps.translationCode})` : ""}`,
     ).not.toBe("200");
   });
 
@@ -161,7 +160,7 @@ describe("PetlinkGPS Registration", () => {
     expect(updateResponse.updatePetlinkGps, "Update device response should be defined").toBeDefined();
     expect(
       updateResponse.updatePetlinkGps.code,
-      `updatePetlinkGps should succeed - Error: ${updateResponse.updatePetlinkGps.message}${updateResponse.updatePetlinkGps.translationCode ? ` (${updateResponse.updatePetlinkGps.translationCode})` : ''}`
+      `updatePetlinkGps should succeed - Error: ${updateResponse.updatePetlinkGps.message}${updateResponse.updatePetlinkGps.translationCode ? ` (${updateResponse.updatePetlinkGps.translationCode})` : ""}`,
     ).toBe("200");
 
     // STEP 2: GET - Verifica che l'update sia persistito
@@ -170,7 +169,7 @@ describe("PetlinkGPS Registration", () => {
     });
     expect(
       getUpdatedResponse.getPetlinkGps.code,
-      `getPetlinkGps should succeed - Error: ${getUpdatedResponse.getPetlinkGps.message}${getUpdatedResponse.getPetlinkGps.translationCode ? ` (${getUpdatedResponse.getPetlinkGps.translationCode})` : ''}`
+      `getPetlinkGps should succeed - Error: ${getUpdatedResponse.getPetlinkGps.message}${getUpdatedResponse.getPetlinkGps.translationCode ? ` (${getUpdatedResponse.getPetlinkGps.translationCode})` : ""}`,
     ).toBe("200");
     expect(getUpdatedResponse.getPetlinkGps.petlinkGps?.timezone, "Device timezone should be updated and persisted").toBe(newTimezone);
   });

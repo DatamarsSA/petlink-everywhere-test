@@ -1,28 +1,25 @@
 import { beforeAll, afterAll, describe, expect, it, beforeEach } from "vitest";
-import { fixtureCurrentBrand, appBrand, pollingTimeoutMs, pollingIntervalMs } from "../../../fixtures/fixtures.js";
+import { fxt } from "../../../fixtures/fixtures.js";
 import type { UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { waitFor } from "../../../helpers/helpers.js";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
-import { testHelper } from "../../../clients/client-test-helper.js";
-import { User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { logger } from "../../../config/logger.js";
 
 describe("User Registration", () => {
   // Payload per la registrazione utente
   const signUpPayload = {
-    email: fixtureCurrentBrand.user.email,
-    name: fixtureCurrentBrand.user.name,
-    surname: fixtureCurrentBrand.user.surname,
-    city: fixtureCurrentBrand.user.city,
-    countryCode: fixtureCurrentBrand.user.countryCode,
-    zipCode: fixtureCurrentBrand.user.zipCode,
-    streetAddress: fixtureCurrentBrand.user.streetAddress,
-    phone: fixtureCurrentBrand.user.phone,
-    password: fixtureCurrentBrand.user.password,
-    confirmPassword: fixtureCurrentBrand.user.confirmPassword,
-    languageId: fixtureCurrentBrand.user.languageId,
+    email: fxt.current.user.email,
+    name: fxt.current.user.name,
+    surname: fxt.current.user.surname,
+    city: fxt.current.user.city,
+    countryCode: fxt.current.user.countryCode,
+    zipCode: fxt.current.user.zipCode,
+    streetAddress: fxt.current.user.streetAddress,
+    phone: fxt.current.user.phone,
+    password: fxt.current.user.password,
+    confirmPassword: fxt.current.user.confirmPassword,
+    languageId: fxt.current.user.languageId,
   } as UserIn;
 
   // Variabili condivise tra i test
@@ -38,7 +35,7 @@ describe("User Registration", () => {
 
     expect(
       response.checkContact.code,
-      `checkContact should succeed - Error: ${response.checkContact.message}${response.checkContact.translationCode ? ` (${response.checkContact.translationCode})` : ''}`
+      `checkContact should succeed - Error: ${response.checkContact.message}${response.checkContact.translationCode ? ` (${response.checkContact.translationCode})` : ""}`,
     ).toBe("200");
   });
 
@@ -56,8 +53,8 @@ describe("User Registration", () => {
 
   it("Wait to receive OTP via SMS", async () => {
     const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(signUpPayload.phone), {
-      timeoutMs: pollingTimeoutMs,
-      intervalMs: pollingIntervalMs,
+      timeoutMs: fxt.polling.timeoutMs,
+      intervalMs: fxt.polling.intervalMs,
       timeoutError: `OTP not received for ${signUpPayload.phone}`,
     });
 
@@ -72,10 +69,7 @@ describe("User Registration", () => {
       contact: signUpPayload.phone,
     });
 
-    expect(
-      response.checkOtp.code,
-      `checkOtp should succeed - Error: ${response.checkOtp.message}${response.checkOtp.translationCode ? ` (${response.checkOtp.translationCode})` : ''}`
-    ).toBe("200");
+    expect(response.checkOtp.code, `checkOtp should succeed - Error: ${response.checkOtp.message}${response.checkOtp.translationCode ? ` (${response.checkOtp.translationCode})` : ""}`).toBe("200");
   });
 
   it("Register User", async () => {
@@ -85,13 +79,12 @@ describe("User Registration", () => {
         otp: receivedOtp!,
         verificationId,
       },
-      appBrand: appBrand,
+      appBrand: fxt.current.appBrand,
     });
 
-    expect(
-      response.signUpUser.code,
-      `signUpUser should succeed - Error: ${response.signUpUser.message}${response.signUpUser.translationCode ? ` (${response.signUpUser.translationCode})` : ''}`
-    ).toBe("200");
+    expect(response.signUpUser.code, `signUpUser should succeed - Error: ${response.signUpUser.message}${response.signUpUser.translationCode ? ` (${response.signUpUser.translationCode})` : ""}`).toBe(
+      "200",
+    );
   });
 
   it("Try login new user (with PHONE)", async () => {
@@ -105,8 +98,8 @@ describe("User Registration", () => {
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
     const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
-      timeoutMs: pollingTimeoutMs,
-      intervalMs: pollingIntervalMs,
+      timeoutMs: fxt.polling.timeoutMs,
+      intervalMs: fxt.polling.intervalMs,
       timeoutError: "Verification email not received",
     });
 
@@ -138,7 +131,7 @@ describe("User Registration", () => {
     expect(response.verifyEmail, "Email verification response should be defined").toBeDefined();
     expect(
       response.verifyEmail!.code,
-      `verifyEmail should succeed - Error: ${response.verifyEmail!.message}${response.verifyEmail!.translationCode ? ` (${response.verifyEmail!.translationCode})` : ''}`
+      `verifyEmail should succeed - Error: ${response.verifyEmail!.message}${response.verifyEmail!.translationCode ? ` (${response.verifyEmail!.translationCode})` : ""}`,
     ).toBe("200");
   });
 
@@ -187,11 +180,11 @@ describe("User Registration", () => {
 
     expect(
       phoneCheck.checkContact.code,
-      `checkContact should fail - phone no longer available - Error: ${phoneCheck.checkContact.message}${phoneCheck.checkContact.translationCode ? ` (${phoneCheck.checkContact.translationCode})` : ''}`
+      `checkContact should fail - phone no longer available - Error: ${phoneCheck.checkContact.message}${phoneCheck.checkContact.translationCode ? ` (${phoneCheck.checkContact.translationCode})` : ""}`,
     ).toBe("400");
     expect(
       emailCheck.checkContact.code,
-      `checkContact should fail - email no longer available - Error: ${emailCheck.checkContact.message}${emailCheck.checkContact.translationCode ? ` (${emailCheck.checkContact.translationCode})` : ''}`
+      `checkContact should fail - email no longer available - Error: ${emailCheck.checkContact.message}${emailCheck.checkContact.translationCode ? ` (${emailCheck.checkContact.translationCode})` : ""}`,
     ).toBe("400");
   });
 
@@ -261,7 +254,7 @@ describe("User Registration", () => {
 // describe("User Credentials Management", () => {
 //   describe("CHANGE flows (authenticated)", () => {
 //     let testUser: User;
-//     const originalPassword = fixtureCurrentBrand.user.password;
+//     const originalPassword = fixtures.current.user.password;
 //
 //     beforeEach(async () => {
 //       // Setup: Create new user for each test (isolated)
@@ -297,7 +290,7 @@ describe("User Registration", () => {
 //       // Update email
 //       const response = await petlink.core.graphql.authJwt.updateEmailUser({
 //         email: newEmail,
-//         languageId: fixtureCurrentBrand.user.languageId,
+//         languageId: fixtures.current.user.languageId,
 //         appBrand: appBrand,
 //       });
 //
@@ -314,23 +307,23 @@ describe("User Registration", () => {
 //       // STEP 1: Request OTP for new phone
 //       const otpResponse = await petlink.core.graphql.public.sendOtp({
 //         phone: newPhone,
-//         languageId: fixtureCurrentBrand.user.languageId,
+//         languageId: fixtures.current.user.languageId,
 //       });
 //
 //       expect(otpResponse.sendOtp.code, "OTP request should succeed").toBe("200");
 //       expect(otpResponse.sendOtp.verificationId, "Should receive verificationId").toBeDefined();
 //
 //       // STEP 2: Get OTP from SMS (using Twilio client)
-//       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(fixtureCurrentBrand.user.phone), {
-//         timeoutMs: pollingTimeoutMs,
-//         intervalMs: pollingIntervalMs,
-//         timeoutError: `OTP not received for ${fixtureCurrentBrand.user.phone}`,
+//       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(fixtures.current.user.phone), {
+//         timeoutMs: fixtures.polling.timeoutMs,
+//         intervalMs: fixtures.polling.intervalMs,
+//         timeoutError: `OTP not received for ${fixtures.current.user.phone}`,
 //       });
 //
 //       // STEP 3: Update phone with OTP
 //       const updateResponse = await petlink.core.graphql.authJwt.updatePhoneNumberUser({
 //         phone: newPhone,
-//         languageId: fixtureCurrentBrand.user.languageId,
+//         languageId: fixtures.current.user.languageId,
 //         verificationId: otpResponse.sendOtp.verificationId!,
 //         otp: otp!,
 //       });
@@ -358,7 +351,7 @@ describe("User Registration", () => {
 //       // STEP 1: Request OTP (sent to phone) for password reset
 //       const otpResponse = await petlink.core.graphql.public.sendOtpForgotPassword({
 //         contact: setup.user!.phone,
-//         languageId: fixtureCurrentBrand.user.languageId,
+//         languageId: fixtures.current.user.languageId,
 //       });
 //       logger.debug("changeForgotPassword() response", { otpResponse });
 //
@@ -367,8 +360,8 @@ describe("User Registration", () => {
 //
 //       // STEP 2: Get OTP from PHONE
 //       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(setup.user!.phone), {
-//         timeoutMs: pollingTimeoutMs,
-//         intervalMs: pollingIntervalMs,
+//         timeoutMs: fixtures.polling.timeoutMs,
+//         intervalMs: fixtures.polling.intervalMs,
 //         timeoutError: `OTP not received for ${setup.user!.phone}`,
 //       });
 //       logger.debug("Received OTP", { otp });
@@ -404,7 +397,7 @@ describe("User Registration", () => {
 //       const response = await petlink.core.graphql.public.forgotEmail({
 //         productNumber: device.serialNumber,
 //         entityType: "PETLINK_GPS",
-//         languageId: fixtureCurrentBrand.user.languageId,
+//         languageId: fixtures.current.user.languageId,
 //       });
 //
 //       expect(response.forgotEmail?.code, "Email recovery request should succeed").toBe("200");

@@ -1,11 +1,11 @@
 import { PetIn, SpeciesEnum, BreedTypeEnum, Gender, PetLivingEnvironment, UserIn } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { AppBrand, LanguageId } from "../clients/petlink-infrastructure/types.js";
 
-// APP_BRAND is validated in vitest.config.ts and defaults to "KIPPY"
+// Determine the current brand from environment variables
 const currentAppBrand = process.env.APP_BRAND as "PETLINK" | "KIPPY";
 
 // ============================================
-// COMMON (non-exported, internal use only)
+// COMMON DATA (Internal use only)
 // ============================================
 
 const commonUser = {
@@ -66,87 +66,44 @@ const commonCard = {
 };
 
 // ============================================
-// EXPORTED FIXTURES
+// BASE FIXTURES (Internal use only)
 // ============================================
 
-export const fixtures = {
-  // Brand-specific configurations
-  // KIPPY (EU)
+const baseFixtures = {
   KIPPY: {
-    user: {
-      ...commonUser,
-      city: "Milano",
-      countryCode: "IT",
-      zipCode: "20100",
-      languageId: "IT" as LanguageId,
-    } as UserIn,
-
-    pet: {
-      defaultDog: { ...commonPet.defaultDog },
-      defaultCat: { ...commonPet.defaultCat },
-    },
-
+    appBrand: AppBrand.KIPPY,
+    user: { ...commonUser, city: "Milano", countryCode: "IT", zipCode: "20100", languageId: "IT" as LanguageId } as UserIn,
+    pet: { ...commonPet },
     devices: {
-      CAT: {
-        serialNumber: "UTEST01",
-        countryCode: "IT",
-        timezone: "Europe/Rome",
-      },
-      DOG: {
-        serialNumber: "UTEST02",
-        countryCode: "IT",
-        timezone: "Europe/Rome",
-      },
-      EVO: {
-        serialNumber: "UTEST03",
-        countryCode: "IT",
-        timezone: "Europe/Rome",
-      },
+      CAT: { serialNumber: "UTEST01", countryCode: "IT", timezone: "Europe/Rome" },
+      DOG: { serialNumber: "UTEST02", countryCode: "IT", timezone: "Europe/Rome" },
+      EVO: { serialNumber: "UTEST03", countryCode: "IT", timezone: "Europe/Rome" },
     },
-
     card: commonCard,
   },
-
-  // PETLINK (USA..)
   PETLINK: {
-    user: {
-      ...commonUser,
-      city: "New York",
-      countryCode: "US",
-      zipCode: "10001",
-      languageId: "EN" as LanguageId,
-    } as UserIn,
-
-    pet: {
-      defaultDog: { ...commonPet.defaultDog },
-      defaultCat: { ...commonPet.defaultCat },
-    },
-
+    appBrand: AppBrand.PETLINK,
+    user: { ...commonUser, city: "New York", countryCode: "US", zipCode: "10001", languageId: "EN" as LanguageId } as UserIn,
+    pet: { ...commonPet },
     devices: {
-      CAT: {
-        serialNumber: "UTEST04",
-        countryCode: "US",
-        timezone: "America/New_York",
-      },
-      DOG: {
-        serialNumber: "UTEST05",
-        countryCode: "US",
-        timezone: "America/New_York",
-      },
+      CAT: { serialNumber: "UTEST04", countryCode: "US", timezone: "America/New_York" },
+      DOG: { serialNumber: "UTEST05", countryCode: "US", timezone: "America/New_York" },
     },
-
     card: commonCard,
   },
 };
 
 // ============================================
-// CONVENIENCE EXPORTS
+// SINGLE EXPORTED FIXTURE OBJECT
 // ============================================
 
-// Current brand fixtures (automatically selected based on APP_BRAND env var)
-export const appBrand = currentAppBrand;
-export const isKippyRun = currentAppBrand === AppBrand.KIPPY;
-export const isPetlinkRun = currentAppBrand === AppBrand.PETLINK;
-export const pollingTimeoutMs = 180000;
-export const pollingIntervalMs = 1000;
-export const fixtureCurrentBrand = fixtures[currentAppBrand];
+export const fxt = {
+  ...baseFixtures,
+  isKippyRun: currentAppBrand === AppBrand.KIPPY,
+  isPetlinkRun: currentAppBrand === AppBrand.PETLINK,
+  current: baseFixtures[currentAppBrand],
+  polling: {
+    timeoutMs: 180000,
+    intervalMs: 1000,
+  },
+};
