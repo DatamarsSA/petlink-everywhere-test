@@ -287,7 +287,7 @@ export class TestHelper {
     });
 
     if (response.createPet.code !== "200") {
-      throw new Error(`Failed to create ${petType}: ${response.createPet.message}`);
+      throw new Error(`Failed to create ${petType}: ${response.createPet.message}${(response.createPet.translationCode && ` - ${response.createPet.translationCode}`) ?? ""}`);
     }
 
     logger.debug("✓ Created Pet", {
@@ -326,7 +326,9 @@ export class TestHelper {
     });
 
     if (response.createPetlinkGps.code !== "200") {
-      throw new Error(`Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}`);
+      throw new Error(
+        `Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}${(response.createPetlinkGps.translationCode && ` - ${response.createPetlinkGps.translationCode}`) ?? ""}`,
+      );
     }
 
     logger.debug("✓ Created Device", {
