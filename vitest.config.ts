@@ -46,20 +46,16 @@ export default defineConfig(({ mode }) => {
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
   });
 
-  try {
-    const validatedEnv = envSchema.parse(process.env);
-    // Merge validated values back (garantisce i default)
-    Object.assign(process.env, validatedEnv);
-    console.log("✅ Envs validated successfully");
-  } catch (error) {
+  const result = envSchema.safeParse(process.env);
+  if (!result.success) {
     console.error("❌ Envs validation failed");
-    if (error instanceof z.ZodError) {
-      error.issues.forEach((issue) => {
-        console.error(`  ${issue.path.join(".")}: ${issue.message}`);
-      });
-    }
+    result.error.issues.forEach((issue) => {
+      console.error(`  ${issue.path.join(".")}: ${issue.message}`);
+    });
     process.exit(1);
   }
+  Object.assign(process.env, result.data);
+  console.log("✅ Envs validated successfully");
 
   return {
     test: {
