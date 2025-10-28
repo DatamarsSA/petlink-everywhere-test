@@ -1,5 +1,5 @@
 import { logger } from "../logger.js";
-import { testHelper, TestHelper } from "../../clients/client-test-helper.js";
+import { testHelper } from "../../clients/client-test-helper.js";
 
 export default async function setup() {
   // Clean test-reports/ directory once before all tests

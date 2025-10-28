@@ -6,19 +6,17 @@
   "scripts": {
     "prettier:write-src": "prettier --write --ignore-path .prettierignore ./src",
     "precommit": "yarn prettier:write-src && yarn run tsc --noEmit",
-    "fetch:schemas": "tsx src/clients/petlink-infrastructure/endpoints/graphql/scripts/fetch-schema.ts ALL",
-    "codegen:generate-sdk": "graphql-codegen --config codegen.yaml",
-    "fetch-schemas:generate-sdk": "yarn fetch:schemas && yarn codegen:generate-sdk",
+    "codegen": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts",
     "test": "vitest run",
-    "pipeline": "yarn fetch:schemas && yarn codegen:generate-sdk && yarn test",
-    "pipeline:develop": "TEST_ENV=develop yarn pipeline",
-    "pipeline:test": "TEST_ENV=test yarn pipeline"
+    "pipeline:develop": "TEST_ENV=develop yarn codegen && yarn test",
+    "pipeline:test": "TEST_ENV=test yarn codegen && yarn test"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",
     "@graphql-codegen/typescript": "^4.0.6",
     "@graphql-codegen/typescript-graphql-request": "^6.2.0",
     "@graphql-codegen/typescript-operations": "^4.2.0",
+    "@tsconfig/node16": "^16.1.6",
     "@types/node": "^20.19.23",
     "@types/twilio": "^3.19.3",
     "@vitest/ui": "^3.2.4",
@@ -40,7 +38,6 @@
     "@aws-sdk/signature-v4": "^3.374.0",
     "@faker-js/faker": "^10.0.0",
     "googleapis": "^160.0.0",
-    "ts-node": "^10.9.2",
     "twilio": "^5.9.0",
     "winston": "^3.18.3",
     "zod": "^4.1.11"

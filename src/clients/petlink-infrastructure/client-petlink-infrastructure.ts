@@ -6,7 +6,6 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
-import { appBrand } from "../../fixtures/fixtures.js";
 import { logger } from "../../config/logger.js";
 
 // ------------------------------
