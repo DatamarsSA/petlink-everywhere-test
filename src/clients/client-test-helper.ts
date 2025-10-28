@@ -302,7 +302,7 @@ export class TestHelper {
       throw new Error(`Device fixture not found for brand ${fxt.current.appBrand} and type ${deviceType}`);
     }
 
-    logger.debug(`→ Assign device (${deviceType} - ${deviceFixture.serialNumber}) to pet ${pet.species} with id ${pet.id}`);
+    logger.debug(`→ Assigning device ${deviceType} (${deviceFixture.serialNumber}) to pet ${pet.name} (${pet.species}) with id ${pet.id}`);
 
     // Validate EVO can only be created with KIPPY brand
     if (deviceType === DeviceType.EVO && !fxt.isKippyRun) {
@@ -327,7 +327,7 @@ export class TestHelper {
       );
     }
 
-    logger.debug("✓ Created Device", {
+    logger.debug("✓ Assigned Device", {
       serialNumber: response.createPetlinkGps.petlinkGps!.serialNumber,
       deviceType,
       petId: pet.id,
