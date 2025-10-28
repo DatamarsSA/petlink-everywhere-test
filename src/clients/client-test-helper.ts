@@ -109,7 +109,7 @@ class TestSetupBuilder {
 
     if (this.includeDogDevice && this.setup.pets.dog) {
       devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dog.id, DeviceType.DOG).then((device) => {
+        this.helper.createDeviceForPet(this.setup.pets.dog, DeviceType.DOG).then((device) => {
           this.setup.devices.dogStandard = device;
         }),
       );
@@ -117,7 +117,7 @@ class TestSetupBuilder {
 
     if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
       devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dogForEvo.id, DeviceType.EVO).then((device) => {
+        this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceType.EVO).then((device) => {
           this.setup.devices.dogEvo = device;
         }),
       );
@@ -125,7 +125,7 @@ class TestSetupBuilder {
 
     if (this.includeCatDevice && this.setup.pets.cat) {
       devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.cat.id, DeviceType.CAT).then((device) => {
+        this.helper.createDeviceForPet(this.setup.pets.cat, DeviceType.CAT).then((device) => {
           this.setup.devices.catStandard = device;
         }),
       );
@@ -206,10 +206,6 @@ export class TestHelper {
     }
 
     logger.debug("✓ Cleanup operations completed successfully");
-  }
-
-  async clearAuthCache(): Promise<void> {
-    petlink.clearAllCache();
   }
 
   async createUser(): Promise<User> {
@@ -299,25 +295,25 @@ export class TestHelper {
     return response.createPet.pet!;
   }
 
-  async createDeviceForPet(petId: string, deviceType: DeviceType): Promise<PetlinkGps> {
-    logger.debug(`→ Creating device (${deviceType}) for pet ${petId}`);
-
-    // Validate EVO can only be created with KIPPY brand
-    if (deviceType === DeviceType.EVO && !fxt.isKippyRun) {
-      throw new Error("EVO device can only be created when appBrand is KIPPY");
-    }
-
+  async createDeviceForPet(pet: Pet, deviceType: DeviceType): Promise<PetlinkGps> {
     const deviceFixture = deviceType === DeviceType.EVO ? fxt.KIPPY.devices.EVO : fxt.current.devices[deviceType];
 
     if (!deviceFixture) {
       throw new Error(`Device fixture not found for brand ${fxt.current.appBrand} and type ${deviceType}`);
     }
 
+    logger.debug(`→ Assign device (${deviceType} - ${deviceFixture.serialNumber}) to pet ${pet.species} with id ${pet.id}`);
+
+    // Validate EVO can only be created with KIPPY brand
+    if (deviceType === DeviceType.EVO && !fxt.isKippyRun) {
+      throw new Error("EVO device can only be created when appBrand is KIPPY");
+    }
+
     const devicePayload: PetlinkGpsIn = {
       serialNumber: deviceFixture.serialNumber,
       countryCode: deviceFixture.countryCode,
       timezone: deviceFixture.timezone,
-      petId: petId,
+      petId: pet.id,
     };
 
     const response = await petlink.core.graphql.authJwt.createPetlinkGps({
@@ -334,7 +330,7 @@ export class TestHelper {
     logger.debug("✓ Created Device", {
       serialNumber: response.createPetlinkGps.petlinkGps!.serialNumber,
       deviceType,
-      petId,
+      petId: pet.id,
       id: response.createPetlinkGps.petlinkGps!.id,
     });
 
