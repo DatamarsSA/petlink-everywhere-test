@@ -492,6 +492,22 @@ export class PetLinkInfrastructure {
   cleanIamCredentials(): void {
     AuthManager.clearIamCredentials();
   }
+
+  /**
+   * [DEBUG] Returns the current authentication state of the client.
+   * Useful for debugging and advanced test assertions.
+   */
+  getCurrentAuthState(): {
+    isUserLoggedIn: boolean;
+    hasIamCredentials: boolean;
+    jwtToken?: string;
+  } {
+    return {
+      isUserLoggedIn: AuthManager.hasValidJwtToken(),
+      hasIamCredentials: AuthManager.hasIamCredentials(),
+      jwtToken: AuthManager.hasValidJwtToken() ? AuthManager.getJwtToken() : undefined,
+    };
+  }
 }
 
 export const petlink = new PetLinkInfrastructure();
