@@ -325,11 +325,11 @@ class AuthManager {
     return signedRequest.headers as Record<string, string>;
   }
 
-  /**
-   * Clear all cached auth material.
-   */
-  static clearCache(): void {
+  static clearJwtCache(): void {
     this.jwtToken = null;
+  }
+
+  static clearIamCredentials(): void {
     this.iamCredentials = null;
   }
 }
@@ -480,13 +480,17 @@ export class PetLinkInfrastructure {
   }
 
   /**
-   * Clear all authentication state and cached clients.
-   * Should be called between test suites to ensure clean state.
+   * Clears user-specific authentication (JWT) and related clients,
+   * simulating a user logout.
    */
-  clearAllCache(): void {
-    AuthManager.clearCache();
+  logoutUser(): void {
+    AuthManager.clearJwtCache();
     this.core.clearCache();
     this.cct.clearCache();
+  }
+
+  cleanIamCredentials(): void {
+    AuthManager.clearIamCredentials();
   }
 }
 
