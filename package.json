@@ -4,8 +4,7 @@
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {
-    "prettier:write-src": "prettier --write --ignore-path .prettierignore ./src",
-    "precommit": "yarn prettier:write-src && yarn run tsc --noEmit",
+    "precommit": "yarn run tsc --noEmit",
     "codegen": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts",
     "test": "vitest run",
     "pipeline:develop": "TEST_ENV=develop yarn codegen && yarn test",
