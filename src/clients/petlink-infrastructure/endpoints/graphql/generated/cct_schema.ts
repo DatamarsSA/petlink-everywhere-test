@@ -34,9 +34,20 @@ export interface Activity {
   walk: Scalars["Int"]["output"];
 }
 
-export type ActivityProfileEnum = "MODERATELY_ACTIVE" | "SEDENTARY" | "VERY_ACTIVE";
+export enum ActivityProfileEnum {
+  ModeratelyActive = "MODERATELY_ACTIVE",
+  Sedentary = "SEDENTARY",
+  VeryActive = "VERY_ACTIVE",
+}
 
-export type AddFreePeriod = "ADD_1_YEAR" | "ADD_7_DAYS" | "ADD_14_DAYS" | "ADD_30_DAYS" | "ADD_60_DAYS" | "ADD_90_DAYS";
+export enum AddFreePeriod {
+  Add_1Year = "ADD_1_YEAR",
+  Add_7Days = "ADD_7_DAYS",
+  Add_14Days = "ADD_14_DAYS",
+  Add_30Days = "ADD_30_DAYS",
+  Add_60Days = "ADD_60_DAYS",
+  Add_90Days = "ADD_90_DAYS",
+}
 
 export interface AddTicketToIssueResponse {
   __typename?: "AddTicketToIssueResponse";
@@ -61,7 +72,14 @@ export interface Breed {
   species: SpeciesEnum;
 }
 
-export type CancelReasonCodeEnum = "DO_NOT_USE" | "DO_NOT_WORK_PROPERLY" | "MISSING_PET" | "NOT_SUITABLE" | "OTHER" | "TOO_EXPENSIVE";
+export enum CancelReasonCodeEnum {
+  DoNotUse = "DO_NOT_USE",
+  DoNotWorkProperly = "DO_NOT_WORK_PROPERLY",
+  MissingPet = "MISSING_PET",
+  NotSuitable = "NOT_SUITABLE",
+  Other = "OTHER",
+  TooExpensive = "TOO_EXPENSIVE",
+}
 
 export interface Card {
   __typename?: "Card";
@@ -106,7 +124,10 @@ export interface Coupon {
 }
 
 /**  Enum */
-export type CouponSetMode = "apply" | "simulate";
+export enum CouponSetMode {
+  Apply = "apply",
+  Simulate = "simulate",
+}
 
 export interface CreateIssueResponse {
   __typename?: "CreateIssueResponse";
@@ -160,7 +181,12 @@ export interface CreditNote {
   username: Scalars["String"]["output"];
 }
 
-export type CreditNoteStatusTypeEnum = "adjusted" | "refund_due" | "refunded" | "voided";
+export enum CreditNoteStatusTypeEnum {
+  Adjusted = "adjusted",
+  RefundDue = "refund_due",
+  Refunded = "refunded",
+  Voided = "voided",
+}
 
 export interface Customer {
   __typename?: "Customer";
@@ -178,7 +204,12 @@ export interface Customer {
   surname: Scalars["String"]["output"];
 }
 
-export type CustomerMood = "COLLABORATIVE" | "CRITICAL" | "NON_COOPERATIVE" | "VERY_CRITICAL";
+export enum CustomerMood {
+  Collaborative = "COLLABORATIVE",
+  Critical = "CRITICAL",
+  NonCooperative = "NON_COOPERATIVE",
+  VeryCritical = "VERY_CRITICAL",
+}
 
 export interface DateFilterInput {
   gte?: InputMaybe<Scalars["String"]["input"]>;
@@ -269,7 +300,11 @@ export interface DeviceMap {
   serialId: Scalars["String"]["output"];
 }
 
-export type DeviceVisibilityEnum = "KIPPY" | "PETLINK" | "VODAFONE";
+export enum DeviceVisibilityEnum {
+  Kippy = "KIPPY",
+  Petlink = "PETLINK",
+  Vodafone = "VODAFONE",
+}
 
 export interface DiscoutItem {
   __typename?: "DiscoutItem";
@@ -288,7 +323,10 @@ export interface DunningAttemptsItem {
   transactionId: Scalars["String"]["output"];
 }
 
-export type FilterEnum = "AND" | "OR";
+export enum FilterEnum {
+  And = "AND",
+  Or = "OR",
+}
 
 export interface GetActivitiesResponse {
   __typename?: "GetActivitiesResponse";
@@ -647,9 +685,25 @@ export interface InvoiceItem {
   unitPrice: Scalars["Int"]["output"];
 }
 
-export type InvoiceReasonCodeEnum = "order_cancellation" | "order_change" | "other" | "product_unsatisfactory" | "service_unsatisfactory" | "waiver";
+export enum InvoiceReasonCodeEnum {
+  OrderCancellation = "order_cancellation",
+  OrderChange = "order_change",
+  Other = "other",
+  ProductUnsatisfactory = "product_unsatisfactory",
+  ServiceUnsatisfactory = "service_unsatisfactory",
+  Waiver = "waiver",
+}
 
-export type InvoiceStatusEnum = "non_paying" | "not_paid" | "paid" | "paid_externally" | "payment_due" | "pending" | "posted" | "voided";
+export enum InvoiceStatusEnum {
+  NonPaying = "non_paying",
+  NotPaid = "not_paid",
+  Paid = "paid",
+  PaidExternally = "paid_externally",
+  PaymentDue = "payment_due",
+  Pending = "pending",
+  Posted = "posted",
+  Voided = "voided",
+}
 
 export interface Issue {
   __typename?: "Issue";
@@ -670,7 +724,13 @@ export interface IssueInput {
   zendeskId: Scalars["String"]["input"];
 }
 
-export type LanguageId = "DE" | "EN" | "ES" | "FR" | "IT";
+export enum LanguageId {
+  De = "DE",
+  En = "EN",
+  Es = "ES",
+  Fr = "FR",
+  It = "IT",
+}
 
 export interface LogActivityUser {
   __typename?: "LogActivityUser";
@@ -848,7 +908,10 @@ export interface OrderCustomer {
   phone: Scalars["String"]["output"];
 }
 
-export type OrderEnum = "asc" | "desc";
+export enum OrderEnum {
+  Asc = "asc",
+  Desc = "desc",
+}
 
 export interface OrderInput {
   field: Scalars["String"]["input"];
@@ -911,9 +974,16 @@ export interface PaginationInput {
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
 }
 
-export type PaymentMethodEnum = "CARD" | "PAYPAL";
+export enum PaymentMethodEnum {
+  Card = "CARD",
+  Paypal = "PAYPAL",
+}
 
-export type PaymentStatusTypeEnum = "FAILED" | "PENDING" | "SUCCEEDED";
+export enum PaymentStatusTypeEnum {
+  Failed = "FAILED",
+  Pending = "PENDING",
+  Succeeded = "SUCCEEDED",
+}
 
 export interface Pet {
   __typename?: "Pet";
@@ -1004,7 +1074,17 @@ export interface PetProtectionShortInfo {
   status: PetProtectionStatus;
 }
 
-export type PetProtectionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "IN_PROGRESS" | "IN_REVIEW" | "OPEN" | "REFUNDED" | "REJECTED" | "TO_UPDATE";
+export enum PetProtectionStatus {
+  Active = "ACTIVE",
+  Cancelled = "CANCELLED",
+  Expired = "EXPIRED",
+  InProgress = "IN_PROGRESS",
+  InReview = "IN_REVIEW",
+  Open = "OPEN",
+  Refunded = "REFUNDED",
+  Rejected = "REJECTED",
+  ToUpdate = "TO_UPDATE",
+}
 
 export interface PetlinkSubscription {
   __typename?: "PetlinkSubscription";
@@ -1351,7 +1431,12 @@ export interface ResponseGetShelterOrders {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type RoleEnum = "L1" | "L2" | "SUPERADMIN" | "SUPERREADER";
+export enum RoleEnum {
+  L1 = "L1",
+  L2 = "L2",
+  Superadmin = "SUPERADMIN",
+  Superreader = "SUPERREADER",
+}
 
 export interface SetCouponResponse {
   __typename?: "SetCouponResponse";
@@ -1390,9 +1475,24 @@ export interface ShelterOrderRecap {
   orderCount: Scalars["Int"]["output"];
 }
 
-export type SimStatusEnum = "inactive" | "live" | "other" | "ready" | "sleep" | "standBy" | "stopped" | "suspended" | "terminated" | "test";
+export enum SimStatusEnum {
+  Inactive = "inactive",
+  Live = "live",
+  Other = "other",
+  Ready = "ready",
+  Sleep = "sleep",
+  StandBy = "standBy",
+  Stopped = "stopped",
+  Suspended = "suspended",
+  Terminated = "terminated",
+  Test = "test",
+}
 
-export type SpeciesEnum = "CAT" | "DOG" | "OTHER";
+export enum SpeciesEnum {
+  Cat = "CAT",
+  Dog = "DOG",
+  Other = "OTHER",
+}
 
 export interface SubscriptionCancelled {
   __typename?: "SubscriptionCancelled";
@@ -1426,7 +1526,18 @@ export interface SubscriptionItem {
   unitPrice: Scalars["Int"]["output"];
 }
 
-export type SubscriptionStatusEnum = "active" | "cancelled" | "closed" | "future" | "in_trial" | "non_renewing" | "paused" | "to_stop_renew" | "to_stop_renew_addon" | "transferred";
+export enum SubscriptionStatusEnum {
+  Active = "active",
+  Cancelled = "cancelled",
+  Closed = "closed",
+  Future = "future",
+  InTrial = "in_trial",
+  NonRenewing = "non_renewing",
+  Paused = "paused",
+  ToStopRenew = "to_stop_renew",
+  ToStopRenewAddon = "to_stop_renew_addon",
+  Transferred = "transferred",
+}
 
 export interface Ticket {
   __typename?: "Ticket";
@@ -1447,20 +1558,25 @@ export interface Ticket {
   username: Scalars["String"]["output"];
 }
 
-export type TicketAction = "REPLACEMENT" | "RESET" | "RETURN";
+export enum TicketAction {
+  Replacement = "REPLACEMENT",
+  Reset = "RESET",
+  Return = "RETURN",
+}
 
-export type TicketActionReason =
-  | "BATTERY_BLOCK"
-  | "BATTERY_CHARGING"
-  | "COMMERCIAL_RETURN"
-  | "DAMAGED"
-  | "GPRS_PERFORMANCE"
-  | "GPS_PERFORMANCE"
-  | "KIPPY_CARE_DEVICE_PROTECTION"
-  | "LOST"
-  | "NO_CUSTOMER_CARE"
-  | "OUT_OF_WARRANTY_RETURN"
-  | "SUBSCRIPTION";
+export enum TicketActionReason {
+  BatteryBlock = "BATTERY_BLOCK",
+  BatteryCharging = "BATTERY_CHARGING",
+  CommercialReturn = "COMMERCIAL_RETURN",
+  Damaged = "DAMAGED",
+  GprsPerformance = "GPRS_PERFORMANCE",
+  GpsPerformance = "GPS_PERFORMANCE",
+  KippyCareDeviceProtection = "KIPPY_CARE_DEVICE_PROTECTION",
+  Lost = "LOST",
+  NoCustomerCare = "NO_CUSTOMER_CARE",
+  OutOfWarrantyReturn = "OUT_OF_WARRANTY_RETURN",
+  Subscription = "SUBSCRIPTION",
+}
 
 export interface TicketChangeStatusResponse {
   __typename?: "TicketChangeStatusResponse";
@@ -1485,30 +1601,34 @@ export interface TicketInput {
   techNotes?: InputMaybe<Scalars["String"]["input"]>;
 }
 
-export type TicketIssue =
-  | "ACTIVITY_BUG"
-  | "APP_BUG"
-  | "BATTERY_DRAINS_QUICKLY"
-  | "BATTERY_NOT_CHARGE"
-  | "BATTERY_PARTIALLY_CHARGES"
-  | "BATTERY_WIRE_DISCONNECTED"
-  | "BLUETOOTH"
-  | "DAMAGED_NO_WARRANTY"
-  | "DAMAGED_UNDER_WARRANTY"
-  | "DIMENSIONS"
-  | "GPRS_PERFORMANCE"
-  | "GPS_FIXING_PERFORMANCE"
-  | "GPS_LOCATION_PERFORMANCE"
-  | "LED"
-  | "LOST"
-  | "NO_SOUND"
-  | "SIM"
-  | "UNKNOWN"
-  | "WATER_INFILTRATION"
-  | "WIFI_HOME"
-  | "WIFI_LOCATION";
+export enum TicketIssue {
+  ActivityBug = "ACTIVITY_BUG",
+  AppBug = "APP_BUG",
+  BatteryDrainsQuickly = "BATTERY_DRAINS_QUICKLY",
+  BatteryNotCharge = "BATTERY_NOT_CHARGE",
+  BatteryPartiallyCharges = "BATTERY_PARTIALLY_CHARGES",
+  BatteryWireDisconnected = "BATTERY_WIRE_DISCONNECTED",
+  Bluetooth = "BLUETOOTH",
+  DamagedNoWarranty = "DAMAGED_NO_WARRANTY",
+  DamagedUnderWarranty = "DAMAGED_UNDER_WARRANTY",
+  Dimensions = "DIMENSIONS",
+  GprsPerformance = "GPRS_PERFORMANCE",
+  GpsFixingPerformance = "GPS_FIXING_PERFORMANCE",
+  GpsLocationPerformance = "GPS_LOCATION_PERFORMANCE",
+  Led = "LED",
+  Lost = "LOST",
+  NoSound = "NO_SOUND",
+  Sim = "SIM",
+  Unknown = "UNKNOWN",
+  WaterInfiltration = "WATER_INFILTRATION",
+  WifiHome = "WIFI_HOME",
+  WifiLocation = "WIFI_LOCATION",
+}
 
-export type TicketStatus = "CLOSED" | "OPEN";
+export enum TicketStatus {
+  Closed = "CLOSED",
+  Open = "OPEN",
+}
 
 export interface UpdateCustomerInput {
   confermationEmail: Scalars["Boolean"]["input"];
@@ -1559,7 +1679,15 @@ export interface User {
   vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
 }
 
-export type VodafoneCountryVisibilityEnum = "DE" | "ES" | "EU" | "GB" | "IE" | "IT" | "PT";
+export enum VodafoneCountryVisibilityEnum {
+  De = "DE",
+  Es = "ES",
+  Eu = "EU",
+  Gb = "GB",
+  Ie = "IE",
+  It = "IT",
+  Pt = "PT",
+}
 
 export interface SetPlanProfilesResponse {
   __typename?: "setPlanProfilesResponse";
@@ -1569,7 +1697,12 @@ export interface SetPlanProfilesResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type SdkFunctionWrapper = <T>(action: (requestHeaders?: Record<string, string>) => Promise<T>, operationName: string, operationType?: string, variables?: any) => Promise<T>;
+export type SdkFunctionWrapper = <T>(
+  action: (requestHeaders?: Record<string, string>) => Promise<T>,
+  operationName: string,
+  operationType?: string,
+  variables?: any,
+) => Promise<T>;
 
 const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationType, _variables) => action();
 

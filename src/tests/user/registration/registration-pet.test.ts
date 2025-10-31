@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PetIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { BreedTypeEnum, PetIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
@@ -36,7 +36,10 @@ describe("Pet Registration", () => {
   });
 
   it("Create DOG and CAT for the user", async () => {
-    const [dogResponse, catResponse] = await Promise.all([petlink.core.graphql.authJwt.createPet({ pet: dogPayload }), petlink.core.graphql.authJwt.createPet({ pet: catPayload })]);
+    const [dogResponse, catResponse] = await Promise.all([
+      petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
+      petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
+    ]);
 
     // Assert DOG
     expect(
@@ -88,7 +91,7 @@ describe("Pet Registration", () => {
       petlink.core.graphql.authJwt.createPet({
         pet: {
           ...dogPayload,
-          breedType: "PUREBREED",
+          breedType: BreedTypeEnum.Purebreed,
           breeds: [
             "5b0bfddb-532e-41cb-9705-b2ddc21226ef", // Labrador Retriever
             "0074b56e-8c84-43b6-aaad-d7c00a9aa37e", // Another dog breed
@@ -99,7 +102,7 @@ describe("Pet Registration", () => {
       petlink.core.graphql.authJwt.createPet({
         pet: {
           ...dogPayload,
-          breedType: "MIXED_BREED",
+          breedType: BreedTypeEnum.MixedBreed,
           breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Only 1 breed
         },
       }),
@@ -107,7 +110,7 @@ describe("Pet Registration", () => {
       petlink.core.graphql.authJwt.createPet({
         pet: {
           ...dogPayload,
-          breedType: "MIXED_BREED",
+          breedType: BreedTypeEnum.MixedBreed,
           breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef", "5b0bfddb-532e-41cb-9705-b2ddc21226ef"],
         },
       }),
@@ -115,7 +118,7 @@ describe("Pet Registration", () => {
       petlink.core.graphql.authJwt.createPet({
         pet: {
           ...catPayload,
-          breedType: "PUREBREED",
+          breedType: BreedTypeEnum.Purebreed,
           breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever (DOG)
         },
       }),
@@ -123,7 +126,7 @@ describe("Pet Registration", () => {
       petlink.core.graphql.authJwt.createPet({
         pet: {
           ...dogPayload,
-          breedType: "PUREBREED",
+          breedType: BreedTypeEnum.Purebreed,
           breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese (CAT)
         },
       }),

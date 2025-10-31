@@ -1,5 +1,13 @@
-import { PetIn, SpeciesEnum, BreedTypeEnum, Gender, PetLivingEnvironment, UserIn } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { AppBrand, LanguageId } from "../clients/petlink-infrastructure/types.js";
+import {
+  PetIn,
+  SpeciesEnum,
+  BreedTypeEnum,
+  Gender,
+  PetLivingEnvironment,
+  LanguageId,
+  AppBrand,
+  UserIn,
+} from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 // Determine the current brand from environment variables
 const currentAppBrand = process.env.APP_BRAND as "PETLINK" | "KIPPY";
@@ -21,8 +29,8 @@ const commonUser = {
 const commonPet = {
   defaultDog: {
     name: "TestDog",
-    species: "DOG" as SpeciesEnum,
-    breedType: "PUREBREED" as BreedTypeEnum,
+    species: SpeciesEnum.Dog,
+    breedType: BreedTypeEnum.Purebreed,
     breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever
     gender: "MALE" as Gender,
     weight: 15000, // in grammi
@@ -33,8 +41,8 @@ const commonPet = {
 
   defaultCat: {
     name: "TestCat",
-    species: "CAT" as SpeciesEnum,
-    breedType: "PUREBREED" as BreedTypeEnum,
+    species: SpeciesEnum.Cat,
+    breedType: BreedTypeEnum.Purebreed,
     breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese
     gender: "FEMALE" as Gender,
     weight: 4200, // in grammi
@@ -71,7 +79,7 @@ const commonCard = {
 
 const baseFixtures = {
   KIPPY: {
-    appBrand: AppBrand.KIPPY,
+    appBrand: AppBrand.Kippy,
     user: { ...commonUser, city: "Milano", countryCode: "IT", zipCode: "20100", languageId: "IT" as LanguageId } as UserIn,
     pet: { ...commonPet },
     devices: {
@@ -82,7 +90,7 @@ const baseFixtures = {
     card: commonCard,
   },
   PETLINK: {
-    appBrand: AppBrand.PETLINK,
+    appBrand: AppBrand.Petlink,
     user: { ...commonUser, city: "New York", countryCode: "US", zipCode: "10001", languageId: "EN" as LanguageId } as UserIn,
     pet: { ...commonPet },
     devices: {
@@ -99,8 +107,8 @@ const baseFixtures = {
 
 export const fxt = {
   ...baseFixtures,
-  isKippyRun: currentAppBrand === AppBrand.KIPPY,
-  isPetlinkRun: currentAppBrand === AppBrand.PETLINK,
+  isKippyRun: currentAppBrand === AppBrand.Kippy,
+  isPetlinkRun: currentAppBrand === AppBrand.Petlink,
   current: baseFixtures[currentAppBrand],
   polling: {
     timeoutMs: 180000,

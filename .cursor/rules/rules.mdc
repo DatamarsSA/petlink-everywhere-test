@@ -46,16 +46,12 @@ Use the `testHelper` builder to create a clean state before tests run. This is t
 // in src/tests/user/subscriptions/default-purchase.test.ts
 
 import { describe, expect, it, beforeAll } from "vitest";
-import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 
 describe.sequential("User Subscription Purchase Flow", () => {
   let setup: TestSetup;
 
   beforeAll(async () => {
-    // 1. Clean previous test runs' data
-    await testHelper.cleanupAll();
-    
-    // 2. Build the necessary entities for this test flow
+    // Build the necessary entities for this test flow
     setup = await testHelper.setupBuilder()
       .withUser()
       .withDog()
@@ -68,7 +64,7 @@ describe.sequential("User Subscription Purchase Flow", () => {
 ```
 
 **Key Principles**:
-- **Clean First**: `cleanupAll()` runs *before* tests, ensuring a fresh start and allowing manual inspection of the database after a run.
+- **Clean First**: `cleanupAll()` runs *before* tests (as a config of setupFiles - beforeAll), ensuring a fresh start and allowing manual inspection of the database after a run.
 - **Use the Builder**: `.withUser()`, `.withDog()`, `.withCatDevice()`, etc. abstract away the complexity of entity creation. Access results via the `setup` object.
 - **Sequential Execution**: Use `describe.sequential` when tests in a file depend on each other to form a complete user flow.
 

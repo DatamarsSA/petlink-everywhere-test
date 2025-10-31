@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { fxt } from "../../../fixtures/fixtures.js";
-import type { UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { ContactType, UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { waitFor } from "../../../helpers/helpers.js";
+import { extractParamsFromUrl, waitFor } from "../../../helpers/helpers.js";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 
@@ -30,7 +30,7 @@ describe("User Registration", () => {
   it("Verify phone number availability", async () => {
     const response = await petlink.core.graphql.public.checkContact({
       contact: signUpPayload.phone,
-      contactType: "PHONE",
+      contactType: ContactType.Phone,
     });
 
     expect(
@@ -117,14 +117,6 @@ describe("User Registration", () => {
   }, 70000);
 
   it("Verify Email (clicking on received link)", async () => {
-    const extractParamsFromUrl = (url: string) => {
-      const urlObj = new URL(url);
-      const uuid = urlObj.searchParams.get("uuid");
-      const otp = urlObj.searchParams.get("otp");
-      const verificationId = urlObj.searchParams.get("verificationId");
-      return { uuid, otp, verificationId };
-    };
-
     const params = extractParamsFromUrl(verificationLink!);
 
     const response = await petlink.core.graphql.public.verifyEmail({
@@ -174,11 +166,11 @@ describe("User Registration", () => {
     const [phoneCheck, emailCheck] = await Promise.all([
       petlink.core.graphql.public.checkContact({
         contact: signUpPayload.phone,
-        contactType: "PHONE",
+        contactType: ContactType.Phone,
       }),
       petlink.core.graphql.public.checkContact({
         contact: signUpPayload.email,
-        contactType: "EMAIL",
+        contactType: ContactType.Email,
       }),
     ]);
 

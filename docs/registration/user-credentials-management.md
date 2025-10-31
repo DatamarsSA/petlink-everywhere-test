@@ -31,11 +31,14 @@ STEP 1: Richiedi OTP per il nuovo numero
 
 STEP 2: Utente riceve OTP via SMS
 
-STEP 3: Aggiorna phone con OTP
+STEP 3: Verifica Phone number inviando OTP
+└─> checkOtp(verificationId, otp, newPhone)
+
+STEP 4: Aggiorna phone con OTP
 └─> updatePhoneNumberUser(newPhone, verificationId, otp)
     └─> Phone aggiornato
 Autenticazione richiesta: 
-  STEP 1: ❌ NO (public)
+  STEP 1-2-3: ❌ NO (public)
   STEP 3: ✅ SI (authJwt)
 
 ------ FORGOT/RECOVERY flows (public) ------
@@ -45,7 +48,7 @@ STEP 1: Richiedi OTP
 └─> sendOtpForgotPassword(contact: email/phone)
     └─> Ritorna: verificationId
 
-STEP 2: Utente riceve OTP via email/SMS
+STEP 2: Utente riceve OTP via SMS
 
 STEP 3: Cambia password
 └─> changeForgotPassword(otp, verificationId, newPassword)

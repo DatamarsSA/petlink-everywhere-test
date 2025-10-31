@@ -1,12 +1,27 @@
-import { User, UserIn, PetIn, Pet, PetlinkGps, PetlinkGpsIn, SpeciesEnum } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  User,
+  UserIn,
+  PetIn,
+  Pet,
+  PetlinkGps,
+  PetlinkGpsIn,
+  SpeciesEnum,
+  UtilityTestTypeEnum,
+  DeviceTypeEnum,
+} from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
-import { PetType, DeviceType, UtilityTestTypeEnum } from "./petlink-infrastructure/types.js";
 import { logger } from "../config/logger.js";
 import { existsSync, mkdirSync } from "fs";
 import { unlinkSync } from "node:fs";
+
+type UserOptions = {
+  email?: string;
+  phone?: string;
+  password?: string;
+};
 
 export interface TestSetup {
   user?: User;
@@ -25,6 +40,7 @@ export interface TestSetup {
 class TestSetupBuilder {
   private setup: TestSetup = { pets: {}, devices: {} };
   private includeUser = false;
+  private userOptions: UserOptions = {};
   private includeDog = false;
   private includeDogForEvo = false;
   private includeCat = false;
@@ -34,8 +50,9 @@ class TestSetupBuilder {
 
   constructor(private helper: TestHelper) {}
 
-  withUser(): this {
+  withUser(options: UserOptions = {}): this {
     this.includeUser = true;
+    this.userOptions = options;
     return this;
   }
 
@@ -74,14 +91,14 @@ class TestSetupBuilder {
 
   async build(): Promise<TestSetup> {
     if (this.includeUser) {
-      this.setup.user = await this.helper.createUser();
+      this.setup.user = await this.helper.createUser(this.userOptions);
     }
 
     const petPromises: Promise<void>[] = [];
 
     if (this.includeDog) {
       petPromises.push(
-        this.helper.createPet(PetType.DOG).then((dog) => {
+        this.helper.createPet(SpeciesEnum.Dog).then((dog) => {
           this.setup.pets.dog = dog;
         }),
       );
@@ -89,7 +106,7 @@ class TestSetupBuilder {
 
     if (this.includeDogForEvo) {
       petPromises.push(
-        this.helper.createPet(PetType.DOG).then((dogForEvo) => {
+        this.helper.createPet(SpeciesEnum.Dog).then((dogForEvo) => {
           this.setup.pets.dogForEvo = dogForEvo;
         }),
       );
@@ -97,7 +114,7 @@ class TestSetupBuilder {
 
     if (this.includeCat) {
       petPromises.push(
-        this.helper.createPet(PetType.CAT).then((cat) => {
+        this.helper.createPet(SpeciesEnum.Cat).then((cat) => {
           this.setup.pets.cat = cat;
         }),
       );
@@ -109,7 +126,7 @@ class TestSetupBuilder {
 
     if (this.includeDogDevice && this.setup.pets.dog) {
       devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dog, DeviceType.DOG).then((device) => {
+        this.helper.createDeviceForPet(this.setup.pets.dog, DeviceTypeEnum.Dog).then((device) => {
           this.setup.devices.dogStandard = device;
         }),
       );
@@ -117,7 +134,7 @@ class TestSetupBuilder {
 
     if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
       devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceType.EVO).then((device) => {
+        this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceTypeEnum.Evo).then((device) => {
           this.setup.devices.dogEvo = device;
         }),
       );
@@ -125,7 +142,7 @@ class TestSetupBuilder {
 
     if (this.includeCatDevice && this.setup.pets.cat) {
       devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.cat, DeviceType.CAT).then((device) => {
+        this.helper.createDeviceForPet(this.setup.pets.cat, DeviceTypeEnum.Cat).then((device) => {
           this.setup.devices.catStandard = device;
         }),
       );
@@ -176,7 +193,7 @@ export class TestHelper {
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
-            utilityType: UtilityTestTypeEnum.CLEAN_UP_USER,
+            utilityType: UtilityTestTypeEnum.CleanUpUser,
           },
         })
         .then((response) => {
@@ -208,26 +225,49 @@ export class TestHelper {
     logger.debug("✓ Cleanup operations completed successfully");
   }
 
-  async createUser(): Promise<User> {
+  async cleanUpUser(userPhone?: string): Promise<void> {
+    logger.debug("→ Starting user cleanup operation");
+
+    try {
+      const response = await petlink.core.graphql.authIam.utilityIntegrationTest({
+        input: {
+          phone: userPhone ?? fxt.current.user.phone,
+          utilityType: UtilityTestTypeEnum.CleanUpUser,
+        },
+      });
+
+      if (response.utilityIntegrationTest.code !== "200") {
+        throw new Error(response.utilityIntegrationTest.message);
+      }
+
+      logger.debug("✓ User cleanup operation completed successfully");
+    } catch (error: any) {
+      const errorMessage = `Cleanup failed for user: ${error.message}`;
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  async createUser(options: UserOptions = {}): Promise<User> {
     logger.debug("→ Creating test user");
 
     const userPayload: UserIn = {
-      email: fxt.current.user.email,
+      email: options.email ?? fxt.current.user.email,
       name: fxt.current.user.name,
       surname: fxt.current.user.surname,
       city: fxt.current.user.city,
       countryCode: fxt.current.user.countryCode,
       zipCode: fxt.current.user.zipCode,
       streetAddress: fxt.current.user.streetAddress,
-      phone: fxt.current.user.phone,
-      password: fxt.current.user.password,
-      confirmPassword: fxt.current.user.confirmPassword,
+      phone: options.phone ?? fxt.current.user.phone,
+      password: options.password ?? fxt.current.user.password,
+      confirmPassword: options.password ?? fxt.current.user.confirmPassword,
       languageId: fxt.current.user.languageId,
     };
 
     const response = await petlink.core.graphql.authIam.utilityIntegrationTest({
       input: {
-        utilityType: UtilityTestTypeEnum.SIGN_UP,
+        utilityType: UtilityTestTypeEnum.SignUp,
         userIn: userPayload,
         appBrand: fxt.current.appBrand,
       },
@@ -258,9 +298,9 @@ export class TestHelper {
 
     let petFixture: PetIn;
 
-    if (petType === PetType.DOG) {
+    if (petType === SpeciesEnum.Dog) {
       petFixture = fxt.current.pet.defaultDog;
-    } else if (petType === PetType.CAT) {
+    } else if (petType === SpeciesEnum.Cat) {
       petFixture = fxt.current.pet.defaultCat;
     } else {
       throw new Error(`Invalid pet type: ${petType}.`);
@@ -283,7 +323,9 @@ export class TestHelper {
     });
 
     if (response.createPet.code !== "200") {
-      throw new Error(`Failed to create ${petType}: ${response.createPet.message}${(response.createPet.translationCode && ` - ${response.createPet.translationCode}`) ?? ""}`);
+      throw new Error(
+        `Failed to create ${petType}: ${response.createPet.message}${(response.createPet.translationCode && ` - ${response.createPet.translationCode}`) ?? ""}`,
+      );
     }
 
     logger.debug("✓ Created Pet", {
@@ -295,8 +337,8 @@ export class TestHelper {
     return response.createPet.pet!;
   }
 
-  async createDeviceForPet(pet: Pet, deviceType: DeviceType): Promise<PetlinkGps> {
-    const deviceFixture = deviceType === DeviceType.EVO ? fxt.KIPPY.devices.EVO : fxt.current.devices[deviceType];
+  async createDeviceForPet(pet: Pet, deviceType: DeviceTypeEnum): Promise<PetlinkGps> {
+    const deviceFixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : fxt.current.devices[deviceType];
 
     if (!deviceFixture) {
       throw new Error(`Device fixture not found for brand ${fxt.current.appBrand} and type ${deviceType}`);
@@ -305,7 +347,7 @@ export class TestHelper {
     logger.debug(`→ Assigning device ${deviceType} (${deviceFixture.serialNumber}) to pet ${pet.name} (${pet.species}) with id ${pet.id}`);
 
     // Validate EVO can only be created with KIPPY brand
-    if (deviceType === DeviceType.EVO && !fxt.isKippyRun) {
+    if (deviceType === DeviceTypeEnum.Evo && !fxt.isKippyRun) {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
 

@@ -2,9 +2,10 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
-import { LanguageId, SubStatus, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/types.js";
 import { assertDatesWithinTolerance, expectSubBoughtMatchSubToBuy, expectPetProtBoughtMatchesPetProtToBuy, waitFor } from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
+import { UtilityTestTypeEnum, LanguageId, CancelReasonCodeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 
 describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -213,24 +214,30 @@ describe("DEFAULT subscription flow", () => {
       // Purchase
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [choosenPlan.id],
           card: fxt.current.card.valid,
         },
       });
-      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed for subscription purchase - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
+      expect(
+        purchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed for subscription purchase - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
       // Wait for payment SUCCEDED feedback (wait from chargebee webhook)
-      const subsActiveForThisDevice = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+      const subsActiveForThisDevice = await waitFor(
+        async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
+        {
+          isReady: (result) => {
+            const sub = result.getSubscriptionByProductId.subscription;
+            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+          },
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" in ${fxt.polling.timeoutMs}ms`,
         },
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${fxt.polling.timeoutMs}ms`,
-      });
+      );
       const subscription = subsActiveForThisDevice.getSubscriptionByProductId.subscription!;
 
       logger.info("Subscription activated successfully", {
@@ -259,24 +266,30 @@ describe("DEFAULT subscription flow", () => {
 
       const purchasePlanWithAddonResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPlan.addon.id],
           card: fxt.current.card.valid,
         },
       });
-      expect(purchasePlanWithAddonResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchasePlanWithAddonResponse.utilityIntegrationTest.message}`).toBe("200");
+      expect(
+        purchasePlanWithAddonResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed - Error: ${purchasePlanWithAddonResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
 
-      const purchasedSubscriptions = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+      const purchasedSubscriptions = await waitFor(
+        async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
+        {
+          isReady: (result) => {
+            const sub = result.getSubscriptionByProductId.subscription;
+            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+          },
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" in ${fxt.polling.timeoutMs}ms`,
         },
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "${SubStatus.Active}" in ${fxt.polling.timeoutMs}ms`,
-      });
+      );
 
       const subscription = purchasedSubscriptions.getSubscriptionByProductId.subscription!;
 
@@ -293,14 +306,14 @@ describe("DEFAULT subscription flow", () => {
       });
     });
 
-    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.IT)("BUY sub + PET-protection", async () => {
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY sub + PET-protection", async () => {
       const chosenPlan = availablePlansForThisDevice![0].pricings[0]!;
       const chosenPetProtection = availablePetProtectionForThisPet![0].pricings[0]!;
       logger.debug("Chosen plans for test", { chosenPlan, chosenPetProtection });
 
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPetProtection.id],
@@ -332,7 +345,10 @@ describe("DEFAULT subscription flow", () => {
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
 
       // Purchase response
-      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
+      expect(
+        purchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
 
       // Verify subscription matches plan
       expectSubBoughtMatchSubToBuy(sub, chosenPlan, {
@@ -348,7 +364,7 @@ describe("DEFAULT subscription flow", () => {
       });
     });
 
-    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.IT)("BUY PET-protection alone", async () => {
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY PET-protection alone", async () => {
       logger.debug("dentro BUY PET-protection alone");
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
@@ -356,28 +372,32 @@ describe("DEFAULT subscription flow", () => {
       // STEP 2: Purchase a regular subscription first
       const subPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [regularPlan.id],
           card: fxt.current.card.valid,
         },
       });
-      expect(subPurchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed for regular subscription - Error: ${subPurchaseResponse.utilityIntegrationTest.message}`).toBe(
-        "200",
-      );
+      expect(
+        subPurchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed for regular subscription - Error: ${subPurchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
 
       // STEP 3: Wait for the subscription to become active with SUCCEEDED payment status
       logger.debug(`bought SUB for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
-      const activeSubscription = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+      const activeSubscription = await waitFor(
+        async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
+        {
+          isReady: (result) => {
+            const sub = result.getSubscriptionByProductId.subscription;
+            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+          },
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
         },
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
-      });
+      );
 
       const activeSub = activeSubscription.getSubscriptionByProductId.subscription!;
       expect(activeSub.status, "Subscription should be active before purchasing pet protection").toBe("active");
@@ -387,7 +407,7 @@ describe("DEFAULT subscription flow", () => {
       logger.debug(`bought PET-PROTECTION for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
       const petProtectionPurchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [petProtectionPlan.id],
@@ -443,7 +463,10 @@ describe("DEFAULT subscription flow", () => {
       expect(updateResponse.updatePetProtectionData).toBeDefined();
 
       const updateResult = updateResponse.updatePetProtectionData!;
-      expect(updateResult.code, `updatePetProtectionData should succeed - Error: ${updateResult.message}${updateResult.translationCode ? ` (${updateResult.translationCode})` : ""}`).toBe("200");
+      expect(
+        updateResult.code,
+        `updatePetProtectionData should succeed - Error: ${updateResult.message}${updateResult.translationCode ? ` (${updateResult.translationCode})` : ""}`,
+      ).toBe("200");
       expect(updateResult.petProtection?.petOwner?.fiscalCode, "Owner fiscal code should be updated").toBe(petProtectionOwner.fiscalCode);
       expect(updateResult.petProtection?.pet?.name, "Pet name should be updated").toBe(petProtectionPet.name);
 
@@ -463,7 +486,7 @@ describe("DEFAULT subscription flow", () => {
       expect(petProtection.pet, "Pet data should match").toEqual(petProtectionPet);
     });
 
-    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.IT)("BUY sub + addOn DEVICE-protection + PET-protection", async () => {
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY sub + addOn DEVICE-protection + PET-protection", async () => {
       // select plan with device addon
       const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
       expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
@@ -484,7 +507,7 @@ describe("DEFAULT subscription flow", () => {
       // Purchase: plan + addon + pet protection (price ids array)
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
@@ -492,7 +515,10 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
-      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
+      expect(
+        purchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
 
       // Wait for both subscription active and petProtection assignment
       const [subscriptionResult, petProtectionResult] = await Promise.all([
@@ -581,7 +607,7 @@ describe("DEFAULT subscription flow", () => {
 
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [chosenPlan.id],
@@ -589,18 +615,24 @@ describe("DEFAULT subscription flow", () => {
         },
       });
 
-      expect(purchaseResponse.utilityIntegrationTest.code, `utilityIntegrationTest should succeed in beforeEach - Error: ${purchaseResponse.utilityIntegrationTest.message}`).toBe("200");
+      expect(
+        purchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed in beforeEach - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
 
       // STEP 4: Wait for subscription to become active and store it
-      const subscriptionResult = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+      const subscriptionResult = await waitFor(
+        async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
+        {
+          isReady: (result) => {
+            const sub = result.getSubscriptionByProductId.subscription;
+            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+          },
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
+          timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
         },
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
-        timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
-      });
+      );
 
       currentSubscription = subscriptionResult.getSubscriptionByProductId.subscription!;
 
@@ -643,7 +675,7 @@ describe("DEFAULT subscription flow", () => {
       // STEP 3: Buy YEARLY subscription (should create FUTURE)
       const purchaseYearlyResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BUY_NEW_SUBSCRIPTION,
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
           priceIds: [yearlyPlan!.id],
@@ -744,7 +776,7 @@ describe("DEFAULT subscription flow", () => {
         subscriptionId,
         appBrand: fxt.current.appBrand,
         cancelReason: "Testing cancellation flow for integration tests",
-        cancelReasonCode: "OTHER",
+        cancelReasonCode: CancelReasonCodeEnum.Other,
       });
 
       expect(

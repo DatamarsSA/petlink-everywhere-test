@@ -14,18 +14,8 @@ mutation checkOtp($verificationId: String!, $otp: String!, $contact: String!) {
     verificationId
   }
 }
-mutation signUpUser(
-  $user: UserIn!
-  $otpData: OtpInput!
-  $languageId: LanguageId
-  $appBrand: AppBrand!
-) {
-  signUpUser(
-    user: $user
-    otpData: $otpData
-    languageId: $languageId
-    appBrand: $appBrand
-  ) {
+mutation signUpUser($user: UserIn!, $otpData: OtpInput!, $languageId: LanguageId, $appBrand: AppBrand!) {
+  signUpUser(user: $user, otpData: $otpData, languageId: $languageId, appBrand: $appBrand) {
     code
     translationCode
     message
@@ -249,16 +239,8 @@ mutation updateBillingInfo($updateBillingInfoInput: UpdateBillingInfoInput!) {
   }
 }
 
-mutation updatePetProtectionData(
-  $petProtectionId: String!
-  $owner: PetProtectionOwnerIn!
-  $pet: PetProtectionPetIn!
-) {
-  updatePetProtectionData(
-    petProtectionId: $petProtectionId
-    owner: $owner
-    pet: $pet
-  ) {
+mutation updatePetProtectionData($petProtectionId: String!, $owner: PetProtectionOwnerIn!, $pet: PetProtectionPetIn!) {
+  updatePetProtectionData(petProtectionId: $petProtectionId, owner: $owner, pet: $pet) {
     code
     translationCode
     message
@@ -317,18 +299,8 @@ mutation updatePetProtectionData(
   }
 }
 
-mutation stopRenewingSubscription(
-  $subscriptionId: String!
-  $appBrand: AppBrand!
-  $cancelReason: String!
-  $cancelReasonCode: CancelReasonCodeEnum!
-) {
-  stopRenewingSubscription(
-    subscriptionId: $subscriptionId
-    appBrand: $appBrand
-    cancelReason: $cancelReason
-    cancelReasonCode: $cancelReasonCode
-  ) {
+mutation stopRenewingSubscription($subscriptionId: String!, $appBrand: AppBrand!, $cancelReason: String!, $cancelReasonCode: CancelReasonCodeEnum!) {
+  stopRenewingSubscription(subscriptionId: $subscriptionId, appBrand: $appBrand, cancelReason: $cancelReason, cancelReasonCode: $cancelReasonCode) {
     code
     translationCode
     message

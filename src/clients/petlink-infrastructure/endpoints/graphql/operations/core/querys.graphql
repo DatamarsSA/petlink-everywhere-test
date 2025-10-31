@@ -196,16 +196,8 @@ query getPetlinkGps($id: String!) {
   }
 }
 
-query getSubscriptionPlans(
-  $productId: String
-  $countryCode: String
-  $serialNumber: String
-) {
-  getSubscriptionPlans(
-    productId: $productId
-    countryCode: $countryCode
-    serialNumber: $serialNumber
-  ) {
+query getSubscriptionPlans($productId: String, $countryCode: String, $serialNumber: String) {
+  getSubscriptionPlans(productId: $productId, countryCode: $countryCode, serialNumber: $serialNumber) {
     code
     translationCode
     message
@@ -291,20 +283,8 @@ query getBillingInfo {
   }
 }
 
-query getSubscriptionPlanPricing(
-  $planPriceId: String!
-  $careProtectionPlanId: String
-  $addonPriceIds: [String!]
-  $countryCode: String!
-  $productId: String!
-) {
-  getSubscriptionPlanPricing(
-    planPriceId: $planPriceId
-    careProtectionPlanId: $careProtectionPlanId
-    addonPriceIds: $addonPriceIds
-    countryCode: $countryCode
-    productId: $productId
-  ) {
+query getSubscriptionPlanPricing($planPriceId: String!, $careProtectionPlanId: String, $addonPriceIds: [String!], $countryCode: String!, $productId: String!) {
+  getSubscriptionPlanPricing(planPriceId: $planPriceId, careProtectionPlanId: $careProtectionPlanId, addonPriceIds: $addonPriceIds, countryCode: $countryCode, productId: $productId) {
     code
     translationCode
     message

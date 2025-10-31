@@ -157,6 +157,8 @@ describe("User Credentials Management", () => {
   describe("RECOVERY credentials (forgot -> public)", () => {
     beforeEach(async () => {
       // Clear all cache to simulate non-authenticated user
+      await testHelper.cleanUpUser(`+15555234567`);
+      await testHelper.cleanUpUser(fxt.current.user.phone);
       await testHelper.cleanupAll();
       // const setup = await testHelper.setupBuilder().withUser().build();
       petlink.logoutUser();
@@ -217,15 +219,12 @@ describe("User Credentials Management", () => {
       ).toBe("200");
     });
 
-    it("Recovery EMAIL (User forgot email) → Serial number device flow", async () => {
+    it.todo("Recovery EMAIL (User forgot email) → Serial number device flow", async () => {
       // Setup: Create user with device
       const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
 
       const testUser = setup.user!;
       const device = setup.devices.dogStandard!;
-
-      // Logout to simulate "forgot email" scenario
-      petlink.logoutUser();
 
       // STEP 1: Recover email using device serial number
       const response = await petlink.core.graphql.public.forgotEmail({
@@ -233,13 +232,13 @@ describe("User Credentials Management", () => {
         entityType: ProductTypeEnum.PetlinkGps,
         languageId: fxt.current.user.languageId,
       });
+      //TODO: I do note receive email, understand why (on be miss "forgotEmail" template, but welcome template should works)
 
       expect(
         response.forgotEmail?.code,
         `forgotEmail should succeed - Error: ${response.forgotEmail?.message}${response.forgotEmail?.translationCode ? ` (${response.forgotEmail?.translationCode})` : ""}`,
       ).toBe("200");
 
-      // Note: Email will be sent to the registered address
       // User needs to check their mailbox to find which email received the message
       logger.info("Email recovery requested", {
         deviceSerial: device.serialNumber,

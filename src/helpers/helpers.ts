@@ -66,7 +66,12 @@ export async function waitFor<T>(
     timeoutError?: string;
   } = {},
 ): Promise<T> {
-  const { isReady = (result) => !!result, timeoutMs = 30000, intervalMs = 1000, timeoutError = `Timeout: Payment succeeded not return within ${timeoutMs}ms` } = options;
+  const {
+    isReady = (result) => !!result,
+    timeoutMs = 30000,
+    intervalMs = 1000,
+    timeoutError = `Timeout: Payment succeeded not return within ${timeoutMs}ms`,
+  } = options;
 
   const startTime = Date.now();
   let attempts = 0;
@@ -119,7 +124,10 @@ export function assertDatesWithinTolerance(date1: string, date2: string, toleran
   const diffMs = Math.abs(actual - expected);
   const diffHours = diffMs / (1000 * 60 * 60);
 
-  expect(diffHours, `${message}. Date1: ${date1}, Date2: ${date2}, ` + `Actual diff: ${diffHours.toFixed(2)} hours (Expected tolerance: ±${toleranceHours}h)`).toBeLessThanOrEqual(toleranceHours);
+  expect(
+    diffHours,
+    `${message}. Date1: ${date1}, Date2: ${date2}, ` + `Actual diff: ${diffHours.toFixed(2)} hours (Expected tolerance: ±${toleranceHours}h)`,
+  ).toBeLessThanOrEqual(toleranceHours);
 }
 
 /**
@@ -250,4 +258,12 @@ export function expectPetProtBoughtMatchesPetProtToBuy(
     userId: expectedUserId,
     status: expectedStatus,
   });
+}
+
+export function extractParamsFromUrl(url: string) {
+  const urlObj = new URL(url);
+  const uuid = urlObj.searchParams.get("uuid");
+  const otp = urlObj.searchParams.get("otp");
+  const verificationId = urlObj.searchParams.get("verificationId");
+  return { uuid, otp, verificationId };
 }

@@ -49,7 +49,11 @@ export interface Activities {
   walk?: Maybe<Scalars["Float"]["output"]>;
 }
 
-export type ActivityProfileEnum = "MODERATELY_ACTIVE" | "SEDENTARY" | "VERY_ACTIVE";
+export enum ActivityProfileEnum {
+  ModeratelyActive = "MODERATELY_ACTIVE",
+  Sedentary = "SEDENTARY",
+  VeryActive = "VERY_ACTIVE",
+}
 
 export interface ActivityReport {
   __typename?: "ActivityReport";
@@ -115,6 +119,7 @@ export interface AddonPricing {
   id: Scalars["String"]["output"];
   itemFamilyId?: Maybe<Scalars["String"]["output"]>;
   itemId: Scalars["String"]["output"];
+  itemType?: Maybe<Scalars["String"]["output"]>;
   name: Scalars["String"]["output"];
   period?: Maybe<Scalars["Float"]["output"]>;
   periodUnit?: Maybe<Scalars["String"]["output"]>;
@@ -124,7 +129,10 @@ export interface AddonPricing {
   trialPeriodUnit?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type AppBrand = "KIPPY" | "PETLINK";
+export enum AppBrand {
+  Kippy = "KIPPY",
+  Petlink = "PETLINK",
+}
 
 export interface BillingInfo {
   __typename?: "BillingInfo";
@@ -155,9 +163,19 @@ export interface Breed {
   species: SpeciesEnum;
 }
 
-export type BreedTypeEnum = "MIXED_BREED" | "PUREBREED";
+export enum BreedTypeEnum {
+  MixedBreed = "MIXED_BREED",
+  Purebreed = "PUREBREED",
+}
 
-export type CancelReasonCodeEnum = "DO_NOT_USE" | "DO_NOT_WORK_PROPERLY" | "MISSING_PET" | "NOT_SUITABLE" | "OTHER" | "TOO_EXPENSIVE";
+export enum CancelReasonCodeEnum {
+  DoNotUse = "DO_NOT_USE",
+  DoNotWorkProperly = "DO_NOT_WORK_PROPERLY",
+  MissingPet = "MISSING_PET",
+  NotSuitable = "NOT_SUITABLE",
+  Other = "OTHER",
+  TooExpensive = "TOO_EXPENSIVE",
+}
 
 export interface Card {
   __typename?: "Card";
@@ -188,9 +206,17 @@ export interface Command {
   modeType?: InputMaybe<ModeType>;
 }
 
-export type CommandEnum = "FLASHLIGHT" | "LIVE_TRACKING" | "LIVE_TRACKING_TEST" | "SOUND";
+export enum CommandEnum {
+  Flashlight = "FLASHLIGHT",
+  LiveTracking = "LIVE_TRACKING",
+  LiveTrackingTest = "LIVE_TRACKING_TEST",
+  Sound = "SOUND",
+}
 
-export type ContactType = "EMAIL" | "PHONE";
+export enum ContactType {
+  Email = "EMAIL",
+  Phone = "PHONE",
+}
 
 export interface ContactVerified {
   __typename?: "ContactVerified";
@@ -257,7 +283,11 @@ export interface DevicePrice {
   price: Scalars["Float"]["output"];
 }
 
-export type DeviceTypeEnum = "CAT" | "DOG" | "EVO";
+export enum DeviceTypeEnum {
+  Cat = "CAT",
+  Dog = "DOG",
+  Evo = "EVO",
+}
 
 export interface DiscoutItem {
   __typename?: "DiscoutItem";
@@ -321,7 +351,18 @@ export interface EnergySavingZoneIn {
   ssid: Scalars["String"]["input"];
 }
 
-export type EntityTypeEnum = "ACTIVITY" | "ENERGY_SAVING_ZONE" | "GEOFENCE" | "PET" | "PETLINK_GPS" | "PETLINK_MICROCHIP" | "PETLINK_QR_TAG" | "PET_HISTORY_EVENT" | "SUBSCRIPTION" | "USER";
+export enum EntityTypeEnum {
+  Activity = "ACTIVITY",
+  EnergySavingZone = "ENERGY_SAVING_ZONE",
+  Geofence = "GEOFENCE",
+  Pet = "PET",
+  PetlinkGps = "PETLINK_GPS",
+  PetlinkMicrochip = "PETLINK_MICROCHIP",
+  PetlinkQrTag = "PETLINK_QR_TAG",
+  PetHistoryEvent = "PET_HISTORY_EVENT",
+  Subscription = "SUBSCRIPTION",
+  User = "USER",
+}
 
 export interface EszNotificationPreferences {
   __typename?: "EszNotificationPreferences";
@@ -336,7 +377,10 @@ export interface EszNotificationsInput {
   push: Scalars["Boolean"]["input"];
 }
 
-export type Gender = "FEMALE" | "MALE";
+export enum Gender {
+  Female = "FEMALE",
+  Male = "MALE",
+}
 
 export interface Geofence {
   __typename?: "Geofence";
@@ -387,7 +431,11 @@ export interface GpsMessageStatusIn {
   status: GpsStatusIn;
 }
 
-export type GpsMessageType = "LAST_POSITION" | "LIVE_TRACKING" | "STATUS";
+export enum GpsMessageType {
+  LastPosition = "LAST_POSITION",
+  LiveTracking = "LIVE_TRACKING",
+  Status = "STATUS",
+}
 
 export interface GpsOptimizationCommand {
   __typename?: "GpsOptimizationCommand";
@@ -459,7 +507,14 @@ export interface GpsStatusIn {
   sound: StatusState;
 }
 
-export type HighlightEnum = "ABOVE_AVERAGE" | "ABOVE_THRESHOLD" | "AVERAGE" | "BELOW_AVERAGE" | "BELOW_THRESHOLD" | "HIDE";
+export enum HighlightEnum {
+  AboveAverage = "ABOVE_AVERAGE",
+  AboveThreshold = "ABOVE_THRESHOLD",
+  Average = "AVERAGE",
+  BelowAverage = "BELOW_AVERAGE",
+  BelowThreshold = "BELOW_THRESHOLD",
+  Hide = "HIDE",
+}
 
 export interface Highlights {
   __typename?: "Highlights";
@@ -481,11 +536,15 @@ export interface Image {
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type ImageUploadType = "PET" | "USER";
+export enum ImageUploadType {
+  Pet = "PET",
+  User = "USER",
+}
 
 export interface InvoiceItemShortInfo {
   __typename?: "InvoiceItemShortInfo";
   amount: Scalars["Int"]["output"];
+  chargebeeInvoiceItemId: Scalars["String"]["output"];
   description: Scalars["String"]["output"];
   itemId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
@@ -493,7 +552,14 @@ export interface InvoiceItemShortInfo {
   unitPrice: Scalars["Int"]["output"];
 }
 
-export type InvoiceReasonCodeEnum = "order_cancellation" | "order_change" | "other" | "product_unsatisfactory" | "service_unsatisfactory" | "waiver";
+export enum InvoiceReasonCodeEnum {
+  OrderCancellation = "order_cancellation",
+  OrderChange = "order_change",
+  Other = "other",
+  ProductUnsatisfactory = "product_unsatisfactory",
+  ServiceUnsatisfactory = "service_unsatisfactory",
+  Waiver = "waiver",
+}
 
 export interface InvoiceShortInfo {
   __typename?: "InvoiceShortInfo";
@@ -506,13 +572,34 @@ export interface InvoiceShortInfo {
   total: Scalars["Float"]["output"];
 }
 
-export type InvoiceStatusEnum = "non_paying" | "not_paid" | "paid" | "paid_externally" | "payment_due" | "pending" | "posted" | "voided";
+export enum InvoiceStatusEnum {
+  NonPaying = "non_paying",
+  NotPaid = "not_paid",
+  Paid = "paid",
+  PaidExternally = "paid_externally",
+  PaymentDue = "payment_due",
+  Pending = "pending",
+  Posted = "posted",
+  Voided = "voided",
+}
 
-export type LanguageId = "DE" | "EN" | "ES" | "FR" | "IT";
+export enum LanguageId {
+  De = "DE",
+  En = "EN",
+  Es = "ES",
+  Fr = "FR",
+  It = "IT",
+}
 
-export type LayoutPageEnum = "full_page" | "in_app";
+export enum LayoutPageEnum {
+  FullPage = "full_page",
+  InApp = "in_app",
+}
 
-export type LikeType = "DISLIKE" | "LIKE";
+export enum LikeType {
+  Dislike = "DISLIKE",
+  Like = "LIKE",
+}
 
 export interface LostIn {
   countryCode: Scalars["String"]["input"];
@@ -557,9 +644,15 @@ export interface MobileDevice {
   serialNumber: Scalars["String"]["output"];
 }
 
-export type MobileOsEnum = "ANDROID" | "IOS";
+export enum MobileOsEnum {
+  Android = "ANDROID",
+  Ios = "IOS",
+}
 
-export type ModeType = "BLE" | "SENTINEL";
+export enum ModeType {
+  Ble = "BLE",
+  Sentinel = "SENTINEL",
+}
 
 export interface Mutation {
   __typename?: "Mutation";
@@ -573,19 +666,24 @@ export interface Mutation {
   changeForgotPassword: Response;
   changePassword: Response;
   checkOtp: ResponseOtp;
-  createEnergySavingZone: ResponseEnergySavingZone;
+  /**
+   *   createEnergySavingZone(energySavingZone: EnergySavingZoneIn!):
+   * ResponseEnergySavingZone! @aws_cognito_user_pools @aws_iam
+   *  updateEnergySavingZone(energySavingZone: UpdateEnergySavingZoneIn!):
+   * ResponseEnergySavingZone! @aws_cognito_user_pools @aws_iam
+   *  deleteEnergySavingZone(id: String!): Response! @aws_cognito_user_pools @aws_iam
+   *  isActiveEnergySavingZone(id: String!, isActive: Boolean!): Response! @aws_cognito_user_pools @aws_iam
+   */
   createGeofence: ResponseGeofence;
   createPet: ResponsePet;
   createPetlinkGps: ResponseCreatePetlinkGps;
   createPetlinkMicrochip: ResponsePetlinkMicrochip;
   createPetlinkQrTag: ResponsePetlinkQrTag;
-  deleteEnergySavingZone: Response;
   deleteGeofence: Response;
   deletePet: Response;
   deleteRegistrationToken: Response;
   deleteUser: Response;
   forgotEmail?: Maybe<Response>;
-  isActiveEnergySavingZone: Response;
   logDisabled?: Maybe<Response>;
   /**   subscription publishers */
   publishOnGpsMessagePosition: GpsMessagePosition;
@@ -618,10 +716,9 @@ export interface Mutation {
   stopRenewingSubscription?: Maybe<Response>;
   /**   subscriptions */
   updateBillingInfo: Response;
-  updateEmailUser: Response;
+  updateEmailUser: ResponseUser;
   /**   end of life */
   updateEndOfLife: ResponseUpdateEndOfLife;
-  updateEnergySavingZone: ResponseEnergySavingZone;
   updateGeofence: ResponseGeofence;
   updateNotificationSettings: ResponseNotificationSettings;
   updatePaymentSources: ResponseManagePaymentSources;
@@ -629,7 +726,7 @@ export interface Mutation {
   updatePetProtectionData?: Maybe<ResponseUpdatePetProtectionData>;
   /**   TODO: rename in deleteProduct */
   updatePetlinkGps: ResponsePetlinkGps;
-  updatePhoneNumberUser: Response;
+  updatePhoneNumberUser: ResponseUser;
   updateUser: ResponseUser;
   /**   cct */
   updateUserContact: Response;
@@ -668,10 +765,6 @@ export type MutationCheckOtpArgs = {
   verificationId: Scalars["String"]["input"];
 };
 
-export type MutationCreateEnergySavingZoneArgs = {
-  energySavingZone: EnergySavingZoneIn;
-};
-
 export type MutationCreateGeofenceArgs = {
   geofence: GeofenceIn;
 };
@@ -691,10 +784,6 @@ export type MutationCreatePetlinkMicrochipArgs = {
 
 export type MutationCreatePetlinkQrTagArgs = {
   petlinkQrTag: PetlinkQrTagIn;
-};
-
-export type MutationDeleteEnergySavingZoneArgs = {
-  id: Scalars["String"]["input"];
 };
 
 export type MutationDeleteGeofenceArgs = {
@@ -717,11 +806,6 @@ export type MutationForgotEmailArgs = {
   entityType?: InputMaybe<ProductTypeEnum>;
   languageId?: InputMaybe<LanguageId>;
   productNumber: Scalars["String"]["input"];
-};
-
-export type MutationIsActiveEnergySavingZoneArgs = {
-  id: Scalars["String"]["input"];
-  isActive: Scalars["Boolean"]["input"];
 };
 
 export type MutationLogDisabledArgs = {
@@ -849,10 +933,6 @@ export type MutationUpdateEndOfLifeArgs = {
   input?: InputMaybe<EndOfLifeIn>;
 };
 
-export type MutationUpdateEnergySavingZoneArgs = {
-  energySavingZone: UpdateEnergySavingZoneIn;
-};
-
 export type MutationUpdateGeofenceArgs = {
   geofence: UpdateGeofenceIn;
 };
@@ -953,7 +1033,11 @@ export interface OtpInput {
   verificationId: Scalars["String"]["input"];
 }
 
-export type PageTypeEnum = "EOL" | "PAYMENT_METHOD" | "PET_PROFILE";
+export enum PageTypeEnum {
+  Eol = "EOL",
+  PaymentMethod = "PAYMENT_METHOD",
+  PetProfile = "PET_PROFILE",
+}
 
 export interface Pagination {
   __typename?: "Pagination";
@@ -968,9 +1052,19 @@ export interface PaginationInput {
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
 }
 
-export type PaymentSourceStatus = "expired" | "expiring" | "invalid" | "pending_verification" | "valid";
+export enum PaymentSourceStatus {
+  Expired = "expired",
+  Expiring = "expiring",
+  Invalid = "invalid",
+  PendingVerification = "pending_verification",
+  Valid = "valid",
+}
 
-export type PaymentStatusTypeEnum = "FAILED" | "PENDING" | "SUCCEEDED";
+export enum PaymentStatusTypeEnum {
+  Failed = "FAILED",
+  Pending = "PENDING",
+  Succeeded = "SUCCEEDED",
+}
 
 export interface Pet {
   __typename?: "Pet";
@@ -1014,39 +1108,40 @@ export interface PetHistoryEvent {
   petId: Scalars["String"]["output"];
 }
 
-export type PetHistoryEventTypeEnum =
-  | "ACTIVE_SUBSCRIPTION"
-  | "ACTIVE_SUBSCRIPTION_TRIAL"
-  | "DEVICE_ASSOCIATE"
-  | "DEVICE_BATTERY"
-  | "DEVICE_OFF"
-  | "DEVICE_OFFLINE"
-  | "DEVICE_POSITION"
-  | "ENERGY_SAVING_ZONE_ACTIVE"
-  | "ENERGY_SAVING_ZONE_IN"
-  | "ENERGY_SAVING_ZONE_OUT"
-  | "FIRMWARE_UPDATE"
-  | "GEOFENCE_ACTIVE"
-  | "GEOFENCE_NO_PET"
-  | "GEOFENCE_OUT"
-  | "HIGH_TEMPERATURE"
-  | "LOW_TEMPERATURE"
-  | "NO_GPS_SIGNAL"
-  | "OFF_SUBSCRIPTION"
-  | "PET_BORN"
-  | "PET_FOUND"
-  | "PET_PROFILE_CREATED"
-  | "PET_PROFILE_UPDATED"
-  | "QR_TAG_SCANNED"
-  | "REGISTERED_GPS"
-  | "REGISTERED_GPS_PREPAID"
-  | "REPLACEMENT"
-  | "SET_PET_FOUND"
-  | "SET_PET_LOST"
-  | "SIGNAL_INTERRUPTED"
-  | "SIGNAL_TIMEOUT"
-  | "WEEKLY_GOAL_ACHIEVED"
-  | "WEEKLY_GOAL_ALMOST_REACHED";
+export enum PetHistoryEventTypeEnum {
+  ActiveSubscription = "ACTIVE_SUBSCRIPTION",
+  ActiveSubscriptionTrial = "ACTIVE_SUBSCRIPTION_TRIAL",
+  DeviceAssociate = "DEVICE_ASSOCIATE",
+  DeviceBattery = "DEVICE_BATTERY",
+  DeviceOff = "DEVICE_OFF",
+  DeviceOffline = "DEVICE_OFFLINE",
+  DevicePosition = "DEVICE_POSITION",
+  EnergySavingZoneActive = "ENERGY_SAVING_ZONE_ACTIVE",
+  EnergySavingZoneIn = "ENERGY_SAVING_ZONE_IN",
+  EnergySavingZoneOut = "ENERGY_SAVING_ZONE_OUT",
+  FirmwareUpdate = "FIRMWARE_UPDATE",
+  GeofenceActive = "GEOFENCE_ACTIVE",
+  GeofenceNoPet = "GEOFENCE_NO_PET",
+  GeofenceOut = "GEOFENCE_OUT",
+  HighTemperature = "HIGH_TEMPERATURE",
+  LowTemperature = "LOW_TEMPERATURE",
+  NoGpsSignal = "NO_GPS_SIGNAL",
+  OffSubscription = "OFF_SUBSCRIPTION",
+  PetBorn = "PET_BORN",
+  PetFound = "PET_FOUND",
+  PetProfileCreated = "PET_PROFILE_CREATED",
+  PetProfileUpdated = "PET_PROFILE_UPDATED",
+  QrTagScanned = "QR_TAG_SCANNED",
+  RegisteredGps = "REGISTERED_GPS",
+  RegisteredGpsPrepaid = "REGISTERED_GPS_PREPAID",
+  Replacement = "REPLACEMENT",
+  SetPetFound = "SET_PET_FOUND",
+  SetPetLost = "SET_PET_LOST",
+  SignalInterrupted = "SIGNAL_INTERRUPTED",
+  SignalTimeout = "SIGNAL_TIMEOUT",
+  WeeklyGoalAchieved = "WEEKLY_GOAL_ACHIEVED",
+  WeeklyGoalAlmostReached = "WEEKLY_GOAL_ALMOST_REACHED",
+}
 
 export interface PetHistoryExtra {
   __typename?: "PetHistoryExtra";
@@ -1069,7 +1164,11 @@ export interface PetIn {
   weight?: InputMaybe<Scalars["Float"]["input"]>;
 }
 
-export type PetLivingEnvironment = "ALWAYS_AT_HOME" | "ALWAYS_OUTDOORS" | "INDOORS_AND_OUTOORS";
+export enum PetLivingEnvironment {
+  AlwaysAtHome = "ALWAYS_AT_HOME",
+  AlwaysOutdoors = "ALWAYS_OUTDOORS",
+  IndoorsAndOutoors = "INDOORS_AND_OUTOORS",
+}
 
 export interface PetProtection {
   __typename?: "PetProtection";
@@ -1150,7 +1249,17 @@ export interface PetProtectionPetIn {
   species: Scalars["String"]["input"];
 }
 
-export type PetProtectionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "IN_PROGRESS" | "IN_REVIEW" | "OPEN" | "REFUNDED" | "REJECTED" | "TO_UPDATE";
+export enum PetProtectionStatus {
+  Active = "ACTIVE",
+  Cancelled = "CANCELLED",
+  Expired = "EXPIRED",
+  InProgress = "IN_PROGRESS",
+  InReview = "IN_REVIEW",
+  Open = "OPEN",
+  Refunded = "REFUNDED",
+  Rejected = "REJECTED",
+  ToUpdate = "TO_UPDATE",
+}
 
 export interface PetlinkGps {
   __typename?: "PetlinkGps";
@@ -1252,7 +1361,13 @@ export interface Position {
   lng: Scalars["Float"]["input"];
 }
 
-export type PositionType = "BLE" | "GPS" | "LBS" | "SKIP" | "WIFI";
+export enum PositionType {
+  Ble = "BLE",
+  Gps = "GPS",
+  Lbs = "LBS",
+  Skip = "SKIP",
+  Wifi = "WIFI",
+}
 
 export interface Post {
   __typename?: "Post";
@@ -1274,6 +1389,7 @@ export interface Pricing {
   id: Scalars["String"]["output"];
   itemFamilyId?: Maybe<Scalars["String"]["output"]>;
   itemId: Scalars["String"]["output"];
+  itemType?: Maybe<Scalars["String"]["output"]>;
   name: Scalars["String"]["output"];
   period?: Maybe<Scalars["Float"]["output"]>;
   periodUnit?: Maybe<Scalars["String"]["output"]>;
@@ -1300,7 +1416,11 @@ export interface Product {
   userId: Scalars["String"]["output"];
 }
 
-export type ProductTypeEnum = "PETLINK_GPS" | "PETLINK_MICROCHIP" | "PETLINK_QR_TAG";
+export enum ProductTypeEnum {
+  PetlinkGps = "PETLINK_GPS",
+  PetlinkMicrochip = "PETLINK_MICROCHIP",
+  PetlinkQrTag = "PETLINK_QR_TAG",
+}
 
 export interface Promotion {
   __typename?: "Promotion";
@@ -1318,7 +1438,9 @@ export interface PromotionInput {
   type: PromotionTypeEnum;
 }
 
-export type PromotionTypeEnum = "ADDON";
+export enum PromotionTypeEnum {
+  Addon = "ADDON",
+}
 
 export interface PurchasedService {
   __typename?: "PurchasedService";
@@ -1362,7 +1484,7 @@ export interface Query {
   getEndOfLifeStep: ResponseGetEndOfLifeStep;
   getEnergySavingZone: ResponseEnergySavingZone;
   getEnergySavingZones: ResponseEnergySavingZones;
-  getGeofence: ResponseGeofence;
+  /**   getGeofence(id: String!): ResponseGeofence! @aws_cognito_user_pools @aws_iam */
   getGeofences: ResponseGeofences;
   getGpsPromotions: ResponseGetGpsPromotions;
   getLogUploadUrl: ResponseGetLogUploadUrl;
@@ -1514,10 +1636,6 @@ export type QueryGetEndOfLifeStepArgs = {
 };
 
 export type QueryGetEnergySavingZoneArgs = {
-  id: Scalars["String"]["input"];
-};
-
-export type QueryGetGeofenceArgs = {
   id: Scalars["String"]["input"];
 };
 
@@ -1957,6 +2075,7 @@ export interface ResponseOtp {
   __typename?: "ResponseOtp";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
+  resendAt?: Maybe<Scalars["Int"]["output"]>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
   verificationId?: Maybe<Scalars["String"]["output"]>;
 }
@@ -2198,9 +2317,19 @@ export interface Setting {
   updateObject?: InputMaybe<Scalars["AWSJSON"]["input"]>;
 }
 
-export type SettingOperationEnum = "ACTIVATE" | "CREATE" | "DEACTIVATE" | "DELETE" | "UPDATE";
+export enum SettingOperationEnum {
+  Activate = "ACTIVATE",
+  Create = "CREATE",
+  Deactivate = "DEACTIVATE",
+  Delete = "DELETE",
+  Update = "UPDATE",
+}
 
-export type SettingTypeEnum = "ENERGY_SAVING_ZONE" | "GEOFENCE" | "UPDATE_FREQUENCY";
+export enum SettingTypeEnum {
+  EnergySavingZone = "ENERGY_SAVING_ZONE",
+  Geofence = "GEOFENCE",
+  UpdateFrequency = "UPDATE_FREQUENCY",
+}
 
 export interface ShippingInfo {
   __typename?: "ShippingInfo";
@@ -2229,9 +2358,18 @@ export interface ShippingInfoIn {
   zip: Scalars["String"]["input"];
 }
 
-export type SpeciesEnum = "CAT" | "DOG" | "OTHER";
+export enum SpeciesEnum {
+  Cat = "CAT",
+  Dog = "DOG",
+  Other = "OTHER",
+}
 
-export type StatusState = "ERROR" | "OFF" | "ON" | "REQUESTED";
+export enum StatusState {
+  Error = "ERROR",
+  Off = "OFF",
+  On = "ON",
+  Requested = "REQUESTED",
+}
 
 export interface Subscription {
   __typename?: "Subscription";
@@ -2305,7 +2443,18 @@ export interface SubscriptionStatus {
   subscriptionIsActive: Scalars["Boolean"]["output"];
 }
 
-export type SubscriptionStatusEnum = "active" | "cancelled" | "closed" | "future" | "in_trial" | "non_renewing" | "paused" | "to_stop_renew" | "to_stop_renew_addon" | "transferred";
+export enum SubscriptionStatusEnum {
+  Active = "active",
+  Cancelled = "cancelled",
+  Closed = "closed",
+  Future = "future",
+  InTrial = "in_trial",
+  NonRenewing = "non_renewing",
+  Paused = "paused",
+  ToStopRenew = "to_stop_renew",
+  ToStopRenewAddon = "to_stop_renew_addon",
+  Transferred = "transferred",
+}
 
 export interface SubscriptionStatusIn {
   currentTermEnd: Scalars["String"]["input"];
@@ -2470,16 +2619,28 @@ export interface UtilityIntegrationTestInput {
   utilityType: UtilityTestTypeEnum;
 }
 
-export type UtilityTestTypeEnum = "BUY_NEW_SUBSCRIPTION" | "CLEAN_UP_USER" | "SIGN_UP";
+export enum UtilityTestTypeEnum {
+  BuyNewSubscription = "BUY_NEW_SUBSCRIPTION",
+  CleanUpUser = "CLEAN_UP_USER",
+  SignUp = "SIGN_UP",
+}
 
-export type ValidationStatusEnum = "invalid" | "not_validated" | "partially_valid" | "valid";
+export enum ValidationStatusEnum {
+  Invalid = "invalid",
+  NotValidated = "not_validated",
+  PartiallyValid = "partially_valid",
+  Valid = "valid",
+}
 
 export type SendOtpMutationVariables = Exact<{
   phone: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
 }>;
 
-export type SendOtpMutation = { __typename?: "Mutation"; sendOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null } };
+export type SendOtpMutation = {
+  __typename?: "Mutation";
+  sendOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+};
 
 export type CheckOtpMutationVariables = Exact<{
   verificationId: Scalars["String"]["input"];
@@ -2487,7 +2648,10 @@ export type CheckOtpMutationVariables = Exact<{
   contact: Scalars["String"]["input"];
 }>;
 
-export type CheckOtpMutation = { __typename?: "Mutation"; checkOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null } };
+export type CheckOtpMutation = {
+  __typename?: "Mutation";
+  checkOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+};
 
 export type SignUpUserMutationVariables = Exact<{
   user: UserIn;
@@ -2496,13 +2660,19 @@ export type SignUpUserMutationVariables = Exact<{
   appBrand: AppBrand;
 }>;
 
-export type SignUpUserMutation = { __typename?: "Mutation"; signUpUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type SignUpUserMutation = {
+  __typename?: "Mutation";
+  signUpUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type UtilityIntegrationTestMutationVariables = Exact<{
   input: UtilityIntegrationTestInput;
 }>;
 
-export type UtilityIntegrationTestMutation = { __typename?: "Mutation"; utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string } };
+export type UtilityIntegrationTestMutation = {
+  __typename?: "Mutation";
+  utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string };
+};
 
 export type VerifyEmailMutationVariables = Exact<{
   verificationId: Scalars["String"]["input"];
@@ -2510,7 +2680,10 @@ export type VerifyEmailMutationVariables = Exact<{
   uuid: Scalars["String"]["input"];
 }>;
 
-export type VerifyEmailMutation = { __typename?: "Mutation"; verifyEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null };
+export type VerifyEmailMutation = {
+  __typename?: "Mutation";
+  verifyEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
+};
 
 export type CreatePetMutationVariables = Exact<{
   pet: PetIn;
@@ -2588,7 +2761,10 @@ export type DeletePetMutationVariables = Exact<{
   petId: Scalars["String"]["input"];
 }>;
 
-export type DeletePetMutation = { __typename?: "Mutation"; deletePet: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type DeletePetMutation = {
+  __typename?: "Mutation";
+  deletePet: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type CreatePetlinkGpsMutationVariables = Exact<{
   petlinkGps: PetlinkGpsIn;
@@ -2615,7 +2791,16 @@ export type CreatePetlinkGpsMutation = {
       updateDate: string;
       countryCode?: string | null;
       timezone?: string | null;
-      lastKnownPosition?: { __typename?: "GpsPosition"; lat: number; lng: number; alt?: number | null; radius: number; speed?: number | null; positionType: PositionType; date: string } | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
@@ -2632,7 +2817,13 @@ export type CreatePetlinkGpsMutation = {
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
       newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; url: string; version: string } | null;
-      settings: { __typename?: "GpsSettings"; activityProfile?: ActivityProfileEnum | null; updateFrequency: number; enableGpsOnDefault: boolean; optimizationDone?: boolean | null };
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
     } | null;
   };
 };
@@ -2662,7 +2853,16 @@ export type UpdatePetlinkGpsMutation = {
       subscriptionId?: string | null;
       subscriptionIsActive?: boolean | null;
       logEnabled?: boolean | null;
-      lastKnownPosition?: { __typename?: "GpsPosition"; lat: number; lng: number; alt?: number | null; radius: number; speed?: number | null; positionType: PositionType; date: string } | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
@@ -2679,7 +2879,13 @@ export type UpdatePetlinkGpsMutation = {
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
       newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; version: string; url: string } | null;
-      settings: { __typename?: "GpsSettings"; activityProfile?: ActivityProfileEnum | null; updateFrequency: number; enableGpsOnDefault: boolean; optimizationDone?: boolean | null };
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
     } | null;
   };
 };
@@ -2688,13 +2894,19 @@ export type ResetPetlinkGpsMutationVariables = Exact<{
   id: Scalars["String"]["input"];
 }>;
 
-export type ResetPetlinkGpsMutation = { __typename?: "Mutation"; resetPetlinkGps: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type ResetPetlinkGpsMutation = {
+  __typename?: "Mutation";
+  resetPetlinkGps: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type UpdateBillingInfoMutationVariables = Exact<{
   updateBillingInfoInput: UpdateBillingInfoInput;
 }>;
 
-export type UpdateBillingInfoMutation = { __typename?: "Mutation"; updateBillingInfo: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type UpdateBillingInfoMutation = {
+  __typename?: "Mutation";
+  updateBillingInfo: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type UpdatePetProtectionDataMutationVariables = Exact<{
   petProtectionId: Scalars["String"]["input"];
@@ -2742,9 +2954,25 @@ export type UpdatePetProtectionDataMutation = {
         homePhone: string;
         mobilePhone: string;
       } | null;
-      pet?: { __typename?: "PetProtectionPetData"; species: string; breed: string; gender: string; name: string; birthDate?: string | null; microchip?: string | null } | null;
+      pet?: {
+        __typename?: "PetProtectionPetData";
+        species: string;
+        breed: string;
+        gender: string;
+        name: string;
+        birthDate?: string | null;
+        microchip?: string | null;
+      } | null;
       petFlag: { __typename?: "PetProtectionFlag"; country: boolean; age: boolean };
-      card?: { __typename?: "Card"; expiryMonth?: number | null; expiryYear?: number | null; maskedNumber?: string | null; type?: string | null; brand?: string | null; paymentMethod: string } | null;
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
     } | null;
   } | null;
 };
@@ -2795,7 +3023,13 @@ export type GetUserQuery = {
       contactVerified?: { __typename?: "ContactVerified"; email?: boolean | null; phone?: boolean | null } | null;
       image?: { __typename?: "Image"; id: string; url?: string | null } | null;
       mobileDevices?: Array<{ __typename?: "MobileDevice"; os: MobileOsEnum; registrationToken: string; serialNumber: string }> | null;
-      notificationSettings: { __typename?: "NotificationSettings"; email: boolean; push: boolean; sms: boolean; energySavingZone: { __typename?: "EszNotificationPreferences"; push: boolean } };
+      notificationSettings: {
+        __typename?: "NotificationSettings";
+        email: boolean;
+        push: boolean;
+        sms: boolean;
+        energySavingZone: { __typename?: "EszNotificationPreferences"; push: boolean };
+      };
       settings: { __typename?: "UserSettings"; liveDistance: boolean; liveSpeed: boolean; liveTrack: boolean };
     } | null;
   };
@@ -2806,7 +3040,10 @@ export type CheckContactQueryVariables = Exact<{
   contactType: ContactType;
 }>;
 
-export type CheckContactQuery = { __typename?: "Query"; checkContact: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type CheckContactQuery = {
+  __typename?: "Query";
+  checkContact: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type GetPetQueryVariables = Exact<{
   id: Scalars["String"]["input"];
@@ -2878,7 +3115,13 @@ export type GetColorsQueryVariables = Exact<{
 
 export type GetColorsQuery = {
   __typename?: "Query";
-  getColors: { __typename?: "ResponseGetColors"; code: string; message: string; translationCode?: string | null; items?: Array<{ __typename?: "Color"; code: string; name: string }> | null };
+  getColors: {
+    __typename?: "ResponseGetColors";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items?: Array<{ __typename?: "Color"; code: string; name: string }> | null;
+  };
 };
 
 export type GetBreedQueryVariables = Exact<{
@@ -2922,7 +3165,16 @@ export type GetPetlinkGpsQuery = {
       subscriptionId?: string | null;
       subscriptionIsActive?: boolean | null;
       logEnabled?: boolean | null;
-      lastKnownPosition?: { __typename?: "GpsPosition"; lat: number; lng: number; alt?: number | null; radius: number; speed?: number | null; positionType: PositionType; date: string } | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
@@ -2939,7 +3191,13 @@ export type GetPetlinkGpsQuery = {
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
       newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; version: string; url: string } | null;
-      settings: { __typename?: "GpsSettings"; activityProfile?: ActivityProfileEnum | null; updateFrequency: number; enableGpsOnDefault: boolean; optimizationDone?: boolean | null };
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
     } | null;
   };
 };
@@ -3134,7 +3392,15 @@ export type GetSubscriptionByProductIdQuery = {
       billingPeriod: number;
       billingPeriodUnit: string;
       addonToStopIds?: Array<string> | null;
-      card?: { __typename?: "Card"; expiryMonth?: number | null; expiryYear?: number | null; maskedNumber?: string | null; type?: string | null; brand?: string | null; paymentMethod: string } | null;
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
       subscriptionItems: Array<{
         __typename?: "PetlinkSubscriptionItem";
         amount: number;
@@ -3174,8 +3440,24 @@ export type GetSubscriptionsQuery = {
       planChangeNotAllowed: boolean;
       totalAmount: number;
       addonToStopIds?: Array<string> | null;
-      card?: { __typename?: "Card"; expiryMonth?: number | null; expiryYear?: number | null; maskedNumber?: string | null; type?: string | null; brand?: string | null; paymentMethod: string } | null;
-      subscriptionItems: Array<{ __typename?: "SubscriptionShortInfoItem"; amount: number; name?: string | null; itemPriceId: string; itemType: string; itemId: string; quantity: number }>;
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
+      subscriptionItems: Array<{
+        __typename?: "SubscriptionShortInfoItem";
+        amount: number;
+        name?: string | null;
+        itemPriceId: string;
+        itemType: string;
+        itemId: string;
+        quantity: number;
+      }>;
       invoice?: {
         __typename?: "InvoiceShortInfo";
         id: string;
@@ -3183,8 +3465,23 @@ export type GetSubscriptionsQuery = {
         creationDate: string;
         currencyCode: string;
         total: number;
-        items: Array<{ __typename?: "InvoiceItemShortInfo"; itemId: string; itemType: string; description: string; quantity: number; unitPrice: number; amount: number }>;
-        discountItems?: Array<{ __typename?: "DiscoutItem"; couponId: string; chargebeeInvoiceItemId: string; discountType: string; discountPercentage?: number | null; amount: number }> | null;
+        items: Array<{
+          __typename?: "InvoiceItemShortInfo";
+          itemId: string;
+          itemType: string;
+          description: string;
+          quantity: number;
+          unitPrice: number;
+          amount: number;
+        }>;
+        discountItems?: Array<{
+          __typename?: "DiscoutItem";
+          couponId: string;
+          chargebeeInvoiceItemId: string;
+          discountType: string;
+          discountPercentage?: number | null;
+          amount: number;
+        }> | null;
       } | null;
     }> | null;
   };
@@ -3234,9 +3531,25 @@ export type GetPetProtectionQuery = {
         homePhone: string;
         mobilePhone: string;
       } | null;
-      pet?: { __typename?: "PetProtectionPetData"; species: string; breed: string; gender: string; name: string; birthDate?: string | null; microchip?: string | null } | null;
+      pet?: {
+        __typename?: "PetProtectionPetData";
+        species: string;
+        breed: string;
+        gender: string;
+        name: string;
+        birthDate?: string | null;
+        microchip?: string | null;
+      } | null;
       petFlag: { __typename?: "PetProtectionFlag"; country: boolean; age: boolean };
-      card?: { __typename?: "Card"; expiryMonth?: number | null; expiryYear?: number | null; maskedNumber?: string | null; type?: string | null; brand?: string | null; paymentMethod: string } | null;
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
     } | null;
   };
 };
@@ -3246,7 +3559,10 @@ export type ChangePasswordMutationVariables = Exact<{
   password: Scalars["String"]["input"];
 }>;
 
-export type ChangePasswordMutation = { __typename?: "Mutation"; changePassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type ChangePasswordMutation = {
+  __typename?: "Mutation";
+  changePassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type UpdateEmailUserMutationVariables = Exact<{
   email: Scalars["String"]["input"];
@@ -3254,7 +3570,10 @@ export type UpdateEmailUserMutationVariables = Exact<{
   appBrand: AppBrand;
 }>;
 
-export type UpdateEmailUserMutation = { __typename?: "Mutation"; updateEmailUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type UpdateEmailUserMutation = {
+  __typename?: "Mutation";
+  updateEmailUser: { __typename?: "ResponseUser"; code: string; translationCode?: string | null; message: string };
+};
 
 export type UpdatePhoneNumberUserMutationVariables = Exact<{
   phone: Scalars["String"]["input"];
@@ -3263,7 +3582,10 @@ export type UpdatePhoneNumberUserMutationVariables = Exact<{
   otp: Scalars["String"]["input"];
 }>;
 
-export type UpdatePhoneNumberUserMutation = { __typename?: "Mutation"; updatePhoneNumberUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type UpdatePhoneNumberUserMutation = {
+  __typename?: "Mutation";
+  updatePhoneNumberUser: { __typename?: "ResponseUser"; code: string; translationCode?: string | null; message: string };
+};
 
 export type SendOtpForgotPasswordMutationVariables = Exact<{
   contact: Scalars["String"]["input"];
@@ -3281,7 +3603,10 @@ export type ChangeForgotPasswordMutationVariables = Exact<{
   password: Scalars["String"]["input"];
 }>;
 
-export type ChangeForgotPasswordMutation = { __typename?: "Mutation"; changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } };
+export type ChangeForgotPasswordMutation = {
+  __typename?: "Mutation";
+  changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
 
 export type ForgotEmailMutationVariables = Exact<{
   productNumber: Scalars["String"]["input"];
@@ -3289,7 +3614,10 @@ export type ForgotEmailMutationVariables = Exact<{
   languageId?: InputMaybe<LanguageId>;
 }>;
 
-export type ForgotEmailMutation = { __typename?: "Mutation"; forgotEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null };
+export type ForgotEmailMutation = {
+  __typename?: "Mutation";
+  forgotEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
+};
 
 export const SendOtpDocument = {
   kind: "Document",
@@ -3304,7 +3632,11 @@ export const SendOtpDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "phone" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -3362,7 +3694,11 @@ export const CheckOtpDocument = {
             kind: "Field",
             name: { kind: "Name", value: "checkOtp" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "verificationId" }, value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
               { kind: "Argument", name: { kind: "Name", value: "contact" }, value: { kind: "Variable", name: { kind: "Name", value: "contact" } } },
             ],
@@ -3399,7 +3735,11 @@ export const SignUpUserDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "otpData" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "OtpInput" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
         {
           kind: "VariableDefinition",
           variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
@@ -3497,7 +3837,11 @@ export const VerifyEmailDocument = {
             kind: "Field",
             name: { kind: "Name", value: "verifyEmail" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "verificationId" }, value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
               { kind: "Argument", name: { kind: "Name", value: "uuid" }, value: { kind: "Variable", name: { kind: "Name", value: "uuid" } } },
             ],
@@ -3850,7 +4194,9 @@ export const UpdatePetlinkGpsDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "updatePetlinkGps" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "petlinkGps" }, value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "petlinkGps" }, value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -4012,7 +4358,13 @@ export const UpdateBillingInfoDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "updateBillingInfo" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "updateBillingInfoInput" }, value: { kind: "Variable", name: { kind: "Name", value: "updateBillingInfoInput" } } }],
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "updateBillingInfoInput" },
+                value: { kind: "Variable", name: { kind: "Name", value: "updateBillingInfoInput" } },
+              },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -4058,7 +4410,11 @@ export const UpdatePetProtectionDataDocument = {
             kind: "Field",
             name: { kind: "Name", value: "updatePetProtectionData" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "petProtectionId" }, value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petProtectionId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "owner" }, value: { kind: "Variable", name: { kind: "Name", value: "owner" } } },
               { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
             ],
@@ -4199,10 +4555,18 @@ export const StopRenewingSubscriptionDocument = {
             kind: "Field",
             name: { kind: "Name", value: "stopRenewingSubscription" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "subscriptionId" }, value: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "subscriptionId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
               { kind: "Argument", name: { kind: "Name", value: "cancelReason" }, value: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } } },
-              { kind: "Argument", name: { kind: "Name", value: "cancelReasonCode" }, value: { kind: "Variable", name: { kind: "Name", value: "cancelReasonCode" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "cancelReasonCode" },
+                value: { kind: "Variable", name: { kind: "Name", value: "cancelReasonCode" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -4504,7 +4868,11 @@ export const GetColorsDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "species" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "SpeciesEnum" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -4554,7 +4922,11 @@ export const GetBreedDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "species" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "SpeciesEnum" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -4727,9 +5099,21 @@ export const GetSubscriptionPlansDocument = {
       operation: "query",
       name: { kind: "Name", value: "getSubscriptionPlans" },
       variableDefinitions: [
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "productId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "countryCode" } }, type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } }, type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "countryCode" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -4916,7 +5300,11 @@ export const GetSubscriptionPlanPricingDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "planPriceId" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "careProtectionPlanId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "careProtectionPlanId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
         {
           kind: "VariableDefinition",
           variable: { kind: "Variable", name: { kind: "Name", value: "addonPriceIds" } },
@@ -4941,7 +5329,11 @@ export const GetSubscriptionPlanPricingDocument = {
             name: { kind: "Name", value: "getSubscriptionPlanPricing" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "planPriceId" }, value: { kind: "Variable", name: { kind: "Name", value: "planPriceId" } } },
-              { kind: "Argument", name: { kind: "Name", value: "careProtectionPlanId" }, value: { kind: "Variable", name: { kind: "Name", value: "careProtectionPlanId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "careProtectionPlanId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "careProtectionPlanId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "addonPriceIds" }, value: { kind: "Variable", name: { kind: "Name", value: "addonPriceIds" } } },
               { kind: "Argument", name: { kind: "Name", value: "countryCode" }, value: { kind: "Variable", name: { kind: "Name", value: "countryCode" } } },
               { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
@@ -5040,7 +5432,9 @@ export const GetSubscriptionByProductIdDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "getSubscriptionByProductId" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -5126,7 +5520,9 @@ export const GetSubscriptionsDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "getSubscriptions" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -5255,7 +5651,13 @@ export const GetPetProtectionDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "getPetProtection" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "petProtectionId" }, value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } } }],
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petProtectionId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
+              },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -5413,7 +5815,11 @@ export const UpdateEmailUserDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "email" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
         {
           kind: "VariableDefinition",
           variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
@@ -5458,7 +5864,11 @@ export const UpdatePhoneNumberUserDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "phone" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
         {
           kind: "VariableDefinition",
           variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
@@ -5479,7 +5889,11 @@ export const UpdatePhoneNumberUserDocument = {
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "phone" }, value: { kind: "Variable", name: { kind: "Name", value: "phone" } } },
               { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
-              { kind: "Argument", name: { kind: "Name", value: "verificationId" }, value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
             ],
             selectionSet: {
@@ -5509,7 +5923,11 @@ export const SendOtpForgotPasswordDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "contact" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -5568,7 +5986,11 @@ export const ChangeForgotPasswordDocument = {
             name: { kind: "Name", value: "changeForgotPassword" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
-              { kind: "Argument", name: { kind: "Name", value: "verificationId" }, value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "password" }, value: { kind: "Variable", name: { kind: "Name", value: "password" } } },
             ],
             selectionSet: {
@@ -5598,8 +6020,16 @@ export const ForgotEmailDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "productNumber" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "entityType" } }, type: { kind: "NamedType", name: { kind: "Name", value: "ProductTypeEnum" } } },
-        { kind: "VariableDefinition", variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } }, type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } } },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "entityType" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "ProductTypeEnum" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -5627,7 +6057,12 @@ export const ForgotEmailDocument = {
   ],
 } as unknown as DocumentNode;
 
-export type SdkFunctionWrapper = <T>(action: (requestHeaders?: Record<string, string>) => Promise<T>, operationName: string, operationType?: string, variables?: any) => Promise<T>;
+export type SdkFunctionWrapper = <T>(
+  action: (requestHeaders?: Record<string, string>) => Promise<T>,
+  operationName: string,
+  operationType?: string,
+  variables?: any,
+) => Promise<T>;
 
 const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationType, _variables) => action();
 
@@ -5635,7 +6070,8 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
   return {
     sendOtp(variables: SendOtpMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<SendOtpMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<SendOtpMutation>({ document: SendOtpDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<SendOtpMutation>({ document: SendOtpDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "sendOtp",
         "mutation",
         variables,
@@ -5643,32 +6079,62 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     checkOtp(variables: CheckOtpMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<CheckOtpMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<CheckOtpMutation>({ document: CheckOtpDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<CheckOtpMutation>({ document: CheckOtpDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "checkOtp",
         "mutation",
         variables,
       );
     },
-    signUpUser(variables: SignUpUserMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<SignUpUserMutation> {
+    signUpUser(
+      variables: SignUpUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SignUpUserMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<SignUpUserMutation>({ document: SignUpUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<SignUpUserMutation>({
+            document: SignUpUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "signUpUser",
         "mutation",
         variables,
       );
     },
-    utilityIntegrationTest(variables: UtilityIntegrationTestMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UtilityIntegrationTestMutation> {
+    utilityIntegrationTest(
+      variables: UtilityIntegrationTestMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UtilityIntegrationTestMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<UtilityIntegrationTestMutation>({ document: UtilityIntegrationTestDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<UtilityIntegrationTestMutation>({
+            document: UtilityIntegrationTestDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "utilityIntegrationTest",
         "mutation",
         variables,
       );
     },
-    verifyEmail(variables: VerifyEmailMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<VerifyEmailMutation> {
+    verifyEmail(
+      variables: VerifyEmailMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<VerifyEmailMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<VerifyEmailMutation>({ document: VerifyEmailDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<VerifyEmailMutation>({
+            document: VerifyEmailDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "verifyEmail",
         "mutation",
         variables,
@@ -5676,7 +6142,13 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     createPet(variables: CreatePetMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<CreatePetMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<CreatePetMutation>({ document: CreatePetDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<CreatePetMutation>({
+            document: CreatePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "createPet",
         "mutation",
         variables,
@@ -5684,7 +6156,13 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     updatePet(variables: UpdatePetMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdatePetMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<UpdatePetMutation>({ document: UpdatePetDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetMutation>({
+            document: UpdatePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "updatePet",
         "mutation",
         variables,
@@ -5692,40 +6170,85 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     deletePet(variables: DeletePetMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<DeletePetMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<DeletePetMutation>({ document: DeletePetDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<DeletePetMutation>({
+            document: DeletePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "deletePet",
         "mutation",
         variables,
       );
     },
-    createPetlinkGps(variables: CreatePetlinkGpsMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<CreatePetlinkGpsMutation> {
+    createPetlinkGps(
+      variables: CreatePetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreatePetlinkGpsMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<CreatePetlinkGpsMutation>({ document: CreatePetlinkGpsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<CreatePetlinkGpsMutation>({
+            document: CreatePetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "createPetlinkGps",
         "mutation",
         variables,
       );
     },
-    updatePetlinkGps(variables: UpdatePetlinkGpsMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdatePetlinkGpsMutation> {
+    updatePetlinkGps(
+      variables: UpdatePetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetlinkGpsMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<UpdatePetlinkGpsMutation>({ document: UpdatePetlinkGpsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetlinkGpsMutation>({
+            document: UpdatePetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "updatePetlinkGps",
         "mutation",
         variables,
       );
     },
-    resetPetlinkGps(variables: ResetPetlinkGpsMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ResetPetlinkGpsMutation> {
+    resetPetlinkGps(
+      variables: ResetPetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ResetPetlinkGpsMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<ResetPetlinkGpsMutation>({ document: ResetPetlinkGpsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<ResetPetlinkGpsMutation>({
+            document: ResetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "resetPetlinkGps",
         "mutation",
         variables,
       );
     },
-    updateBillingInfo(variables: UpdateBillingInfoMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdateBillingInfoMutation> {
+    updateBillingInfo(
+      variables: UpdateBillingInfoMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateBillingInfoMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<UpdateBillingInfoMutation>({ document: UpdateBillingInfoDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<UpdateBillingInfoMutation>({
+            document: UpdateBillingInfoDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "updateBillingInfo",
         "mutation",
         variables,
@@ -5738,7 +6261,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     ): Promise<UpdatePetProtectionDataMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<UpdatePetProtectionDataMutation>({ document: UpdatePetProtectionDataDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<UpdatePetProtectionDataMutation>({
+            document: UpdatePetProtectionDataDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "updatePetProtectionData",
         "mutation",
         variables,
@@ -5751,7 +6279,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     ): Promise<StopRenewingSubscriptionMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<StopRenewingSubscriptionMutation>({ document: StopRenewingSubscriptionDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<StopRenewingSubscriptionMutation>({
+            document: StopRenewingSubscriptionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "stopRenewingSubscription",
         "mutation",
         variables,
@@ -5759,15 +6292,26 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     getUser(variables?: GetUserQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetUserQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetUserQuery>({ document: GetUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetUserQuery>({ document: GetUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getUser",
         "query",
         variables,
       );
     },
-    checkContact(variables: CheckContactQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<CheckContactQuery> {
+    checkContact(
+      variables: CheckContactQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CheckContactQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<CheckContactQuery>({ document: CheckContactDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<CheckContactQuery>({
+            document: CheckContactDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "checkContact",
         "query",
         variables,
@@ -5775,7 +6319,8 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     getPet(variables: GetPetQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetPetQuery>({ document: GetPetDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetPetQuery>({ document: GetPetDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getPet",
         "query",
         variables,
@@ -5783,7 +6328,8 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     getPets(variables?: GetPetsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetsQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetPetsQuery>({ document: GetPetsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetPetsQuery>({ document: GetPetsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getPets",
         "query",
         variables,
@@ -5791,7 +6337,8 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     getColors(variables: GetColorsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetColorsQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetColorsQuery>({ document: GetColorsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetColorsQuery>({ document: GetColorsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getColors",
         "query",
         variables,
@@ -5799,32 +6346,62 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     getBreed(variables: GetBreedQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetBreedQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetBreedQuery>({ document: GetBreedDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetBreedQuery>({ document: GetBreedDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
         "getBreed",
         "query",
         variables,
       );
     },
-    getPetlinkGps(variables: GetPetlinkGpsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetlinkGpsQuery> {
+    getPetlinkGps(
+      variables: GetPetlinkGpsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPetlinkGpsQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetPetlinkGpsQuery>({ document: GetPetlinkGpsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetPetlinkGpsQuery>({
+            document: GetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getPetlinkGps",
         "query",
         variables,
       );
     },
-    getSubscriptionPlans(variables?: GetSubscriptionPlansQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetSubscriptionPlansQuery> {
+    getSubscriptionPlans(
+      variables?: GetSubscriptionPlansQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetSubscriptionPlansQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetSubscriptionPlansQuery>({ document: GetSubscriptionPlansDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetSubscriptionPlansQuery>({
+            document: GetSubscriptionPlansDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getSubscriptionPlans",
         "query",
         variables,
       );
     },
-    getBillingInfo(variables?: GetBillingInfoQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetBillingInfoQuery> {
+    getBillingInfo(
+      variables?: GetBillingInfoQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetBillingInfoQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetBillingInfoQuery>({ document: GetBillingInfoDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetBillingInfoQuery>({
+            document: GetBillingInfoDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getBillingInfo",
         "query",
         variables,
@@ -5837,7 +6414,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     ): Promise<GetSubscriptionPlanPricingQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetSubscriptionPlanPricingQuery>({ document: GetSubscriptionPlanPricingDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetSubscriptionPlanPricingQuery>({
+            document: GetSubscriptionPlanPricingDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getSubscriptionPlanPricing",
         "query",
         variables,
@@ -5850,74 +6432,156 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     ): Promise<GetSubscriptionByProductIdQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetSubscriptionByProductIdQuery>({ document: GetSubscriptionByProductIdDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetSubscriptionByProductIdQuery>({
+            document: GetSubscriptionByProductIdDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getSubscriptionByProductId",
         "query",
         variables,
       );
     },
-    getSubscriptions(variables: GetSubscriptionsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetSubscriptionsQuery> {
+    getSubscriptions(
+      variables: GetSubscriptionsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetSubscriptionsQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetSubscriptionsQuery>({ document: GetSubscriptionsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetSubscriptionsQuery>({
+            document: GetSubscriptionsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getSubscriptions",
         "query",
         variables,
       );
     },
-    getPetProtection(variables: GetPetProtectionQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetProtectionQuery> {
+    getPetProtection(
+      variables: GetPetProtectionQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPetProtectionQuery> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<GetPetProtectionQuery>({ document: GetPetProtectionDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<GetPetProtectionQuery>({
+            document: GetPetProtectionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getPetProtection",
         "query",
         variables,
       );
     },
-    changePassword(variables: ChangePasswordMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ChangePasswordMutation> {
+    changePassword(
+      variables: ChangePasswordMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ChangePasswordMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<ChangePasswordMutation>({ document: ChangePasswordDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<ChangePasswordMutation>({
+            document: ChangePasswordDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "changePassword",
         "mutation",
         variables,
       );
     },
-    updateEmailUser(variables: UpdateEmailUserMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdateEmailUserMutation> {
+    updateEmailUser(
+      variables: UpdateEmailUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateEmailUserMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<UpdateEmailUserMutation>({ document: UpdateEmailUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<UpdateEmailUserMutation>({
+            document: UpdateEmailUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "updateEmailUser",
         "mutation",
         variables,
       );
     },
-    updatePhoneNumberUser(variables: UpdatePhoneNumberUserMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdatePhoneNumberUserMutation> {
+    updatePhoneNumberUser(
+      variables: UpdatePhoneNumberUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePhoneNumberUserMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<UpdatePhoneNumberUserMutation>({ document: UpdatePhoneNumberUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<UpdatePhoneNumberUserMutation>({
+            document: UpdatePhoneNumberUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "updatePhoneNumberUser",
         "mutation",
         variables,
       );
     },
-    sendOtpForgotPassword(variables: SendOtpForgotPasswordMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<SendOtpForgotPasswordMutation> {
+    sendOtpForgotPassword(
+      variables: SendOtpForgotPasswordMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendOtpForgotPasswordMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<SendOtpForgotPasswordMutation>({ document: SendOtpForgotPasswordDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<SendOtpForgotPasswordMutation>({
+            document: SendOtpForgotPasswordDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "sendOtpForgotPassword",
         "mutation",
         variables,
       );
     },
-    changeForgotPassword(variables: ChangeForgotPasswordMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ChangeForgotPasswordMutation> {
+    changeForgotPassword(
+      variables: ChangeForgotPasswordMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ChangeForgotPasswordMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<ChangeForgotPasswordMutation>({ document: ChangeForgotPasswordDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<ChangeForgotPasswordMutation>({
+            document: ChangeForgotPasswordDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "changeForgotPassword",
         "mutation",
         variables,
       );
     },
-    forgotEmail(variables: ForgotEmailMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<ForgotEmailMutation> {
+    forgotEmail(
+      variables: ForgotEmailMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ForgotEmailMutation> {
       return withWrapper(
-        (wrappedRequestHeaders) => client.request<ForgotEmailMutation>({ document: ForgotEmailDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+        (wrappedRequestHeaders) =>
+          client.request<ForgotEmailMutation>({
+            document: ForgotEmailDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "forgotEmail",
         "mutation",
         variables,
