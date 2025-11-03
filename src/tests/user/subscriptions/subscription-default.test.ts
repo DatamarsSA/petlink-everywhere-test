@@ -2,9 +2,18 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
-import { assertDatesWithinTolerance, expectSubBoughtMatchSubToBuy, expectPetProtBoughtMatchesPetProtToBuy, waitFor } from "../../../helpers/helpers.js";
+import {
+  assertDatesWithinTolerance,
+  expectSubBoughtMatchSubToBuy,
+  expectPetProtBoughtMatchesPetProtToBuy,
+  waitFor,
+} from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
-import { UtilityTestTypeEnum, LanguageId, CancelReasonCodeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  UtilityTestTypeEnum,
+  LanguageId,
+  CancelReasonCodeEnum,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 
 describe("DEFAULT subscription flow", () => {
@@ -575,10 +584,8 @@ describe("DEFAULT subscription flow", () => {
     beforeEach(async () => {
       // STEP 1: Cleanup e setup base
       await testHelper.cleanupAll();
-
       setup = await testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice().build();
-
-      // STEP 2: Billing + Plans in parallelo: ~0.5s
+      // STEP 2: update Billing info + get available plasn
       const [_, plansResponse] = await Promise.all([
         petlink.core.graphql.authJwt.updateBillingInfo({
           updateBillingInfoInput: {
@@ -600,7 +607,6 @@ describe("DEFAULT subscription flow", () => {
           serialNumber: setup.devices.dogStandard!.serialNumber,
         }),
       ]);
-
       // STEP 3: Purchase a subscription that will be available for all tests
       const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
       logger.debug("Purchasing subscription for EDIT tests", { chosenPlan });
@@ -662,7 +668,9 @@ describe("DEFAULT subscription flow", () => {
       });
 
       // STEP 2: Find YEARLY plan to buy
-      const yearlyPlan = updatedPlansResponse.getSubscriptionPlans.plans!.flatMap((item) => item.pricings).find((pricing) => pricing!.periodUnit === "year");
+      const yearlyPlan = updatedPlansResponse.getSubscriptionPlans
+        .plans!.flatMap((item) => item.pricings)
+        .find((pricing) => pricing!.periodUnit === "year");
 
       logger.info("Yearly plan selected for upgrade", {
         planId: yearlyPlan!.id,
@@ -690,17 +698,20 @@ describe("DEFAULT subscription flow", () => {
       ).toBe("200");
       logger.info("Yearly subscription purchased successfully");
 
-      const subscriptionsResponse = await waitFor(async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }), {
-        isReady: (result) => {
-          const subs = result.getSubscriptions.subscriptions!;
-          if (subs.length !== 2) return false;
-          const futureSub = subs.find((sub) => sub.status === "future");
-          return futureSub?.paymentStatus === "SUCCEEDED";
+      const subscriptionsResponse = await waitFor(
+        async () => petlink.core.graphql.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }),
+        {
+          isReady: (result) => {
+            const subs = result.getSubscriptions.subscriptions!;
+            if (subs.length !== 2) return false;
+            const futureSub = subs.find((sub) => sub.status === "future");
+            return futureSub?.paymentStatus === "SUCCEEDED";
+          },
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: fxt.polling.intervalMs,
+          timeoutError: `Timeout: New subscription just purchased not found in ${fxt.polling.timeoutMs} `,
         },
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
-        timeoutError: `Timeout: New subscription just purchased not found in ${fxt.polling.timeoutMs} `,
-      });
+      );
 
       expect(
         subscriptionsResponse.getSubscriptions.code,
@@ -758,6 +769,8 @@ describe("DEFAULT subscription flow", () => {
       assertDatesWithinTolerance(futureSub!.currentTermStart!, currentSub!.currentTermEnd!, 0.5, "Future sub should start when current ends");
     });
 
+    it.todo("AUTOMATIC RENEWAL of active subscription");
+    it.todo("DUNNING for active subscription");
     it.todo("CANCEL active sub (with & without fee)", async () => {
       // Use currentSubscription directly (already available from beforeEach)
       expect(currentSubscription).toBeDefined();
@@ -812,10 +825,5 @@ describe("DEFAULT subscription flow", () => {
       expect(subAfter.id, "Subscription ID should remain unchanged after cancel renewal").toBe(currentSubscription.id);
       expect(subAfter.currentTermEnd, "Subscription term end date should remain unchanged after cancel renewal").toBe(currentTermEnd);
     });
-
-    it.todo("REFUND sub");
-    it.todo("REFUND sub + buy new after refund");
-    it.todo("DUNNING for active subscription");
-    it.todo("AUTOMATIC RENEWAL of active subscription");
   });
 });
