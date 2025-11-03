@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
     // App Brand
     APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
     // log level console
-    LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("error"),
+    LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
   });
 
   const result = envSchema.safeParse(process.env);
