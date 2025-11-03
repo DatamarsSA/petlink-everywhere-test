@@ -17,8 +17,6 @@ describe("User Credentials Management", () => {
 
     beforeEach(async () => {
       await testHelper.cleanUpUser(initialPhone);
-      await testHelper.cleanUpUser(fxt.current.user.phone);
-      await testHelper.cleanUpUser(fxt.current.user.phone);
       const setup = await testHelper
         .setupBuilder()
         .withUser({
@@ -81,7 +79,6 @@ describe("User Credentials Management", () => {
       await expect(petlink.loginWithEmail(initialEmail, originalPassword)).rejects.toThrow();
 
       // verify new email
-      petlink.logoutUser();
       const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
         timeoutMs: fxt.polling.timeoutMs,
         intervalMs: fxt.polling.intervalMs,
@@ -148,10 +145,16 @@ describe("User Credentials Management", () => {
         `updatePhoneNumberUser should succeed - Error: ${updateResponse.updatePhoneNumberUser.message}${updateResponse.updatePhoneNumberUser.translationCode ? ` (${updateResponse.updatePhoneNumberUser.translationCode})` : ""}`,
       ).toBe("200");
 
-      // Verify phone changed in user profile
+      // STEP 5: Verify login with new password works
+      petlink.logoutUser();
+      await petlink.loginWithPhone(newPhone, fxt.current.user.password);
       const userCheck = await petlink.core.graphql.authJwt.getUser();
+      expect(
+        userCheck.getUser.code,
+        `Requests login with new phoneNumber should works - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""}`,
+      ).toBe("200");
+      // Verify phone changed in user profile
       expect(userCheck.getUser.user?.phone, "User phone should be updated").toBe(newPhone);
-      let a = "";
     });
   });
 
