@@ -157,12 +157,7 @@ describe("User Credentials Management", () => {
 
   describe("RECOVERY credentials (forgot -> public)", () => {
     beforeEach(async () => {
-      // Clear all cache to simulate non-authenticated user
-      await testHelper.cleanUpUser(`+15555234567`);
-      await testHelper.cleanUpUser(fxt.current.user.phone);
       await testHelper.cleanupAll();
-      // const setup = await testHelper.setupBuilder().withUser().build();
-      petlink.logoutUser();
     });
 
     it("Reset PASSWORD (User forgot password) → OTP flow", async () => {
