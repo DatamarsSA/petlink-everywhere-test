@@ -15,6 +15,10 @@ import {
   CancelReasonCodeEnum,
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import {
+  onGpsMessagePosition,
+  onSubscriptionStatus,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
 describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -234,7 +238,7 @@ describe("DEFAULT subscription flow", () => {
         purchaseResponse.utilityIntegrationTest.code,
         `utilityIntegrationTest should succeed for subscription purchase - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
       ).toBe("200");
-      // Wait for payment SUCCEDED feedback (wait from chargebee webhook)
+      // FE WEBAPP -> Wait (polling) for payment SUCCEDED feedback (wait from chargebee webhook)
       const subsActiveForThisDevice = await waitFor(
         async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
         {
@@ -260,6 +264,48 @@ describe("DEFAULT subscription flow", () => {
         expectedStatus: "active",
         expectedPaymentStatus: "SUCCEEDED",
       });
+      // APP MOBILE -> Wait (socket) to unlock map
+      // todo: socket opened to query 'onSubscriptionStatus'
+      const authState = petlink.getCurrentAuthState();
+      logger.info("Auth state before subscribe", {
+        isUserLoggedIn: authState.isUserLoggedIn,
+        hasIamCredentials: authState.hasIamCredentials,
+        wsUrl: process.env.CORE_WEBSOCKET_URL ? "✅ Set" : "❌ Missing",
+      });
+      const subscriptionStatus = { isActive: false };
+      // Subscribe alla socket
+      petlink.core.subscriptions.subscribe(
+        onSubscriptionStatus,
+        { id: subscription.id }, // deviceId come variabile
+        {
+          next: (data) => {
+            logger.info("Received subscription status update", data);
+            subscriptionStatus.isActive = data.onSubscriptionStatus?.status?.subscriptionIsActive ?? false;
+          },
+          error: (err) => {
+            logger.error("Subscription error", { error: err });
+          },
+          complete: () => {
+            logger.debug("Subscription completed");
+          },
+        },
+      );
+
+      // Aspetta che la subscription notifichi lo status attivo
+      await waitFor(
+        () => Promise.resolve(subscriptionStatus.isActive), // ← Funzione che torna il valore ATTUALE
+        {
+          isReady: (result) => result === true, // ← Esce solo quando true
+          timeoutMs: fxt.polling.timeoutMs,
+          intervalMs: 1000,
+          timeoutError: "Timeout: Socket did not receive subscription active status",
+        },
+      );
+
+      expect(subscriptionStatus.isActive).toBe(true);
+
+      logger.info("✅ Subscription became active and socket confirmed it");
+      let a = "";
     });
 
     it.runIf(fxt.isKippyRun)("BUY sub + addOn DEVICE-protection", async () => {

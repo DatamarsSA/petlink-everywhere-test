@@ -7,6 +7,8 @@ import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 import { logger } from "../../config/logger.js";
+import { createClient } from "graphql-ws";
+import WebSocket from "ws";
 
 // ------------------------------
 // HTTP header constants
@@ -46,6 +48,10 @@ type IamCredentials = {
 class EnvConfig {
   static getEndpoint(service: ServiceType): string {
     return process.env[`${service}_GRAPHQL_API_URL`]!;
+  }
+
+  static getWebSocketUrl(service: ServiceType): string {
+    return process.env[`${service}_WEBSOCKET_URL`]!;
   }
 
   static getApiKey(service: ServiceType): string {
@@ -145,7 +151,12 @@ class AuthHeadersBuilder {
  * Wraps any SDK with automatic performance monitoring.
  */
 class ProxyFactory {
-  static create<TSdk extends object>(config: { getClient: () => Promise<TSdk>; serviceName: string; protocolName: string; authType: AuthType }): TSdk {
+  static create<TSdk extends object>(config: {
+    getClient: () => Promise<TSdk>;
+    serviceName: string;
+    protocolName: string;
+    authType: AuthType;
+  }): TSdk {
     return new Proxy({} as TSdk, {
       get: (_target, prop) => {
         return async (...args: any[]) => {
@@ -426,18 +437,133 @@ class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
   }
 }
 
+class WebSocketProtocol {
+  private wsClient: ReturnType<typeof createClient> | null = null;
+  private serviceName: string;
+  private endpoint: string;
+  private activeSubscriptions = new Map<string, () => void>();
+
+  constructor(serviceName: string) {
+    this.serviceName = serviceName;
+    this.endpoint = EnvConfig.getWebSocketUrl(serviceName as ServiceType);
+  }
+
+  private buildAppSyncUrl(): string {
+    const headers: Record<string, string> = {
+      host: new URL(EnvConfig.getEndpoint(this.serviceName as ServiceType)).host,
+    };
+
+    if (AuthManager.hasValidJwtToken()) {
+      headers.Authorization = AuthManager.getJwtToken();
+    } else {
+      headers["x-api-key"] = EnvConfig.getApiKey(this.serviceName as ServiceType);
+    }
+
+    const headerString = Buffer.from(JSON.stringify(headers)).toString("base64");
+    const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
+
+    // ✅ Aggiungi i parametri
+    return `${this.endpoint}?header=${headerString}&payload=${payloadString}`;
+  }
+
+  private getWsClient() {
+    if (!this.wsClient) {
+      const url = this.buildAppSyncUrl();
+
+      this.wsClient = createClient({
+        url, // ✅ Usa l'URL completo con i parametri
+        webSocketImpl: WebSocket,
+        connectionParams: () => ({}), // ✅ Non aggiungere auth qui
+        retryAttempts: 3,
+        shouldRetry: () => true,
+      });
+
+      logger.debug(`[${this.serviceName}/websocket] Client created`);
+    }
+    return this.wsClient;
+  }
+
+  subscribe<TData>(
+    document: any, // gql DocumentNode from subscriptions.ts
+    variables: Record<string, any>,
+    callbacks: {
+      next: (data: TData) => void;
+      error?: (err: any) => void;
+      complete?: () => void;
+    },
+  ): void {
+    const client = this.getWsClient();
+    const subscriptionId = `sub_${Date.now()}_${Math.random()}`;
+
+    // graphql-ws accetta DocumentNode direttamente
+    const unsubscribe = client.subscribe(
+      { query: document, variables },
+      {
+        next: (result: any) => {
+          if (result.data) {
+            callbacks.next(result.data);
+          } else if (result.errors) {
+            logger.error(`[${this.serviceName}/websocket] Subscription error`, {
+              subscriptionId,
+              errors: result.errors,
+            });
+            callbacks.error?.(new Error(result.errors.map((e: any) => e.message).join(", ")));
+          }
+        },
+        error: (err) => {
+          logger.error(`[${this.serviceName}/websocket] WebSocket error`, {
+            subscriptionId,
+            error: err,
+          });
+          callbacks.error?.(err);
+        },
+        complete: () => {
+          logger.debug(`[${this.serviceName}/websocket] Subscription completed`, { subscriptionId });
+          callbacks.complete?.();
+          this.activeSubscriptions.delete(subscriptionId);
+        },
+      },
+    );
+
+    this.activeSubscriptions.set(subscriptionId, unsubscribe);
+    logger.debug(`[${this.serviceName}/websocket] Subscription started`, {
+      subscriptionId,
+      variablesCount: Object.keys(variables).length,
+    });
+  }
+
+  async disposeSubscriptions(): Promise<void> {
+    const count = this.activeSubscriptions.size;
+    logger.debug(`[${this.serviceName}/websocket] Disposing ${count} subscriptions`);
+
+    this.activeSubscriptions.forEach((unsubscribe) => unsubscribe());
+    this.activeSubscriptions.clear();
+
+    if (this.wsClient) {
+      this.wsClient.dispose();
+      this.wsClient = null;
+    }
+  }
+}
+
 // ------------------------------
 // Service Containers
 // ------------------------------
 class CoreService {
   readonly graphql: GraphQLProtocol<CoreSdk>;
+  readonly subscriptions: WebSocketProtocol;
 
   constructor() {
     this.graphql = new GraphQLProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
+    this.subscriptions = new WebSocketProtocol("CORE");
   }
 
   clearCache(): void {
     this.graphql.clearCache();
+  }
+
+  async disposeSubscriptions(): Promise<void> {
+    await this.subscriptions.disposeSubscriptions();
   }
 }
 
@@ -507,6 +633,10 @@ export class PetLinkInfrastructure {
       hasIamCredentials: AuthManager.hasIamCredentials(),
       jwtToken: AuthManager.hasValidJwtToken() ? AuthManager.getJwtToken() : undefined,
     };
+  }
+
+  async disposeAllSubscriptions(): Promise<void> {
+    await this.core.disposeSubscriptions();
   }
 }
 
