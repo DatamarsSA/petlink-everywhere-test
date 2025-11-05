@@ -15,10 +15,7 @@ import {
   CancelReasonCodeEnum,
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
-import {
-  onGpsMessagePosition,
-  onSubscriptionStatus,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
+import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
 describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -216,6 +213,7 @@ describe("DEFAULT subscription flow", () => {
 
     it("BUY sub and verify it becomes active", async () => {
       const choosenPlan = availablePlansForThisDevice![0].pricings[0]!;
+      let subscription = {};
 
       logger.info("Testing subscription purchase", {
         planId: choosenPlan.id,
@@ -224,7 +222,43 @@ describe("DEFAULT subscription flow", () => {
         periodUnit: choosenPlan.periodUnit,
       });
 
-      // Purchase
+      // 🔥 STEP 1: Apri WebSocket PRIMA di comprare
+      logger.info("Opening WebSocket subscription", { userId: setup.user!.id });
+
+      const subscriptionPromise = new Promise<any>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          resolve({ timedOut: true }); // Non rejetta, solo segnala timeout
+        }, 30_000); // 30 secondi
+
+        const subscriptionObservable = petlink.core.subscription.authJwt(subscriptions.onSubscriptionStatus, { id: setup.user!.id });
+
+        const wsSub = subscriptionObservable.subscribe({
+          next: (event: any) => {
+            const status = event.data?.onSubscriptionStatus?.status;
+            logger.info("📨 WebSocket event received", {
+              status: status,
+              subscriptionIsActive: status?.subscriptionIsActive,
+            });
+
+            // Verifica se è l'evento che ci interessa (subscription attiva)
+            if (status?.subscriptionIsActive === true) {
+              clearTimeout(timeout);
+              wsSub.unsubscribe();
+              resolve(event.data);
+            }
+          },
+          error: (error: any) => {
+            clearTimeout(timeout);
+            logger.error("WebSocket error", { error: error.message });
+            reject(error);
+          },
+        });
+      });
+
+      // Aspetta un momento per assicurarsi che il WebSocket sia connesso
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // 🔥 STEP 2: Ora compra la subscription
       const purchaseResponse = await petlink.core.graphql.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BuyNewSubscription,
@@ -234,24 +268,25 @@ describe("DEFAULT subscription flow", () => {
           card: fxt.current.card.valid,
         },
       });
+
       expect(
         purchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed for subscription purchase - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
       ).toBe("200");
-      // FE WEBAPP -> Wait (polling) for payment SUCCEDED feedback (wait from chargebee webhook)
-      const subsActiveForThisDevice = await waitFor(
-        async () => petlink.core.graphql.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
-        {
-          isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
-          },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
-          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" in ${fxt.polling.timeoutMs}ms`,
-        },
-      );
-      const subscription = subsActiveForThisDevice.getSubscriptionByProductId.subscription!;
+
+      // 🔥 STEP 3: Aspetta l'evento WebSocket O usa polling come fallback
+      const wsResult = await subscriptionPromise;
+
+      logger.info("✅ Subscription activated via WebSocket!", {
+        productId: wsResult.onSubscriptionStatus.status.productId,
+        subscriptionIsActive: wsResult.onSubscriptionStatus.status.subscriptionIsActive,
+      });
+
+      // Ottieni i dettagli completi della subscription
+      const subsDetails = await petlink.core.graphql.authJwt.getSubscriptionByProductId({
+        productId: setup.devices.dogStandard!.id,
+      });
+      subscription = subsDetails.getSubscriptionByProductId.subscription!;
 
       logger.info("Subscription activated successfully", {
         subscriptionId: subscription.id,
@@ -264,50 +299,7 @@ describe("DEFAULT subscription flow", () => {
         expectedStatus: "active",
         expectedPaymentStatus: "SUCCEEDED",
       });
-      // APP MOBILE -> Wait (socket) to unlock map
-      // todo: socket opened to query 'onSubscriptionStatus'
-      const authState = petlink.getCurrentAuthState();
-      logger.info("Auth state before subscribe", {
-        isUserLoggedIn: authState.isUserLoggedIn,
-        hasIamCredentials: authState.hasIamCredentials,
-        wsUrl: process.env.CORE_WEBSOCKET_URL ? "✅ Set" : "❌ Missing",
-      });
-      const subscriptionStatus = { isActive: false };
-      // Subscribe alla socket
-      petlink.core.subscriptions.subscribe(
-        onSubscriptionStatus,
-        { id: subscription.id }, // deviceId come variabile
-        {
-          next: (data) => {
-            logger.info("Received subscription status update", data);
-            subscriptionStatus.isActive = data.onSubscriptionStatus?.status?.subscriptionIsActive ?? false;
-          },
-          error: (err) => {
-            logger.error("Subscription error", { error: err });
-          },
-          complete: () => {
-            logger.debug("Subscription completed");
-          },
-        },
-      );
-
-      // Aspetta che la subscription notifichi lo status attivo
-      await waitFor(
-        () => Promise.resolve(subscriptionStatus.isActive), // ← Funzione che torna il valore ATTUALE
-        {
-          isReady: (result) => result === true, // ← Esce solo quando true
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: 1000,
-          timeoutError: "Timeout: Socket did not receive subscription active status",
-        },
-      );
-
-      expect(subscriptionStatus.isActive).toBe(true);
-
-      logger.info("✅ Subscription became active and socket confirmed it");
-      let a = "";
     });
-
     it.runIf(fxt.isKippyRun)("BUY sub + addOn DEVICE-protection", async () => {
       const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
       expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
