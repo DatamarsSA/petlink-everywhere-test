@@ -413,154 +413,240 @@ class GraphQLHttpProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
 }
 
 // GraphQL Subscription (AppSync custom WebSocket)
+/**
+ * WebSocket client for GraphQL subscriptions (AppSync custom protocol)
+ * Singleton pattern: maintains 1 persistent connection, multiplexes N subscriptions
+ */
 class GraphQLWSProtocol {
   private token: string | null = null;
+  private apiKey: string | null = null;
+  private authType: "jwt" | "apikey" | null = null;
 
-  /**
-   * Configures JWT authentication (once per instance)
-   */
+  private ws: WebSocket | null = null;
+  private isConnected = false;
+
+  private subscriptions = new Map<
+    string,
+    {
+      callbacks: { next: (data: any) => void; error: (err: any) => void };
+      timeout: NodeJS.Timeout | null;
+    }
+  >();
+  private subscriptionCounter = 0;
+
   authJwt(): this {
     this.token = AuthManager.getJwtToken();
+    this.authType = "jwt";
     return this;
   }
 
-  /**
-   * Subscribes to a GraphQL subscription with auto-cleanup
-   * @param query - GraphQL subscription query string
-   * @param variables - Query variables
-   * @param callbacks - Event handlers { next, error }
-   * @param options - Optional configuration (timeoutMs for auto-timeout)
-   * @returns Subscription handle with unsubscribe method
-   */
-  subscribe(
-    query: string,
-    variables: Record<string, any>,
-    callbacks: { next: (data: any) => void; error: (err: any) => void },
-    options?: { timeoutMs?: number },
-  ): { unsubscribe: () => void } {
-    if (!this.token) {
-      throw new Error("No authentication configured. Call authJwt() first.");
+  authApiKey(): this {
+    this.apiKey = EnvConfig.getApiKey(ServiceType.CORE);
+    this.authType = "apikey";
+    return this;
+  }
+
+  // Ensures WebSocket connection is established (lazy connection)
+  private async ensureConnected(): Promise<void> {
+    if (this.ws && this.isConnected) {
+      logger.debug("Reusing existing WebSocket connection");
+      return;
+    }
+
+    if (!this.authType) {
+      throw new Error("No authentication configured. Call authJwt() or authApiKey() first.");
     }
 
     const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
     const host = new URL(endpoint).host;
     const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
 
-    const connectionHeaders = {
-      host: host,
-      Authorization: this.token,
-    };
+    const connectionHeaders = this.authType === "jwt" ? { host, Authorization: this.token! } : { host, "x-api-key": this.apiKey! };
 
     const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
     const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
     const connectionUrl = `${wsUrl}?header=${headerString}&payload=${payloadString}`;
 
+    this.ws = new WebSocket(connectionUrl, "graphql-ws");
+
+    return new Promise((resolve, reject) => {
+      this.ws!.on("open", () => {
+        logger.debug("WebSocket opened, sending connection_init");
+        this.ws!.send(JSON.stringify({ type: "connection_init" }));
+      });
+
+      this.ws!.on("message", (data: any) => {
+        const message = JSON.parse(data.toString());
+        logger.debug("WebSocket message received", { type: message.type, id: message.id });
+
+        switch (message.type) {
+          case "connection_ack":
+            this.isConnected = true;
+            logger.debug("WebSocket connection established");
+            resolve();
+            break;
+
+          case "data": {
+            const subId = message.id;
+            const sub = this.subscriptions.get(subId);
+            if (sub && message.payload?.data) {
+              if (sub.timeout) {
+                clearTimeout(sub.timeout);
+                sub.timeout = null;
+              }
+              sub.callbacks.next({ data: message.payload.data });
+            }
+            break;
+          }
+
+          case "error": {
+            const subId = message.id;
+            const sub = this.subscriptions.get(subId);
+            if (sub) {
+              if (sub.timeout) {
+                clearTimeout(sub.timeout);
+                sub.timeout = null;
+              }
+              logger.error("Subscription error", { subId, errors: message.payload?.errors });
+              sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
+            }
+            break;
+          }
+
+          case "connection_error":
+            logger.error("Connection error", { payload: message.payload });
+            this.isConnected = false;
+            reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
+            break;
+
+          case "start_ack":
+            logger.debug("Subscription start acknowledged", { id: message.id });
+            break;
+
+          case "ka":
+            logger.debug("Keep-alive received");
+            break;
+
+          default:
+            logger.debug("Unknown message type", { type: message.type });
+            break;
+        }
+      });
+
+      this.ws!.on("error", (error: any) => {
+        logger.error("WebSocket error", { error: error.message });
+        this.isConnected = false;
+        reject(error);
+      });
+
+      this.ws!.on("close", (code: number, reason: Buffer) => {
+        logger.debug("WebSocket closed", { code, reason: reason.toString() });
+        this.isConnected = false;
+        this.subscriptions.clear();
+      });
+    });
+  }
+
+  /**
+   * Subscribes to a GraphQL subscription
+   * Automatically establishes connection if not already connected
+   * @param query - GraphQL subscription query string
+   * @param variables - Query variables
+   * @param callbacks - Event handlers { next, error }
+   * @param options - Optional configuration (timeoutMs for auto-timeout)
+   * @returns Promise resolving to subscription handle with unsubscribe method
+   */
+  async subscribe(
+    query: string,
+    variables: Record<string, any>,
+    callbacks: { next: (data: any) => void; error: (err: any) => void },
+    options?: { timeoutMs?: number },
+  ): Promise<{ unsubscribe: () => void }> {
+    await this.ensureConnected();
+
+    const subId = (++this.subscriptionCounter).toString();
     const operationNameMatch = query.match(/subscription\s+(\w+)/);
     const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
-    const timeoutMs = options?.timeoutMs;
 
-    const ws = new WebSocket(connectionUrl, "graphql-ws");
-    let isConnected = false;
+    const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
+    const host = new URL(endpoint).host;
+
     let timeout: NodeJS.Timeout | null = null;
 
-    // Setup auto-timeout if specified
-    if (timeoutMs) {
+    if (options?.timeoutMs) {
       timeout = setTimeout(() => {
-        logger.error("WebSocket timeout", { timeoutMs });
-        callbacks.error(new Error(`Timeout: no event received in ${timeoutMs}ms`));
-        ws.close();
-      }, timeoutMs);
+        logger.error("WebSocket timeout", { subId, timeoutMs: options.timeoutMs });
+        callbacks.error(new Error(`Timeout: no event received in ${options.timeoutMs}ms`));
+        this.subscriptions.delete(subId);
+      }, options.timeoutMs);
     }
 
-    // Wrap callbacks for auto-cleanup
-    const wrappedNext = (data: any) => {
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
-      callbacks.next(data);
+    this.subscriptions.set(subId, { callbacks, timeout });
+
+    const authPayload =
+      this.authType === "jwt"
+        ? {
+            host,
+            Authorization: JSON.stringify({
+              operationName,
+              variables,
+              authToken: this.token,
+            }),
+          }
+        : {
+            host,
+            "x-api-key": this.apiKey!,
+          };
+
+    const subscriptionPayload = {
+      id: subId,
+      type: "start",
+      payload: {
+        data: JSON.stringify({ query, variables }),
+        extensions: {
+          authorization: authPayload,
+        },
+      },
     };
 
-    const wrappedError = (err: any) => {
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
-      callbacks.error(err);
-    };
-
-    ws.on("open", () => {
-      logger.debug("WebSocket opened, sending connection_init");
-      ws.send(JSON.stringify({ type: "connection_init" }));
-    });
-
-    ws.on("message", (data: any) => {
-      const message = JSON.parse(data.toString());
-      logger.debug("WebSocket message received", { type: message.type, id: message.id });
-
-      if (message.type === "connection_ack") {
-        logger.debug("Connection acknowledged, subscribing to operation", { operationName, variables });
-        isConnected = true;
-
-        const subscriptionPayload = {
-          id: "1",
-          type: "start",
-          payload: {
-            data: JSON.stringify({ query, variables }),
-            extensions: {
-              authorization: {
-                host: host,
-                Authorization: JSON.stringify({
-                  operationName: operationName,
-                  variables: variables,
-                  authToken: this.token,
-                }),
-              },
-            },
-          },
-        };
-
-        ws.send(JSON.stringify(subscriptionPayload));
-      } else if (message.type === "start_ack") {
-        logger.debug("Subscription started successfully");
-      } else if (message.type === "data") {
-        logger.debug("Subscription data received", { data: message.payload?.data });
-        if (message.payload?.data) {
-          wrappedNext({ data: message.payload.data });
-        }
-      } else if (message.type === "error") {
-        logger.error("Subscription error", { errors: message.payload?.errors });
-        wrappedError(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
-      } else if (message.type === "connection_error") {
-        logger.error("Connection error", { payload: message.payload });
-        wrappedError(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
-      } else if (message.type === "ka") {
-        logger.debug("Keep-alive received");
-      }
-    });
-
-    ws.on("error", (error: any) => {
-      logger.error("WebSocket error", { error: error.message, isConnected });
-      wrappedError(error);
-    });
-
-    ws.on("close", (code: number, reason: Buffer) => {
-      logger.debug("WebSocket closed", { code, reason: reason.toString(), isConnected });
-    });
+    this.ws!.send(JSON.stringify(subscriptionPayload));
+    logger.debug("Subscription started", { subId, operationName, variables });
 
     return {
       unsubscribe: () => {
-        if (timeout) {
-          clearTimeout(timeout);
-          timeout = null;
+        const sub = this.subscriptions.get(subId);
+        if (sub?.timeout) {
+          clearTimeout(sub.timeout);
         }
-        if (isConnected) {
-          ws.send(JSON.stringify({ type: "stop", id: "1" }));
+        this.subscriptions.delete(subId);
+
+        if (this.isConnected) {
+          this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
         }
-        ws.close();
-        logger.debug("Subscription unsubscribed");
+        logger.debug("Subscription unsubscribed", { subId });
       },
     };
+  }
+
+  /**
+   * Disconnects WebSocket and cleans up all subscriptions
+   * Call this in afterAll() to cleanup after tests
+   */
+  disconnect(): void {
+    if (this.ws) {
+      this.subscriptions.forEach((sub) => {
+        if (sub.timeout) {
+          clearTimeout(sub.timeout);
+        }
+      });
+      this.subscriptions.clear();
+
+      this.ws.close();
+      this.ws = null;
+      this.isConnected = false;
+
+      logger.debug("WebSocket disconnected (all subscriptions closed)");
+    }
   }
 }
 

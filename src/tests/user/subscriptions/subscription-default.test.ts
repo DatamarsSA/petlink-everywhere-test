@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
@@ -211,6 +211,10 @@ describe("DEFAULT subscription flow", () => {
       availablePetProtectionForThisPet = plansResponse.getSubscriptionPlans.careProtectionPlans!;
     });
 
+    afterAll(() => {
+      petlink.core.graphqlWS.disconnect();
+    });
+
     it("BUY sub and verify it becomes active", async () => {
       const choosenPlan = availablePlansForThisDevice![0].pricings[0]!;
       const deviceId = setup.devices.dogStandard!.id;
@@ -224,9 +228,9 @@ describe("DEFAULT subscription flow", () => {
 
       let subStatusUpdated = null;
 
-      // Open WebSocket subscription BEFORE purchase (for app)
-      const socketToListenUpdateStatusSub = new Promise<void>((resolve, reject) => {
-        const wsSub = petlink.core.graphqlWS.authJwt().subscribe(
+      // Open WebSocket subscription BEFORE purchase (event-driven)
+      const activationPromise = new Promise<void>(async (resolve, reject) => {
+        const wsSub = await petlink.core.graphqlWS.authJwt().subscribe(
           subscriptions.onSubscriptionStatus,
           { id: setup.user!.id },
           {
@@ -235,7 +239,8 @@ describe("DEFAULT subscription flow", () => {
               subStatusUpdated = event.data;
 
               // Resolve only when subscription is ACTIVE
-              if (event.data?.onSubscriptionStatus?.status.subscriptionIsActive === true) {
+              const status = event.data?.onSubscriptionStatus?.status;
+              if (status?.subscriptionIsActive === true) {
                 wsSub.unsubscribe();
                 resolve();
               }
@@ -245,9 +250,10 @@ describe("DEFAULT subscription flow", () => {
               reject(error);
             },
           },
-          { timeoutMs: fxt.socket.timeoutMs }, // Auto-timeout + clearTimeout
+          { timeoutMs: fxt.socket.timeoutMs },
         );
       });
+
       // Wait for WebSocket to establish connection
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -268,7 +274,9 @@ describe("DEFAULT subscription flow", () => {
       ).toBe("200");
 
       // Wait for WebSocket event (pure event-driven)
-      await socketToListenUpdateStatusSub;
+      await activationPromise;
+
+      // Assert on WebSocket event
       expect(subStatusUpdated, "Should arrive update of sub status from subscription").not.toBeNull();
       expect(subStatusUpdated!.onSubscriptionStatus.id).toBe(setup.user!.id);
       expect(subStatusUpdated!.onSubscriptionStatus.status.subscriptionIsActive).toBe(true);
