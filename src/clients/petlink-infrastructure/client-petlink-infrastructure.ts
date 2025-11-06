@@ -565,16 +565,16 @@ class GraphQLWSProtocol {
 }
 
 class CoreService {
-  readonly graphql: GraphQLHttpProtocol<CoreSdk>;
-  readonly subscription: GraphQLWSProtocol;
+  readonly graphqlHttp: GraphQLHttpProtocol<CoreSdk>;
+  readonly graphqlWS: GraphQLWSProtocol;
 
   constructor() {
-    this.graphql = new GraphQLHttpProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
-    this.subscription = new GraphQLWSProtocol();
+    this.graphqlHttp = new GraphQLHttpProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
+    this.graphqlWS = new GraphQLWSProtocol();
   }
 
   clearCache(): void {
-    this.graphql.clearCache();
+    this.graphqlHttp.clearCache();
   }
 }
 

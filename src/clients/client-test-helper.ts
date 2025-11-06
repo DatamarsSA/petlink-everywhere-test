@@ -189,7 +189,7 @@ export class TestHelper {
 
     await Promise.all([
       // 1. Petlink user & related entity cleanup
-      petlink.core.graphql.authIam
+      petlink.core.graphqlHttp.authIam
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
@@ -229,7 +229,7 @@ export class TestHelper {
     logger.debug("→ Starting user cleanup operation");
 
     try {
-      const response = await petlink.core.graphql.authIam.utilityIntegrationTest({
+      const response = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
           phone: userPhone ?? fxt.current.user.phone,
           utilityType: UtilityTestTypeEnum.CleanUpUser,
@@ -265,7 +265,7 @@ export class TestHelper {
       languageId: fxt.current.user.languageId,
     };
 
-    const response = await petlink.core.graphql.authIam.utilityIntegrationTest({
+    const response = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
       input: {
         utilityType: UtilityTestTypeEnum.SignUp,
         userIn: userPayload,
@@ -278,7 +278,7 @@ export class TestHelper {
     }
 
     await petlink.loginWithPhone(userPayload.phone, userPayload.password);
-    const userResponse = await petlink.core.graphql.authJwt.getUser();
+    const userResponse = await petlink.core.graphqlHttp.authJwt.getUser();
 
     if (!userResponse.getUser.user) {
       throw new Error("User not found after creation");
@@ -318,7 +318,7 @@ export class TestHelper {
       primaryColor: petFixture.primaryColor,
     };
 
-    const response = await petlink.core.graphql.authJwt.createPet({
+    const response = await petlink.core.graphqlHttp.authJwt.createPet({
       pet: petPayload,
     });
 
@@ -358,7 +358,7 @@ export class TestHelper {
       petId: pet.id,
     };
 
-    const response = await petlink.core.graphql.authJwt.createPetlinkGps({
+    const response = await petlink.core.graphqlHttp.authJwt.createPetlinkGps({
       petlinkGps: devicePayload,
       appBrand: fxt.current.appBrand,
     });

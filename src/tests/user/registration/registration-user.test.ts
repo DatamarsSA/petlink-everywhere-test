@@ -28,7 +28,7 @@ describe("User Registration", () => {
   let verificationLink: string | null;
 
   it("Verify phone number availability", async () => {
-    const response = await petlink.core.graphql.public.checkContact({
+    const response = await petlink.core.graphqlHttp.public.checkContact({
       contact: signUpPayload.phone,
       contactType: ContactType.Phone,
     });
@@ -40,7 +40,7 @@ describe("User Registration", () => {
   });
 
   it("Send OTP to phone", async () => {
-    const response = await petlink.core.graphql.public.sendOtp({
+    const response = await petlink.core.graphqlHttp.public.sendOtp({
       phone: signUpPayload.phone,
       languageId: signUpPayload.languageId,
     });
@@ -63,7 +63,7 @@ describe("User Registration", () => {
   }, 70000);
 
   it("Verify phone number (sending received OTP)", async () => {
-    const response = await petlink.core.graphql.public.checkOtp({
+    const response = await petlink.core.graphqlHttp.public.checkOtp({
       verificationId,
       otp: receivedOtp!,
       contact: signUpPayload.phone,
@@ -76,7 +76,7 @@ describe("User Registration", () => {
   });
 
   it("Register User", async () => {
-    const response = await petlink.core.graphql.public.signUpUser({
+    const response = await petlink.core.graphqlHttp.public.signUpUser({
       user: signUpPayload,
       otpData: {
         otp: receivedOtp!,
@@ -93,7 +93,7 @@ describe("User Registration", () => {
 
   it("Try login new user (with PHONE)", async () => {
     await petlink.loginWithPhone(signUpPayload.phone, signUpPayload.password);
-    const userResponse = await petlink.core.graphql.authJwt.getUser();
+    const userResponse = await petlink.core.graphqlHttp.authJwt.getUser();
 
     expect(userResponse.getUser.user?.phone, "Logged in user phone should match signup payload").toBe(signUpPayload.phone);
     expect(userResponse.getUser.user?.contactVerified?.phone, "Phone should be verified after OTP confirmation").toBe(true);
@@ -119,7 +119,7 @@ describe("User Registration", () => {
   it("Verify Email (clicking on received link)", async () => {
     const params = extractParamsFromUrl(verificationLink!);
 
-    const response = await petlink.core.graphql.public.verifyEmail({
+    const response = await petlink.core.graphqlHttp.public.verifyEmail({
       uuid: params.uuid!,
       otp: params.otp!,
       verificationId: params.verificationId!,
@@ -133,7 +133,7 @@ describe("User Registration", () => {
 
   it("Try login new user (with EMAIL)", async () => {
     await petlink.loginWithEmail(signUpPayload.email, signUpPayload.password);
-    const user = await petlink.core.graphql.authJwt.getUser();
+    const user = await petlink.core.graphqlHttp.authJwt.getUser();
 
     expect(user.getUser.user, "User should be defined after login with email").toBeDefined();
     expect(user.getUser.user?.email, "Logged in user email should match signup payload").toBe(signUpPayload.email);
@@ -143,7 +143,7 @@ describe("User Registration", () => {
   });
 
   it("Verify user created has all value equals to input payload", async () => {
-    const userResponse = await petlink.core.graphql.authJwt.getUser();
+    const userResponse = await petlink.core.graphqlHttp.authJwt.getUser();
     // Verifica campi specifici dell'input
     expect(userResponse.getUser.user, "Created user should match input payload").toMatchObject({
       email: signUpPayload.email,
@@ -164,11 +164,11 @@ describe("User Registration", () => {
 
   it("Verify contacts (Phone & Email) are no longer available", async () => {
     const [phoneCheck, emailCheck] = await Promise.all([
-      petlink.core.graphql.public.checkContact({
+      petlink.core.graphqlHttp.public.checkContact({
         contact: signUpPayload.phone,
         contactType: ContactType.Phone,
       }),
-      petlink.core.graphql.public.checkContact({
+      petlink.core.graphqlHttp.public.checkContact({
         contact: signUpPayload.email,
         contactType: ContactType.Email,
       }),

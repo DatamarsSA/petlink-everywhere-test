@@ -37,11 +37,11 @@ describe("PetlinkGPS Registration", () => {
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
-      petlink.core.graphql.authJwt.createPetlinkGps({
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
         petlinkGps: dogDevicePayload,
         appBrand: fxt.current.appBrand,
       }),
-      petlink.core.graphql.authJwt.createPetlinkGps({
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
         petlinkGps: catDevicePayload,
         appBrand: fxt.current.appBrand,
       }),
@@ -88,7 +88,7 @@ describe("PetlinkGPS Registration", () => {
       petId: setup.pets.dogForEvo!.id,
     } as PetlinkGpsIn;
 
-    const evoResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
+    const evoResponse = await petlink.core.graphqlHttp.authJwt.createPetlinkGps({
       petlinkGps: evoDevicePayload,
       appBrand: fxt.current.appBrand,
     });
@@ -128,11 +128,11 @@ describe("PetlinkGPS Registration", () => {
     } as PetlinkGpsIn;
 
     const [dogResponse, catResponse] = await Promise.all([
-      petlink.core.graphql.authJwt.createPetlinkGps({
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
         petlinkGps: dogDevicePayload,
         appBrand: fxt.current.appBrand,
       }),
-      petlink.core.graphql.authJwt.createPetlinkGps({
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
         petlinkGps: catDevicePayload,
         appBrand: fxt.current.appBrand,
       }),
@@ -151,7 +151,7 @@ describe("PetlinkGPS Registration", () => {
   it("Update PetlinkGps should work correctly", async () => {
     // STEP 1: UPDATE - Modifica solo timezone del DOG GPS
     const newTimezone = "America/New_York";
-    const updateResponse = await petlink.core.graphql.authJwt.updatePetlinkGps({
+    const updateResponse = await petlink.core.graphqlHttp.authJwt.updatePetlinkGps({
       petlinkGps: {
         id: dogDevice.id,
         timezone: newTimezone,
@@ -164,7 +164,7 @@ describe("PetlinkGPS Registration", () => {
     ).toBe("200");
 
     // STEP 2: GET - Verifica che l'update sia persistito
-    const getUpdatedResponse = await petlink.core.graphql.authJwt.getPetlinkGps({
+    const getUpdatedResponse = await petlink.core.graphqlHttp.authJwt.getPetlinkGps({
       id: dogDevice.id,
     });
     expect(

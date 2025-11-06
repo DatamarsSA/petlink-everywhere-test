@@ -32,7 +32,7 @@ describe("User Credentials Management", () => {
       const newPassword = "NewPassword123!";
 
       // Change password using old password
-      const response = await petlink.core.graphql.authJwt.changePassword({
+      const response = await petlink.core.graphqlHttp.authJwt.changePassword({
         oldPassword: originalPassword,
         password: newPassword,
       });
@@ -49,7 +49,7 @@ describe("User Credentials Management", () => {
 
       // Verify new password works
       await petlink.loginWithEmail(testUser.email, newPassword);
-      const userCheck = await petlink.core.graphql.authJwt.getUser();
+      const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
         `getUser should succeed - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""}`,
@@ -60,7 +60,7 @@ describe("User Credentials Management", () => {
       const newEmail = fxt.current.user.email;
 
       // STEP 1: Update email (this marks it as unverified)
-      const updateResponse = await petlink.core.graphql.authJwt.updateEmailUser({
+      const updateResponse = await petlink.core.graphqlHttp.authJwt.updateEmailUser({
         email: newEmail,
         languageId: fxt.current.user.languageId,
         appBrand: fxt.current.appBrand,
@@ -72,7 +72,7 @@ describe("User Credentials Management", () => {
           updateResponse.updateEmailUser.translationCode ? ` (${updateResponse.updateEmailUser.translationCode})` : ""
         }`,
       ).toBe("200");
-      const checkUserUpdated = await petlink.core.graphql.authJwt.getUser();
+      const checkUserUpdated = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(checkUserUpdated.getUser.user?.email, "User email should be updated").toBe(newEmail);
 
       // Verify login with old email doesn't works anymore
@@ -85,7 +85,7 @@ describe("User Credentials Management", () => {
         timeoutError: "Verification email not received",
       });
       const params = extractParamsFromUrl(linkUrlToOpen!);
-      await petlink.core.graphql.public.verifyEmail({
+      await petlink.core.graphqlHttp.public.verifyEmail({
         uuid: params.uuid!,
         otp: params.otp!,
         verificationId: params.verificationId!,
@@ -94,7 +94,7 @@ describe("User Credentials Management", () => {
       // Try login with new email
       petlink.logoutUser();
       await petlink.loginWithEmail(newEmail, originalPassword);
-      const userCheck = await petlink.core.graphql.authJwt.getUser();
+      const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
         `Requests logged with new email should works - Error: ${userCheck.getUser.message}${
@@ -107,7 +107,7 @@ describe("User Credentials Management", () => {
       const newPhone = fxt.current.user.phone; // Use the checkable fixture phone
 
       // STEP 1: Request OTP for new phone
-      const otpResponse = await petlink.core.graphql.public.sendOtp({
+      const otpResponse = await petlink.core.graphqlHttp.public.sendOtp({
         phone: newPhone,
         languageId: fxt.current.user.languageId,
       });
@@ -126,14 +126,14 @@ describe("User Credentials Management", () => {
       });
 
       // STEP 3: Verify OTP phone number (sending received OTP)
-      await petlink.core.graphql.public.checkOtp({
+      await petlink.core.graphqlHttp.public.checkOtp({
         verificationId: otpResponse.sendOtp.verificationId!,
         otp: otp!,
         contact: newPhone,
       });
 
       // STEP 4: Update phone with OTP
-      const updateResponse = await petlink.core.graphql.authJwt.updatePhoneNumberUser({
+      const updateResponse = await petlink.core.graphqlHttp.authJwt.updatePhoneNumberUser({
         phone: newPhone,
         languageId: fxt.current.user.languageId,
         verificationId: otpResponse.sendOtp.verificationId!,
@@ -148,7 +148,7 @@ describe("User Credentials Management", () => {
       // STEP 5: Verify login with new password works
       petlink.logoutUser();
       await petlink.loginWithPhone(newPhone, fxt.current.user.password);
-      const userCheck = await petlink.core.graphql.authJwt.getUser();
+      const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
         `Requests login with new phoneNumber should works - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""}`,
@@ -167,7 +167,7 @@ describe("User Credentials Management", () => {
       const setup = await testHelper.setupBuilder().withUser().build();
 
       // STEP 1: Request OTP (sent to phone) for password reset
-      const otpResponse = await petlink.core.graphql.public.sendOtpForgotPassword({
+      const otpResponse = await petlink.core.graphqlHttp.public.sendOtpForgotPassword({
         contact: setup.user!.phone,
         languageId: fxt.current.user.languageId,
       });
@@ -188,7 +188,7 @@ describe("User Credentials Management", () => {
       logger.debug("Received OTP", { otp });
 
       // STEP 3: Verify OTP
-      await petlink.core.graphql.public.checkOtp({
+      await petlink.core.graphqlHttp.public.checkOtp({
         verificationId: otpResponse.sendOtpForgotPassword.verificationId!,
         otp: otp!,
         contact: setup.user!.phone,
@@ -196,7 +196,7 @@ describe("User Credentials Management", () => {
 
       // STEP 4: Change password using OTP
       const newPassword = "ResetPassword123!";
-      const changeResponse = await petlink.core.graphql.public.changeForgotPassword({
+      const changeResponse = await petlink.core.graphqlHttp.public.changeForgotPassword({
         otp: otp!,
         verificationId: otpResponse.sendOtpForgotPassword.verificationId!,
         password: newPassword,
@@ -211,7 +211,7 @@ describe("User Credentials Management", () => {
       // STEP 5: Verify new password works
       petlink.logoutUser();
       await petlink.loginWithPhone(setup.user!.phone, newPassword);
-      const userCheck = await petlink.core.graphql.authJwt.getUser();
+      const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
         `Requests logge with new password should works - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""}`,

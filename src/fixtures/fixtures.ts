@@ -114,4 +114,7 @@ export const fxt = {
     timeoutMs: 180000,
     intervalMs: 1000,
   },
+  socket: {
+    timeoutMs: 30000,
+  },
 };

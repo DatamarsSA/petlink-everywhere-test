@@ -37,8 +37,8 @@ describe("Pet Registration", () => {
 
   it("Create DOG and CAT for the user", async () => {
     const [dogResponse, catResponse] = await Promise.all([
-      petlink.core.graphql.authJwt.createPet({ pet: dogPayload }),
-      petlink.core.graphql.authJwt.createPet({ pet: catPayload }),
+      petlink.core.graphqlHttp.authJwt.createPet({ pet: dogPayload }),
+      petlink.core.graphqlHttp.authJwt.createPet({ pet: catPayload }),
     ]);
 
     // Assert DOG
@@ -86,51 +86,52 @@ describe("Pet Registration", () => {
     // 4. CAT species cannot use DOG breeds
 
     // Execute all invalid pet creation requests in parallel
-    const [dogPurebreedWithTwoBreeds, dogMixedbreedWithOneBreed, dogMixedbreedWithTwoEqualsBreed, catWithDogBreed, dogWithCatBreed] = await Promise.all([
-      // Invalid: PUREBREED with 2 breeds (should have only 1)
-      petlink.core.graphql.authJwt.createPet({
-        pet: {
-          ...dogPayload,
-          breedType: BreedTypeEnum.Purebreed,
-          breeds: [
-            "5b0bfddb-532e-41cb-9705-b2ddc21226ef", // Labrador Retriever
-            "0074b56e-8c84-43b6-aaad-d7c00a9aa37e", // Another dog breed
-          ],
-        },
-      }),
-      // Invalid: MIXED_BREED with 1 breed (should have 2)
-      petlink.core.graphql.authJwt.createPet({
-        pet: {
-          ...dogPayload,
-          breedType: BreedTypeEnum.MixedBreed,
-          breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Only 1 breed
-        },
-      }),
-      // Invalid: MIXED_BREED with 2 equals breeds
-      petlink.core.graphql.authJwt.createPet({
-        pet: {
-          ...dogPayload,
-          breedType: BreedTypeEnum.MixedBreed,
-          breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef", "5b0bfddb-532e-41cb-9705-b2ddc21226ef"],
-        },
-      }),
-      // Invalid: CAT with DOG breed
-      petlink.core.graphql.authJwt.createPet({
-        pet: {
-          ...catPayload,
-          breedType: BreedTypeEnum.Purebreed,
-          breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever (DOG)
-        },
-      }),
-      // Invalid: DOG with CAT breed
-      petlink.core.graphql.authJwt.createPet({
-        pet: {
-          ...dogPayload,
-          breedType: BreedTypeEnum.Purebreed,
-          breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese (CAT)
-        },
-      }),
-    ]);
+    const [dogPurebreedWithTwoBreeds, dogMixedbreedWithOneBreed, dogMixedbreedWithTwoEqualsBreed, catWithDogBreed, dogWithCatBreed] =
+      await Promise.all([
+        // Invalid: PUREBREED with 2 breeds (should have only 1)
+        petlink.core.graphqlHttp.authJwt.createPet({
+          pet: {
+            ...dogPayload,
+            breedType: BreedTypeEnum.Purebreed,
+            breeds: [
+              "5b0bfddb-532e-41cb-9705-b2ddc21226ef", // Labrador Retriever
+              "0074b56e-8c84-43b6-aaad-d7c00a9aa37e", // Another dog breed
+            ],
+          },
+        }),
+        // Invalid: MIXED_BREED with 1 breed (should have 2)
+        petlink.core.graphqlHttp.authJwt.createPet({
+          pet: {
+            ...dogPayload,
+            breedType: BreedTypeEnum.MixedBreed,
+            breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Only 1 breed
+          },
+        }),
+        // Invalid: MIXED_BREED with 2 equals breeds
+        petlink.core.graphqlHttp.authJwt.createPet({
+          pet: {
+            ...dogPayload,
+            breedType: BreedTypeEnum.MixedBreed,
+            breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef", "5b0bfddb-532e-41cb-9705-b2ddc21226ef"],
+          },
+        }),
+        // Invalid: CAT with DOG breed
+        petlink.core.graphqlHttp.authJwt.createPet({
+          pet: {
+            ...catPayload,
+            breedType: BreedTypeEnum.Purebreed,
+            breeds: ["5b0bfddb-532e-41cb-9705-b2ddc21226ef"], // Labrador Retriever (DOG)
+          },
+        }),
+        // Invalid: DOG with CAT breed
+        petlink.core.graphqlHttp.authJwt.createPet({
+          pet: {
+            ...dogPayload,
+            breedType: BreedTypeEnum.Purebreed,
+            breeds: ["f7bbebdf-26bb-4947-996d-3290bf128f01"], // Siamese (CAT)
+          },
+        }),
+      ]);
     // Assert all requests failed with validation error (400)
     expect(
       dogPurebreedWithTwoBreeds.createPet.code,
@@ -161,7 +162,7 @@ describe("Pet Registration", () => {
       name: "Temp Pet for CRUD Test",
     } as PetIn;
 
-    const createResponse = await petlink.core.graphql.authJwt.createPet({
+    const createResponse = await petlink.core.graphqlHttp.authJwt.createPet({
       pet: tempPetData,
     });
 
@@ -179,7 +180,7 @@ describe("Pet Registration", () => {
     const updatedName = "Updated Temp Pet";
     const updatedWeight = 25;
 
-    const updateResponse = await petlink.core.graphql.authJwt.updatePet({
+    const updateResponse = await petlink.core.graphqlHttp.authJwt.updatePet({
       pet: {
         id: petId,
         name: updatedName,
@@ -198,7 +199,7 @@ describe("Pet Registration", () => {
     expect(updateResponse.updatePet.pet?.weight, "Pet weight should be updated").toBe(updatedWeight);
 
     // TEST DELETE: Remove the temporary PET
-    const deleteResponse = await petlink.core.graphql.authJwt.deletePet({
+    const deleteResponse = await petlink.core.graphqlHttp.authJwt.deletePet({
       petId,
     });
 
@@ -209,7 +210,7 @@ describe("Pet Registration", () => {
     ).toBe("200");
 
     // Verify the PET no longer exists
-    const petsAfterDelete = await petlink.core.graphql.authJwt.getPets();
+    const petsAfterDelete = await petlink.core.graphqlHttp.authJwt.getPets();
     const deletedPet = petsAfterDelete.getPets.pets?.find((p) => p.id === petId);
     expect(deletedPet, "Pet should not exist after deletion").toBeUndefined();
   });
@@ -221,7 +222,7 @@ describe("Pet Registration", () => {
       name: "Pet with Device Test",
     } as PetIn;
 
-    const createPetResponse = await petlink.core.graphql.authJwt.createPet({
+    const createPetResponse = await petlink.core.graphqlHttp.authJwt.createPet({
       pet: tempPetData,
     });
 
@@ -240,7 +241,7 @@ describe("Pet Registration", () => {
       petId: petId,
     };
 
-    const createDeviceResponse = await petlink.core.graphql.authJwt.createPetlinkGps({
+    const createDeviceResponse = await petlink.core.graphqlHttp.authJwt.createPetlinkGps({
       petlinkGps: devicePayload,
       appBrand: fxt.current.appBrand,
     });
@@ -252,7 +253,7 @@ describe("Pet Registration", () => {
     expect(createDeviceResponse.createPetlinkGps.petlinkGps).toBeDefined();
 
     // STEP 3: Try to delete the PET while it has a device associated (should FAIL)
-    const deleteWithDeviceResponse = await petlink.core.graphql.authJwt.deletePet({
+    const deleteWithDeviceResponse = await petlink.core.graphqlHttp.authJwt.deletePet({
       petId,
     });
     expect(
@@ -261,7 +262,7 @@ describe("Pet Registration", () => {
     ).not.toBe("200");
 
     // Verify the PET still exists
-    const petsAfterFailedDelete = await petlink.core.graphql.authJwt.getPets();
+    const petsAfterFailedDelete = await petlink.core.graphqlHttp.authJwt.getPets();
     const petStillExists = petsAfterFailedDelete.getPets.pets?.find((p) => p.id === petId);
     expect(petStillExists, "Pet should still exist after failed deletion attempt").toBeDefined();
   });
