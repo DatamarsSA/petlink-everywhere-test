@@ -230,7 +230,7 @@ describe("DEFAULT subscription flow", () => {
 
       // Open WebSocket subscription BEFORE purchase (event-driven)
       const activationPromise = new Promise<void>(async (resolve, reject) => {
-        const wsSub = await petlink.core.graphqlWS.authJwt().subscribe(
+        const wsSub = await petlink.core.graphqlWS.authJwt.subscribe(
           subscriptions.onSubscriptionStatus,
           { id: setup.user!.id },
           {

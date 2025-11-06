@@ -9,19 +9,13 @@ import { performanceTracker } from "../../helpers/helper-performance-tracker.js"
 import { logger } from "../../config/logger.js";
 import WebSocket from "ws";
 
+// === Types ===
 const HTTP_HEADERS = {
   AUTHORIZATION: "Authorization",
   API_KEY: "x-api-key",
-  X_AMZ_DATE: "X-Amz-Date",
-  X_AMZ_SECURITY_TOKEN: "X-Amz-Security-Token",
   CONTENT_TYPE: "Content-Type",
   HOST: "host",
 };
-
-enum ServiceType {
-  CORE = "CORE",
-  CCT = "CCT",
-}
 
 enum AuthType {
   JWT = "jwt",
@@ -34,6 +28,32 @@ type IamCredentials = {
   secretAccessKey: string;
 };
 
+type AuthConfig = {
+  cacheKey: string;
+  headers: Record<string, string>;
+  middleware?: RequestMiddleware;
+};
+
+type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
+  serviceName: string;
+  endpoint: string;
+  createClient: (authConfig: AuthConfig) => Promise<TClient>;
+  createSdk: (client: TClient) => TSdk;
+};
+
+type HttpProtocol<TSdk extends object> = {
+  authJwt: TSdk;
+  authIam: TSdk;
+  public: TSdk;
+  clearCache: () => void;
+};
+
+enum ServiceType {
+  CORE = "CORE",
+  CCT = "CCT",
+}
+
+// === Envs ===
 class EnvConfig {
   static getEndpoint(service: ServiceType): string {
     return process.env[`${service}_GRAPHQL_API_URL`]!;
@@ -55,142 +75,8 @@ class EnvConfig {
   }
 }
 
-// ============================================
-// Auth Config Type (needed by HTTP Protocol Factory)
-// ============================================
-type AuthConfig = {
-  cacheKey: string;
-  headers: Record<string, string>;
-  middleware?: RequestMiddleware;
-};
+// === Auth ===
 
-// ============================================
-// HTTP Protocol Factory (Generic for GraphQL, REST, etc.)
-// ============================================
-type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
-  serviceName: string;
-  endpoint: string;
-  createClient: (authConfig: AuthConfig) => Promise<TClient>;
-  createSdk: (client: TClient) => TSdk;
-};
-
-type HttpProtocol<TSdk extends object> = {
-  authJwt: TSdk;
-  authIam: TSdk;
-  public: TSdk;
-  clearCache: () => void;
-};
-
-const createHttpProtocol = <TClient extends object, TSdk extends object>(config: HttpProtocolConfig<TClient, TSdk>): HttpProtocol<TSdk> => {
-  const cache = new Map<string, TSdk>();
-
-  const createAuthFacet = (authType: AuthType): TSdk => {
-    return new Proxy({} as TSdk, {
-      get: (_target, prop: string | symbol) => {
-        return async (...args: any[]) => {
-          // Build auth config for this auth type
-          const authConfig = await buildAuthConfig(authType, config.serviceName, config.endpoint);
-
-          // Get or create client from cache
-          let client = cache.get(authConfig.cacheKey);
-          if (!client) {
-            const httpClient = await config.createClient(authConfig);
-            client = config.createSdk(httpClient);
-            cache.set(authConfig.cacheKey, client);
-          }
-
-          // Execute operation with performance tracking
-          const startTime = performance.now();
-          try {
-            return await (client as any)[prop](...args);
-          } catch (error: any) {
-            logger.error(`[${config.serviceName}/graphql/${authType}] Error in ${String(prop)}`, {
-              operation: String(prop),
-              response: error.response?.errors,
-              statusCode: error.response?.status,
-              message: error.message,
-            });
-            throw error;
-          } finally {
-            const duration = Math.round(performance.now() - startTime);
-            performanceTracker.recordPerformance({
-              service: config.serviceName,
-              protocol: "graphql",
-              authType,
-              operation: String(prop),
-              duration,
-            });
-          }
-        };
-      },
-    }) as TSdk;
-  };
-
-  return {
-    authJwt: createAuthFacet(AuthType.JWT),
-    authIam: createAuthFacet(AuthType.IAM),
-    public: createAuthFacet(AuthType.API_KEY),
-    clearCache: () => cache.clear(),
-  };
-};
-
-// ============================================
-// Auth Config Builder Function
-// ============================================
-const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint?: string): Promise<AuthConfig> => {
-  switch (authType) {
-    case AuthType.JWT: {
-      if (!AuthManager.jwt.hasValidToken()) {
-        throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
-      }
-      const token = AuthManager.jwt.getToken();
-      return {
-        cacheKey: `jwt:${token}`,
-        headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
-      };
-    }
-
-    case AuthType.IAM: {
-      if (!AuthManager.iam.hasCredentials()) {
-        throw new Error("No IAM credentials available. Please login first with loginWithIam.");
-      }
-      const credentials = AuthManager.iam.getCredentials();
-      return {
-        cacheKey: `iam:${credentials.accessKeyId}`,
-        headers: {}, // Will be filled by middleware
-        middleware: async (request) => {
-          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-          const signedHeaders = await AuthManager.iam.signRequest(endpoint!, body);
-          return {
-            ...request,
-            headers: { ...request.headers, ...signedHeaders },
-          };
-        },
-      };
-    }
-
-    case AuthType.API_KEY: {
-      const apiKey = EnvConfig.getApiKey(serviceName as unknown as ServiceType);
-      if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
-      return {
-        cacheKey: `apiKey:${apiKey}`,
-        headers: { [HTTP_HEADERS.API_KEY]: apiKey },
-      };
-    }
-
-    default:
-      throw new Error(`Unsupported auth type: ${authType}`);
-  }
-};
-
-// ============================================
-// Auth Providers (Separated by Auth Type)
-// ============================================
-
-/**
- * JWT Authentication Provider
- * Handles Cognito user pool authentication and token management
- */
 class JwtAuthProvider {
   private token: { token: string; expiry: Date } | null = null;
 
@@ -271,38 +157,24 @@ class JwtAuthProvider {
   }
 }
 
-/**
- * IAM Authentication Provider
- * Handles AWS IAM credentials and SigV4 request signing
- */
 class IamAuthProvider {
-  private credentials: IamCredentials | null = null;
+  private readonly credentials: IamCredentials;
 
-  setCredentials(credentials: IamCredentials): void {
-    this.credentials = credentials;
-  }
-
-  hasCredentials(): boolean {
-    return !!this.credentials;
-  }
-
-  getCredentials(): IamCredentials {
-    if (!this.hasCredentials()) {
-      throw new Error("IAM credentials not set. Please call loginWithIam first.");
-    }
-    return this.credentials!;
+  constructor() {
+    this.credentials = {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    };
   }
 
   /**
    * Build SigV4 headers for AppSync request.
    */
   async signRequest(endpoint: string, body: string): Promise<Record<string, string>> {
-    const credentials = this.getCredentials();
-
     const signer = new SignatureV4({
       credentials: {
-        accessKeyId: credentials.accessKeyId,
-        secretAccessKey: credentials.secretAccessKey,
+        accessKeyId: this.credentials.accessKeyId,
+        secretAccessKey: this.credentials.secretAccessKey,
       },
       region: EnvConfig.getAwsRegion(),
       service: "appsync",
@@ -325,273 +197,352 @@ class IamAuthProvider {
     const signedRequest = await signer.sign(httpRequest);
     return signedRequest.headers as Record<string, string>;
   }
-
-  clear(): void {
-    this.credentials = null;
-  }
 }
 
-/**
- * AuthManager - Central authentication orchestrator
- * Provides unified access to different auth providers
- */
 class AuthManager {
   static readonly jwt = new JwtAuthProvider();
   static readonly iam = new IamAuthProvider();
-
-  /**
-   * Clear all authentication state
-   */
-  static clearAll(): void {
-    this.jwt.clear();
-    this.iam.clear();
-  }
 }
 
-// GraphQL Subscription (AppSync custom WebSocket)
-/**
- * WebSocket client for GraphQL subscriptions (AppSync custom protocol)
- * Singleton pattern: maintains 1 persistent connection, multiplexes N subscriptions
- */
-class GraphQLWSProtocol {
-  private token: string | null = null;
-  private apiKey: string | null = null;
-  private authType: "jwt" | "apikey" | null = null;
-
-  private ws: WebSocket | null = null;
-  private isConnected = false;
-
-  private subscriptions = new Map<
-    string,
-    {
-      callbacks: { next: (data: any) => void; error: (err: any) => void };
-      timeout: NodeJS.Timeout | null;
-    }
-  >();
-  private subscriptionCounter = 0;
-
-  authJwt(): this {
-    this.token = AuthManager.jwt.getToken();
-    this.authType = "jwt";
-    return this;
-  }
-
-  authApiKey(): this {
-    this.apiKey = EnvConfig.getApiKey(ServiceType.CORE);
-    this.authType = "apikey";
-    return this;
-  }
-
-  // Ensures WebSocket connection is established (lazy connection)
-  private async ensureConnected(): Promise<void> {
-    if (this.ws && this.isConnected) {
-      logger.debug("Reusing existing WebSocket connection");
-      return;
+// === Clients/Protocols ===
+const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint?: string): Promise<AuthConfig> => {
+  switch (authType) {
+    case AuthType.JWT: {
+      if (!AuthManager.jwt.hasValidToken()) {
+        throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
+      }
+      const token = AuthManager.jwt.getToken();
+      return {
+        cacheKey: `jwt:${token}`,
+        headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+      };
     }
 
-    if (!this.authType) {
-      throw new Error("No authentication configured. Call authJwt() or authApiKey() first.");
-    }
-
-    const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
-    const host = new URL(endpoint).host;
-    const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
-
-    const connectionHeaders =
-      this.authType === "jwt"
-        ? { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.AUTHORIZATION]: this.token! }
-        : { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.API_KEY]: this.apiKey! };
-
-    const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
-    const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
-    const connectionUrl = `${wsUrl}?header=${headerString}&payload=${payloadString}`;
-
-    this.ws = new WebSocket(connectionUrl, "graphql-ws");
-
-    return new Promise((resolve, reject) => {
-      this.ws!.on("open", () => {
-        logger.debug("WebSocket opened, sending connection_init");
-        this.ws!.send(JSON.stringify({ type: "connection_init" }));
-      });
-
-      this.ws!.on("message", (data: any) => {
-        const message = JSON.parse(data.toString());
-        logger.debug("WebSocket message received", { type: message.type, id: message.id });
-
-        switch (message.type) {
-          case "connection_ack":
-            this.isConnected = true;
-            logger.debug("WebSocket connection established");
-            resolve();
-            break;
-
-          case "data": {
-            const subId = message.id;
-            const sub = this.subscriptions.get(subId);
-            if (sub && message.payload?.data) {
-              if (sub.timeout) {
-                clearTimeout(sub.timeout);
-                sub.timeout = null;
-              }
-              sub.callbacks.next({ data: message.payload.data });
-            }
-            break;
-          }
-
-          case "error": {
-            const subId = message.id;
-            const sub = this.subscriptions.get(subId);
-            if (sub) {
-              if (sub.timeout) {
-                clearTimeout(sub.timeout);
-                sub.timeout = null;
-              }
-              logger.error("Subscription error", { subId, errors: message.payload?.errors });
-              sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
-            }
-            break;
-          }
-
-          case "connection_error":
-            logger.error("Connection error", { payload: message.payload });
-            this.isConnected = false;
-            reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
-            break;
-
-          case "start_ack":
-            logger.debug("Subscription start acknowledged", { id: message.id });
-            break;
-
-          case "ka":
-            logger.debug("Keep-alive received");
-            break;
-
-          default:
-            logger.debug("Unknown message type", { type: message.type });
-            break;
-        }
-      });
-
-      this.ws!.on("error", (error: any) => {
-        logger.error("WebSocket error", { error: error.message });
-        this.isConnected = false;
-        reject(error);
-      });
-
-      this.ws!.on("close", (code: number, reason: Buffer) => {
-        logger.debug("WebSocket closed", { code, reason: reason.toString() });
-        this.isConnected = false;
-        this.subscriptions.clear();
-      });
-    });
-  }
-
-  /**
-   * Subscribes to a GraphQL subscription
-   * Automatically establishes connection if not already connected
-   * @param query - GraphQL subscription query string
-   * @param variables - Query variables
-   * @param callbacks - Event handlers { next, error }
-   * @param options - Optional configuration (timeoutMs for auto-timeout)
-   * @returns Promise resolving to subscription handle with unsubscribe method
-   */
-  async subscribe(
-    query: string,
-    variables: Record<string, any>,
-    callbacks: { next: (data: any) => void; error: (err: any) => void },
-    options?: { timeoutMs?: number },
-  ): Promise<{ unsubscribe: () => void }> {
-    await this.ensureConnected();
-
-    const subId = (++this.subscriptionCounter).toString();
-    const operationNameMatch = query.match(/subscription\s+(\w+)/);
-    const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
-
-    const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
-    const host = new URL(endpoint).host;
-
-    let timeout: NodeJS.Timeout | null = null;
-
-    if (options?.timeoutMs) {
-      timeout = setTimeout(() => {
-        logger.error("WebSocket timeout", { subId, timeoutMs: options.timeoutMs });
-        callbacks.error(new Error(`Timeout: no event received in ${options.timeoutMs}ms`));
-        this.subscriptions.delete(subId);
-      }, options.timeoutMs);
-    }
-
-    this.subscriptions.set(subId, { callbacks, timeout });
-
-    const authPayload =
-      this.authType === "jwt"
-        ? {
-          [HTTP_HEADERS.HOST]: host,
-          [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-            operationName,
-            variables,
-            authToken: this.token,
-          }),
-        }
-        : {
-          [HTTP_HEADERS.HOST]: host,
-          [HTTP_HEADERS.API_KEY]: this.apiKey!,
-        };
-
-    const subscriptionPayload = {
-      id: subId,
-      type: "start",
-      payload: {
-        data: JSON.stringify({ query, variables }),
-        extensions: {
-          authorization: authPayload,
+    case AuthType.IAM: {
+      return {
+        cacheKey: "iam:static",
+        headers: {}, // Will be filled by middleware
+        middleware: async (request) => {
+          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+          const signedHeaders = await AuthManager.iam.signRequest(endpoint!, body);
+          return {
+            ...request,
+            headers: { ...request.headers, ...signedHeaders },
+          };
         },
-      },
-    };
+      };
+    }
 
-    this.ws!.send(JSON.stringify(subscriptionPayload));
-    logger.debug("Subscription started", { subId, operationName, variables });
+    case AuthType.API_KEY: {
+      const apiKey = EnvConfig.getApiKey(serviceName as unknown as ServiceType);
+      if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
+      return {
+        cacheKey: `apiKey:${apiKey}`,
+        headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+      };
+    }
 
-    return {
-      unsubscribe: () => {
-        const sub = this.subscriptions.get(subId);
-        if (sub?.timeout) {
-          clearTimeout(sub.timeout);
-        }
-        this.subscriptions.delete(subId);
-
-        if (this.isConnected) {
-          this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
-        }
-        logger.debug("Subscription unsubscribed", { subId });
-      },
-    };
+    default:
+      throw new Error(`Unsupported auth type: ${authType}`);
   }
+};
 
-  /**
-   * Disconnects WebSocket and cleans up all subscriptions
-   * Call this in afterAll() to cleanup after tests
-   */
-  disconnect(): void {
-    if (this.ws) {
-      this.subscriptions.forEach((sub) => {
-        if (sub.timeout) {
-          clearTimeout(sub.timeout);
-        }
+const createGraphQLWSProtocol = (serviceType: ServiceType) => {
+  class WSClient {
+    private token: string | null = null;
+    private apiKey: string | null = null;
+    private authType: "jwt" | "apikey" | null = null;
+    private ws: WebSocket | null = null;
+    private isConnected = false;
+    private subscriptions = new Map<
+      string,
+      {
+        callbacks: { next: (data: any) => void; error: (err: any) => void };
+        timeout: NodeJS.Timeout | null;
+      }
+    >();
+    private subscriptionCounter = 0;
+
+    setAuthJwt() {
+      this.token = AuthManager.jwt.getToken();
+      this.authType = "jwt";
+    }
+
+    setAuthApiKey() {
+      this.apiKey = EnvConfig.getApiKey(serviceType);
+      this.authType = "apikey";
+    }
+
+    private async ensureConnected(): Promise<void> {
+      if (this.ws && this.isConnected) {
+        logger.debug("Reusing existing WebSocket connection");
+        return;
+      }
+
+      if (!this.authType) {
+        throw new Error("No authentication configured.");
+      }
+
+      const endpoint = EnvConfig.getEndpoint(serviceType);
+      const host = new URL(endpoint).host;
+      const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
+
+      const connectionHeaders =
+        this.authType === "jwt"
+          ? { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.AUTHORIZATION]: this.token! }
+          : { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.API_KEY]: this.apiKey! };
+
+      const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
+      const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
+      const connectionUrl = `${wsUrl}?header=${headerString}&payload=${payloadString}`;
+
+      this.ws = new WebSocket(connectionUrl, "graphql-ws");
+
+      return new Promise((resolve, reject) => {
+        this.ws!.on("open", () => {
+          logger.debug("WebSocket opened, sending connection_init");
+          this.ws!.send(JSON.stringify({ type: "connection_init" }));
+        });
+
+        this.ws!.on("message", (data: any) => {
+          const message = JSON.parse(data.toString());
+          logger.debug("WebSocket message received", { type: message.type, id: message.id });
+
+          switch (message.type) {
+            case "connection_ack":
+              this.isConnected = true;
+              logger.debug("WebSocket connection established");
+              resolve();
+              break;
+
+            case "data": {
+              const subId = message.id;
+              const sub = this.subscriptions.get(subId);
+              if (sub && message.payload?.data) {
+                if (sub.timeout) {
+                  clearTimeout(sub.timeout);
+                  sub.timeout = null;
+                }
+                sub.callbacks.next({ data: message.payload.data });
+              }
+              break;
+            }
+
+            case "error": {
+              const subId = message.id;
+              const sub = this.subscriptions.get(subId);
+              if (sub) {
+                if (sub.timeout) {
+                  clearTimeout(sub.timeout);
+                  sub.timeout = null;
+                }
+                logger.error("Subscription error", { subId, errors: message.payload?.errors });
+                sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
+              }
+              break;
+            }
+
+            case "connection_error":
+              logger.error("Connection error", { payload: message.payload });
+              this.isConnected = false;
+              reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
+              break;
+
+            case "start_ack":
+              logger.debug("Subscription start acknowledged", { id: message.id });
+              break;
+
+            case "ka":
+              logger.debug("Keep-alive received");
+              break;
+
+            default:
+              logger.debug("Unknown message type", { type: message.type });
+              break;
+          }
+        });
+
+        this.ws!.on("error", (error: any) => {
+          logger.error("WebSocket error", { error: error.message });
+          this.isConnected = false;
+          reject(error);
+        });
+
+        this.ws!.on("close", (code: number, reason: Buffer) => {
+          logger.debug("WebSocket closed", { code, reason: reason.toString() });
+          this.isConnected = false;
+          this.subscriptions.clear();
+        });
       });
-      this.subscriptions.clear();
+    }
 
-      this.ws.close();
-      this.ws = null;
-      this.isConnected = false;
+    async subscribe(
+      query: string,
+      variables: Record<string, any>,
+      callbacks: { next: (data: any) => void; error: (err: any) => void },
+      options?: { timeoutMs?: number },
+    ): Promise<{ unsubscribe: () => void }> {
+      await this.ensureConnected();
 
-      logger.debug("WebSocket disconnected (all subscriptions closed)");
+      const subId = (++this.subscriptionCounter).toString();
+      const operationNameMatch = query.match(/subscription\s+(\w+)/);
+      const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
+
+      const endpoint = EnvConfig.getEndpoint(serviceType);
+      const host = new URL(endpoint).host;
+
+      let timeout: NodeJS.Timeout | null = null;
+
+      if (options?.timeoutMs) {
+        timeout = setTimeout(() => {
+          logger.error("WebSocket timeout", { subId, timeoutMs: options.timeoutMs });
+          callbacks.error(new Error(`Timeout: no event received in ${options.timeoutMs}ms`));
+          this.subscriptions.delete(subId);
+        }, options.timeoutMs);
+      }
+
+      this.subscriptions.set(subId, { callbacks, timeout });
+
+      const authPayload =
+        this.authType === "jwt"
+          ? {
+              [HTTP_HEADERS.HOST]: host,
+              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+                operationName,
+                variables,
+                authToken: this.token,
+              }),
+            }
+          : {
+              [HTTP_HEADERS.HOST]: host,
+              [HTTP_HEADERS.API_KEY]: this.apiKey!,
+            };
+
+      const subscriptionPayload = {
+        id: subId,
+        type: "start",
+        payload: {
+          data: JSON.stringify({ query, variables }),
+          extensions: {
+            authorization: authPayload,
+          },
+        },
+      };
+
+      this.ws!.send(JSON.stringify(subscriptionPayload));
+      logger.debug("Subscription started", { subId, operationName, variables });
+
+      return {
+        unsubscribe: () => {
+          const sub = this.subscriptions.get(subId);
+          if (sub?.timeout) {
+            clearTimeout(sub.timeout);
+          }
+          this.subscriptions.delete(subId);
+
+          if (this.isConnected) {
+            this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
+          }
+          logger.debug("Subscription unsubscribed", { subId });
+        },
+      };
+    }
+
+    disconnect(): void {
+      if (this.ws) {
+        this.subscriptions.forEach((sub) => {
+          if (sub.timeout) {
+            clearTimeout(sub.timeout);
+          }
+        });
+        this.subscriptions.clear();
+
+        this.ws.close();
+        this.ws = null;
+        this.isConnected = false;
+
+        logger.debug("WebSocket disconnected (all subscriptions closed)");
+      }
     }
   }
-}
+
+  const client = new WSClient();
+
+  return {
+    authJwt: {
+      subscribe: async (query: string, variables: Record<string, any>, callbacks: any, options?: any) => {
+        client.setAuthJwt();
+        return await client.subscribe(query, variables, callbacks, options);
+      },
+    },
+    authApiKey: {
+      subscribe: async (query: string, variables: Record<string, any>, callbacks: any, options?: any) => {
+        client.setAuthApiKey();
+        return await client.subscribe(query, variables, callbacks, options);
+      },
+    },
+    disconnect: () => client.disconnect(),
+  };
+};
+
+const createHttpProtocol = <TClient extends object, TSdk extends object>(config: HttpProtocolConfig<TClient, TSdk>): HttpProtocol<TSdk> => {
+  const cache = new Map<string, TSdk>();
+
+  const createAuthFacet = (authType: AuthType): TSdk => {
+    return new Proxy({} as TSdk, {
+      get: (_target, prop: string | symbol) => {
+        return async (...args: any[]) => {
+          // 1. Build auth config for this auth type
+          const authConfig = await buildAuthConfig(authType, config.serviceName, config.endpoint);
+
+          // 2. Get or create client from cache
+          let client = cache.get(authConfig.cacheKey);
+          if (!client) {
+            const httpClient = await config.createClient(authConfig);
+            client = config.createSdk(httpClient);
+            cache.set(authConfig.cacheKey, client);
+          }
+
+          // 3. Execute operation with performance tracking
+          const startTime = performance.now();
+          try {
+            return await (client as any)[prop](...args);
+          } catch (error: any) {
+            logger.error(`[${config.serviceName}/graphql/${authType}] Error in ${String(prop)}`, {
+              operation: String(prop),
+              response: error.response?.errors,
+              statusCode: error.response?.status,
+              message: error.message,
+            });
+            throw error;
+          } finally {
+            const duration = Math.round(performance.now() - startTime);
+            performanceTracker.recordPerformance({
+              service: config.serviceName,
+              protocol: "graphql",
+              authType,
+              operation: String(prop),
+              duration,
+            });
+          }
+        };
+      },
+    }) as TSdk;
+  };
+
+  return {
+    authJwt: createAuthFacet(AuthType.JWT),
+    authIam: createAuthFacet(AuthType.IAM),
+    public: createAuthFacet(AuthType.API_KEY),
+    clearCache: () => cache.clear(),
+  };
+};
+
+// === Services ===
 
 class CoreService {
   readonly graphqlHttp: HttpProtocol<CoreSdk>;
-  readonly graphqlWS: GraphQLWSProtocol;
+  readonly graphqlWS: ReturnType<typeof createGraphQLWSProtocol>;
 
   constructor() {
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
@@ -604,7 +555,7 @@ class CoreService {
         }),
       createSdk: (client) => getCoreSdk(client),
     });
-    this.graphqlWS = new GraphQLWSProtocol();
+    this.graphqlWS = createGraphQLWSProtocol(ServiceType.CORE);
   }
 
   clearCache(): void {
@@ -633,12 +584,11 @@ class CctService {
   }
 }
 
-export class PetLinkInfrastructure {
+class PetLinkInfrastructure {
   readonly core: CoreService;
   readonly cct: CctService;
 
   constructor() {
-    this.loginWithIam(process.env.AWS_ACCESS_KEY_ID!, process.env.AWS_SECRET_ACCESS_KEY!);
     this.core = new CoreService();
     this.cct = new CctService();
   }
@@ -652,10 +602,6 @@ export class PetLinkInfrastructure {
     await AuthManager.jwt.authenticate(phone, password, "phone_number");
   }
 
-  loginWithIam(accessKeyId: string, secretAccessKey: string): void {
-    AuthManager.iam.setCredentials({ accessKeyId, secretAccessKey });
-  }
-
   /**
    * Clears user-specific authentication (JWT) and related clients,
    * simulating a user logout.
@@ -666,22 +612,16 @@ export class PetLinkInfrastructure {
     this.cct.clearCache();
   }
 
-  cleanIamCredentials(): void {
-    AuthManager.iam.clear();
-  }
-
   /**
    * [DEBUG] Returns the current authentication state of the client.
    * Useful for debugging and advanced test assertions.
    */
   getCurrentAuthState(): {
     isUserLoggedIn: boolean;
-    hasIamCredentials: boolean;
     jwtToken?: string;
   } {
     return {
       isUserLoggedIn: AuthManager.jwt.hasValidToken(),
-      hasIamCredentials: AuthManager.iam.hasCredentials(),
       jwtToken: AuthManager.jwt.hasValidToken() ? AuthManager.jwt.getToken() : undefined,
     };
   }
