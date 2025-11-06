@@ -14,6 +14,8 @@ const HTTP_HEADERS = {
   API_KEY: "x-api-key",
   X_AMZ_DATE: "X-Amz-Date",
   X_AMZ_SECURITY_TOKEN: "X-Amz-Security-Token",
+  CONTENT_TYPE: "Content-Type",
+  HOST: "host",
 };
 
 enum ServiceType {
@@ -138,10 +140,10 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
 const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint?: string): Promise<AuthConfig> => {
   switch (authType) {
     case AuthType.JWT: {
-      if (!AuthManager.hasValidJwtToken()) {
+      if (!AuthManager.jwt.hasValidToken()) {
         throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
       }
-      const token = AuthManager.getJwtToken();
+      const token = AuthManager.jwt.getToken();
       return {
         cacheKey: `jwt:${token}`,
         headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
@@ -149,16 +151,16 @@ const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint
     }
 
     case AuthType.IAM: {
-      if (!AuthManager.hasIamCredentials()) {
+      if (!AuthManager.iam.hasCredentials()) {
         throw new Error("No IAM credentials available. Please login first with loginWithIam.");
       }
-      const credentials = AuthManager.getIamCredentials();
+      const credentials = AuthManager.iam.getCredentials();
       return {
         cacheKey: `iam:${credentials.accessKeyId}`,
         headers: {}, // Will be filled by middleware
         middleware: async (request) => {
           const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-          const signedHeaders = await AuthManager.generateIamAuthHeaders(endpoint!, body);
+          const signedHeaders = await AuthManager.iam.signRequest(endpoint!, body);
           return {
             ...request,
             headers: { ...request.headers, ...signedHeaders },
@@ -181,17 +183,21 @@ const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint
   }
 };
 
-class AuthManager {
-  // Active JWT token cache
-  private static jwtToken: { token: string; expiry: Date } | null = null;
+// ============================================
+// Auth Providers (Separated by Auth Type)
+// ============================================
 
-  // Active IAM credentials
-  private static iamCredentials: IamCredentials | null = null;
+/**
+ * JWT Authentication Provider
+ * Handles Cognito user pool authentication and token management
+ */
+class JwtAuthProvider {
+  private token: { token: string; expiry: Date } | null = null;
 
   /**
    * Authenticate via Cognito user pools and cache the ID token.
    */
-  static async authenticateWithJwt(username: string, password: string, authMethod: "email" | "phone_number"): Promise<void> {
+  async authenticate(username: string, password: string, authMethod: "email" | "phone_number"): Promise<void> {
     try {
       const config = EnvConfig.getCognitoConfig();
       const client = new CognitoIdentityProviderClient({ region: config.region });
@@ -210,15 +216,15 @@ class AuthManager {
       });
 
       const response = await client.send(command);
-      const token = response.AuthenticationResult?.IdToken;
+      const idToken = response.AuthenticationResult?.IdToken;
 
-      if (!token) {
+      if (!idToken) {
         throw new Error(`Failed to get ID token from Cognito for user: ${username}`);
       }
 
-      this.jwtToken = this.createTokenCacheEntry(token);
+      this.token = this.createTokenCacheEntry(idToken);
     } catch (error: any) {
-      logger.error(`[AUTH] Failed to authenticate user ${username} via ${authMethod}`, {
+      logger.error(`[AUTH/JWT] Failed to authenticate user ${username} via ${authMethod}`, {
         error: error.message,
         code: error.code || error.name,
         username,
@@ -228,30 +234,25 @@ class AuthManager {
     }
   }
 
-  /**
-   * Return true if there is a non-expired JWT.
-   */
-  static hasValidJwtToken(): boolean {
-    return !!this.jwtToken && this.jwtToken.expiry > new Date();
+  hasValidToken(): boolean {
+    return !!this.token && this.token.expiry > new Date();
   }
 
-  /**
-   * Get the cached JWT token value (throws if missing/expired).
-   */
-  static getJwtToken(): string {
-    if (!this.hasValidJwtToken()) {
+  getToken(): string {
+    if (!this.hasValidToken()) {
       throw new Error("No valid JWT token available. Please login first.");
     }
-    return this.jwtToken!.token;
+    return this.token!.token;
+  }
+
+  clear(): void {
+    this.token = null;
   }
 
   /**
-   * Decode exp and compute a safe expiry with clock skew.
+   * Decode JWT exp claim and compute a safe expiry with clock skew.
    */
-  private static createTokenCacheEntry(token: string): {
-    token: string;
-    expiry: Date;
-  } {
+  private createTokenCacheEntry(token: string): { token: string; expiry: Date } {
     const decodePayload = (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length < 2) throw new Error("Invalid JWT");
@@ -268,28 +269,35 @@ class AuthManager {
 
     return { token, expiry: new Date(expiryMs) };
   }
+}
 
-  // IAM credentials management
-  static setIamCredentials(credentials: IamCredentials): void {
-    this.iamCredentials = credentials;
+/**
+ * IAM Authentication Provider
+ * Handles AWS IAM credentials and SigV4 request signing
+ */
+class IamAuthProvider {
+  private credentials: IamCredentials | null = null;
+
+  setCredentials(credentials: IamCredentials): void {
+    this.credentials = credentials;
   }
 
-  static hasIamCredentials(): boolean {
-    return !!this.iamCredentials;
+  hasCredentials(): boolean {
+    return !!this.credentials;
   }
 
-  static getIamCredentials(): IamCredentials {
-    if (!this.hasIamCredentials()) {
+  getCredentials(): IamCredentials {
+    if (!this.hasCredentials()) {
       throw new Error("IAM credentials not set. Please call loginWithIam first.");
     }
-    return this.iamCredentials!;
+    return this.credentials!;
   }
 
   /**
    * Build SigV4 headers for AppSync request.
    */
-  static async generateIamAuthHeaders(endpoint: string, body: string): Promise<Record<string, string>> {
-    const credentials = this.getIamCredentials();
+  async signRequest(endpoint: string, body: string): Promise<Record<string, string>> {
+    const credentials = this.getCredentials();
 
     const signer = new SignatureV4({
       credentials: {
@@ -304,8 +312,8 @@ class AuthManager {
     const url = new URL(endpoint);
     const httpRequest = new HttpRequest({
       headers: {
-        "Content-Type": "application/json",
-        host: url.host,
+        [HTTP_HEADERS.CONTENT_TYPE]: "application/json",
+        [HTTP_HEADERS.HOST]: url.host,
       },
       body: body,
       method: "POST",
@@ -318,12 +326,25 @@ class AuthManager {
     return signedRequest.headers as Record<string, string>;
   }
 
-  static clearJwtCache(): void {
-    this.jwtToken = null;
+  clear(): void {
+    this.credentials = null;
   }
+}
 
-  static clearIamCredentials(): void {
-    this.iamCredentials = null;
+/**
+ * AuthManager - Central authentication orchestrator
+ * Provides unified access to different auth providers
+ */
+class AuthManager {
+  static readonly jwt = new JwtAuthProvider();
+  static readonly iam = new IamAuthProvider();
+
+  /**
+   * Clear all authentication state
+   */
+  static clearAll(): void {
+    this.jwt.clear();
+    this.iam.clear();
   }
 }
 
@@ -350,7 +371,7 @@ class GraphQLWSProtocol {
   private subscriptionCounter = 0;
 
   authJwt(): this {
-    this.token = AuthManager.getJwtToken();
+    this.token = AuthManager.jwt.getToken();
     this.authType = "jwt";
     return this;
   }
@@ -376,7 +397,10 @@ class GraphQLWSProtocol {
     const host = new URL(endpoint).host;
     const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
 
-    const connectionHeaders = this.authType === "jwt" ? { host, Authorization: this.token! } : { host, "x-api-key": this.apiKey! };
+    const connectionHeaders =
+      this.authType === "jwt"
+        ? { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.AUTHORIZATION]: this.token! }
+        : { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.API_KEY]: this.apiKey! };
 
     const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
     const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
@@ -501,17 +525,17 @@ class GraphQLWSProtocol {
     const authPayload =
       this.authType === "jwt"
         ? {
-            host,
-            Authorization: JSON.stringify({
-              operationName,
-              variables,
-              authToken: this.token,
-            }),
-          }
+          [HTTP_HEADERS.HOST]: host,
+          [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+            operationName,
+            variables,
+            authToken: this.token,
+          }),
+        }
         : {
-            host,
-            "x-api-key": this.apiKey!,
-          };
+          [HTTP_HEADERS.HOST]: host,
+          [HTTP_HEADERS.API_KEY]: this.apiKey!,
+        };
 
     const subscriptionPayload = {
       id: subId,
@@ -621,15 +645,15 @@ export class PetLinkInfrastructure {
 
   // --- Auth ---
   async loginWithEmail(email: string, password: string): Promise<void> {
-    await AuthManager.authenticateWithJwt(email, password, "email");
+    await AuthManager.jwt.authenticate(email, password, "email");
   }
 
   async loginWithPhone(phone: string, password: string): Promise<void> {
-    await AuthManager.authenticateWithJwt(phone, password, "phone_number");
+    await AuthManager.jwt.authenticate(phone, password, "phone_number");
   }
 
   loginWithIam(accessKeyId: string, secretAccessKey: string): void {
-    AuthManager.setIamCredentials({ accessKeyId, secretAccessKey });
+    AuthManager.iam.setCredentials({ accessKeyId, secretAccessKey });
   }
 
   /**
@@ -637,13 +661,13 @@ export class PetLinkInfrastructure {
    * simulating a user logout.
    */
   logoutUser(): void {
-    AuthManager.clearJwtCache();
+    AuthManager.jwt.clear();
     this.core.clearCache();
     this.cct.clearCache();
   }
 
   cleanIamCredentials(): void {
-    AuthManager.clearIamCredentials();
+    AuthManager.iam.clear();
   }
 
   /**
@@ -656,9 +680,9 @@ export class PetLinkInfrastructure {
     jwtToken?: string;
   } {
     return {
-      isUserLoggedIn: AuthManager.hasValidJwtToken(),
-      hasIamCredentials: AuthManager.hasIamCredentials(),
-      jwtToken: AuthManager.hasValidJwtToken() ? AuthManager.getJwtToken() : undefined,
+      isUserLoggedIn: AuthManager.jwt.hasValidToken(),
+      hasIamCredentials: AuthManager.iam.hasCredentials(),
+      jwtToken: AuthManager.jwt.hasValidToken() ? AuthManager.jwt.getToken() : undefined,
     };
   }
 }
