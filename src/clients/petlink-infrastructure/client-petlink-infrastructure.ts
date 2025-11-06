@@ -35,7 +35,7 @@ type AuthConfig = {
 };
 
 type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
-  serviceName: string;
+  serviceName: ServiceType;
   endpoint: string;
   createClient: (authConfig: AuthConfig) => Promise<TClient>;
   createSdk: (client: TClient) => TSdk;
@@ -205,7 +205,7 @@ class AuthManager {
 }
 
 // === Clients/Protocols ===
-const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint?: string): Promise<AuthConfig> => {
+const buildAuthConfig = async (authType: AuthType, serviceName: ServiceType, endpoint?: string): Promise<AuthConfig> => {
   switch (authType) {
     case AuthType.JWT: {
       if (!AuthManager.jwt.hasValidToken()) {
@@ -234,7 +234,7 @@ const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint
     }
 
     case AuthType.API_KEY: {
-      const apiKey = EnvConfig.getApiKey(serviceName as unknown as ServiceType);
+      const apiKey = EnvConfig.getApiKey(serviceName);
       if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
       return {
         cacheKey: `apiKey:${apiKey}`,
@@ -274,9 +274,18 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
     }
 
     private async ensureConnected(): Promise<void> {
+      // Controlla se auth è cambiata
       if (this.ws && this.isConnected) {
-        logger.debug("Reusing existing WebSocket connection");
-        return;
+        const currentAuthMatches = (this.authType === "jwt" && this.token) || (this.authType === "apikey" && this.apiKey);
+
+        if (currentAuthMatches) {
+          logger.debug("Reusing existing WebSocket connection");
+          return;
+        }
+
+        // Auth cambiata, chiudi socket esistente
+        logger.debug("Auth type changed, reconnecting WebSocket");
+        this.disconnect();
       }
 
       if (!this.authType) {
@@ -546,7 +555,7 @@ class CoreService {
 
   constructor() {
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
-      serviceName: "CORE",
+      serviceName: ServiceType.CORE,
       endpoint: EnvConfig.getEndpoint(ServiceType.CORE),
       createClient: async (authConfig) =>
         new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CORE), {
@@ -568,7 +577,7 @@ class CctService {
 
   constructor() {
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CctSdk>({
-      serviceName: "CCT",
+      serviceName: ServiceType.CCT,
       endpoint: EnvConfig.getEndpoint(ServiceType.CCT),
       createClient: async (authConfig) =>
         new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CCT), {

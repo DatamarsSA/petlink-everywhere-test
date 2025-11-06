@@ -64,32 +64,3 @@ describe.skip("User mode", () => {
     expect(pushNotifications).toContain({ action: "ENERGY_SAVING_ZONE_IN" });
   });
 });
-
-describe.skip("GRAPHQL WEBSOKCET usage pattern", () => {
-  afterEach(() => {
-    await petlink.disposeAllSubscriptions();
-  });
-
-  it("How to call SOCKET", async () => {
-    const wsSub = await petlink.core.graphqlWS.authJwt().subscribe(
-      subscriptions.onSubscriptionStatus,
-      { id: setup.user!.id },
-      {
-        next: (event: any) => {
-          logger.info("WebSocket event received", { event });
-          // Resolve only when subscription is ACTIVE
-          const status = event.data?.onSubscriptionStatus?.status;
-          if (status?.subscriptionIsActive === true) {
-            wsSub.unsubscribe();
-            resolve();
-          }
-        },
-        error: (error: any) => {
-          logger.error("WebSocket error", { error: error.message });
-          reject(error);
-        },
-      },
-      { timeoutMs: fxt.socket.timeoutMs },
-    );
-  });
-});
