@@ -213,14 +213,14 @@ const buildAuthConfig = async (authType: AuthType, serviceName: ServiceType, end
       }
       const token = AuthManager.jwt.getToken();
       return {
-        cacheKey: `jwt:${token}`,
+        cacheKey: `${serviceName}:jwt:${token}`,
         headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
       };
     }
 
     case AuthType.IAM: {
       return {
-        cacheKey: "iam:static",
+        cacheKey: `${serviceName}:iam:static`,
         headers: {}, // Will be filled by middleware
         middleware: async (request) => {
           const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
@@ -237,7 +237,7 @@ const buildAuthConfig = async (authType: AuthType, serviceName: ServiceType, end
       const apiKey = EnvConfig.getApiKey(serviceName);
       if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
       return {
-        cacheKey: `apiKey:${apiKey}`,
+        cacheKey: `${serviceName}:apiKey:${apiKey}`,
         headers: { [HTTP_HEADERS.API_KEY]: apiKey },
       };
     }
@@ -415,17 +415,17 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
       const authPayload =
         this.authType === "jwt"
           ? {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-                operationName,
-                variables,
-                authToken: this.token,
-              }),
-            }
+            [HTTP_HEADERS.HOST]: host,
+            [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+              operationName,
+              variables,
+              authToken: this.token,
+            }),
+          }
           : {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.API_KEY]: this.apiKey!,
-            };
+            [HTTP_HEADERS.HOST]: host,
+            [HTTP_HEADERS.API_KEY]: this.apiKey!,
+          };
 
       const subscriptionPayload = {
         id: subId,
