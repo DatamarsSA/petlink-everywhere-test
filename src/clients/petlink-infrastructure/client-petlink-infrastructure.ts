@@ -9,9 +9,6 @@ import { performanceTracker } from "../../helpers/helper-performance-tracker.js"
 import { logger } from "../../config/logger.js";
 import WebSocket from "ws";
 
-// ------------------------------
-// HTTP header constants
-// ------------------------------
 const HTTP_HEADERS = {
   AUTHORIZATION: "Authorization",
   API_KEY: "x-api-key",
@@ -19,17 +16,11 @@ const HTTP_HEADERS = {
   X_AMZ_SECURITY_TOKEN: "X-Amz-Security-Token",
 };
 
-// ------------------------------
-// Service types
-// ------------------------------
 enum ServiceType {
   CORE = "CORE",
   CCT = "CCT",
 }
 
-// ------------------------------
-// Auth types
-// ------------------------------
 enum AuthType {
   JWT = "jwt",
   IAM = "iam",
@@ -41,9 +32,6 @@ type IamCredentials = {
   secretAccessKey: string;
 };
 
-// ------------------------------
-// Env config helper
-// ------------------------------
 class EnvConfig {
   static getEndpoint(service: ServiceType): string {
     return process.env[`${service}_GRAPHQL_API_URL`]!;
@@ -188,9 +176,6 @@ class ProxyFactory {
   }
 }
 
-// ------------------------------
-// Auth manager
-// ------------------------------
 class AuthManager {
   // Active JWT token cache
   private static jwtToken: { token: string; expiry: Date } | null = null;
@@ -340,9 +325,6 @@ class AuthManager {
   }
 }
 
-// ------------------------------
-// Base Protocol (Simplified with Composition)
-// ------------------------------
 abstract class BaseProtocol<TSdk extends object> {
   protected serviceName: string;
   protected protocolName: string;
@@ -390,10 +372,8 @@ abstract class BaseProtocol<TSdk extends object> {
   }
 }
 
-// ------------------------------
-// GraphQL Protocol Implementation (Simplified with Composition)
-// ------------------------------
-class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
+// GraphQL Query & Mutations
+class GraphQLHttpProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
   private endpoint: string;
   private sdkFactory: (client: GraphQLClient) => TSdk;
 
@@ -432,173 +412,43 @@ class GraphQLProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
   }
 }
 
-// ------------------------------
-// GraphQL Subscription Protocol (AppSync custom WebSocket)
-// ------------------------------
-class GraphQLSubsProtocol {
+// GraphQL Subscription (AppSync custom WebSocket)
+class GraphQLWSProtocol {
+  private token: string | null = null;
+
   /**
-   * Subscribe with JWT authentication using AppSync custom WebSocket protocol
+   * Configures JWT authentication (once per instance)
    */
-  authJwt(query: string, variables: Record<string, any>): any {
-    const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
-    const token = AuthManager.getJwtToken();
-    const host = new URL(endpoint).host;
-
-    // Convert GraphQL HTTPS endpoint to WebSocket realtime endpoint
-    // https://xxx.appsync-api.region.amazonaws.com/graphql -> wss://xxx.appsync-realtime-api.region.amazonaws.com/graphql
-    const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
-
-    // Step 1: Build connection headers (base64 encoded in URL) - Flutter line 61-72
-    const connectionHeaders = {
-      host: host,
-      Authorization: token,
-    };
-
-    const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
-    const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
-
-    const connectionUrl = `${wsUrl}?header=${headerString}&payload=${payloadString}`;
-
-    // Extract operation name from query
-    const operationNameMatch = query.match(/subscription\s+(\w+)/);
-    const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
-
-    return {
-      subscribe: (callbacks: { next: (data: any) => void; error: (err: any) => void }) => {
-        const ws = new WebSocket(connectionUrl, "graphql-ws");
-        let isConnected = false;
-
-        ws.on("open", () => {
-          logger.debug("WebSocket opened, sending connection_init");
-
-          // Step 2: Send connection_init - Flutter line 107-113
-          ws.send(
-            JSON.stringify({
-              type: "connection_init",
-            })
-          );
-        });
-
-        ws.on("message", (data: any) => {
-          const message = JSON.parse(data.toString());
-
-          logger.debug("WebSocket message received", {
-            type: message.type,
-            id: message.id,
-          });
-
-          if (message.type === "connection_ack") {
-            // Step 3: Connection acknowledged, now subscribe - Flutter line 165-169
-            logger.debug("Connection acknowledged, subscribing to operation", {
-              operationName,
-              variables,
-            });
-
-            isConnected = true;
-
-            // Step 4: Send subscription start - Flutter line 127-151
-            const subscriptionPayload = {
-              id: "1", // Unique ID for this subscription
-              type: "start",
-              payload: {
-                data: JSON.stringify({
-                  query: query,
-                  variables: variables,
-                }),
-                extensions: {
-                  authorization: {
-                    host: host,
-                    Authorization: JSON.stringify({
-                      operationName: operationName,
-                      variables: variables,
-                      authToken: token,
-                    }),
-                  },
-                },
-              },
-            };
-
-            ws.send(JSON.stringify(subscriptionPayload));
-          } else if (message.type === "start_ack") {
-            logger.debug("Subscription started successfully");
-          } else if (message.type === "data") {
-            // Step 5: Receive data - Flutter line 160-164
-            logger.debug("Subscription data received", {
-              data: message.payload?.data,
-            });
-
-            if (message.payload?.data) {
-              callbacks.next({ data: message.payload.data });
-            }
-          } else if (message.type === "error") {
-            logger.error("Subscription error", {
-              errors: message.payload?.errors,
-            });
-
-            const errorMessage = message.payload?.errors?.[0]?.message || "Unknown subscription error";
-            callbacks.error(new Error(errorMessage));
-          } else if (message.type === "connection_error") {
-            logger.error("Connection error", {
-              payload: message.payload,
-            });
-
-            callbacks.error(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
-          } else if (message.type === "ka") {
-            // Keep-alive message, ignore
-            logger.debug("Keep-alive received");
-          }
-        });
-
-        ws.on("error", (error: any) => {
-          logger.error("WebSocket error", {
-            error: error.message,
-            isConnected,
-          });
-          callbacks.error(error);
-        });
-
-        ws.on("close", (code: number, reason: Buffer) => {
-          logger.debug("WebSocket closed", {
-            code,
-            reason: reason.toString(),
-            isConnected,
-          });
-        });
-
-        // Return subscription handle with unsubscribe method
-        return {
-          unsubscribe: () => {
-            if (isConnected) {
-              // Send stop message before closing - Flutter line 177-181
-              ws.send(
-                JSON.stringify({
-                  type: "stop",
-                  id: "1",
-                })
-              );
-            }
-            ws.close();
-            logger.debug("Subscription unsubscribed");
-          },
-        };
-      },
-    };
+  authJwt(): this {
+    this.token = AuthManager.getJwtToken();
+    return this;
   }
 
   /**
-   * Subscribe with API key (public) - same protocol, different auth
+   * Subscribes to a GraphQL subscription with auto-cleanup
+   * @param query - GraphQL subscription query string
+   * @param variables - Query variables
+   * @param callbacks - Event handlers { next, error }
+   * @param options - Optional configuration (timeoutMs for auto-timeout)
+   * @returns Subscription handle with unsubscribe method
    */
-  public(query: string, variables: Record<string, any>): any {
-    const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
-    const apiKey = EnvConfig.getApiKey(ServiceType.CORE);
-    const host = new URL(endpoint).host;
+  subscribe(
+    query: string,
+    variables: Record<string, any>,
+    callbacks: { next: (data: any) => void; error: (err: any) => void },
+    options?: { timeoutMs?: number },
+  ): { unsubscribe: () => void } {
+    if (!this.token) {
+      throw new Error("No authentication configured. Call authJwt() first.");
+    }
 
+    const endpoint = EnvConfig.getEndpoint(ServiceType.CORE);
+    const host = new URL(endpoint).host;
     const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
 
-    // Use API key instead of Authorization token
     const connectionHeaders = {
       host: host,
-      "x-api-key": apiKey,
+      Authorization: this.token,
     };
 
     const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
@@ -607,83 +457,120 @@ class GraphQLSubsProtocol {
 
     const operationNameMatch = query.match(/subscription\s+(\w+)/);
     const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
+    const timeoutMs = options?.timeoutMs;
 
-    return {
-      subscribe: (callbacks: { next: (data: any) => void; error: (err: any) => void }) => {
-        const ws = new WebSocket(connectionUrl, "graphql-ws");
-        let isConnected = false;
+    const ws = new WebSocket(connectionUrl, "graphql-ws");
+    let isConnected = false;
+    let timeout: NodeJS.Timeout | null = null;
 
-        ws.on("open", () => {
-          ws.send(JSON.stringify({ type: "connection_init" }));
-        });
+    // Setup auto-timeout if specified
+    if (timeoutMs) {
+      timeout = setTimeout(() => {
+        logger.error("WebSocket timeout", { timeoutMs });
+        callbacks.error(new Error(`Timeout: no event received in ${timeoutMs}ms`));
+        ws.close();
+      }, timeoutMs);
+    }
 
-        ws.on("message", (data: any) => {
-          const message = JSON.parse(data.toString());
+    // Wrap callbacks for auto-cleanup
+    const wrappedNext = (data: any) => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+      callbacks.next(data);
+    };
 
-          if (message.type === "connection_ack") {
-            isConnected = true;
+    const wrappedError = (err: any) => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+      callbacks.error(err);
+    };
 
-            const subscriptionPayload = {
-              id: "1",
-              type: "start",
-              payload: {
-                data: JSON.stringify({
-                  query: query,
+    ws.on("open", () => {
+      logger.debug("WebSocket opened, sending connection_init");
+      ws.send(JSON.stringify({ type: "connection_init" }));
+    });
+
+    ws.on("message", (data: any) => {
+      const message = JSON.parse(data.toString());
+      logger.debug("WebSocket message received", { type: message.type, id: message.id });
+
+      if (message.type === "connection_ack") {
+        logger.debug("Connection acknowledged, subscribing to operation", { operationName, variables });
+        isConnected = true;
+
+        const subscriptionPayload = {
+          id: "1",
+          type: "start",
+          payload: {
+            data: JSON.stringify({ query, variables }),
+            extensions: {
+              authorization: {
+                host: host,
+                Authorization: JSON.stringify({
+                  operationName: operationName,
                   variables: variables,
+                  authToken: this.token,
                 }),
-                extensions: {
-                  authorization: {
-                    host: host,
-                    "x-api-key": apiKey,
-                  },
-                },
               },
-            };
-
-            ws.send(JSON.stringify(subscriptionPayload));
-          } else if (message.type === "data") {
-            if (message.payload?.data) {
-              callbacks.next({ data: message.payload.data });
-            }
-          } else if (message.type === "error" || message.type === "connection_error") {
-            const errorMessage =
-              message.payload?.errors?.[0]?.message || JSON.stringify(message.payload) || "Unknown error";
-            callbacks.error(new Error(errorMessage));
-          }
-        });
-
-        ws.on("error", (error: any) => {
-          logger.error("WebSocket error (public)", { error: error.message });
-          callbacks.error(error);
-        });
-
-        ws.on("close", () => {
-          logger.debug("WebSocket closed (public)");
-        });
-
-        return {
-          unsubscribe: () => {
-            if (isConnected) {
-              ws.send(JSON.stringify({ type: "stop", id: "1" }));
-            }
-            ws.close();
+            },
           },
         };
+
+        ws.send(JSON.stringify(subscriptionPayload));
+      } else if (message.type === "start_ack") {
+        logger.debug("Subscription started successfully");
+      } else if (message.type === "data") {
+        logger.debug("Subscription data received", { data: message.payload?.data });
+        if (message.payload?.data) {
+          wrappedNext({ data: message.payload.data });
+        }
+      } else if (message.type === "error") {
+        logger.error("Subscription error", { errors: message.payload?.errors });
+        wrappedError(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
+      } else if (message.type === "connection_error") {
+        logger.error("Connection error", { payload: message.payload });
+        wrappedError(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
+      } else if (message.type === "ka") {
+        logger.debug("Keep-alive received");
+      }
+    });
+
+    ws.on("error", (error: any) => {
+      logger.error("WebSocket error", { error: error.message, isConnected });
+      wrappedError(error);
+    });
+
+    ws.on("close", (code: number, reason: Buffer) => {
+      logger.debug("WebSocket closed", { code, reason: reason.toString(), isConnected });
+    });
+
+    return {
+      unsubscribe: () => {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        if (isConnected) {
+          ws.send(JSON.stringify({ type: "stop", id: "1" }));
+        }
+        ws.close();
+        logger.debug("Subscription unsubscribed");
       },
     };
   }
 }
 
-// ------------------------------
-// Service Containers
-// ------------------------------
 class CoreService {
-  readonly graphql: GraphQLProtocol<CoreSdk>;
-  readonly subscription: GraphQLSubsProtocol;
+  readonly graphql: GraphQLHttpProtocol<CoreSdk>;
+  readonly subscription: GraphQLWSProtocol;
 
   constructor() {
-    this.graphql = new GraphQLProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
-    this.subscription = new GraphQLSubsProtocol();
+    this.graphql = new GraphQLHttpProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
+    this.subscription = new GraphQLWSProtocol();
   }
 
   clearCache(): void {
@@ -692,10 +579,10 @@ class CoreService {
 }
 
 class CctService {
-  readonly graphql: GraphQLProtocol<CctSdk>;
+  readonly graphql: GraphQLHttpProtocol<CctSdk>;
 
   constructor() {
-    this.graphql = new GraphQLProtocol("CCT", EnvConfig.getEndpoint(ServiceType.CCT), (client) => getCctSdk(client));
+    this.graphql = new GraphQLHttpProtocol("CCT", EnvConfig.getEndpoint(ServiceType.CCT), (client) => getCctSdk(client));
   }
 
   clearCache(): void {
@@ -703,9 +590,6 @@ class CctService {
   }
 }
 
-// ------------------------------
-// PetLink Infrastructure (Facade)
-// ------------------------------
 export class PetLinkInfrastructure {
   readonly core: CoreService;
   readonly cct: CctService;
