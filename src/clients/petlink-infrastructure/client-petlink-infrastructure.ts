@@ -53,119 +53,68 @@ class EnvConfig {
   }
 }
 
-// ------------------------------
-// Reusable Components (Composition Pattern)
-// ------------------------------
+// ============================================
+// Auth Config Type (needed by HTTP Protocol Factory)
+// ============================================
+type AuthConfig = {
+  cacheKey: string;
+  headers: Record<string, string>;
+  middleware?: RequestMiddleware;
+};
 
-/**
- * Generic cache manager for any client type.
- * Handles get-or-create pattern with async factory.
- */
-class CacheManager<T> {
-  private cache = new Map<string, T>();
+// ============================================
+// HTTP Protocol Factory (Generic for GraphQL, REST, etc.)
+// ============================================
+type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
+  serviceName: string;
+  endpoint: string;
+  createClient: (authConfig: AuthConfig) => Promise<TClient>;
+  createSdk: (client: TClient) => TSdk;
+};
 
-  async getOrCreate(key: string, factory: () => Promise<T>): Promise<T> {
-    const cached = this.cache.get(key);
-    if (cached) return cached;
+type HttpProtocol<TSdk extends object> = {
+  authJwt: TSdk;
+  authIam: TSdk;
+  public: TSdk;
+  clearCache: () => void;
+};
 
-    const value = await factory();
-    this.cache.set(key, value);
-    return value;
-  }
+const createHttpProtocol = <TClient extends object, TSdk extends object>(config: HttpProtocolConfig<TClient, TSdk>): HttpProtocol<TSdk> => {
+  const cache = new Map<string, TSdk>();
 
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-/**
- * Centralized auth headers builder for all auth types.
- * Eliminates duplication across protocols.
- */
-class AuthHeadersBuilder {
-  static async build(
-    authType: AuthType,
-    serviceName: string,
-  ): Promise<{
-    cacheKey: string;
-    headers: Record<string, string>;
-    middleware?: RequestMiddleware;
-  }> {
-    switch (authType) {
-      case AuthType.JWT: {
-        if (!AuthManager.hasValidJwtToken()) {
-          throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
-        }
-        const token = AuthManager.getJwtToken();
-        return {
-          cacheKey: `jwt:${token}`,
-          headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
-        };
-      }
-
-      case AuthType.IAM: {
-        if (!AuthManager.hasIamCredentials()) {
-          throw new Error("No IAM credentials available. Please login first with loginWithIam.");
-        }
-        const credentials = AuthManager.getIamCredentials();
-        return {
-          cacheKey: `iam:${credentials.accessKeyId}`,
-          headers: {}, // Will be filled by middleware
-        };
-      }
-
-      case AuthType.API_KEY: {
-        const apiKey = EnvConfig.getApiKey(serviceName as unknown as ServiceType);
-        if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
-        return {
-          cacheKey: `apiKey:${apiKey}`,
-          headers: { [HTTP_HEADERS.API_KEY]: apiKey },
-        };
-      }
-
-      default:
-        throw new Error(`Unsupported auth type: ${authType}`);
-    }
-  }
-}
-
-/**
- * Factory for creating performance-tracked proxies.
- * Wraps any SDK with automatic performance monitoring.
- */
-class ProxyFactory {
-  static create<TSdk extends object>(config: {
-    getClient: () => Promise<TSdk>;
-    serviceName: string;
-    protocolName: string;
-    authType: AuthType;
-  }): TSdk {
+  const createAuthFacet = (authType: AuthType): TSdk => {
     return new Proxy({} as TSdk, {
-      get: (_target, prop) => {
+      get: (_target, prop: string | symbol) => {
         return async (...args: any[]) => {
-          const client = await config.getClient();
-          const member = (client as any)[prop];
-          if (typeof member !== "function") return member;
+          // Build auth config for this auth type
+          const authConfig = await buildAuthConfig(authType, config.serviceName, config.endpoint);
 
-          // Track performance
+          // Get or create client from cache
+          let client = cache.get(authConfig.cacheKey);
+          if (!client) {
+            const httpClient = await config.createClient(authConfig);
+            client = config.createSdk(httpClient);
+            cache.set(authConfig.cacheKey, client);
+          }
+
+          // Execute operation with performance tracking
           const startTime = performance.now();
           try {
-            return await member(...args);
+            return await (client as any)[prop](...args);
           } catch (error: any) {
-            logger.error(`[${config.serviceName}/${config.protocolName}/${config.authType}] Error in ${String(prop)}`, {
+            logger.error(`[${config.serviceName}/graphql/${authType}] Error in ${String(prop)}`, {
               operation: String(prop),
               response: error.response?.errors,
               statusCode: error.response?.status,
               message: error.message,
             });
-
             throw error;
           } finally {
             const duration = Math.round(performance.now() - startTime);
             performanceTracker.recordPerformance({
               service: config.serviceName,
-              protocol: config.protocolName,
-              authType: config.authType,
+              protocol: "graphql",
+              authType,
               operation: String(prop),
               duration,
             });
@@ -173,8 +122,64 @@ class ProxyFactory {
         };
       },
     }) as TSdk;
+  };
+
+  return {
+    authJwt: createAuthFacet(AuthType.JWT),
+    authIam: createAuthFacet(AuthType.IAM),
+    public: createAuthFacet(AuthType.API_KEY),
+    clearCache: () => cache.clear(),
+  };
+};
+
+// ============================================
+// Auth Config Builder Function
+// ============================================
+const buildAuthConfig = async (authType: AuthType, serviceName: string, endpoint?: string): Promise<AuthConfig> => {
+  switch (authType) {
+    case AuthType.JWT: {
+      if (!AuthManager.hasValidJwtToken()) {
+        throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
+      }
+      const token = AuthManager.getJwtToken();
+      return {
+        cacheKey: `jwt:${token}`,
+        headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+      };
+    }
+
+    case AuthType.IAM: {
+      if (!AuthManager.hasIamCredentials()) {
+        throw new Error("No IAM credentials available. Please login first with loginWithIam.");
+      }
+      const credentials = AuthManager.getIamCredentials();
+      return {
+        cacheKey: `iam:${credentials.accessKeyId}`,
+        headers: {}, // Will be filled by middleware
+        middleware: async (request) => {
+          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+          const signedHeaders = await AuthManager.generateIamAuthHeaders(endpoint!, body);
+          return {
+            ...request,
+            headers: { ...request.headers, ...signedHeaders },
+          };
+        },
+      };
+    }
+
+    case AuthType.API_KEY: {
+      const apiKey = EnvConfig.getApiKey(serviceName as unknown as ServiceType);
+      if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
+      return {
+        cacheKey: `apiKey:${apiKey}`,
+        headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+      };
+    }
+
+    default:
+      throw new Error(`Unsupported auth type: ${authType}`);
   }
-}
+};
 
 class AuthManager {
   // Active JWT token cache
@@ -199,7 +204,6 @@ class AuthManager {
           PASSWORD: password,
         },
         ClientMetadata: {
-          // appBrand: appBrand,
           method: authMethod,
           username: username,
         },
@@ -265,9 +269,7 @@ class AuthManager {
     return { token, expiry: new Date(expiryMs) };
   }
 
-  // ------------------------------
   // IAM credentials management
-  // ------------------------------
   static setIamCredentials(credentials: IamCredentials): void {
     this.iamCredentials = credentials;
   }
@@ -322,93 +324,6 @@ class AuthManager {
 
   static clearIamCredentials(): void {
     this.iamCredentials = null;
-  }
-}
-
-abstract class BaseProtocol<TSdk extends object> {
-  protected serviceName: string;
-  protected protocolName: string;
-  protected cache: CacheManager<TSdk>;
-
-  protected constructor(serviceName: string, protocolName: string) {
-    this.serviceName = serviceName;
-    this.protocolName = protocolName;
-    this.cache = new CacheManager<TSdk>();
-  }
-
-  clearCache(): void {
-    this.cache.clear();
-  }
-
-  /**
-   * Create a proxy that lazily resolves the underlying SDK bound to the chosen auth.
-   * Uses ProxyFactory for automatic performance tracking.
-   */
-  protected makeSdkProxy(authType: AuthType): TSdk {
-    return ProxyFactory.create({
-      getClient: () => this.getOrCreateSdk(authType),
-      serviceName: this.serviceName,
-      protocolName: this.protocolName,
-      authType,
-    });
-  }
-
-  /**
-   * Resolve or create the underlying SDK configured with the right auth headers/middleware.
-   */
-  protected abstract getOrCreateSdk(authType: AuthType): Promise<TSdk>;
-
-  // -------------- Auth facets --------------
-  get authJwt(): TSdk {
-    return this.makeSdkProxy(AuthType.JWT);
-  }
-
-  get authIam(): TSdk {
-    return this.makeSdkProxy(AuthType.IAM);
-  }
-
-  get public(): TSdk {
-    return this.makeSdkProxy(AuthType.API_KEY);
-  }
-}
-
-// GraphQL Query & Mutations
-class GraphQLHttpProtocol<TSdk extends object> extends BaseProtocol<TSdk> {
-  private endpoint: string;
-  private sdkFactory: (client: GraphQLClient) => TSdk;
-
-  constructor(serviceName: string, endpoint: string, sdkFactory: (client: GraphQLClient) => TSdk) {
-    super(serviceName, "graphql");
-    this.endpoint = endpoint;
-    this.sdkFactory = sdkFactory;
-  }
-
-  protected async getOrCreateSdk(authType: AuthType): Promise<TSdk> {
-    // Use AuthHeadersBuilder to get auth config (eliminates duplication)
-    const authConfig = await AuthHeadersBuilder.build(authType, this.serviceName);
-
-    // Use CacheManager to get or create SDK (eliminates cache duplication)
-    return this.cache.getOrCreate(authConfig.cacheKey, async () => {
-      const clientOptions: {
-        headers: Record<string, string>;
-        requestMiddleware?: RequestMiddleware;
-      } = { headers: authConfig.headers };
-
-      // IAM requires middleware because signature depends on request body
-      if (authType === AuthType.IAM) {
-        clientOptions.requestMiddleware = async (request) => {
-          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-          const signedHeaders = await AuthManager.generateIamAuthHeaders(this.endpoint, body);
-          return {
-            ...request,
-            headers: { ...request.headers, ...signedHeaders },
-          };
-        };
-      }
-
-      const client = new GraphQLClient(this.endpoint, clientOptions);
-      return this.sdkFactory(client);
-    });
   }
 }
 
@@ -651,11 +566,20 @@ class GraphQLWSProtocol {
 }
 
 class CoreService {
-  readonly graphqlHttp: GraphQLHttpProtocol<CoreSdk>;
+  readonly graphqlHttp: HttpProtocol<CoreSdk>;
   readonly graphqlWS: GraphQLWSProtocol;
 
   constructor() {
-    this.graphqlHttp = new GraphQLHttpProtocol("CORE", EnvConfig.getEndpoint(ServiceType.CORE), (client) => getCoreSdk(client));
+    this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
+      serviceName: "CORE",
+      endpoint: EnvConfig.getEndpoint(ServiceType.CORE),
+      createClient: async (authConfig) =>
+        new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CORE), {
+          headers: authConfig.headers,
+          requestMiddleware: authConfig.middleware,
+        }),
+      createSdk: (client) => getCoreSdk(client),
+    });
     this.graphqlWS = new GraphQLWSProtocol();
   }
 
@@ -665,14 +589,23 @@ class CoreService {
 }
 
 class CctService {
-  readonly graphql: GraphQLHttpProtocol<CctSdk>;
+  readonly graphqlHttp: HttpProtocol<CctSdk>;
 
   constructor() {
-    this.graphql = new GraphQLHttpProtocol("CCT", EnvConfig.getEndpoint(ServiceType.CCT), (client) => getCctSdk(client));
+    this.graphqlHttp = createHttpProtocol<GraphQLClient, CctSdk>({
+      serviceName: "CCT",
+      endpoint: EnvConfig.getEndpoint(ServiceType.CCT),
+      createClient: async (authConfig) =>
+        new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CCT), {
+          headers: authConfig.headers,
+          requestMiddleware: authConfig.middleware,
+        }),
+      createSdk: (client) => getCctSdk(client),
+    });
   }
 
   clearCache(): void {
-    this.graphql.clearCache();
+    this.graphqlHttp.clearCache();
   }
 }
 

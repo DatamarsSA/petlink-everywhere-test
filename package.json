@@ -17,6 +17,7 @@
     "@graphql-codegen/typescript-operations": "^4.2.0",
     "@types/node": "^20.19.23",
     "@types/twilio": "^3.19.3",
+    "@types/ws": "^8.18.1",
     "@vitest/ui": "^3.2.4",
     "dotenv": "^17.2.2",
     "get-graphql-schema": "^2.1.2",
@@ -39,6 +40,7 @@
     "ts-node": "^10.9.2",
     "twilio": "^5.10.3",
     "winston": "^3.18.3",
+    "ws": "^8.18.3",
     "zod": "^4.1.11"
   },
   "resolutions": {
