@@ -129,6 +129,8 @@ describe("User Profile Management", () => {
       });
     });
 
+    ///-------------- change credentials --------------
+
     it("Change EMAIL (User wants to change his email)", async () => {
       const newEmail = fxt.current.user.email;
 
@@ -228,6 +230,7 @@ describe("User Profile Management", () => {
       ).toBe("200");
       // Verify phone changed in user profile
       expect(userCheck.getUser.user?.phone, "User phone should be updated").toBe(newPhone);
+      await testHelper.cleanUpUser(newPhone);
     });
 
     it("Change PASSWORD (User wants to change his password)", async () => {
