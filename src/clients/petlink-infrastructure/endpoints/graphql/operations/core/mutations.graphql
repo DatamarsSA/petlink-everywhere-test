@@ -306,3 +306,34 @@ mutation stopRenewingSubscription($subscriptionId: String!, $appBrand: AppBrand!
     message
   }
 }
+
+mutation updateUser($user: UpdateUserIn!) {
+  updateUser(user: $user) {
+    code
+    translationCode
+    message
+    user {
+      id
+      entityType
+      name
+      surname
+      email
+      phone
+      birthDate
+      gender
+      city
+      countryCode
+      zipCode
+      streetAddress
+      stateCode
+      languageId
+      timezone
+      image {
+        id
+        url
+      }
+      creationDate
+      updateDate
+    }
+  }
+}

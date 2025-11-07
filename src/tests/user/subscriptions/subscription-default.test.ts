@@ -53,12 +53,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(fxt.isKippyRun && evoDevice
         ? [
-            petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-              productId: evoDevice.id,
-              countryCode: evoDevice.countryCode,
-              serialNumber: evoDevice.serialNumber,
-            }),
-          ]
+          petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+            productId: evoDevice.id,
+            countryCode: evoDevice.countryCode,
+            serialNumber: evoDevice.serialNumber,
+          }),
+        ]
         : []),
     ];
 

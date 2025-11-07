@@ -1,37 +1,54 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
-import { fxt } from "../../fixtures/fixtures.js";
+// src/tests/device/sentinel-tcp.test.ts
 
-describe.skip("Utilities for debug test", () => {
-  let setup: TestSetup = {} as TestSetup;
+import { describe, it, beforeAll, afterAll } from "vitest";
+import { testHelper } from "../../clients/client-test-helper.js";
+import { logger } from "../../config/logger.js";
+import { createSentinelClient } from "../../clients/client-sentinel.js";
 
+describe.sequential("Sentinel TCP Communication", () => {
+  let setup: any;
+  const sentinelClient = createSentinelClient();
 
-  // it("debug", async () => {
-  //
-  //   // Setup user
-  //   setup = await testHelper.setupBuilder().withUser().build();
-  //
-  //   console.time("cleanupAll");
-  //   await testHelper.cleanupAll();
-  //   console.timeEnd("cleanupAll");
-  //
-  //   // Setup user again for the next cleanup
-  //   setup = await testHelper.setupBuilder().withUser().build();
-  //
-  //   console.time("cleanUpUser");
-  //   await testHelper.cleanUpUser();
-  //   console.timeEnd("cleanUpUser");
-  // });
+  beforeAll(async () => {
+    setup = await testHelper.setupBuilder()
+      .withUser()
+      .withDog()
+      .withDogDevice()
+      .build();
 
-  it("debug", async () => {
-    let a = await testHelper.cleanUpUser("+15554839926");
-    let b = await testHelper.cleanUpUser("+15554716645");
-    let c = await testHelper.cleanUpUser("+15554874926");
-    let d = await testHelper.cleanUpUser("+15558643068");
-    //new hardcoded number
-    let e = await testHelper.cleanUpUser("+15555234567");
-    let f = ""
+    // Connette al server Sentinel
+    await sentinelClient.connect();
   });
 
+  afterAll(() => {
+    sentinelClient.disconnect();
+  });
 
+  it("should send WELCOME packet and receive response", async () => {
+    logger.info("Testing device WELCOME handshake");
+
+    const serialNumber = setup.devices.dogStandard!.serialNumber;
+
+    // Invia il welcome
+    await sentinelClient.sendWelcome(serialNumber);
+
+    // Verifica che abbiamo ricevuto qualcosa
+    const receivedData = sentinelClient.getReceivedData();
+    logger.debug(`Received ${receivedData.length} bytes from Sentinel`);
+
+    // Qui puoi fare assertion sulla risposta
+    // expect(receivedData.length).toBeGreaterThan(0);
+  });
+
+  it("should send HEARTBEAT after connection", async () => {
+    logger.info("Testing device HEARTBEAT");
+
+    const serialNumber = setup.devices.dogStandard!.serialNumber;
+
+    await sentinelClient.sendHeartbeat(serialNumber);
+
+    // Verifica ricezione
+    const receivedData = sentinelClient.getReceivedData();
+    logger.debug(`Total received: ${receivedData.length} bytes`);
+  });
 });

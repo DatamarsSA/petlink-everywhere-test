@@ -22,7 +22,6 @@ const commonUser = {
   password: "Ciaokippy3!",
   confirmPassword: "Ciaokippy3!",
   email: "t90086085@gmail.com",
-  streetAddress: "Via Test 123",
   phone: "+18777804236",
 };
 
@@ -80,7 +79,7 @@ const commonCard = {
 const baseFixtures = {
   KIPPY: {
     appBrand: AppBrand.Kippy,
-    user: { ...commonUser, city: "Milano", countryCode: "IT", zipCode: "20100", languageId: "IT" as LanguageId } as UserIn,
+    user: { ...commonUser, city: "Milano", countryCode: "IT", zipCode: "20100", languageId: LanguageId.It, streetAddress: "Via Torino 10" } as UserIn,
     pet: { ...commonPet },
     devices: {
       CAT: { serialNumber: "UTEST01", countryCode: "IT", timezone: "Europe/Rome" },
@@ -91,7 +90,14 @@ const baseFixtures = {
   },
   PETLINK: {
     appBrand: AppBrand.Petlink,
-    user: { ...commonUser, city: "New York", countryCode: "US", zipCode: "10001", languageId: "EN" as LanguageId } as UserIn,
+    user: {
+      ...commonUser,
+      city: "New York",
+      countryCode: "US",
+      zipCode: "10001",
+      languageId: LanguageId.En,
+      streetAddress: "Fifth Avenue 350",
+    } as UserIn,
     pet: { ...commonPet },
     devices: {
       CAT: { serialNumber: "UTEST04", countryCode: "US", timezone: "America/New_York" },

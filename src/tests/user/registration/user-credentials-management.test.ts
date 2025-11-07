@@ -1,4 +1,4 @@
-import { ProductTypeEnum, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { LanguageId, ProductTypeEnum, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
@@ -8,8 +8,8 @@ import { extractParamsFromUrl, waitFor } from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 
-describe("User Credentials Management", () => {
-  describe("CHANGE credentials (intentional -> authenticated)", () => {
+describe("User Profile Management", () => {
+  describe("CHANGE profile info (intentional -> authenticated)", () => {
     let testUser: User;
     const initialEmail = `initial-email@example.com`;
     const initialPhone = `+15555234567`;
@@ -28,32 +28,105 @@ describe("User Credentials Management", () => {
       testUser = setup.user!;
     });
 
-    it("Change PASSWORD (User wants to change his password)", async () => {
-      const newPassword = "NewPassword123!";
+    it("Change PROFILE info", async () => {
+      // Definisci i dati in base al brand (Kippy = Europa, Petlink = USA)
+      const europeanData = {
+        city: "Roma",
+        countryCode: "IT",
+        zipCode: "00100",
+        streetAddress: "Via Veneto 50",
+        languageId: LanguageId.It,
+      };
 
-      // Change password using old password
-      const response = await petlink.core.graphqlHttp.authJwt.changePassword({
-        oldPassword: originalPassword,
-        password: newPassword,
-      });
+      const americanData = {
+        city: "Los Angeles",
+        countryCode: "US",
+        zipCode: "90001",
+        streetAddress: "Sunset Boulevard 200",
+        languageId: LanguageId.En,
+      };
+
+      // Scegli i dati in base al brand
+      const locationData = fxt.isKippyRun ? europeanData : americanData;
+
+      const updatedProfileData = {
+        id: testUser.id,
+        name: "Mario",
+        surname: "Rossi",
+        ...locationData,
+      };
+
+      // STEP 1: Update user profile (all fields at once)
+      const updateResponse = await petlink.core.graphqlHttp.authJwt.updateUser({ user: updatedProfileData });
 
       expect(
-        response.changePassword.code,
-        `changePassword should succeed - Error: ${response.changePassword.message}${
-          response.changePassword.translationCode ? ` (${response.changePassword.translationCode})` : ""
+        updateResponse.updateUser.code,
+        `updateUser should succeed - Error: ${updateResponse.updateUser.message}${
+          updateResponse.updateUser.translationCode ? ` (${updateResponse.updateUser.translationCode})` : ""
         }`,
       ).toBe("200");
 
-      // Verify old password no longer works
-      await expect(petlink.loginWithEmail(testUser.email, originalPassword)).rejects.toThrow("Incorrect username or password.");
-
-      // Verify new password works
-      await petlink.loginWithEmail(testUser.email, newPassword);
+      // STEP 2: Verify all profile data was updated correctly
       const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
-        `getUser should succeed - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""}`,
+        `getUser should succeed - Error: ${userCheck.getUser.message}${
+          userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
+        }`,
       ).toBe("200");
+
+      expect(userCheck.getUser.user, "User profile should be updated").toMatchObject({
+        name: updatedProfileData.name,
+        surname: updatedProfileData.surname,
+        city: updatedProfileData.city,
+        countryCode: updatedProfileData.countryCode,
+        zipCode: updatedProfileData.zipCode,
+        streetAddress: updatedProfileData.streetAddress,
+        languageId: updatedProfileData.languageId,
+      });
+    });
+
+    it("Change TIMEZONE", async () => {
+      // Define the user data with timezone change
+      const updatedUserWithTimezone = {
+        id: testUser.id,
+        name: testUser.name,
+        surname: testUser.surname,
+        city: testUser.city!,
+        countryCode: testUser.countryCode,
+        languageId: testUser.languageId,
+        timezone: "America/Mexico_City",
+        zipCode: testUser.zipCode!,
+        streetAddress: testUser.streetAddress!,
+      };
+
+      // STEP 1: Update user with timezone
+      const updateResponse = await petlink.core.graphqlHttp.authJwt.updateUser({ user: updatedUserWithTimezone });
+
+      expect(
+        updateResponse.updateUser.code,
+        `updateUser should succeed - Error: ${updateResponse.updateUser.message}${
+          updateResponse.updateUser.translationCode ? ` (${updateResponse.updateUser.translationCode})` : ""
+        }`,
+      ).toBe("200");
+
+      // STEP 2: Verify timezone was updated
+      const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
+      expect(
+        userCheck.getUser.code,
+        `getUser should succeed - Error: ${userCheck.getUser.message}${
+          userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
+        }`,
+      ).toBe("200");
+
+      expect(userCheck.getUser.user?.timezone, "User timezone should be updated").toBe("America/Mexico_City");
+
+      // Also verify other fields were preserved/updated
+      expect(userCheck.getUser.user, "User profile should be updated with timezone").toMatchObject({
+        name: updatedUserWithTimezone.name,
+        surname: updatedUserWithTimezone.surname,
+        timezone: updatedUserWithTimezone.timezone,
+      });
     });
 
     it("Change EMAIL (User wants to change his email)", async () => {
@@ -155,6 +228,34 @@ describe("User Credentials Management", () => {
       ).toBe("200");
       // Verify phone changed in user profile
       expect(userCheck.getUser.user?.phone, "User phone should be updated").toBe(newPhone);
+    });
+
+    it("Change PASSWORD (User wants to change his password)", async () => {
+      const newPassword = "NewPassword123!";
+
+      // Change password using old password
+      const response = await petlink.core.graphqlHttp.authJwt.changePassword({
+        oldPassword: originalPassword,
+        password: newPassword,
+      });
+
+      expect(
+        response.changePassword.code,
+        `changePassword should succeed - Error: ${response.changePassword.message}${
+          response.changePassword.translationCode ? ` (${response.changePassword.translationCode})` : ""
+        }`,
+      ).toBe("200");
+
+      // Verify old password no longer works
+      await expect(petlink.loginWithEmail(testUser.email, originalPassword)).rejects.toThrow("Incorrect username or password.");
+
+      // Verify new password works
+      await petlink.loginWithEmail(testUser.email, newPassword);
+      const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
+      expect(
+        userCheck.getUser.code,
+        `getUser should succeed - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""}`,
+      ).toBe("200");
     });
   });
 

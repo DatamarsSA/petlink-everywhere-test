@@ -415,17 +415,17 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
       const authPayload =
         this.authType === "jwt"
           ? {
-            [HTTP_HEADERS.HOST]: host,
-            [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-              operationName,
-              variables,
-              authToken: this.token,
-            }),
-          }
+              [HTTP_HEADERS.HOST]: host,
+              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+                operationName,
+                variables,
+                authToken: this.token,
+              }),
+            }
           : {
-            [HTTP_HEADERS.HOST]: host,
-            [HTTP_HEADERS.API_KEY]: this.apiKey!,
-          };
+              [HTTP_HEADERS.HOST]: host,
+              [HTTP_HEADERS.API_KEY]: this.apiKey!,
+            };
 
       const subscriptionPayload = {
         id: subId,

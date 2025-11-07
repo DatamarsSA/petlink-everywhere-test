@@ -262,6 +262,14 @@ export interface Coupon {
   name: Scalars["String"]["output"];
 }
 
+export interface CurrentSubscription {
+  __typename?: "CurrentSubscription";
+  id: Scalars["String"]["output"];
+  invoiceStatus?: Maybe<InvoiceStatusEnum>;
+  paymentStatus?: Maybe<PaymentStatusTypeEnum>;
+  status: SubscriptionStatusEnum;
+}
+
 export interface Device {
   __typename?: "Device";
   activated: Scalars["Boolean"]["output"];
@@ -656,6 +664,7 @@ export enum ModeType {
 
 export interface Mutation {
   __typename?: "Mutation";
+  acknowledgeCheckout: Response;
   /**
    *  refundInvoice(invoiceId: String!, refundAmount: Float!, reasonCode:
    * InvoiceReasonCodeEnum!): Response @aws_cognito_user_pools @aws_iam
@@ -734,6 +743,10 @@ export interface Mutation {
   utilityIntegrationTest: ResponseUtilityIntegrationTest;
   verifyEmail?: Maybe<Response>;
 }
+
+export type MutationAcknowledgeCheckoutArgs = {
+  id: Scalars["String"]["input"];
+};
 
 export type MutationActivateDeviceInOrderArgs = {
   deviceId: Scalars["String"]["input"];
@@ -2043,6 +2056,7 @@ export interface ResponseGetSubscriptionByProductId {
 export interface ResponseGetSubscriptions {
   __typename?: "ResponseGetSubscriptions";
   code: Scalars["String"]["output"];
+  currentSubscription?: Maybe<CurrentSubscription>;
   message: Scalars["String"]["output"];
   subscriptions?: Maybe<Array<SubscriptionShortInfo>>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
@@ -2075,7 +2089,7 @@ export interface ResponseOtp {
   __typename?: "ResponseOtp";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
-  resendAt?: Maybe<Scalars["Int"]["output"]>;
+  resendAt?: Maybe<Scalars["Float"]["output"]>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
   verificationId?: Maybe<Scalars["String"]["output"]>;
 }
@@ -2989,6 +3003,41 @@ export type StopRenewingSubscriptionMutation = {
   stopRenewingSubscription?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
 };
 
+export type UpdateUserMutationVariables = Exact<{
+  user: UpdateUserIn;
+}>;
+
+export type UpdateUserMutation = {
+  __typename?: "Mutation";
+  updateUser: {
+    __typename?: "ResponseUser";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    user?: {
+      __typename?: "User";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      birthDate?: string | null;
+      gender?: Gender | null;
+      city?: string | null;
+      countryCode: string;
+      zipCode?: string | null;
+      streetAddress?: string | null;
+      stateCode?: string | null;
+      languageId: LanguageId;
+      timezone?: string | null;
+      creationDate: string;
+      updateDate: string;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
+    } | null;
+  };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -3594,7 +3643,13 @@ export type SendOtpForgotPasswordMutationVariables = Exact<{
 
 export type SendOtpForgotPasswordMutation = {
   __typename?: "Mutation";
-  sendOtpForgotPassword: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+  sendOtpForgotPassword: {
+    __typename?: "ResponseOtp";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    verificationId?: string | null;
+  };
 };
 
 export type ChangeForgotPasswordMutationVariables = Exact<{
@@ -3646,7 +3701,11 @@ export const SendOtpDocument = {
             name: { kind: "Name", value: "sendOtp" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "phone" }, value: { kind: "Variable", name: { kind: "Name", value: "phone" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -3755,7 +3814,11 @@ export const SignUpUserDocument = {
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
               { kind: "Argument", name: { kind: "Name", value: "otpData" }, value: { kind: "Variable", name: { kind: "Name", value: "otpData" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
             ],
             selectionSet: {
@@ -3792,7 +3855,9 @@ export const UtilityIntegrationTestDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "utilityIntegrationTest" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -3879,7 +3944,9 @@ export const CreatePetDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "createPet" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -3952,7 +4019,9 @@ export const UpdatePetDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "updatePet" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -4025,7 +4094,9 @@ export const DeletePetDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "deletePet" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "petId" }, value: { kind: "Variable", name: { kind: "Name", value: "petId" } } }],
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "petId" }, value: { kind: "Variable", name: { kind: "Name", value: "petId" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -4066,7 +4137,11 @@ export const CreatePetlinkGpsDocument = {
             kind: "Field",
             name: { kind: "Name", value: "createPetlinkGps" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "petlinkGps" }, value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petlinkGps" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
             ],
             selectionSet: {
@@ -4195,7 +4270,11 @@ export const UpdatePetlinkGpsDocument = {
             kind: "Field",
             name: { kind: "Name", value: "updatePetlinkGps" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "petlinkGps" }, value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petlinkGps" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -4561,7 +4640,11 @@ export const StopRenewingSubscriptionDocument = {
                 value: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
               },
               { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
-              { kind: "Argument", name: { kind: "Name", value: "cancelReason" }, value: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "cancelReason" },
+                value: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } },
+              },
               {
                 kind: "Argument",
                 name: { kind: "Name", value: "cancelReasonCode" },
@@ -4574,6 +4657,80 @@ export const StopRenewingSubscriptionDocument = {
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateUserIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "gender" } },
+                      { kind: "Field", name: { kind: "Name", value: "city" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "zipCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "streetAddress" } },
+                      { kind: "Field", name: { kind: "Name", value: "stateCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "languageId" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -4728,7 +4885,11 @@ export const CheckContactDocument = {
             name: { kind: "Name", value: "checkContact" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "contact" }, value: { kind: "Variable", name: { kind: "Name", value: "contact" } } },
-              { kind: "Argument", name: { kind: "Name", value: "contactType" }, value: { kind: "Variable", name: { kind: "Name", value: "contactType" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "contactType" },
+                value: { kind: "Variable", name: { kind: "Name", value: "contactType" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -4882,7 +5043,11 @@ export const GetColorsDocument = {
             name: { kind: "Name", value: "getColors" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "species" }, value: { kind: "Variable", name: { kind: "Name", value: "species" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -4936,7 +5101,11 @@ export const GetBreedDocument = {
             name: { kind: "Name", value: "getBreed" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "species" }, value: { kind: "Variable", name: { kind: "Name", value: "species" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -5122,9 +5291,21 @@ export const GetSubscriptionPlansDocument = {
             kind: "Field",
             name: { kind: "Name", value: "getSubscriptionPlans" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
-              { kind: "Argument", name: { kind: "Name", value: "countryCode" }, value: { kind: "Variable", name: { kind: "Name", value: "countryCode" } } },
-              { kind: "Argument", name: { kind: "Name", value: "serialNumber" }, value: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "countryCode" },
+                value: { kind: "Variable", name: { kind: "Name", value: "countryCode" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "serialNumber" },
+                value: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -5328,15 +5509,31 @@ export const GetSubscriptionPlanPricingDocument = {
             kind: "Field",
             name: { kind: "Name", value: "getSubscriptionPlanPricing" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "planPriceId" }, value: { kind: "Variable", name: { kind: "Name", value: "planPriceId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "planPriceId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "planPriceId" } },
+              },
               {
                 kind: "Argument",
                 name: { kind: "Name", value: "careProtectionPlanId" },
                 value: { kind: "Variable", name: { kind: "Name", value: "careProtectionPlanId" } },
               },
-              { kind: "Argument", name: { kind: "Name", value: "addonPriceIds" }, value: { kind: "Variable", name: { kind: "Name", value: "addonPriceIds" } } },
-              { kind: "Argument", name: { kind: "Name", value: "countryCode" }, value: { kind: "Variable", name: { kind: "Name", value: "countryCode" } } },
-              { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "addonPriceIds" },
+                value: { kind: "Variable", name: { kind: "Name", value: "addonPriceIds" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "countryCode" },
+                value: { kind: "Variable", name: { kind: "Name", value: "countryCode" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -5433,7 +5630,11 @@ export const GetSubscriptionByProductIdDocument = {
             kind: "Field",
             name: { kind: "Name", value: "getSubscriptionByProductId" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -5521,7 +5722,11 @@ export const GetSubscriptionsDocument = {
             kind: "Field",
             name: { kind: "Name", value: "getSubscriptions" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "productId" }, value: { kind: "Variable", name: { kind: "Name", value: "productId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -5785,7 +5990,11 @@ export const ChangePasswordDocument = {
             kind: "Field",
             name: { kind: "Name", value: "changePassword" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "oldPassword" }, value: { kind: "Variable", name: { kind: "Name", value: "oldPassword" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "oldPassword" },
+                value: { kind: "Variable", name: { kind: "Name", value: "oldPassword" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "password" }, value: { kind: "Variable", name: { kind: "Name", value: "password" } } },
             ],
             selectionSet: {
@@ -5834,7 +6043,11 @@ export const UpdateEmailUserDocument = {
             name: { kind: "Name", value: "updateEmailUser" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "email" }, value: { kind: "Variable", name: { kind: "Name", value: "email" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
               { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
             ],
             selectionSet: {
@@ -5888,7 +6101,11 @@ export const UpdatePhoneNumberUserDocument = {
             name: { kind: "Name", value: "updatePhoneNumberUser" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "phone" }, value: { kind: "Variable", name: { kind: "Name", value: "phone" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
               {
                 kind: "Argument",
                 name: { kind: "Name", value: "verificationId" },
@@ -5937,7 +6154,11 @@ export const SendOtpForgotPasswordDocument = {
             name: { kind: "Name", value: "sendOtpForgotPassword" },
             arguments: [
               { kind: "Argument", name: { kind: "Name", value: "contact" }, value: { kind: "Variable", name: { kind: "Name", value: "contact" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -6038,9 +6259,21 @@ export const ForgotEmailDocument = {
             kind: "Field",
             name: { kind: "Name", value: "forgotEmail" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "productNumber" }, value: { kind: "Variable", name: { kind: "Name", value: "productNumber" } } },
-              { kind: "Argument", name: { kind: "Name", value: "entityType" }, value: { kind: "Variable", name: { kind: "Name", value: "entityType" } } },
-              { kind: "Argument", name: { kind: "Name", value: "languageId" }, value: { kind: "Variable", name: { kind: "Name", value: "languageId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productNumber" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productNumber" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "entityType" },
+                value: { kind: "Variable", name: { kind: "Name", value: "entityType" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -6068,19 +6301,37 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
-    sendOtp(variables: SendOtpMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<SendOtpMutation> {
+    sendOtp(
+      variables: SendOtpMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendOtpMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<SendOtpMutation>({ document: SendOtpDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<SendOtpMutation>({
+            document: SendOtpDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "sendOtp",
         "mutation",
         variables,
       );
     },
-    checkOtp(variables: CheckOtpMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<CheckOtpMutation> {
+    checkOtp(
+      variables: CheckOtpMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CheckOtpMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<CheckOtpMutation>({ document: CheckOtpDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<CheckOtpMutation>({
+            document: CheckOtpDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "checkOtp",
         "mutation",
         variables,
@@ -6140,7 +6391,11 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
-    createPet(variables: CreatePetMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<CreatePetMutation> {
+    createPet(
+      variables: CreatePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreatePetMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
           client.request<CreatePetMutation>({
@@ -6154,7 +6409,11 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
-    updatePet(variables: UpdatePetMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<UpdatePetMutation> {
+    updatePet(
+      variables: UpdatePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
           client.request<UpdatePetMutation>({
@@ -6168,7 +6427,11 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
-    deletePet(variables: DeletePetMutationVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<DeletePetMutation> {
+    deletePet(
+      variables: DeletePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeletePetMutation> {
       return withWrapper(
         (wrappedRequestHeaders) =>
           client.request<DeletePetMutation>({
@@ -6290,10 +6553,33 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    updateUser(
+      variables: UpdateUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateUserMutation>({
+            document: UpdateUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateUser",
+        "mutation",
+        variables,
+      );
+    },
     getUser(variables?: GetUserQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetUserQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetUserQuery>({ document: GetUserDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetUserQuery>({
+            document: GetUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getUser",
         "query",
         variables,
@@ -6320,7 +6606,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     getPet(variables: GetPetQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetPetQuery>({ document: GetPetDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetPetQuery>({
+            document: GetPetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getPet",
         "query",
         variables,
@@ -6329,25 +6620,48 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     getPets(variables?: GetPetsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetsQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetPetsQuery>({ document: GetPetsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetPetsQuery>({
+            document: GetPetsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getPets",
         "query",
         variables,
       );
     },
-    getColors(variables: GetColorsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetColorsQuery> {
+    getColors(
+      variables: GetColorsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetColorsQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetColorsQuery>({ document: GetColorsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetColorsQuery>({
+            document: GetColorsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getColors",
         "query",
         variables,
       );
     },
-    getBreed(variables: GetBreedQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetBreedQuery> {
+    getBreed(
+      variables: GetBreedQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetBreedQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<GetBreedQuery>({ document: GetBreedDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }),
+          client.request<GetBreedQuery>({
+            document: GetBreedDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
         "getBreed",
         "query",
         variables,
