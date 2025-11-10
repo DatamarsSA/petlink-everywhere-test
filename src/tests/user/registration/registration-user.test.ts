@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fxt } from "../../../fixtures/fixtures.js";
-import { ContactType, UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { ContactType, PetIn, UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { extractParamsFromUrl, waitFor } from "../../../helpers/helpers.js";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
@@ -26,6 +26,7 @@ describe("User Registration", () => {
   let verificationId: string;
   let receivedOtp: string | null;
   let verificationLink: string | null;
+  let userId: string;
 
   it("Verify phone number availability", async () => {
     const response = await petlink.core.graphqlHttp.public.checkContact({
@@ -98,6 +99,7 @@ describe("User Registration", () => {
     expect(userResponse.getUser.user?.phone, "Logged in user phone should match signup payload").toBe(signUpPayload.phone);
     expect(userResponse.getUser.user?.contactVerified?.phone, "Phone should be verified after OTP confirmation").toBe(true);
     expect(userResponse.getUser.user?.contactVerified?.email, "Email should not be verified yet").toBe(false);
+    userId = userResponse.getUser.user!.id;
   });
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
@@ -184,7 +186,34 @@ describe("User Registration", () => {
     ).toBe("400");
   });
 
-  it.todo("Delete User", async () => {
-    //NOTE: it should not be possible if he has pet associated
+  it("Delete User", async () => {
+    await petlink.loginWithPhone(signUpPayload.phone, signUpPayload.password);
+    //associo Pet a user
+    const catPayload = {
+      name: fxt.current.pet.defaultCat.name,
+      species: fxt.current.pet.defaultCat.species,
+      breedType: fxt.current.pet.defaultCat.breedType,
+      breeds: fxt.current.pet.defaultCat.breeds,
+      gender: fxt.current.pet.defaultCat.gender,
+      weight: fxt.current.pet.defaultCat.weight,
+      birthDate: fxt.current.pet.defaultCat.birthDate,
+      livingEnvironment: fxt.current.pet.defaultCat.livingEnvironment,
+      primaryColor: fxt.current.pet.defaultCat.primaryColor,
+    } as PetIn;
+    let createCatResponse = await petlink.core.graphqlHttp.authJwt.createPet({ pet: catPayload });
+    //delete user should not be possibile where has pet associated
+    let deleteUserResponse = await petlink.core.graphqlHttp.authJwt.deleteUser({ id: userId });
+    //FIXME: now deleteUser pass also with pet associated because check is on app and not on backend api, when added cehck on backend api this test should test also not.tobe 200
+    expect(
+      deleteUserResponse.deleteUser.code,
+      `deleteUser should fail - Error: ${deleteUserResponse.deleteUser.message}${deleteUserResponse.deleteUser.translationCode ? ` (${deleteUserResponse.deleteUser.translationCode})` : ""}`,
+    ).not.toBe("200");
+
+    await petlink.core.graphqlHttp.authJwt.deletePet({ petId: createCatResponse.createPet.pet!.id });
+    deleteUserResponse = await petlink.core.graphqlHttp.authJwt.deleteUser({ id: userId });
+    expect(
+      deleteUserResponse.deleteUser.code,
+      `deleteUser should succeed - Error: ${deleteUserResponse.deleteUser.message}${deleteUserResponse.deleteUser.translationCode ? ` (${deleteUserResponse.deleteUser.translationCode})` : ""}`,
+    ).toBe("200");
   });
 });
