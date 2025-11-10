@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => {
   });
 
   const result = envSchema.safeParse(process.env);
+  console.log("APP_BRAND", result.data?.APP_BRAND);
+
   if (!result.success) {
     console.error("❌ Envs validation failed");
     result.error.issues.forEach((issue) => {

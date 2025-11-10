@@ -155,11 +155,11 @@ describe("Pet Registration", () => {
     ).toBe("400");
   });
 
-  it("Update and Delete PET should work correctly", async () => {
-    // Create a temporary PET for CRUD testing (isolated from main DOG and CAT)
+  it("Update PET should work correctly", async () => {
+    // Create a temporary PET for UPDATE testing
     const tempPetData = {
       ...dogPayload,
-      name: "Temp Pet for CRUD Test",
+      name: "Temp Pet for UPDATE Test",
     } as PetIn;
 
     const createResponse = await petlink.core.graphqlHttp.authJwt.createPet({
@@ -176,7 +176,7 @@ describe("Pet Registration", () => {
 
     const petId = createResponse.createPet.pet?.id!;
 
-    // TEST UPDATE: Modify the temporary PET
+    // Modify the temporary PET
     const updatedName = "Updated Temp Pet";
     const updatedWeight = 25;
 
@@ -198,7 +198,23 @@ describe("Pet Registration", () => {
     expect(updateResponse.updatePet.pet?.name, "Pet name should be updated").toBe(updatedName);
     expect(updateResponse.updatePet.pet?.weight, "Pet weight should be updated").toBe(updatedWeight);
 
-    // TEST DELETE: Remove the temporary PET
+    // Cleanup: Delete the temporary PET
+    await petlink.core.graphqlHttp.authJwt.deletePet({ petId });
+  });
+
+  it("Delete PET should work correctly", async () => {
+    // Create a temporary PET for DELETE testing
+    const tempPetData = {
+      ...dogPayload,
+      name: "Temp Pet for DELETE Test",
+    } as PetIn;
+
+    const createResponse = await petlink.core.graphqlHttp.authJwt.createPet({
+      pet: tempPetData,
+    });
+    const petId = createResponse.createPet.pet?.id!;
+
+    // Remove the temporary PET
     const deleteResponse = await petlink.core.graphqlHttp.authJwt.deletePet({
       petId,
     });

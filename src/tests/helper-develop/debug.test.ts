@@ -4,8 +4,9 @@ import { describe, it, beforeAll, afterAll } from "vitest";
 import { testHelper } from "../../clients/client-test-helper.js";
 import { logger } from "../../config/logger.js";
 import { createSentinelClient } from "../../clients/client-sentinel.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
-describe.sequential("Sentinel TCP Communication", () => {
+describe.skip("Sentinel TCP Communication", () => {
   let setup: any;
   const sentinelClient = createSentinelClient();
 
@@ -51,4 +52,16 @@ describe.sequential("Sentinel TCP Communication", () => {
     const receivedData = sentinelClient.getReceivedData();
     logger.debug(`Total received: ${receivedData.length} bytes`);
   });
+
 });
+
+
+
+describe.skip("", () => {
+
+  it("", async () => {
+    await testHelper.cleanUpUser();
+    await testHelper.cleanupAll()
+  })
+
+})

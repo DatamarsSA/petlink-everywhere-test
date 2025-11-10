@@ -183,4 +183,8 @@ describe("User Registration", () => {
       `checkContact should fail - email no longer available - Error: ${emailCheck.checkContact.message}${emailCheck.checkContact.translationCode ? ` (${emailCheck.checkContact.translationCode})` : ""}`,
     ).toBe("400");
   });
+
+  it.todo("Delete User", async () => {
+    //NOTE: it should not be possible if he has pet associated
+  });
 });

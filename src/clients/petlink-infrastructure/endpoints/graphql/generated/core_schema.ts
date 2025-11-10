@@ -3038,6 +3038,15 @@ export type UpdateUserMutation = {
   };
 };
 
+export type DeleteUserMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteUserMutation = {
+  __typename?: "Mutation";
+  deleteUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -4731,6 +4740,41 @@ export const UpdateUserDocument = {
                     ],
                   },
                 },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteUser" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
               ],
             },
           },
@@ -6567,6 +6611,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "updateUser",
+        "mutation",
+        variables,
+      );
+    },
+    deleteUser(
+      variables: DeleteUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteUserMutation>({
+            document: DeleteUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteUser",
         "mutation",
         variables,
       );

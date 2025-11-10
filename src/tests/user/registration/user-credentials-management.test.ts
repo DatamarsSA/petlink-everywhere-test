@@ -28,7 +28,7 @@ describe("User Profile Management", () => {
       testUser = setup.user!;
     });
 
-    it("Change PROFILE info", async () => {
+    it("Change PROFILE info (all fields of user)", async () => {
       // Definisci i dati in base al brand (Kippy = Europa, Petlink = USA)
       const europeanData = {
         city: "Roma",
@@ -123,15 +123,21 @@ describe("User Profile Management", () => {
 
       // Also verify other fields were preserved/updated
       expect(userCheck.getUser.user, "User profile should be updated with timezone").toMatchObject({
+        id: updatedUserWithTimezone.id,
         name: updatedUserWithTimezone.name,
         surname: updatedUserWithTimezone.surname,
+        city: updatedUserWithTimezone.city!,
+        countryCode: updatedUserWithTimezone.countryCode,
+        languageId: updatedUserWithTimezone.languageId,
         timezone: updatedUserWithTimezone.timezone,
+        zipCode: updatedUserWithTimezone.zipCode!,
+        streetAddress: updatedUserWithTimezone.streetAddress!,
       });
     });
 
     ///-------------- change credentials --------------
 
-    it("Change EMAIL (User wants to change his email)", async () => {
+    it("Change EMAIL", async () => {
       const newEmail = fxt.current.user.email;
 
       // STEP 1: Update email (this marks it as unverified)
@@ -178,7 +184,7 @@ describe("User Profile Management", () => {
       );
     });
 
-    it("Change PHONE (User wants to change his phone number)", async () => {
+    it("Change PHONE NUMBER", async () => {
       const newPhone = fxt.current.user.phone; // Use the checkable fixture phone
 
       // STEP 1: Request OTP for new phone
@@ -233,7 +239,7 @@ describe("User Profile Management", () => {
       await testHelper.cleanUpUser(newPhone);
     });
 
-    it("Change PASSWORD (User wants to change his password)", async () => {
+    it("Change PASSWORD", async () => {
       const newPassword = "NewPassword123!";
 
       // Change password using old password

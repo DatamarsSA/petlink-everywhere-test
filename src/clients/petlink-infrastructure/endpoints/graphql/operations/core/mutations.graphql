@@ -108,6 +108,7 @@ mutation deletePet($petId: String!) {
     message
   }
 }
+
 mutation createPetlinkGps($petlinkGps: PetlinkGpsIn!, $appBrand: AppBrand!) {
   createPetlinkGps(petlinkGps: $petlinkGps, appBrand: $appBrand) {
     code
@@ -335,5 +336,13 @@ mutation updateUser($user: UpdateUserIn!) {
       creationDate
       updateDate
     }
+  }
+}
+
+mutation deleteUser($id: String!) {
+  deleteUser(id: $id) {
+    code
+    translationCode
+    message
   }
 }
