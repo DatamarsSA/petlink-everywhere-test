@@ -121,6 +121,6 @@ export const fxt = {
     intervalMs: 1000,
   },
   socket: {
-    timeoutMs: 30000,
+    timeoutMs: 60000,
   },
 };
