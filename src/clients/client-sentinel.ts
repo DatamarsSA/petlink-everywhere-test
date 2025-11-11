@@ -13,6 +13,20 @@ interface SentinelConfig {
   port: number;
 }
 
+interface WiFiCell {
+  bssid: string;      // MAC address (6 bytes)
+  rssi: number;       // Signal strength (-100 to 0 dBm)
+  channel: number;    // WiFi channel (1-14)
+}
+
+interface GSMCell {
+  cid: number;        // Cell ID (2 bytes)
+  lac: number;        // Location Area Code (2 bytes)
+  mcc: number;        // Mobile Country Code (2 bytes)
+  mnc: number;        // Mobile Network Code (2 bytes)
+  rxl: number;        // Signal strength (0-63)
+}
+
 //Encapsula un payload nel formato SIRF protocol
 function encapsulate(payload: Buffer): Buffer {
   const length = payload.length;
@@ -63,6 +77,8 @@ function stringToBytes(str: string, length: number): Buffer {
 /**
  * Crea il pacchetto 0x01 WELCOME
  * Basato su kippy-protocol.md - Contiene TUTTI i campi obbligatori
+ * + WiFi cells (opzionale, 90 bytes)
+ * + GSM cells (opzionale, 161 bytes)
  */
 function createWelcomePacket(
   serialNumber: string,
@@ -72,9 +88,20 @@ function createWelcomePacket(
     battery?: number;
     temperature?: number;
     collar_detached?: boolean;
+    geofence_status?: "inside" | "outside" | "none";
+    wifi_cells?: WiFiCell[];
+    gsm_cells?: GSMCell[];
   },
 ): Buffer {
-  const payload = Buffer.alloc(150);
+  // Calcola la dimensione totale
+  let totalSize = 109; // Base obbligatorio
+  const hasWiFi = options?.wifi_cells && options.wifi_cells.length > 0;
+  const hasGSM = options?.gsm_cells && options.gsm_cells.length > 0;
+  
+  if (hasWiFi) totalSize += 90;  // 10 WiFi cells × 9 bytes
+  if (hasGSM) totalSize += 161;  // 7 GSM cells × 23 bytes
+  
+  const payload = Buffer.alloc(totalSize);
   let offset = 0;
 
   console.log("🔧 DEBUG: Starting packet creation");
@@ -167,8 +194,14 @@ function createWelcomePacket(
 
   // Server notifications (1 byte) - flags per geofence
   // Bit 0x20 = inside_geofence, 0x40 = outside_geofence
-  payload[offset++] = 0x00;
-  console.log(`  [${offset - 1}] notifications`);
+  let notifications = 0x00;
+  if (options?.geofence_status === "inside") {
+    notifications |= 0x20;  // Bit 5
+  } else if (options?.geofence_status === "outside") {
+    notifications |= 0x40;  // Bit 6
+  }
+  payload[offset++] = notifications;
+  console.log(`  [${offset - 1}] notifications = 0x${notifications.toString(16).padStart(2, "0")}`);
 
   // Reset cause (1 byte)
   payload[offset++] = 0;
@@ -237,13 +270,85 @@ function createWelcomePacket(
   offset += 2;
 
   // Detailed information flag (1 byte)
-  // Bit 0 = wifiCell, Bit 1 = agps_ublox, ecc
-  payload[offset++] = 0x00;
-  console.log(`  [${offset - 1}] info_flag = 0`);
+  // Bit 0 = wifiCell, Bit 2 = gsmCell
+  let infoFlag = 0x00;
+  if (hasWiFi) infoFlag |= 0x01;  // Bit 0
+  if (hasGSM) infoFlag |= 0x04;   // Bit 2
+  payload[offset++] = infoFlag;
+  console.log(`  [${offset - 1}] info_flag = 0x${infoFlag.toString(16).padStart(2, "0")}`);
+
+  // ===== OPZIONALE: WiFi Cells (90 bytes totali) =====
+  if (hasWiFi) {
+    console.log(`\n📡 WiFi Cells (${options!.wifi_cells!.length} networks):`);
+    for (let i = 0; i < 10; i++) {
+      const wifi = options!.wifi_cells![i];
+      
+      if (wifi) {
+        // BSSID (6 bytes) - MAC address
+        const bssidBytes = Buffer.from(wifi.bssid.replace(/:/g, ""), "hex");
+        bssidBytes.copy(payload, offset);
+        offset += 6;
+        
+        // RSSI (1 byte) - Signal strength (-100 to 0 dBm, stored as unsigned)
+        const rssi = Math.max(0, Math.min(255, wifi.rssi + 100));
+        payload[offset++] = rssi;
+        
+        // Channel (1 byte)
+        payload[offset++] = wifi.channel;
+        
+        console.log(`  [${offset - 9}..${offset - 1}] WiFi ${i}: ${wifi.bssid} RSSI=${wifi.rssi} CH=${wifi.channel}`);
+      } else {
+        // Empty WiFi cell
+        payload.fill(0, offset, offset + 8);
+        offset += 8;
+      }
+    }
+  }
+
+  // ===== OPZIONALE: GSM Cells (161 bytes totali) =====
+  if (hasGSM) {
+    console.log(`\n📶 GSM Cells (${options!.gsm_cells!.length} cells):`);
+    for (let i = 0; i < 7; i++) {
+      const gsm = options!.gsm_cells![i];
+      
+      if (gsm) {
+        // CID (2 bytes - LITTLE ENDIAN)
+        payload.writeUInt16LE(gsm.cid, offset);
+        offset += 2;
+        
+        // LAC (2 bytes - LITTLE ENDIAN)
+        payload.writeUInt16LE(gsm.lac, offset);
+        offset += 2;
+        
+        // MCC (2 bytes - LITTLE ENDIAN)
+        payload.writeUInt16LE(gsm.mcc, offset);
+        offset += 2;
+        
+        // MNC (2 bytes - LITTLE ENDIAN)
+        payload.writeUInt16LE(gsm.mnc, offset);
+        offset += 2;
+        
+        // RXL (1 byte) - Signal strength (0-63)
+        payload[offset++] = Math.max(0, Math.min(63, gsm.rxl));
+        
+        // Spare (14 bytes)
+        payload.fill(0, offset, offset + 14);
+        offset += 14;
+        
+        console.log(`  [${offset - 23}..${offset - 1}] GSM ${i}: CID=${gsm.cid} LAC=${gsm.lac} MCC=${gsm.mcc} MNC=${gsm.mnc} RXL=${gsm.rxl}`);
+      } else {
+        // Empty GSM cell
+        payload.fill(0, offset, offset + 23);
+        offset += 23;
+      }
+    }
+  }
 
   console.log(`\n✅ TOTAL PACKET SIZE: ${offset} bytes`);
-  console.log(`📦 Expected: 109 bytes (before optional GSM/WiFi cells)`);
-  console.log(`   Difference: ${offset - 109} bytes\n`);
+  console.log(`📦 Base: 109 bytes`);
+  if (hasWiFi) console.log(`📡 WiFi cells: +90 bytes`);
+  if (hasGSM) console.log(`📶 GSM cells: +161 bytes`);
+  console.log(`   Total: ${offset} bytes\n`);
 
   return encapsulate(payload.subarray(0, offset));
 }
@@ -338,6 +443,7 @@ export class SentinelTcpClient {
 
   /**
    * Invia il pacchetto WELCOME (0x01) per autenticarsi
+   * Supporta WiFi cells, GSM cells, geofence flags, ESZ flag
    */
   async sendWelcome(
     serialNumber: string,
@@ -347,6 +453,9 @@ export class SentinelTcpClient {
       battery?: number;
       temperature?: number;
       collar_detached?: boolean;
+      geofence_status?: "inside" | "outside" | "none";
+      wifi_cells?: WiFiCell[];
+      gsm_cells?: GSMCell[];
     },
   ): Promise<void> {
     logger.debug(`→ Sending WELCOME packet for device ${serialNumber}`);
@@ -428,3 +537,67 @@ export function resetSentinelClient(): void {
     sentinelClientInstance = null;
   }
 }
+
+/**
+ * ESEMPI DI UTILIZZO
+ * 
+ * // Scenario 1: Normal GPS tracking
+ * await client.sendWelcome("PETL123456", {
+ *   latitude: 44.5024,
+ *   longitude: 11.3463,
+ *   battery: 4200,
+ *   temperature: 22,
+ *   collar_detached: false
+ * });
+ * 
+ * // Scenario 2: ESZ Entry (GPS spento, a casa)
+ * await client.sendWelcome("PETL123456", {
+ *   latitude: 0,
+ *   longitude: 0,
+ *   battery: 3500,
+ *   temperature: 20,
+ *   collar_detached: true
+ * });
+ * 
+ * // Scenario 3: Geofence Outside
+ * await client.sendWelcome("PETL123456", {
+ *   latitude: 44.5024,
+ *   longitude: 11.3463,
+ *   geofence_status: "outside"
+ * });
+ * 
+ * // Scenario 4: WiFi Geolocation (GPS spento, WiFi disponibile)
+ * await client.sendWelcome("PETL123456", {
+ *   latitude: 0,
+ *   longitude: 0,
+ *   collar_detached: true,
+ *   wifi_cells: [
+ *     { bssid: "AA:BB:CC:DD:EE:FF", rssi: -50, channel: 6 },
+ *     { bssid: "11:22:33:44:55:66", rssi: -70, channel: 11 },
+ *     { bssid: "99:88:77:66:55:44", rssi: -80, channel: 1 }
+ *   ]
+ * });
+ * 
+ * // Scenario 5: GSM Geolocation (GPS spento, WiFi assente, GSM disponibile)
+ * await client.sendWelcome("PETL123456", {
+ *   latitude: 0,
+ *   longitude: 0,
+ *   gsm_cells: [
+ *     { cid: 12345, lac: 67890, mcc: 222, mnc: 10, rxl: 20 },
+ *     { cid: 12346, lac: 67890, mcc: 222, mnc: 10, rxl: 18 },
+ *     { cid: 12347, lac: 67890, mcc: 222, mnc: 10, rxl: 15 }
+ *   ]
+ * });
+ * 
+ * // Scenario 6: WiFi + GSM Geolocation
+ * await client.sendWelcome("PETL123456", {
+ *   latitude: 0,
+ *   longitude: 0,
+ *   wifi_cells: [
+ *     { bssid: "AA:BB:CC:DD:EE:FF", rssi: -50, channel: 6 }
+ *   ],
+ *   gsm_cells: [
+ *     { cid: 12345, lac: 67890, mcc: 222, mnc: 10, rxl: 20 }
+ *   ]
+ * });
+ */

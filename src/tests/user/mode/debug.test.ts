@@ -71,12 +71,6 @@ describe("Socket TCP sentinel", () => {
     logger.info("✓ Connected to Sentinel");
   });
 
-  // afterAll(async () => {
-  //   logger.info("🔌 Disconnecting from Sentinel...");
-  //   resetSentinelClient();
-  //   logger.info("✓ Disconnected from Sentinel");
-  // });
-
   it("socket - send welcome packet with GPS", async () => {
     logger.info("→ Sending device packet with GPS enabled");
 
@@ -101,6 +95,30 @@ describe("Socket TCP sentinel", () => {
       longitude: 0,
       battery: 3500,
       collar_detached: true,
+    });
+
+    logger.info("✓ Packet sent, waiting for Sentinel to process...");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  });
+
+  it("wifi & gsm geolocation", async () => {
+    logger.info("→ Sending geolocation");
+
+    // WiFi Geolocation
+    await client.sendWelcome("PETL123456", {
+      latitude: 0,
+      longitude: 0,
+      wifi_cells: [
+        { bssid: "AA:BB:CC:DD:EE:FF", rssi: -50, channel: 6 },
+        { bssid: "11:22:33:44:55:66", rssi: -70, channel: 11 },
+      ],
+    });
+
+    // GSM Geolocation
+    await client.sendWelcome("PETL123456", {
+      latitude: 0,
+      longitude: 0,
+      gsm_cells: [{ cid: 12345, lac: 67890, mcc: 222, mnc: 10, rxl: 20 }],
     });
 
     logger.info("✓ Packet sent, waiting for Sentinel to process...");
