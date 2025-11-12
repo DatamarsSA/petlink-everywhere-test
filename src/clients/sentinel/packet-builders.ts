@@ -106,8 +106,10 @@ function stringToBytes(str: string, length: number): Buffer {
  * });
  */
 function buildPacket(config: PacketBuilderConfig): Buffer {
-  // STEP 1: Alloca buffer massimo (sarà trimmato dopo)
-  const MAX_PAYLOAD_SIZE = 500;
+  // STEP 1: Alloca buffer (dimensione calcolata dal payloadBuilder)
+  // Nota: Usiamo una dimensione massima come placeholder
+  // Il payloadBuilder ritorna l'offset effettivo usato
+  const MAX_PAYLOAD_SIZE = 600; // Max per 0x01 + WiFi + GSM
   const payload = Buffer.alloc(MAX_PAYLOAD_SIZE);
   let offset = 0;
 
@@ -156,16 +158,9 @@ export function createPacket01(
   return buildPacket({
     packetType: 0x01,
     payloadBuilder: (buffer, offset) => {
-      // Calcola la dimensione totale
-      let totalSize = 109; // Base obbligatorio
+      // Calcola la dimensione totale del payload
       const hasWiFi = options?.wifi_cells && options.wifi_cells.length > 0;
       const hasGSM = options?.gsm_cells && options.gsm_cells.length > 0;
-
-      if (hasWiFi) totalSize += 90; // 10 WiFi cells × 9 bytes
-      if (hasGSM) totalSize += 161; // 7 GSM cells × 23 bytes
-
-      logger.debug("🔧 Starting Packet 0x01 (Welcome) creation");
-      logger.debug(`Device: ${serialNumber}`);
 
       // Serial number (10 bytes)
       const startSerial = offset;
@@ -249,7 +244,8 @@ export function createPacket01(
       offset += 4;
 
       // Temperature (2 bytes, int16 - in 0.1°C - LITTLE ENDIAN)
-      const temp = (options?.temperature || 20) * 10;
+      // Stored as (value * 10), so 20°C = 200
+      const temp = options?.temperature ? options.temperature * 10 : 200;
       const startTemp = offset;
       buffer.writeInt16LE(temp, offset);
       logger.debug(
@@ -303,6 +299,20 @@ export function createPacket01(
       buffer[offset++] = 0x00;
       logger.debug(`[${startCurrStatus}] curr_status: 0 → ${buffer.slice(startCurrStatus, offset).toString("hex").toUpperCase()}`);
 
+      // Server notifications (1 byte) - flags per geofence
+      // Bit 0x20 = inside_geofence, 0x40 = outside_geofence
+      let notifications = 0x00;
+      if (options?.geofence_status === "inside") {
+        notifications |= 0x20; // Bit 5
+      } else if (options?.geofence_status === "outside") {
+        notifications |= 0x40; // Bit 6
+      }
+      const startNotif = offset;
+      buffer[offset++] = notifications;
+      logger.debug(
+        `[${startNotif}] notifications: ${options?.geofence_status || "none"} → ${buffer.slice(startNotif, offset).toString("hex").toUpperCase()}`,
+      );
+
       // Reset cause (1 byte)
       const startResetCause = offset;
       buffer[offset++] = 0;
@@ -322,6 +332,15 @@ export function createPacket01(
       const startSpareC4 = offset;
       buffer[offset++] = 80;
       logger.debug(`[${startSpareC4}] spare_c4: 80% → ${buffer.slice(startSpareC4, offset).toString("hex").toUpperCase()}`);
+
+      // Server notification ext (spare_c5) (1 byte) - flags per ESZ
+      // Bit 0x01 = collar_detached (ESZ mode)
+      const collar_detached = options?.collar_detached ? 0x01 : 0x00;
+      const startSpareC5 = offset;
+      buffer[offset++] = collar_detached;
+      logger.debug(
+        `[${startSpareC5}] spare_c5 (ESZ): ${options?.collar_detached ? "detached" : "attached"} → ${buffer.slice(startSpareC5, offset).toString("hex").toUpperCase()}`,
+      );
 
       // Modem GMR (spare_c6) (1 byte)
       const startSpareC6 = offset;
@@ -425,29 +444,6 @@ export function createPacket01(
           .toUpperCase()}`,
       );
       offset += 2;
-
-      // Server notifications (1 byte) - flags per geofence
-      // Bit 0x20 = inside_geofence, 0x40 = outside_geofence
-      let notifications = 0x00;
-      if (options?.geofence_status === "inside") {
-        notifications |= 0x20; // Bit 5
-      } else if (options?.geofence_status === "outside") {
-        notifications |= 0x40; // Bit 6
-      }
-      const startNotif = offset;
-      buffer[offset++] = notifications;
-      logger.debug(
-        `[${startNotif}] notifications: ${options?.geofence_status || "none"} → ${buffer.slice(startNotif, offset).toString("hex").toUpperCase()}`,
-      );
-
-      // Server notification ext (spare_c5) (1 byte) - flags per ESZ
-      // Bit 0x01 = collar_detached (ESZ mode)
-      const collar_detached = options?.collar_detached ? 0x01 : 0x00;
-      const startSpareC5 = offset;
-      buffer[offset++] = collar_detached;
-      logger.debug(
-        `[${startSpareC5}] spare_c5 (ESZ): ${options?.collar_detached ? "detached" : "attached"} → ${buffer.slice(startSpareC5, offset).toString("hex").toUpperCase()}`,
-      );
 
       // Detailed information flag (1 byte)
       // Bit 0 = wifiCell, Bit 2 = gsmCell

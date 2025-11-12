@@ -165,7 +165,7 @@ export const sentinelTcpClient = new SentinelTcpClient({
  *
  * STEP 3: Creazione Pacchetto
  *   createWelcomePacket(serialNumber, options)
- *   └─ Costruisce 109+ bytes di payload binario
+ *   └─ Costruisce payload packet0x01
  *
  * STEP 4: Encapsulation SIRF
  *   encapsulate(payload)
@@ -188,7 +188,7 @@ export const sentinelTcpClient = new SentinelTcpClient({
  *   (Header + Payload + CRC + Footer)
  *          ↓
  *   Packet 0x01 (Welcome)
- *   (109 bytes base + [90 WiFi] + [161 GSM])
+ *   (bytes base + [90 WiFi] + [161 GSM])
  *          ↓
  *   Sentinel (Rust)
  *   (Riceve, parsa, processa, invia a SQS)
