@@ -120,8 +120,16 @@ function buildPacket(config: PacketBuilderConfig): Buffer {
   // STEP 4: Estrai solo i byte usati
   const finalPayload = payload.slice(0, payloadEnd);
 
+  logger.debug(`📦 Packet 0x${config.packetType.toString(16).toUpperCase().padStart(2, "0")} - Payload size: ${finalPayload.length} bytes`);
+  logger.debug(`   Hex: ${finalPayload.toString("hex").toUpperCase()}`);
+
   // STEP 5: Incapsula nel SIRF protocol
-  return encapsulateOnSIRFProtocol(finalPayload);
+  const sirf = encapsulateOnSIRFProtocol(finalPayload);
+
+  logger.debug(`🔗 SIRF Encapsulated - Total size: ${sirf.length} bytes`);
+  logger.debug(`   Hex: ${sirf.toString("hex").toUpperCase()}`);
+
+  return sirf;
 }
 
 //------ PACKET 0x01: WELCOME ------
@@ -156,148 +164,266 @@ export function createPacket01(
       if (hasWiFi) totalSize += 90; // 10 WiFi cells × 9 bytes
       if (hasGSM) totalSize += 161; // 7 GSM cells × 23 bytes
 
-      logger.debug("🔧 DEBUG: Starting packet 0x01 creation");
+      logger.debug("🔧 Starting Packet 0x01 (Welcome) creation");
+      logger.debug(`Device: ${serialNumber}`);
 
       // Serial number (10 bytes)
+      const startSerial = offset;
       stringToBytes(serialNumber, 10).copy(buffer, offset);
       offset += 10;
-      logger.debug(`  [${offset - 10}..${offset - 1}] serialNumber`);
+      logger.debug(
+        `[${startSerial}-${offset - 1}] serialNumber: ${serialNumber} → ${buffer.slice(startSerial, offset).toString("hex").toUpperCase()}`,
+      );
 
       // IMEI (15 bytes)
+      const startImei = offset;
       stringToBytes("123456789012345", 15).copy(buffer, offset);
       offset += 15;
-      logger.debug(`  [${offset - 15}..${offset - 1}] imei`);
+      logger.debug(`[${startImei}-${offset - 1}] imei: 123456789012345 → ${buffer.slice(startImei, offset).toString("hex").toUpperCase()}`);
 
       // CCID (20 bytes)
+      const startCcid = offset;
       stringToBytes("12345678901234567890", 20).copy(buffer, offset);
       offset += 20;
-      logger.debug(`  [${offset - 20}..${offset - 1}] iccid`);
+      logger.debug(`[${startCcid}-${offset - 1}] iccid: 12345678901234567890 → ${buffer.slice(startCcid, offset).toString("hex").toUpperCase()}`);
 
       // FW version (3 bytes)
+      const startFw = offset;
       buffer[offset++] = 1;
       buffer[offset++] = 0;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 3}..${offset - 1}] fw_version`);
+      logger.debug(`[${startFw}-${offset - 1}] fw_version: 1.0.0 → ${buffer.slice(startFw, offset).toString("hex").toUpperCase()}`);
 
       // Boot version (3 bytes)
+      const startBl = offset;
       buffer[offset++] = 1;
       buffer[offset++] = 0;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 3}..${offset - 1}] bl_version`);
+      logger.debug(`[${startBl}-${offset - 1}] bl_version: 1.0.0 → ${buffer.slice(startBl, offset).toString("hex").toUpperCase()}`);
 
       // Latitude (4 bytes, f32 - LITTLE ENDIAN)
       const lat = options?.latitude || 0;
+      const startLat = offset;
       buffer.writeFloatLE(lat, offset);
-      logger.debug(`  [${offset}..${offset + 3}] latitude = ${lat}`);
+      logger.debug(
+        `[${startLat}-${offset + 3}] latitude: ${lat} → ${buffer
+          .slice(startLat, offset + 4)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 4;
 
       // Longitude (4 bytes, f32 - LITTLE ENDIAN)
       const lon = options?.longitude || 0;
+      const startLon = offset;
       buffer.writeFloatLE(lon, offset);
-      logger.debug(`  [${offset}..${offset + 3}] longitude = ${lon}`);
+      logger.debug(
+        `[${startLon}-${offset + 3}] longitude: ${lon} → ${buffer
+          .slice(startLon, offset + 4)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 4;
 
       // Altitude (2 bytes, int16 - LITTLE ENDIAN)
+      const startAlt = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startAlt}-${offset + 1}] altitude: 0 → ${buffer
+          .slice(startAlt, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
-      logger.debug(`  [${offset - 2}..${offset - 1}] altitude`);
 
       // Last GPS time (4 bytes, uint32 - LITTLE ENDIAN)
-      buffer.writeUInt32LE(Math.floor(Date.now() / 1000), offset);
+      const startTime = offset;
+      const gpsTime = Math.floor(Date.now() / 1000);
+      buffer.writeUInt32LE(gpsTime, offset);
+      logger.debug(
+        `[${startTime}-${offset + 3}] last_gps_time: ${gpsTime} → ${buffer
+          .slice(startTime, offset + 4)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 4;
-      logger.debug(`  [${offset - 4}..${offset - 1}] last_gps_time`);
 
       // Temperature (2 bytes, int16 - in 0.1°C - LITTLE ENDIAN)
       const temp = (options?.temperature || 20) * 10;
+      const startTemp = offset;
       buffer.writeInt16LE(temp, offset);
-      logger.debug(`  [${offset}..${offset + 1}] temperature = ${temp}`);
+      logger.debug(
+        `[${startTemp}-${offset + 1}] temperature: ${options?.temperature || 20}°C → ${buffer
+          .slice(startTemp, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Speed (2 bytes, int16 - LITTLE ENDIAN)
+      const startSpeed = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startSpeed}-${offset + 1}] speed: 0 → ${buffer
+          .slice(startSpeed, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
-      logger.debug(`  [${offset - 2}..${offset - 1}] speed`);
 
       // Battery voltage (2 bytes, int16 - in mV - LITTLE ENDIAN)
       const battery = options?.battery || 4200;
+      const startBatt = offset;
       buffer.writeInt16LE(battery, offset);
-      logger.debug(`  [${offset}..${offset + 1}] battery = ${battery}`);
+      logger.debug(
+        `[${startBatt}-${offset + 1}] battery: ${battery}mV → ${buffer
+          .slice(startBatt, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Modem quality (CSQ) (1 byte)
+      const startCsq = offset;
       buffer[offset++] = 20;
-      logger.debug(`  [${offset - 1}] csq`);
+      logger.debug(`[${startCsq}] csq: 20 → ${buffer.slice(startCsq, offset).toString("hex").toUpperCase()}`);
 
       // Modem BER (1 byte)
+      const startBer = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] ber`);
+      logger.debug(`[${startBer}] ber: 0 → ${buffer.slice(startBer, offset).toString("hex").toUpperCase()}`);
 
       // New operating status (1 byte)
+      const startNewStatus = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] new_status`);
+      logger.debug(`[${startNewStatus}] new_status: 0 → ${buffer.slice(startNewStatus, offset).toString("hex").toUpperCase()}`);
 
       // Current operating status (1 byte) - 0x00 = DEFAULT
+      const startCurrStatus = offset;
       buffer[offset++] = 0x00;
-      logger.debug(`  [${offset - 1}] curr_status`);
+      logger.debug(`[${startCurrStatus}] curr_status: 0 → ${buffer.slice(startCurrStatus, offset).toString("hex").toUpperCase()}`);
 
       // Reset cause (1 byte)
+      const startResetCause = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] reset_cause`);
+      logger.debug(`[${startResetCause}] reset_cause: 0 → ${buffer.slice(startResetCause, offset).toString("hex").toUpperCase()}`);
 
       // Modem retry (1 byte)
+      const startGprsRetry = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] gprs_retry`);
+      logger.debug(`[${startGprsRetry}] gprs_retry: 0 → ${buffer.slice(startGprsRetry, offset).toString("hex").toUpperCase()}`);
 
       // Modem num sat (1 byte)
+      const startGpsSat = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] gps_sat`);
+      logger.debug(`[${startGpsSat}] gps_sat: 0 → ${buffer.slice(startGpsSat, offset).toString("hex").toUpperCase()}`);
 
       // Battery remaining (spare_c4) (1 byte) - percentuale
+      const startSpareC4 = offset;
       buffer[offset++] = 80;
-      logger.debug(`  [${offset - 1}] spare_c4 = 80`);
+      logger.debug(`[${startSpareC4}] spare_c4: 80% → ${buffer.slice(startSpareC4, offset).toString("hex").toUpperCase()}`);
 
       // Modem GMR (spare_c6) (1 byte)
+      const startSpareC6 = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] spare_c6 = 0`);
+      logger.debug(`[${startSpareC6}] spare_c6: 0 → ${buffer.slice(startSpareC6, offset).toString("hex").toUpperCase()}`);
 
       // Modem retry (spare_c7) (1 byte)
+      const startSpareC7 = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] spare_c7 = 0`);
+      logger.debug(`[${startSpareC7}] spare_c7: 0 → ${buffer.slice(startSpareC7, offset).toString("hex").toUpperCase()}`);
 
       // Modem error (spare_c8) (1 byte)
+      const startSpareC8 = offset;
       buffer[offset++] = 0;
-      logger.debug(`  [${offset - 1}] spare_c8 = 0`);
+      logger.debug(`[${startSpareC8}] spare_c8: 0 → ${buffer.slice(startSpareC8, offset).toString("hex").toUpperCase()}`);
 
       // Modem time from last GPRS (2 bytes - LITTLE ENDIAN)
+      const startLastGprs = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startLastGprs}-${offset + 1}] last_gprs: 0 → ${buffer
+          .slice(startLastGprs, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Modem looking for GPS for (2 bytes - LITTLE ENDIAN)
+      const startLastGps = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startLastGps}-${offset + 1}] last_gps: 0 → ${buffer
+          .slice(startLastGps, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Current radius (spare_s3) (2 bytes - LITTLE ENDIAN)
+      const startSpareS3 = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startSpareS3}-${offset + 1}] spare_s3: 0 → ${buffer
+          .slice(startSpareS3, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Ephemeris CRC (spare_s4) (2 bytes - LITTLE ENDIAN)
+      const startSpareS4 = offset;
       buffer.writeUInt16LE(0, offset);
+      logger.debug(
+        `[${startSpareS4}-${offset + 1}] spare_s4: 0 → ${buffer
+          .slice(startSpareS4, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Life (spare_s5) (2 bytes - LITTLE ENDIAN)
+      const startSpareS5 = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startSpareS5}-${offset + 1}] spare_s5: 0 → ${buffer
+          .slice(startSpareS5, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Life (spare_s6) (2 bytes - LITTLE ENDIAN)
+      const startSpareS6 = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startSpareS6}-${offset + 1}] spare_s6: 0 → ${buffer
+          .slice(startSpareS6, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Active life (spare_s7) (2 bytes - LITTLE ENDIAN)
+      const startSpareS7 = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startSpareS7}-${offset + 1}] spare_s7: 0 → ${buffer
+          .slice(startSpareS7, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Active life (spare_s8) (2 bytes - LITTLE ENDIAN)
+      const startSpareS8 = offset;
       buffer.writeInt16LE(0, offset);
+      logger.debug(
+        `[${startSpareS8}-${offset + 1}] spare_s8: 0 → ${buffer
+          .slice(startSpareS8, offset + 2)
+          .toString("hex")
+          .toUpperCase()}`,
+      );
       offset += 2;
 
       // Server notifications (1 byte) - flags per geofence
@@ -308,22 +434,31 @@ export function createPacket01(
       } else if (options?.geofence_status === "outside") {
         notifications |= 0x40; // Bit 6
       }
+      const startNotif = offset;
       buffer[offset++] = notifications;
-      logger.debug(`  [${offset - 1}] notifications = 0x${notifications.toString(16).padStart(2, "0")}`);
+      logger.debug(
+        `[${startNotif}] notifications: ${options?.geofence_status || "none"} → ${buffer.slice(startNotif, offset).toString("hex").toUpperCase()}`,
+      );
 
       // Server notification ext (spare_c5) (1 byte) - flags per ESZ
       // Bit 0x01 = collar_detached (ESZ mode)
       const collar_detached = options?.collar_detached ? 0x01 : 0x00;
+      const startSpareC5 = offset;
       buffer[offset++] = collar_detached;
-      logger.debug(`  [${offset - 1}] spare_c5 = ${collar_detached}`);
+      logger.debug(
+        `[${startSpareC5}] spare_c5 (ESZ): ${options?.collar_detached ? "detached" : "attached"} → ${buffer.slice(startSpareC5, offset).toString("hex").toUpperCase()}`,
+      );
 
       // Detailed information flag (1 byte)
       // Bit 0 = wifiCell, Bit 2 = gsmCell
       let infoFlag = 0x00;
       if (hasWiFi) infoFlag |= 0x01; // Bit 0
       if (hasGSM) infoFlag |= 0x04; // Bit 2
+      const startInfoFlag = offset;
       buffer[offset++] = infoFlag;
-      logger.debug(`  [${offset - 1}] info_flag = 0x${infoFlag.toString(16).padStart(2, "0")}`);
+      logger.debug(
+        `[${startInfoFlag}] info_flag: ${hasWiFi ? "WiFi" : ""}${hasWiFi && hasGSM ? "+" : ""}${hasGSM ? "GSM" : ""}${!hasWiFi && !hasGSM ? "none" : ""} → ${buffer.slice(startInfoFlag, offset).toString("hex").toUpperCase()}`,
+      );
 
       // ===== OPZIONALE: WiFi Cells (90 bytes totali) =====
       if (hasWiFi) {
@@ -391,13 +526,6 @@ export function createPacket01(
           }
         }
       }
-
-      logger.debug(`\n✅ TOTAL PACKET SIZE: ${offset} bytes`);
-      logger.debug(`📦 Base: 109 bytes`);
-      if (hasWiFi) logger.debug(`📡 WiFi cells: +90 bytes`);
-      if (hasGSM) logger.debug(`📶 GSM cells: +161 bytes`);
-      logger.debug(`   Total: ${offset} bytes\n`);
-
       return offset;
     },
   });
