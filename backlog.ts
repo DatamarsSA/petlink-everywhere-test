@@ -1,9 +1,7 @@
 /** DEVEXPERIENCE
- * - configure logger (print in locale sdisable in pipeline? choose strategy)
  */
 
 /** MISSING TESTS
- * - rest eamil, password and phone number User
  */
 
 /** BUG found
@@ -15,12 +13,11 @@
  *
  */
 
-/** QUESTION for team
+/** QUESTIONS for team
+ *
  */
 
 /** TECH-DEBT to fix
- * - exporte just 1 fixtures (not like now fixtures + fixturesCurrentBrand)
- * - [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
  */
 
 /** TODO:

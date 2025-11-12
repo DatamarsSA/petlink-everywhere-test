@@ -1,6 +1,6 @@
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { describe, it, beforeAll } from "vitest";
 import { logger } from "../../../config/logger.js";
-import { getSentinelClient, resetSentinelClient } from "../../../clients/client-sentinel.js";
+import { sentinelTcpClient } from "../../../clients/sentinel/client-sentinel.js";
 
 // describe.skip("User mode", () => {
 //   it("LIVE TRACKING", async () => {
@@ -62,20 +62,37 @@ import { getSentinelClient, resetSentinelClient } from "../../../clients/client-
 // });
 
 describe("Socket TCP sentinel", () => {
-  let client: ReturnType<typeof getSentinelClient>;
-
   beforeAll(async () => {
     logger.info("🔌 Connecting to Sentinel TCP server...");
-    client = getSentinelClient();
-    await client.connect();
+    await sentinelTcpClient.connect();
     logger.info("✓ Connected to Sentinel");
   });
+
+  // it("socket - send welcome vs send heartbeat", async () => {
+  //   logger.info("→ Sending device packet with GPS enabled");
+  //
+  //   // Scenario 1: Device con GPS acceso (normale)
+  //   // sendWelcome: Packet 0x01 con dati completi
+  //   await sentinelTcpClient.sendWelcome("PETL123456", {
+  //     latitude: 44.5024,
+  //     longitude: 11.3463,
+  //     wifi_cells: [...]
+  //   });
+  //
+  //   // sendHeartbeat: Packet 0x06 semplice (niente opzioni)
+  //   await sentinelTcpClient.sendHeartbeat("PETL123456");
+  //
+  //   // sendRaw: Non usare (è privato!)
+  //
+  //   logger.info("✓ Packet sent, waiting for Sentinel to process...");
+  //   await new Promise((resolve) => setTimeout(resolve, 2000));
+  // });
 
   it("socket - send welcome packet with GPS", async () => {
     logger.info("→ Sending device packet with GPS enabled");
 
     // Scenario 1: Device con GPS acceso (normale)
-    await client.sendWelcome("PETL123456", {
+    await sentinelTcpClient.sendWelcome("PETL123456", {
       latitude: 44.5024,
       longitude: 11.3463,
       battery: 4200,
@@ -90,7 +107,7 @@ describe("Socket TCP sentinel", () => {
     logger.info("→ Sending device packet in ESZ mode (GPS disabled)");
 
     // Scenario 2: Device in ESZ (GPS spento, a casa)
-    await client.sendWelcome("PETL123456", {
+    await sentinelTcpClient.sendWelcome("PETL123456", {
       latitude: 0,
       longitude: 0,
       battery: 3500,
@@ -105,7 +122,7 @@ describe("Socket TCP sentinel", () => {
     logger.info("→ Sending geolocation");
 
     // WiFi Geolocation
-    await client.sendWelcome("PETL123456", {
+    await sentinelTcpClient.sendWelcome("PETL123456", {
       latitude: 0,
       longitude: 0,
       wifi_cells: [
@@ -115,7 +132,7 @@ describe("Socket TCP sentinel", () => {
     });
 
     // GSM Geolocation
-    await client.sendWelcome("PETL123456", {
+    await sentinelTcpClient.sendWelcome("PETL123456", {
       latitude: 0,
       longitude: 0,
       gsm_cells: [{ cid: 12345, lac: 67890, mcc: 222, mnc: 10, rxl: 20 }],
