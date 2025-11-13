@@ -33,6 +33,7 @@ graph TB
     end
 
     subgraph "API Layer"
+        AppSync[AppSync<br/>GraphQL Gateway<br/>+ WebSocket]
         CCTCore[CCT Core<br/>Lambda GraphQL]
         Core[Core API<br/>Lambda GraphQL + REST]
         SubsMgr[Subscriptions Manager<br/>Lambda GraphQL]
@@ -61,9 +62,14 @@ graph TB
 
     %% Client connections
     Stores -->|REST API| Core
-    Mobile -->|GraphQL| Core
-    Web -->|GraphQL| Core
-    CCTFront -->|GraphQL| CCTCore
+    Mobile -->|GraphQL<br/>HTTP/WebSocket| AppSync
+    Web -->|GraphQL<br/>HTTP/WebSocket| AppSync
+    CCTFront -->|GraphQL<br/>HTTP/WebSocket| AppSync
+
+    %% AppSync connections
+    AppSync -->|Lambda Resolvers| CCTCore
+    AppSync -->|Lambda Resolvers| Core
+    AppSync -->|Lambda Resolvers| SubsMgr
 
     %% CCT connections
     CCTCore -->|GraphQL| Core
@@ -100,6 +106,7 @@ graph TB
     style Mobile fill:#e1f5ff
     style Web fill:#e1f5ff
     style CCTFront fill:#ffe1e1
+    style AppSync fill:#fff9c4
     style CCTCore fill:#ffe1e1
     style Core fill:#fff4e1
     style SubsMgr fill:#f3e5f5
@@ -124,7 +131,7 @@ graph TB
   - Subscription purchase and management
   - Push notification handling (Firebase)
   - In-app messaging and alerts
-- **Communication**: GraphQL API to `petlink-everywhere-core`
+- **Communication**: GraphQL API via AppSync to `petlink-everywhere-core`
 
 ### Frontend Applications
 
@@ -138,7 +145,7 @@ graph TB
   - Subscription purchases (including pet protection for Kippy IT)
   - Order activation flows
   - QR tag functionality for lost pets
-- **Communication**: GraphQL API to `petlink-everywhere-core`
+- **Communication**: GraphQL API via AppSync to `petlink-everywhere-core`
 - **Authentication**: AWS Cognito
 
 #### petlink-everywhere-cct (Customer Care Tool)
@@ -151,26 +158,41 @@ graph TB
   - Support ticket creation and tracking
   - Device replacement history
   - Activity and position logs review
-- **Communication**: GraphQL API to `petlink-everywhere-cct-core`
+- **Communication**: GraphQL API via AppSync to `petlink-everywhere-cct-core`
 - **Authentication**: AWS Cognito (separate user pool)
 
 ### Backend Services
+
+#### AWS AppSync
+- **Technology**: AWS Managed Service
+- **Purpose**: GraphQL API Gateway and Real-time Subscriptions
+- **Responsibilities**:
+  - **GraphQL API Gateway**: Exposes GraphQL API to all clients (mobile, web, CCT)
+  - **WebSocket Management**: Manages persistent WebSocket connections for real-time subscriptions
+  - **Lambda Resolver Routing**: Routes GraphQL queries/mutations to appropriate Lambda functions
+  - **Subscription Broadcasting**: Distributes real-time events to subscribed clients
+  - **Authentication Integration**: Integrates with AWS Cognito for user authentication
+- **Key Features**:
+  - HTTP endpoint for queries and mutations
+  - WebSocket endpoint for subscriptions (`graphql-ws` protocol)
+  - Automatic event distribution when Lambda resolvers call `publishOn*` mutations
+  - Connection management, reconnection handling, and scaling
 
 #### petlink-everywhere-core
 - **Technology**: AWS Lambda (TypeScript), AWS AppSync (GraphQL)
 - **Database**: MongoDB
 - **Responsibilities**:
-  - **GraphQL API**: Serves mobile apps, web app, and CCT backend
-  - **REST API**: External integrations (order systems, third-party services)
+  - **GraphQL Resolvers**: Lambda functions that handle GraphQL queries/mutations via AppSync
+  - **REST API**: External integrations (order systems, third-party services) - bypasses AppSync
   - User management and authentication
   - Pet and device registration
   - GPS position and activity data storage
   - Subscription orchestration
   - Notification dispatching (push, SMS, email)
-  - Real-time updates via GraphQL subscriptions
+  - Real-time updates via GraphQL subscriptions (publishes to AppSync)
   - Device command queuing
 - **Key Stacks**:
-  - `api-stack`: Main GraphQL resolvers
+  - `api-stack`: Main GraphQL resolvers (invoked by AppSync)
   - `sentinel-integration-stack`: SQS consumers for device data
   - `subscriptions-integration-stack`: Webhook consumers and subscription logic
   - `sim-operations-stack`: SIM card management for devices
@@ -616,8 +638,8 @@ For information about the test suite architecture and how to run tests, see the 
 ## Deployment Architecture
 
 ### AWS Infrastructure
-- **Lambda Functions**: All backend services (Core, CCT Core, Subscriptions Manager)
-- **AppSync**: GraphQL API management
+- **AppSync**: Managed GraphQL API service that exposes GraphQL endpoints and manages WebSocket connections for real-time subscriptions
+- **Lambda Functions**: All backend services (Core, CCT Core, Subscriptions Manager) - invoked as resolvers by AppSync
 - **EKS**: Kubernetes cluster for Sentinel
 - **MongoDB Atlas**: Database hosting
 - **SQS**: Message queues for async communication
@@ -645,9 +667,10 @@ Most async operations follow this pattern:
 
 ### GraphQL Subscription Updates
 Real-time updates use AppSync subscriptions:
-1. Lambda calls GraphQL mutation `publishOn*` 
-2. AppSync broadcasts to subscribed clients
-3. Clients receive update via WebSocket
+1. Client connects to AppSync via WebSocket and subscribes to `onGpsMessagePosition` (or similar)
+2. Backend Lambda (e.g., `gpsMessagesConsumer`) calls GraphQL mutation `publishOnGpsMessagePosition` on AppSync
+3. AppSync detects active subscriptions and broadcasts the event to all subscribed clients
+4. Clients receive update via WebSocket connection maintained by AppSync
 
 ### Error Handling
 - Lambda retries: 3 attempts with exponential backoff
