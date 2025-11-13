@@ -28,7 +28,7 @@ graph TB
     subgraph "Client Layer"
         Stores[External Stores<br/>US: Shopify / EU: Various]
         Mobile[Mobile Apps<br/>Petlink US / Kippy EU]
-        Web[Web App<br/>Public User Portal]
+        Web[Web App<br/>User Payments]
         CCTFront[CCT Frontend<br/>Support Tool]
     end
 
@@ -483,48 +483,6 @@ The system handles different subscription models based on brand and region:
   - Covers veterinary expenses and pet insurance
   - Managed as separate subscription in Chargebee
 
-### Subscription States
-
-```mermaid
-stateDiagram-v2
-    [*] --> PreRegistration: Device purchased<br/>not activated
-    PreRegistration --> Active: User registers device<br/>and purchases subscription
-    PreRegistration --> Cancelled: Refund before activation
-    
-    Active --> Active: Renewal successful
-    Active --> NonRenewing: User cancels<br/>(auto_renew = false)
-    Active --> Cancelled: Payment failed<br/>or immediate cancellation
-    
-    NonRenewing --> Expired: End of term reached
-    Active --> Expired: Subscription ends
-    
-    Expired --> Active: User reactivates
-    Cancelled --> [*]
-    Expired --> [*]
-```
-
-### Key Subscription Flows
-
-#### Pre-registration Flow
-- User purchases device from external store (e.g., Magento, Amazon)
-- Store calls Core REST API with device serial and subscription plan
-- Core creates "pre-registered" subscription in Chargebee
-- User later activates device via mobile app
-- Subscription becomes active upon device activation
-
-#### Renewal Flow
-- Chargebee automatically attempts renewal based on billing cycle
-- `subscription_renewed` webhook is sent to Subscriptions Manager
-- Subscriptions Manager updates Core via SQS
-- Core updates subscription end date in MongoDB
-- Sentinel is notified to keep device active
-
-#### Cancellation Flow
-- User cancels via mobile app or support cancels via CCT
-- Subscription `auto_renew` flag set to false in Chargebee
-- Device remains active until current term ends
-- At term end, `subscription_cancelled` webhook triggers
-- Sentinel is notified to deactivate device
 
 ---
 
@@ -694,19 +652,3 @@ Real-time updates use AppSync subscriptions:
 - **CCT**: Customer Care Tool for support staff
 
 ---
-
-## Additional Resources
-
-- **API Documentation**: See `petlink-everywhere-core/API-docs.md`
-- **Kippy Protocol**: See `petlink-everywhere-sentinel/kippy-protocol.md`
-- **Environment Configuration**: Check `.env.example` files in each repository
-- **GraphQL Schemas**: Auto-generated in each service's `schema/` directory
-
----
-
-## Maintainers
-
-This documentation is maintained as part of the `petlink-everywhere-test` repository. Please keep it up to date as the architecture evolves.
-
-For questions or clarifications, refer to the development team or update this document accordingly.
-
