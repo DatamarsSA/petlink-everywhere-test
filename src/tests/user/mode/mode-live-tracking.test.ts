@@ -79,50 +79,51 @@ describe("User Mode - Live Tracking", () => {
     petlink.core.graphqlWS.disconnect();
   });
 
-  it("Activate live tracking and should receive frequent position updates", async () => {
-    // logger.info("Mocked Setup", setup);
-    console.log(JSON.stringify(setup, null, 2));
+  it("Activate live tracking and should receive position updates", async () => {
+    const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
+    logger.info("📍 STEP 1: Register device with Sentinel (send initial Packet 0x01)");
+    // CRITICAL: sends a Packet 0x01 to register the device (device must be registered in Sentinel's connection map BEFORE sending commands)
+    await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 22,
+    });
+    logger.info("✓ Device registered on Sentinel cache map");
+    // Wait for Sentinel to process the registration
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    /**
-     * Attivare Live Tracking via GraphQL mutation sendCommand
-     * Sottoscriversi a onGpsMessagePosition(deviceId) via WebSocket
-     * Emulare device che invia 3 posizioni via TCP (usando sentinelTcpClient.sendWelcome)
-     * Verificare che le 3 posizioni arrivino via WebSocket
-     * Disattivare Live Tracking via GraphQL mutation
-     * Verificare che il device torna a modalità normale
-     */
-    logger.info("📍 STEP 1: Setup - Device in normal mode");
-    // Open WebSocket subscription BEFORE purchase (event-driven)
-    const activationPromise = new Promise<void>(async (resolve, reject) => {
-      const wsSub = await petlink.core.graphqlWS.authJwt.subscribe(
+    logger.info("📍 STEP 2: Subscribe to position updates via WebSocket");
+    const positionsReceived: any[] = [];
+    const subscriptionPromise = new Promise<void>((resolve, reject) => {
+      petlink.core.graphqlWS.authJwt.subscribe(
         subscriptions.onGpsMessagePosition,
-        { id: setup.user!.id },
+        { id: setup.devices.dogStandard!.id },
         {
           next: (event: any) => {
-            logger.info("WebSocket event received", { event });
-            // subStatusUpdated = event.data;
-
-            // Resolve only when subscription is ACTIVE
-            const status = event.data?.onSubscriptionStatus?.status;
-            if (status?.subscriptionIsActive === true) {
-              wsSub.unsubscribe();
+            logger.info("📡 WebSocket event received", { event });
+            const position = event.data?.onGpsMessagePosition;
+            if (position) {
+              positionsReceived.push(position);
+              logger.info(`✓ Position received: `, {
+                lat: position.position?.lat,
+                lng: position.position?.lng,
+              });
               resolve();
             }
           },
           error: (error: any) => {
-            logger.error("WebSocket error", { error: error.message });
+            logger.error("❌ WebSocket subscription error", { error: error.message });
             reject(error);
           },
         },
         { timeoutMs: fxt.socket.timeoutMs },
       );
     });
-
     // Wait for WebSocket to establish connection
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    logger.info("📍 STEP 2: Activate Live Tracking");
-    // TODO: App chiama sendCommand(LIVE_TRACKING, duration: 900)
+    logger.info("📍 STEP 3: Activate Live Tracking via GraphQL");
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: CommandEnum.LiveTracking,
@@ -131,46 +132,43 @@ describe("User Mode - Live Tracking", () => {
         modeType: ModeType.Sentinel,
       },
     });
-    expect(activateResponse.sendCommand.code).toBe("200");
+    expect(
+      activateResponse.sendCommand.code,
+      `sendCommand should succeed - Error: ${activateResponse.sendCommand.message}${activateResponse.sendCommand.translationCode ? ` (${activateResponse.sendCommand.translationCode})` : ""}`,
+    ).toBe("200");
+    logger.info("✓ Live Tracking activated");
+    // Wait for command to reach Sentinel
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    logger.info("📍 STEP 3: Simulate device sending positions every ~5 seconds");
-    // Posizione 1
-    await sentinelTcpClient.sendWelcome("PETL123456", {
+    logger.info("📍 STEP 4: Simulate device sending 1 Packet 0x01");
+    // Position 1
+    await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
       latitude: 44.5024,
       longitude: 11.3463,
       battery: 4200,
+      temperature: 22,
     });
-    logger.info("✓ Position 1 sent");
+    logger.info("✓ Packet 0x01 #1 sent");
 
-    // Aspetta 5 secondi
-    // await new Promise((resolve) => setTimeout(resolve, 5000));
+    logger.info("📍 STEP 5: Wait for positions to arrive via WebSocket");
+    await subscriptionPromise;
 
-    // Posizione 2
-    await sentinelTcpClient.sendWelcome("PETL123456", {
-      latitude: 44.5025,
-      longitude: 11.3464,
-      battery: 4190,
+    expect(positionsReceived.length).toBe(1);
+    logger.info("✓ Received position via WebSocket");
+
+    logger.info("📍 STEP 6: Deactivate Live Tracking");
+    const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
+      command: {
+        commandType: CommandEnum.LiveTracking,
+        id: setup.devices.dogStandard!.id,
+        duration: 0,
+        modeType: ModeType.Sentinel,
+      },
     });
-    logger.info("✓ Position 2 sent");
-
-    // Aspetta 5 secondi
-    // await new Promise((resolve) => setTimeout(resolve, 5000));
-
-    // Posizione 3
-    await sentinelTcpClient.sendWelcome("PETL123456", {
-      latitude: 44.5026,
-      longitude: 11.3465,
-      battery: 4180,
-    });
-    logger.info("✓ Position 3 sent");
-
-    logger.info("📍 STEP 4: Subscribe to position updates");
-    // TODO: App si sottoscrive a onGpsMessagePosition(deviceId) - Verifica che riceve 3 posizioni diverse
-
-    logger.info("📍 STEP 5: Deactivate Live Tracking");
-    // TODO: App chiama sendCommand(LIVE_TRACKING, duration: 0)
-
-    logger.info("📍 STEP 6: Verify normal mode resumed");
-    // TODO: Verifica che le posizioni arrivano ogni ~4 minuti
+    expect(
+      deactivateResponse.sendCommand.code,
+      `sendCommand should succeed - Error: ${deactivateResponse.sendCommand.message}${deactivateResponse.sendCommand.translationCode ? ` (${deactivateResponse.sendCommand.translationCode})` : ""}`,
+    ).toBe("200");
+    logger.info("✓ Live Tracking deactivated");
   });
 });
