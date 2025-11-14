@@ -51,6 +51,9 @@ jobs:
       GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
       # App Brand
       APP_BRAND: ${{ matrix.app_brand }}
+      # Sentinel socket tcp
+      SENTINEL_HOST: ${{ secrets.SENTINEL_HOST }}
+      SENTINEL_PORT: ${{ secrets.SENTINEL_PORT }}
 
     strategy:
       fail-fast: false
@@ -132,6 +135,8 @@ jobs:
             -e GMAIL_CLIENT_SECRET \
             -e GMAIL_REFRESH_TOKEN \
             -e APP_BRAND \
+            -e SENTINEL_HOST \
+            -e SENTINEL_PORT \
             -e NODE_ENV \
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
             petlink-everywhere-test yarn pipeline:$NODE_ENV
