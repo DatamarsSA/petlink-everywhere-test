@@ -1,6 +1,6 @@
 import { createConnection, Socket } from "net";
 import { logger } from "../../config/logger.js";
-import { createPacket01, createPacket06, type WiFiCell, type GSMCell } from "./packet-builders.js";
+import { PacketToSentinel, PacketFromSentinel, type WiFiCell, type GSMCell } from "./packet-builders.js";
 
 //------ INTERFACES ------
 interface SentinelConfig {
@@ -98,7 +98,7 @@ export class SentinelTcpClient {
     },
   ): Promise<void> {
     logger.debug(`→ Sending WELCOME packet for device ${serialNumber}`);
-    const packet = createPacket01(serialNumber, options);
+    const packet = PacketToSentinel.packet01(serialNumber, options);
     this.sendRaw(packet);
 
     // Attendi un po' per la risposta
@@ -110,7 +110,7 @@ export class SentinelTcpClient {
    */
   async sendHeartbeat(serialNumber: string): Promise<void> {
     logger.debug(`→ Sending HEARTBEAT packet for device ${serialNumber}`);
-    const packet = createPacket06(serialNumber);
+    const packet = PacketToSentinel.packet06(serialNumber);
     this.sendRaw(packet);
 
     await new Promise((resolve) => setTimeout(resolve, 500));

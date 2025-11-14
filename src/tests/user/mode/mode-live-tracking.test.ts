@@ -2,6 +2,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
 import { sentinelTcpClient } from "../../../clients/sentinel/client-sentinel.js";
+import { PacketFromSentinel } from "../../../clients/sentinel/packet-builders.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, ModeType, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -140,6 +141,16 @@ describe("User Mode - Live Tracking", () => {
     // Wait for command to reach Sentinel
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
+    logger.info("📍 STEP 3.5: Verify device received Packet 0x0A (LIVE_TRACKING command)");
+    const rawData = sentinelTcpClient.getReceivedData();
+    expect(rawData.length, "Device should have received data from Sentinel").toBeGreaterThan(0);
+
+    const activateCommand = PacketFromSentinel.packet0x0A(rawData);
+    expect(activateCommand).toBeDefined();
+    expect(activateCommand?.commandName).toBe("LIVE_TRACKING");
+    expect(activateCommand?.duration).toBe(900);
+    logger.info(`✓ Device received LIVE_TRACKING command with duration: ${activateCommand?.duration}s`);
+
     logger.info("📍 STEP 4: Simulate device sending 1 Packet 0x01");
     // Position 1
     await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
@@ -157,6 +168,7 @@ describe("User Mode - Live Tracking", () => {
     logger.info("✓ Received position via WebSocket");
 
     logger.info("📍 STEP 6: Deactivate Live Tracking");
+    sentinelTcpClient.clearBuffer();
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: CommandEnum.LiveTracking,
@@ -170,5 +182,18 @@ describe("User Mode - Live Tracking", () => {
       `sendCommand should succeed - Error: ${deactivateResponse.sendCommand.message}${deactivateResponse.sendCommand.translationCode ? ` (${deactivateResponse.sendCommand.translationCode})` : ""}`,
     ).toBe("200");
     logger.info("✓ Live Tracking deactivated");
+
+    // Wait for command to reach Sentinel
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    logger.info("📍 STEP 6.5: Verify device received Packet 0x0A (LIVE_TRACKING deactivation command)");
+    const rawDeactivateData = sentinelTcpClient.getReceivedData();
+    expect(rawDeactivateData.length, "Device should have received deactivation data from Sentinel").toBeGreaterThan(0);
+
+    const deactivateCommand = PacketFromSentinel.packet0x0A(rawDeactivateData);
+    expect(deactivateCommand).toBeDefined();
+    expect(deactivateCommand?.commandName).toBe("LIVE_TRACKING");
+    expect(deactivateCommand?.duration).toBe(0);
+    logger.info(`✓ Device received LIVE_TRACKING deactivation command with duration: ${deactivateCommand?.duration}s`);
   });
 });
