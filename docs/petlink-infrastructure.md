@@ -25,100 +25,93 @@ This document provides a complete overview of the system architecture, data flow
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        Stores[External Stores<br/>US: Shopify / EU: Various]
-        Mobile[Mobile Apps<br/>Petlink US / Kippy EU]
-        Web[Web App<br/>User Payments]
-        CCTFront[CCT Frontend<br/>Support Tool]
-    end
+  subgraph "Client Layer"
+    Stores[External Stores<br/>US: Shopify / EU: Various]
+    Mobile[Mobile Apps<br/>Petlink US / Kippy EU]
+    Web[Web App<br/>User Payments]
+    CCTFront[CCT Frontend<br/>Support Tool]
+  end
 
-    subgraph "API Layer"
-        AppSync[AppSync<br/>GraphQL Gateway<br/>+ WebSocket]
-        CCTCore[CCT Core<br/>Lambda GraphQL]
-        Core[Core API<br/>Lambda GraphQL + REST]
-        SubsMgr[Subscriptions Manager<br/>Lambda GraphQL]
-    end
+  subgraph "API Layer"
+    AppSync[AppSync<br/>GraphQL Gateway<br/>+ WebSocket]
+    CCTCore[CCT Core<br/>Lambda GraphQL]
+    Core[Core API<br/>Lambda GraphQL + REST]
+    SubsMgr[Subscriptions Manager<br/>Lambda GraphQL]
+  end
 
-    subgraph "Device Infrastructure"
-        Devices[GPS Devices<br/>Worldwide]
-        Sentinel[Sentinel<br/>Kubernetes EKS]
-        SentinelRust[Rust TCP Server]
-        SentinelLambda[Lambda Consumers<br/>TypeScript]
-    end
+  subgraph "Device Infrastructure"
+    Devices[GPS Devices<br/>Worldwide]
+    Sentinel[Sentinel<br/>Kubernetes EKS]
+    SentinelRust[Rust TCP Server]
+    SentinelLambda[Lambda Consumers<br/>TypeScript]
+  end
 
-    subgraph "Data Storage"
-        MongoDB[(MongoDB<br/>Petlink DB)]
-        CCTMongo[(MongoDB<br/>CCT DB)]
-    end
+  subgraph "Data Storage"
+    MongoDB[(MongoDB<br/>Petlink DB)]
+    CCTMongo[(MongoDB<br/>CCT DB)]
+    SQS[/SQS Queues/]
+  end
 
-    subgraph "Message Queues"
-        SQSSentinelToCore[/SQS: Sentinel → Core<br/>gpsMessages, notifications,<br/>activities/]
-        SQSCoreToSentinel[/SQS: Core → Sentinel<br/>commands, newGpsDevices,<br/>settings/]
-        SQSSubsMgr[/SQS: Subscriptions Manager<br/>subscriptions, expiredSubscriptions/]
-    end
+  subgraph "External Services"
+    Cognito[Cognito<br/>Auth]
+    Chargebee[Chargebee<br/>Payments]
+    Twilio[Twilio<br/>SMS]
+    SendGrid[SendGrid<br/>Email]
+    Firebase[Firebase<br/>Push]
+  end
 
-    subgraph "External Services"
-        Cognito[Cognito<br/>Auth]
-        Chargebee[Chargebee<br/>Payments]
-        Twilio[Twilio<br/>SMS]
-        SendGrid[SendGrid<br/>Email]
-        Firebase[Firebase<br/>Push]
-    end
+%% Client connections
+  Stores -->|REST API| Core
+  Mobile -->|GraphQL<br/>HTTP/WebSocket| AppSync
+  Web -->|GraphQL<br/>HTTP/WebSocket| AppSync
+  CCTFront -->|GraphQL<br/>HTTP/WebSocket| AppSync
 
-    %% Client connections
-    Stores -->|REST API| Core
-    Mobile -->|GraphQL<br/>HTTP/WebSocket| AppSync
-    Web -->|GraphQL<br/>HTTP/WebSocket| AppSync
-    CCTFront -->|GraphQL<br/>HTTP/WebSocket| AppSync
+%% AppSync connections
+  AppSync -->|Lambda Resolvers| CCTCore
+  AppSync -->|Lambda Resolvers| Core
+  AppSync -->|Lambda Resolvers| SubsMgr
 
-    %% AppSync connections
-    AppSync -->|Lambda Resolvers| CCTCore
-    AppSync -->|Lambda Resolvers| Core
-    AppSync -->|Lambda Resolvers| SubsMgr
+%% CCT connections
+  CCTCore -->|GraphQL| Core
+  CCTCore -->|GraphQL| SubsMgr
+  CCTCore <-->|R/W| CCTMongo
 
-    %% CCT connections
-    CCTCore -->|GraphQL| Core
-    CCTCore -->|GraphQL| SubsMgr
-    CCTCore <-->|R/W| CCTMongo
+%% Core connections
+  Core <-->|R/W| MongoDB
+  Core <-->|GraphQL| SubsMgr
+  Core <-->|SQS| SQS
 
-    %% Core connections
-    Core <-->|R/W| MongoDB
-    Core <-->|GraphQL| SubsMgr
-    Core -->|Commands<br/>Device Config<br/>Settings| SQSCoreToSentinel
-    Core <-->|Positions<br/>Activities<br/>Notifications| SQSSentinelToCore
+%% Subscriptions
+  SubsMgr <-->|API| Chargebee
+  Chargebee -.->|Webhooks| SubsMgr
+  SubsMgr -->|Events| SQS
 
-    %% Subscriptions
-    SubsMgr <-->|API| Chargebee
-    Chargebee -.->|Webhooks| SubsMgr
-    SubsMgr -->|Subscription Events| SQSSubsMgr
-    SQSSubsMgr -->|Webhook Events| Core
+%% Device infrastructure
+  Devices <-->|TCP Binary| SentinelRust
+  SentinelRust --> Sentinel
+  SentinelLambda --> Sentinel
+  Sentinel <-->|SQS| SQS
+  SQS <-->|Commands<br/>Positions<br/>Activities| Core
+  Sentinel <-->|R/W| MongoDB
 
-    %% Device infrastructure
-    Devices <-->|TCP Binary| SentinelRust
-    SentinelRust --> Sentinel
-    SentinelLambda --> Sentinel
-    Sentinel -->|Position Updates<br/>Activity Data<br/>Notifications| SQSSentinelToCore
-    SQSCoreToSentinel -->|Commands<br/>Settings| Sentinel
-    Sentinel <-->|R/W| MongoDB
+%% External services
+  Mobile -.->|Auth| Cognito
+  Web -.->|Auth| Cognito
+  CCTFront -.->|Auth| Cognito
+  Core -.->|Notify| Twilio
+  Core -.->|Notify| SendGrid
+  Core -.->|Notify| Firebase
 
-    %% External services
-    Mobile -.->|Auth| Cognito
-    Web -.->|Auth| Cognito
-    CCTFront -.->|Auth| Cognito
-    Core -.->|Notify| Twilio
-    Core -.->|Notify| SendGrid
-    Core -.->|Notify| Firebase
-
-    style Stores fill:#f0f0f0
-    style Mobile fill:#e1f5ff
-    style Web fill:#e1f5ff
-    style CCTFront fill:#ffe1e1
-    style AppSync fill:#fff9c4
-    style CCTCore fill:#ffe1e1
-    style Core fill:#fff4e1
-    style SubsMgr fill:#f3e5f5
-    style Sentinel fill:#e8f5e9
-    style Devices fill:#e0e0e0
+  style Stores fill:#f0f0f0
+  style Mobile fill:#e1f5ff
+  style Web fill:#e1f5ff
+  style CCTFront fill:#ffe1e1
+  style AppSync fill:#fff9c4
+  style CCTCore fill:#ffe1e1
+  style Core fill:#fff4e1
+  style SubsMgr fill:#f3e5f5
+  style Sentinel fill:#e8f5e9
+  style Devices fill:#e0e0e0
 ```
 
 ---
@@ -305,10 +298,125 @@ The system uses **3 separate SQS message queue flows** for async communication:
 - **Coverage**: API testing, subscription flows, device operations
 
 ---
+## Queues
+
+## **🔴 CORE → SENTINEL (4 Code - Comandi Outbound)**
+
+| **#** | **Coda** | **Direzione** | **Produttore** | **Consumatore** | **Cosa Contiene** |
+| --- | --- | --- | --- | --- | --- |
+| **1** | **`commandsQueue`** | **Core → Sentinel** | Core Lambda | Sentinel Lambda | Comandi device (FLASHLIGHT, SOUND, LIVE_TRACKING, ecc) |
+| **2** | **`settingsQueue`** | **Core → Sentinel** | Core Lambda | Sentinel Lambda | Impostazioni device (ENERGY_SAVING_ZONE, GEOFENCE, ecc) |
+| **3** | **`newGpsDevicesQueue`** | **Core → Sentinel** | Core Lambda | Sentinel Lambda | Registrazione nuovi device, device reset |
+| **4** | **`expiredSubscriptionsQueue`** | **Core → Sentinel** | Core Lambda | Sentinel Lambda | Notifica subscription scaduta, disattivazione device |
+
+---
+
+## **🟢 SENTINEL → CORE (3 Code - Dati Inbound)**
+
+| **#** | **Coda** | **Direzione** | **Produttore** | **Consumatore** | **Cosa Contiene** |
+| --- | --- | --- | --- | --- | --- |
+| **5** | **`gpsMessagesQueue`** | **Sentinel → Core** | Sentinel Rust | Core Lambda | Posizioni GPS, dati batteria, temperatura, status device |
+| **6** | **`notificationsQueue`** | **Sentinel → Core** | Sentinel Rust | Core Lambda | Notifiche geofence (in/out), notifiche batteria, notifiche ESZ |
+| **7** | **`activitiesQueue`** | **Sentinel → Core** | Sentinel Rust | Core Lambda | Attività device (movimento, fermo, ecc), cambio stato |
+
+---
+
+## **🟣 SUBSCRIPTIONS MANAGER → CORE (1 Coda - Webhook Events)**
+
+| **#** | **Coda** | **Direzione** | **Produttore** | **Consumatore** | **Cosa Contiene** |
+| --- | --- | --- | --- | --- | --- |
+| **8** | **`subscriptionsWebhookQueue`** | **Subscriptions Manager → Core** | Subscriptions Manager Lambda | Core Lambda | Webhook events da Chargebee (payment_succeeded, subscription_activated, ecc) |
+
+---
+
+## **🟠 CORE → SENTINEL (1 Coda - Subscription Status)**
+
+| **#** | **Coda** | **Direzione** | **Produttore** | **Consumatore** | **Cosa Contiene** |
+| --- | --- | --- | --- | --- | --- |
+| **9** | **`replacementGpsQueue`** | **Core → Sentinel** | Core Lambda | Sentinel Lambda | Notifica replacement device (cambio numero di serie) |
+
+---
+
+## **🔵 CORE → NOTIFICATIONS (1 Coda - Notifiche Esterne)**
+| **#** | **Coda** | **Direzione** | **Produttore** | **Consumatore** | **Cosa Contiene** |
+| --- | --- | --- | --- | --- | --- |
+| **10** | **`notificationQueueUrl`** | **Core → Notifications** | Core Lambda | Notifications Lambda | Notifiche esterne (SMS, Email, Push) |
+
+---
 
 ## Data Flows
 
-### 1. Device to User Flow (Position Updates)
+### Device Registration Flow
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Mobile as Mobile App
+    participant Core as Core API
+    participant MongoDB as MongoDB
+    participant SQS as SQS Queue<br/>newGpsDevices
+    participant Sentinel as Sentinel
+
+    User->>Mobile: Scan QR code / Enter serial
+    Mobile->>Core: registerDevice mutation
+    Core->>MongoDB: Check device exists
+    MongoDB->>Core: Device found
+    Core->>MongoDB: Assign device to user/pet
+    Core->>SQS: Send new device message
+    Core->>Mobile: Device registered
+    SQS->>Sentinel: New device notification
+    Sentinel->>Sentinel: Update device mapping
+    Sentinel->>Sentinel: Send WAKEUP command
+    
+    Note over User,Sentinel: Device is now active<br/>and tracking
+```
+
+**Flow Description**:
+1. User scans device QR code or enters serial number
+2. Mobile app calls `registerDevice` GraphQL mutation
+3. Core validates device exists in inventory
+4. Core assigns device to user's pet in MongoDB
+5. Core sends notification to Sentinel via SQS
+6. Sentinel updates device-to-user mapping
+7. Sentinel sends WAKEUP command to activate device
+8. Device begins transmitting position data
+
+### User to Device Flow (Send Command)
+
+```mermaid
+sequenceDiagram
+    participant Mobile as Mobile App
+    participant Core as Core API
+    participant MongoDB as MongoDB
+    participant SQS as SQS Queue<br/>commands
+    participant Consumer as commands<br/>Consumer
+    participant Sentinel as Sentinel<br/>(Rust TCP)
+    participant Device as GPS Device
+
+    Mobile->>Core: GraphQL mutation<br/>sendCommand
+    Core->>MongoDB: Store command
+    Core->>SQS: Queue command message
+    Core->>Mobile: Command queued response
+    SQS->>Consumer: Trigger Lambda
+    Consumer->>Sentinel: HTTP POST /send_packet
+    Sentinel->>Device: TCP binary command
+    Device->>Sentinel: ACK packet
+    Sentinel->>SQS: Command status update
+    Note over Core,Mobile: Status update via<br/>GraphQL subscription
+```
+
+**Flow Description**:
+1. User initiates command from mobile app (e.g., "Find my pet", "LED on")
+2. Core API validates and stores command in MongoDB
+3. Core sends command message to Sentinel `commands` SQS queue
+4. `commandsConsumer` Lambda receives message
+5. Lambda calls Sentinel HTTP endpoint with command details
+6. Sentinel Rust server sends binary command to device via TCP
+7. Device acknowledges command
+8. Status updates flow back via SQS and GraphQL subscriptions
+
+
+### Device to User Flow (Position Updates)
 
 ```mermaid
 sequenceDiagram
@@ -343,41 +451,8 @@ sequenceDiagram
 7. AppSync broadcasts update to subscribed clients (mobile/web apps)
 8. If position triggers geo-fence alert, notification is queued
 
-### 2. User to Device Flow (Send Command)
 
-```mermaid
-sequenceDiagram
-    participant Mobile as Mobile App
-    participant Core as Core API
-    participant MongoDB as MongoDB
-    participant SQS as SQS Queue<br/>commands
-    participant Consumer as commands<br/>Consumer
-    participant Sentinel as Sentinel<br/>(Rust TCP)
-    participant Device as GPS Device
-
-    Mobile->>Core: GraphQL mutation<br/>sendCommand
-    Core->>MongoDB: Store command
-    Core->>SQS: Queue command message
-    Core->>Mobile: Command queued response
-    SQS->>Consumer: Trigger Lambda
-    Consumer->>Sentinel: HTTP POST /send_packet
-    Sentinel->>Device: TCP binary command
-    Device->>Sentinel: ACK packet
-    Sentinel->>SQS: Command status update
-    Note over Core,Mobile: Status update via<br/>GraphQL subscription
-```
-
-**Flow Description**:
-1. User initiates command from mobile app (e.g., "Find my pet", "LED on")
-2. Core API validates and stores command in MongoDB
-3. Core sends command message to Sentinel `commands` SQS queue
-4. `commandsConsumer` Lambda receives message
-5. Lambda calls Sentinel HTTP endpoint with command details
-6. Sentinel Rust server sends binary command to device via TCP
-7. Device acknowledges command
-8. Status updates flow back via SQS and GraphQL subscriptions
-
-### 3. Subscription Purchase Flow
+### Subscription Purchase Flow
 
 ```mermaid
 sequenceDiagram
@@ -425,42 +500,7 @@ sequenceDiagram
 10. Sentinel updates device's `subscription_active` flag
 11. User receives confirmation notification
 
-### 4. Device Registration Flow
-
-```mermaid
-sequenceDiagram
-    participant User as User
-    participant Mobile as Mobile App
-    participant Core as Core API
-    participant MongoDB as MongoDB
-    participant SQS as SQS Queue<br/>newGpsDevices
-    participant Sentinel as Sentinel
-
-    User->>Mobile: Scan QR code / Enter serial
-    Mobile->>Core: registerDevice mutation
-    Core->>MongoDB: Check device exists
-    MongoDB->>Core: Device found
-    Core->>MongoDB: Assign device to user/pet
-    Core->>SQS: Send new device message
-    Core->>Mobile: Device registered
-    SQS->>Sentinel: New device notification
-    Sentinel->>Sentinel: Update device mapping
-    Sentinel->>Sentinel: Send WAKEUP command
-    
-    Note over User,Sentinel: Device is now active<br/>and tracking
-```
-
-**Flow Description**:
-1. User scans device QR code or enters serial number
-2. Mobile app calls `registerDevice` GraphQL mutation
-3. Core validates device exists in inventory
-4. Core assigns device to user's pet in MongoDB
-5. Core sends notification to Sentinel via SQS
-6. Sentinel updates device-to-user mapping
-7. Sentinel sends WAKEUP command to activate device
-8. Device begins transmitting position data
-
-### 5. Customer Support Flow (CCT)
+### Customer Support Flow (CCT)
 
 ```mermaid
 sequenceDiagram
@@ -582,55 +622,6 @@ The system handles different subscription models based on brand and region:
 
 ---
 
-## Repository Guide
-
-### When to Look at Each Repository
-
-| Repository | When to Look Here | Key Files |
-|------------|------------------|-----------|
-| **petlink-everywhere-core** | Backend API logic, GraphQL resolvers, subscription integration, notification handling | `src/lambda_functions/`, `cdk/stacks/` |
-| **petlink-everywhere-sentinel** | Device communication, GPS packet parsing, device command handling, position processing | `src/sentinel/main.rs`, `src/aws/lambda_functions/` |
-| **subscriptions-manager** | Chargebee integration, payment processing, webhook handling, subscription lifecycle | `src/lambdaFunctions/`, `src/lib/chargebee/` |
-| **petlink-everywhere-cct-core** | CCT-specific operations, support ticket management, customer lookup | `src/lambda_functions/graphql/` |
-| **petlink-everywhere-mobile** | Mobile app features, UI/UX, client-side validation, GraphQL queries/mutations | `lib/features/`, `lib/core/` |
-| **petlink-everywhere-web** | Public web flows, subscription purchase UI, device activation | `src/components/pages/` |
-| **petlink-everywhere-cct** | Support tool features, customer management UI, device troubleshooting | `src/components/` |
-| **petlink-everywhere-types** | Shared type definitions, constants, enums | `src/` |
-| **petlink-everywhere-bluetooth** | Bluetooth device pairing, initial device setup | `lib/` |
-| **petlink-everywhere-test** | E2E tests, integration tests, test utilities | `src/` |
-
-### Common Cross-Repository Scenarios
-
-#### Debugging a Failed Position Update
-1. Check device connection in **sentinel** (Rust logs)
-2. Verify SQS message in **sentinel** (`gpsMessagesConsumer`)
-3. Check MongoDB update in **core** (GraphQL mutation)
-4. Verify subscription in **core** GraphQL resolver
-
-#### Adding a New Subscription Feature
-1. Update Chargebee plan in **subscriptions-manager**
-2. Add GraphQL types in **core** and **subscriptions-manager**
-3. Update UI in **mobile** and **web**
-4. Add test cases in **test**
-
-#### Investigating Subscription Issues
-1. Check Chargebee webhook logs in **subscriptions-manager**
-2. Verify SQS consumer processing in **core** (`subscriptionsWebhookConsumer`)
-3. Check MongoDB subscription status in **core**
-4. Verify device subscription flag in **sentinel**
-
----
-
-## Testing
-
-For information about the test suite architecture and how to run tests, see the test suite documentation in this repository.
-
-### Test Environment
-- Uses Vitest for test execution
-- GraphQL code generation from schemas
-- Environment-based configuration (dev, staging, production)
-- Mock external services where appropriate
-
 ---
 
 ## Deployment Architecture
@@ -653,42 +644,3 @@ For information about the test suite architecture and how to run tests, see the 
 
 ---
 
-## Common Patterns
-
-### SQS Message Flow
-Most async operations follow this pattern:
-1. Service A sends message to SQS queue
-2. Lambda consumer is triggered by SQS event
-3. Consumer processes message and updates database
-4. Consumer may send message to another queue
-5. GraphQL subscriptions notify connected clients
-
-### GraphQL Subscription Updates
-Real-time updates use AppSync subscriptions:
-1. Client connects to AppSync via WebSocket and subscribes to `onGpsMessagePosition` (or similar)
-2. Backend Lambda (e.g., `gpsMessagesConsumer`) calls GraphQL mutation `publishOnGpsMessagePosition` on AppSync
-3. AppSync detects active subscriptions and broadcasts the event to all subscribed clients
-4. Clients receive update via WebSocket connection maintained by AppSync
-
-### Error Handling
-- Lambda retries: 3 attempts with exponential backoff
-- DLQ: Failed messages move to Dead Letter Queue
-- Logging: CloudWatch Logs with structured JSON
-- Alerting: CloudWatch Alarms for critical errors
-
----
-
-## Glossary
-
-- **SiRF**: Binary protocol used by GPS devices for communication
-- **Serial Number**: Unique identifier for each GPS device
-- **ICCID**: SIM card identifier in device
-- **Pet Protection**: Insurance product for Kippy IT users
-- **Device Protection**: Hardware replacement addon for Kippy users
-- **Pre-registration**: Subscription created before device activation
-- **Geo-fence**: Virtual boundary that triggers alerts when crossed
-- **Energy Saving Mode**: Device power management state
-- **Live Tracking**: Real-time position updates from device
-- **CCT**: Customer Care Tool for support staff
-
----
