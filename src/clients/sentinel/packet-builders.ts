@@ -401,6 +401,46 @@ export class PacketToSentinel {
  */
 export class PacketFromSentinel {
   /**
+   * Decapsula un pacchetto dal formato SIRF protocol
+   * Estrae il payload dal pacchetto completo (header + length + payload + CRC + footer)
+   */
+  static decapsulateFromSIRFProtocol(packet: Buffer): Buffer | null {
+    if (packet.length < 8) {
+      logger.debug(`Packet too short: ${packet.length} bytes`);
+      return null;
+    }
+
+    logger.debug(`Decapsulating packet: ${packet.toString("hex")}`);
+    logger.debug(`First 4 bytes: 0x${packet[0]?.toString(16)}, 0x${packet[1]?.toString(16)}, 0x${packet[2]?.toString(16)}, 0x${packet[3]?.toString(16)}`);
+
+    // Verifica header
+    if (packet[0] !== HEADER_BYTE1 || packet[1] !== HEADER_BYTE2) {
+      logger.debug(`Invalid header: got 0x${packet[0]?.toString(16)}${packet[1]?.toString(16)}, expected 0xa0a2`);
+      return null;
+    }
+
+    // Leggi length (big-endian)
+    const length = (packet[2] << 8) | packet[3];
+    logger.debug(`Packet length field: ${length}`);
+
+    // Verifica che il pacchetto sia completo
+    if (packet.length < length + 8) {
+      logger.debug(`Packet incomplete: buffer is ${packet.length} bytes, need ${length + 8}`);
+      return null;
+    }
+
+    // Verifica footer
+    if (packet[length + 6] !== FOOTER_BYTE1 || packet[length + 7] !== FOOTER_BYTE2) {
+      logger.debug(`Invalid footer at position ${length + 6}-${length + 7}: got 0x${packet[length + 6]?.toString(16)}${packet[length + 7]?.toString(16)}, expected 0xb0b3`);
+      return null;
+    }
+
+    logger.debug(`Successfully decapsulated payload of ${length} bytes`);
+    // Estrai il payload (bytes 4 a 4+length)
+    return packet.subarray(4, 4 + length);
+  }
+
+  /**
    * Parsa il Packet 0x0A (comando da Sentinel al device)
    * Converte il buffer binario in oggetto strutturato
    */

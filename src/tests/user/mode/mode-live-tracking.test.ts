@@ -5,7 +5,12 @@ import { sentinelTcpClient } from "../../../clients/sentinel/client-sentinel.js"
 import { PacketFromSentinel } from "../../../clients/sentinel/packet-builders.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
-import { CommandEnum, ModeType, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  CommandEnum,
+  GpsMessagePosition,
+  ModeType,
+  UtilityTestTypeEnum,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
 describe("User Mode - Live Tracking", () => {
@@ -95,7 +100,7 @@ describe("User Mode - Live Tracking", () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     logger.info("📍 STEP 2: Subscribe to position updates via WebSocket");
-    const positionsReceived: any[] = [];
+    let positionsReceived: GpsMessagePosition | null = null;
     const subscriptionPromise = new Promise<void>((resolve, reject) => {
       petlink.core.graphqlWS.authJwt.subscribe(
         subscriptions.onGpsMessagePosition,
@@ -105,7 +110,7 @@ describe("User Mode - Live Tracking", () => {
             logger.info("📡 WebSocket event received", { event });
             const position = event.data?.onGpsMessagePosition;
             if (position) {
-              positionsReceived.push(position);
+              positionsReceived = position;
               logger.info(`✓ Position received: `, {
                 lat: position.position?.lat,
                 lng: position.position?.lng,
@@ -125,11 +130,15 @@ describe("User Mode - Live Tracking", () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     logger.info("📍 STEP 3: Activate Live Tracking via GraphQL");
+    // Clear buffer recevideData from sentinel before end command
+    sentinelTcpClient.clearBuffer();
+    let commandSentToDevice = CommandEnum.LiveTracking;
+    let durationCommandSentToDevice = 900;
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
-        commandType: CommandEnum.LiveTracking,
+        commandType: commandSentToDevice,
         id: setup.devices.dogStandard!.id,
-        duration: 900,
+        duration: durationCommandSentToDevice,
         modeType: ModeType.Sentinel,
       },
     });
@@ -141,18 +150,36 @@ describe("User Mode - Live Tracking", () => {
     // Wait for command to reach Sentinel
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    logger.info("📍 STEP 3.5: Verify device received Packet 0x0A (LIVE_TRACKING command)");
+    logger.info("📍 STEP 4: Verify device received Packet 0x0A (LIVE_TRACKING command)");
     const rawData = sentinelTcpClient.getReceivedData();
+    logger.info("Raw data received: ", rawData);
     expect(rawData.length, "Device should have received data from Sentinel").toBeGreaterThan(0);
 
-    const activateCommand = PacketFromSentinel.packet0x0A(rawData);
-    expect(activateCommand).toBeDefined();
-    expect(activateCommand?.commandName).toBe("LIVE_TRACKING");
-    expect(activateCommand?.duration).toBe(900);
-    logger.info(`✓ Device received LIVE_TRACKING command with duration: ${activateCommand?.duration}s`);
+    logger.debug(`Raw data received: ${rawData.toString("hex")}`);
+    logger.debug(`Raw data length: ${rawData.length}`);
+    logger.debug(
+      `First bytes: 0x${rawData[0]?.toString(16)}, 0x${rawData[1]?.toString(16)}, 0x${rawData[2]?.toString(16)}, 0x${rawData[3]?.toString(16)}`,
+    );
 
-    logger.info("📍 STEP 4: Simulate device sending 1 Packet 0x01");
-    // Position 1
+    // Decapsula il pacchetto dal formato SIRF protocol
+    const payload = PacketFromSentinel.decapsulateFromSIRFProtocol(rawData);
+    expect(payload, "Payload should be decapsulated successfully").toBeDefined();
+
+    logger.debug(`Payload after decapsulation: ${payload!.toString("hex")}`);
+    logger.debug(`Payload length: ${payload!.length}`);
+    logger.debug(`Payload first byte: 0x${payload![0].toString(16)}`);
+
+    const activateCommand = PacketFromSentinel.packet0x0A(payload!);
+    expect(activateCommand, "Should parse Packet 0x0A").toBeDefined();
+    expect(activateCommand!.commandName, "Command name should match").toBe(commandSentToDevice);
+    expect(activateCommand!.duration, "Duration should match").toBe(durationCommandSentToDevice);
+    logger.info(`✓ Device received LIVE_TRACKING command with duration: ${activateCommand!.duration}s`);
+
+    logger.info("📍 STEP 5: Simulate device sending 1 Packet 0x01");
+    let latutideSentoFromDevice = 44.5024;
+    let longitudeSentoFromDevice = 11.3463;
+    let batterySentoFromDevice = 4200;
+    let temperatureSentoFromDevice = 22;
     await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
       latitude: 44.5024,
       longitude: 11.3463,
@@ -161,19 +188,29 @@ describe("User Mode - Live Tracking", () => {
     });
     logger.info("✓ Packet 0x01 #1 sent");
 
-    logger.info("📍 STEP 5: Wait for positions to arrive via WebSocket");
+    logger.info("📍 STEP 6: Wait for positions to arrive via WebSocket");
     await subscriptionPromise;
 
-    expect(positionsReceived.length).toBe(1);
-    logger.info("✓ Received position via WebSocket");
+    logger.info("positionsReceived: ", positionsReceived);
+    expect(positionsReceived).not.toBeNull();
+    expect(positionsReceived!.position.lat, "Latitude should match").toBe(latutideSentoFromDevice);
+    expect(positionsReceived!.position.lng, "Longitude should match").toBe(longitudeSentoFromDevice);
+    // expect(positionsReceived!.position.lng, "Longitude should match").toBe(longitudeSentoFromDevice);
+    // expect(positionsReceived!.position.lng, "Longitude should match").toBe(longitudeSentoFromDevice);
+    logger.info("✓ Received position via WebSocket", {
+      lat: positionsReceived!.position.lat,
+      lng: positionsReceived!.position.lng,
+    });
 
-    logger.info("📍 STEP 6: Deactivate Live Tracking");
+    logger.info("📍 STEP 7: Deactivate Live Tracking");
     sentinelTcpClient.clearBuffer();
+    let commandSentToDeviceDeactivate = CommandEnum.LiveTracking;
+    let durationCommandSentToDeviceDeactivate = 0;
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
-        commandType: CommandEnum.LiveTracking,
+        commandType: commandSentToDeviceDeactivate,
         id: setup.devices.dogStandard!.id,
-        duration: 0,
+        duration: durationCommandSentToDeviceDeactivate,
         modeType: ModeType.Sentinel,
       },
     });
@@ -186,14 +223,18 @@ describe("User Mode - Live Tracking", () => {
     // Wait for command to reach Sentinel
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    logger.info("📍 STEP 6.5: Verify device received Packet 0x0A (LIVE_TRACKING deactivation command)");
+    logger.info("📍 STEP 8: Verify device received Packet 0x0A (LIVE_TRACKING deactivation command)");
     const rawDeactivateData = sentinelTcpClient.getReceivedData();
     expect(rawDeactivateData.length, "Device should have received deactivation data from Sentinel").toBeGreaterThan(0);
 
-    const deactivateCommand = PacketFromSentinel.packet0x0A(rawDeactivateData);
-    expect(deactivateCommand).toBeDefined();
-    expect(deactivateCommand?.commandName).toBe("LIVE_TRACKING");
-    expect(deactivateCommand?.duration).toBe(0);
-    logger.info(`✓ Device received LIVE_TRACKING deactivation command with duration: ${deactivateCommand?.duration}s`);
+    // Decapsula il pacchetto dal formato SIRF protocol
+    const deactivatePayload = PacketFromSentinel.decapsulateFromSIRFProtocol(rawDeactivateData);
+    expect(deactivatePayload, "Payload should be decapsulated successfully").toBeDefined();
+
+    const deactivateCommand = PacketFromSentinel.packet0x0A(deactivatePayload!);
+    expect(deactivateCommand, "Should parse Packet 0x0A").toBeDefined();
+    expect(deactivateCommand!.commandName, "Command name should match").toBe(commandSentToDeviceDeactivate);
+    expect(deactivateCommand!.duration, "Duration should match").toBe(durationCommandSentToDeviceDeactivate);
+    logger.info(`✓ Device received LIVE_TRACKING deactivation command with duration: ${deactivateCommand!.duration}s`);
   });
 });
