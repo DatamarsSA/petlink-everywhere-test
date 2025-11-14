@@ -210,6 +210,7 @@ export enum CommandEnum {
   Flashlight = "FLASHLIGHT",
   LiveTracking = "LIVE_TRACKING",
   LiveTrackingTest = "LIVE_TRACKING_TEST",
+  Shutdown = "SHUTDOWN",
   Sound = "SOUND",
 }
 
@@ -498,6 +499,7 @@ export interface GpsStatus {
   inGeofence?: Maybe<Scalars["Boolean"]["output"]>;
   liveTracking: StatusState;
   offline?: Maybe<Scalars["Boolean"]["output"]>;
+  shutdown?: Maybe<Scalars["Boolean"]["output"]>;
   sound: StatusState;
 }
 
@@ -512,6 +514,7 @@ export interface GpsStatusIn {
   inGeofence?: InputMaybe<Scalars["Boolean"]["input"]>;
   liveTracking: StatusState;
   offline?: InputMaybe<Scalars["Boolean"]["input"]>;
+  shutdown?: InputMaybe<Scalars["Boolean"]["input"]>;
   sound: StatusState;
 }
 
@@ -3047,6 +3050,15 @@ export type DeleteUserMutation = {
   deleteUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
+export type SendCommandMutationVariables = Exact<{
+  command: Command;
+}>;
+
+export type SendCommandMutation = {
+  __typename?: "Mutation";
+  sendCommand: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -4769,6 +4781,43 @@ export const DeleteUserDocument = {
             kind: "Field",
             name: { kind: "Name", value: "deleteUser" },
             arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SendCommandDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "sendCommand" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "command" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "Command" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "sendCommand" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "command" }, value: { kind: "Variable", name: { kind: "Name", value: "command" } } },
+            ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
@@ -6629,6 +6678,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "deleteUser",
+        "mutation",
+        variables,
+      );
+    },
+    sendCommand(
+      variables: SendCommandMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendCommandMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SendCommandMutation>({
+            document: SendCommandDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "sendCommand",
         "mutation",
         variables,
       );

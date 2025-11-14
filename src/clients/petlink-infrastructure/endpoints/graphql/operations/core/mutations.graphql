@@ -346,3 +346,11 @@ mutation deleteUser($id: String!) {
     message
   }
 }
+
+mutation sendCommand($command: Command!) {
+  sendCommand(command: $command) {
+    code
+    translationCode
+    message
+  }
+}

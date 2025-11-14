@@ -1,109 +1,137 @@
-import { describe, it, beforeAll } from "vitest";
+import { describe, it, beforeAll, afterAll, expect } from "vitest";
+import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
 import { sentinelTcpClient } from "../../../clients/sentinel/client-sentinel.js";
+import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+import { fxt } from "../../../fixtures/fixtures.js";
+import { CommandEnum, ModeType, UtilityTestTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════════
- * 🎯 LIVE TRACKING - Feature Overview & Test Flow
- * ═══════════════════════════════════════════════════════════════════════════════
- *
- * FEATURE DESCRIPTION:
- * Live Tracking è una modalità che aumenta la frequenza di aggiornamento della
- * posizione del device da ~4 minuti (normale) a ~5 secondi (real-time).
- * Utile quando l'utente vuole tracciare il pet in tempo reale (es. pet perso).
- *
- * ACTIVATION:
- * - User action: "Attiva tracciamento real-time per 15 minuti"
- * - App chiama: sendCommand({ commandType: "LIVE_TRACKING", deviceId, duration: 900 })
- * - Sentinel riceve il comando e lo invia al device
- * - Device attiva GPS e aumenta frequenza heartbeat a ~5 secondi
- *
- * SUBSCRIPTION:
- * - App si sottoscrive a: onGpsMessagePosition(deviceId)
- * - Riceve posizioni ogni ~5 secondi (invece di ogni ~4 minuti)
- * - Mostra mappa in tempo reale con aggiornamenti frequenti
- *
- * DEACTIVATION:
- * - User action: "Disattiva tracciamento"
- * - App chiama: sendCommand({ commandType: "LIVE_TRACKING", deviceId, duration: 0 })
- * - Sentinel riceve il comando e lo invia al device
- * - Device torna a frequenza normale (~4 minuti)
- * - App unsubscribe da onGpsMessagePosition
- *
- * ═══════════════════════════════════════════════════════════════════════════════
- * TEST FLOW (Macro Steps):
- * ═══════════════════════════════════════════════════════════════════════════════
- *
- * STEP 1: Setup
- *   - Crea un device e un pet
- *   - Device è in modalità normale (frequenza ~4 minuti)
- *
- * STEP 2: Activate Live Tracking
- *   - App chiama: sendCommand(LIVE_TRACKING, duration: 900)
- *   - Verifica: Comando arriva a Sentinel ✓
- *   - Verifica: Sentinel invia comando al device ✓
- *   - Device cambia frequenza a ~5 secondi
- *
- * STEP 3: Simulate Device Sending Positions
- *   - Emula device che invia posizioni ogni ~5 secondi
- *   - Invia 3-4 posizioni diverse (simulando movimento)
- *   - Ogni posizione ha: latitude, longitude, battery, timestamp
- *
- * STEP 4: Subscribe & Receive Positions
- *   - App si sottoscrive a: onGpsMessagePosition(deviceId)
- *   - Verifica: Riceve posizioni ogni ~5 secondi ✓
- *   - Verifica: Posizioni sono diverse (device si muove) ✓
- *   - Verifica: Timestamp è recente ✓
- *
- * STEP 5: Deactivate Live Tracking
- *   - App chiama: sendCommand(LIVE_TRACKING, duration: 0)
- *   - Verifica: Comando arriva a Sentinel ✓
- *   - Device torna a frequenza normale (~4 minuti)
- *
- * STEP 6: Verify Normal Mode
- *   - Verifica: Posizioni arrivano ogni ~4 minuti (non più ogni 5 sec) ✓
- *   - Verifica: Subscription è terminata ✓
- *
- * ═══════════════════════════════════════════════════════════════════════════════
- * SOCKET SIMULATION (cosa fai nel test):
- * ═══════════════════════════════════════════════════════════════════════════════
- *
- * Nel test, TU emuli il device che invia posizioni:
- *
- *   // Simula device che invia posizione 1
- *   await sentinelTcpClient.sendWelcome("PETL123456", {
- *     latitude: 44.5024,
- *     longitude: 11.3463,
- *     battery: 4200,
- *   });
- *
- *   // Aspetta 5 secondi
- *   await sleep(5000);
- *
- *   // Simula device che invia posizione 2 (leggermente diversa)
- *   await sentinelTcpClient.sendWelcome("PETL123456", {
- *     latitude: 44.5025,
- *     longitude: 11.3464,
- *     battery: 4190,
- *   });
- *
- * ═══════════════════════════════════════════════════════════════════════════════
- */
+describe("User Mode - Live Tracking", () => {
+  let setup: TestSetup = {} as TestSetup;
 
-describe.todo("User Mode - Live Tracking", () => {
   beforeAll(async () => {
+    logger.info("🔌 Setting up test environment...");
+    // STEP 1: Create user, pet, and device
+    logger.info("📍 Creating test user, pet, and device");
+    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+    logger.info("✓ Test setup complete", {
+      userId: setup.user!.id,
+      petId: setup.pets.dog!.id,
+      deviceId: setup.devices.dogStandard!.id,
+      serialNumber: setup.devices.dogStandard!.serialNumber,
+    });
+    // STEP 2: Update billing info (required for subscription purchase)
+    logger.info("📍 Updating billing info");
+    const billingResponse = await petlink.core.graphqlHttp.authJwt.updateBillingInfo({
+      updateBillingInfoInput: {
+        billingInfo: {
+          address: setup.user!.streetAddress!,
+          city: setup.user!.city!,
+          country: setup.user!.countryCode!,
+          zip: setup.user!.zipCode!,
+        },
+        email: setup.user!.email!,
+        firstName: setup.user!.name!,
+        lastName: setup.user!.surname!,
+        phone: setup.user!.phone!,
+      },
+    });
+
+    expect(billingResponse.updateBillingInfo.code).toBe("200");
+    logger.info("✓ Billing info updated");
+    // STEP 3: Get subscription plans and purchase a subscription
+    logger.info("📍 Getting subscription plans");
+    const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+      productId: setup.devices.dogStandard!.id,
+      countryCode: setup.devices.dogStandard!.countryCode,
+      serialNumber: setup.devices.dogStandard!.serialNumber,
+    });
+    expect(plansResponse.getSubscriptionPlans.code).toBe("200");
+    const choosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
+    logger.info("✓ Found subscription plan", {
+      planId: choosenPlan.id,
+      price: choosenPlan.price,
+      period: choosenPlan.period,
+    });
+    // STEP 4: Purchase subscription
+    logger.info("📍 Purchasing subscription");
+    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+        phone: setup.user!.phone,
+        productId: setup.devices.dogStandard!.id,
+        priceIds: [choosenPlan.id],
+        card: fxt.current.card.valid,
+      },
+    });
+    expect(purchaseResponse.utilityIntegrationTest.code).toBe("200");
+    logger.info("✓ Subscription purchased successfully");
+    // STEP 5: Connect to Sentinel TCP server
     logger.info("🔌 Connecting to Sentinel TCP server...");
     await sentinelTcpClient.connect();
-    logger.info("✓ Connected to Sentinel");
+    logger.info("✓ Connected to Sentinel TCP server");
+  });
+
+  afterAll(() => {
+    logger.info("🧹 Cleaning up...");
+    sentinelTcpClient.disconnect();
+    petlink.core.graphqlWS.disconnect();
   });
 
   it("Activate live tracking and should receive frequent position updates", async () => {
+    // logger.info("Mocked Setup", setup);
+    console.log(JSON.stringify(setup, null, 2));
+
+    /**
+     * Attivare Live Tracking via GraphQL mutation sendCommand
+     * Sottoscriversi a onGpsMessagePosition(deviceId) via WebSocket
+     * Emulare device che invia 3 posizioni via TCP (usando sentinelTcpClient.sendWelcome)
+     * Verificare che le 3 posizioni arrivino via WebSocket
+     * Disattivare Live Tracking via GraphQL mutation
+     * Verificare che il device torna a modalità normale
+     */
     logger.info("📍 STEP 1: Setup - Device in normal mode");
-    // Device è in modalità normale (frequenza ~4 minuti)
+    // Open WebSocket subscription BEFORE purchase (event-driven)
+    const activationPromise = new Promise<void>(async (resolve, reject) => {
+      const wsSub = await petlink.core.graphqlWS.authJwt.subscribe(
+        subscriptions.onGpsMessagePosition,
+        { id: setup.user!.id },
+        {
+          next: (event: any) => {
+            logger.info("WebSocket event received", { event });
+            // subStatusUpdated = event.data;
+
+            // Resolve only when subscription is ACTIVE
+            const status = event.data?.onSubscriptionStatus?.status;
+            if (status?.subscriptionIsActive === true) {
+              wsSub.unsubscribe();
+              resolve();
+            }
+          },
+          error: (error: any) => {
+            logger.error("WebSocket error", { error: error.message });
+            reject(error);
+          },
+        },
+        { timeoutMs: fxt.socket.timeoutMs },
+      );
+    });
+
+    // Wait for WebSocket to establish connection
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     logger.info("📍 STEP 2: Activate Live Tracking");
     // TODO: App chiama sendCommand(LIVE_TRACKING, duration: 900)
-    // TODO: Verifica che il comando arriva a Sentinel
+    const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
+      command: {
+        commandType: CommandEnum.LiveTracking,
+        id: setup.devices.dogStandard!.id,
+        duration: 900,
+        modeType: ModeType.Sentinel,
+      },
+    });
+    expect(activateResponse.sendCommand.code).toBe("200");
 
     logger.info("📍 STEP 3: Simulate device sending positions every ~5 seconds");
     // Posizione 1
@@ -115,7 +143,7 @@ describe.todo("User Mode - Live Tracking", () => {
     logger.info("✓ Position 1 sent");
 
     // Aspetta 5 secondi
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    // await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // Posizione 2
     await sentinelTcpClient.sendWelcome("PETL123456", {
@@ -126,7 +154,7 @@ describe.todo("User Mode - Live Tracking", () => {
     logger.info("✓ Position 2 sent");
 
     // Aspetta 5 secondi
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    // await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // Posizione 3
     await sentinelTcpClient.sendWelcome("PETL123456", {
@@ -137,8 +165,7 @@ describe.todo("User Mode - Live Tracking", () => {
     logger.info("✓ Position 3 sent");
 
     logger.info("📍 STEP 4: Subscribe to position updates");
-    // TODO: App si sottoscrive a onGpsMessagePosition(deviceId)
-    // TODO: Verifica che riceve 3 posizioni diverse
+    // TODO: App si sottoscrive a onGpsMessagePosition(deviceId) - Verifica che riceve 3 posizioni diverse
 
     logger.info("📍 STEP 5: Deactivate Live Tracking");
     // TODO: App chiama sendCommand(LIVE_TRACKING, duration: 0)
@@ -147,5 +174,3 @@ describe.todo("User Mode - Live Tracking", () => {
     // TODO: Verifica che le posizioni arrivano ogni ~4 minuti
   });
 });
-
-//todo: add sub a onGpsMessagePosition()
