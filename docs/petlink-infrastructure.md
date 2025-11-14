@@ -49,7 +49,12 @@ graph TB
     subgraph "Data Storage"
         MongoDB[(MongoDB<br/>Petlink DB)]
         CCTMongo[(MongoDB<br/>CCT DB)]
-        SQS[/SQS Queues/]
+    end
+
+    subgraph "Message Queues"
+        SQSSentinelToCore[/SQS: Sentinel → Core<br/>gpsMessages, notifications,<br/>activities/]
+        SQSCoreToSentinel[/SQS: Core → Sentinel<br/>commands, newGpsDevices,<br/>settings/]
+        SQSSubsMgr[/SQS: Subscriptions Manager<br/>subscriptions, expiredSubscriptions/]
     end
 
     subgraph "External Services"
@@ -79,19 +84,21 @@ graph TB
     %% Core connections
     Core <-->|R/W| MongoDB
     Core <-->|GraphQL| SubsMgr
-    Core <-->|SQS| SQS
+    Core -->|Commands<br/>Device Config<br/>Settings| SQSCoreToSentinel
+    Core <-->|Positions<br/>Activities<br/>Notifications| SQSSentinelToCore
 
     %% Subscriptions
     SubsMgr <-->|API| Chargebee
     Chargebee -.->|Webhooks| SubsMgr
-    SubsMgr -->|Events| SQS
+    SubsMgr -->|Subscription Events| SQSSubsMgr
+    SQSSubsMgr -->|Webhook Events| Core
 
     %% Device infrastructure
     Devices <-->|TCP Binary| SentinelRust
     SentinelRust --> Sentinel
     SentinelLambda --> Sentinel
-    Sentinel <-->|SQS| SQS
-    SQS <-->|Commands<br/>Positions<br/>Activities| Core
+    Sentinel -->|Position Updates<br/>Activity Data<br/>Notifications| SQSSentinelToCore
+    SQSCoreToSentinel -->|Commands<br/>Settings| Sentinel
     Sentinel <-->|R/W| MongoDB
 
     %% External services
@@ -245,8 +252,41 @@ graph TB
     - `expiredSubscriptionsConsumer`: Handle subscription expiration
 - **Communication**:
   - TCP connections with GPS devices (binary protocol)
-  - SQS queues for communication with `petlink-everywhere-core`
+  - SQS queues for communication with `petlink-everywhere-core` (see SQS Architecture below)
   - MongoDB for device state and position data
+
+### SQS Architecture
+
+The system uses **3 separate SQS message queue flows** for async communication:
+
+#### 1. Sentinel → Core (Device Data Inbound)
+**Queues**: `gpsMessages`, `notifications`, `activities`
+- **Producer**: Sentinel Rust TCP server
+- **Consumer**: Core Lambda functions
+- **Messages**:
+  - `gpsMessages`: GPS position updates, device status, battery level
+  - `notifications`: Geo-fence alerts, device alerts, status changes
+  - `activities`: Activity data from devices (steps, distance, etc.)
+- **Flow**: Device sends TCP packet → Sentinel parses → Sends to SQS → Core processes → Updates MongoDB → Publishes to AppSync
+
+#### 2. Core → Sentinel (Device Commands Outbound)
+**Queues**: `commands`, `newGpsDevices`, `settings`
+- **Producer**: Core Lambda functions
+- **Consumer**: Sentinel Lambda consumers
+- **Messages**:
+  - `commands`: Device commands (LED on/off, find pet, etc.)
+  - `newGpsDevices`: Device registration, device reset
+  - `settings`: Configuration updates (geo-fence, energy saving mode, etc.)
+- **Flow**: User action → Core sends to SQS → Sentinel consumer receives → Forwards to device via TCP
+
+#### 3. Subscriptions Manager → Core (Subscription Events)
+**Queue**: `subscriptions`, `expiredSubscriptions`
+- **Producer**: Subscriptions Manager Lambda
+- **Consumer**: Core Lambda functions
+- **Messages**:
+  - `subscriptions`: Webhook events from Chargebee (subscription_created, subscription_renewed, etc.)
+  - `expiredSubscriptions`: Subscription expiration notifications
+- **Flow**: Chargebee webhook → Subscriptions Manager → SQS → Core processes → Updates device subscription status → Notifies Sentinel
 
 ### Supporting Libraries
 
