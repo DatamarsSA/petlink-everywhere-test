@@ -6,6 +6,21 @@
 import { logger } from "../../config/logger.js";
 
 //------ CONSTANTS ------
+/**
+ * PACKET format
+ *
+ * [HEADER (2 bytes)] [LENGTH (2 bytes)] [PAYLOAD (N bytes)] [CRC (2 bytes)] [FOOTER (2 bytes)]
+ *    0xA0 0xA2          big-endian          variabile         15-bit sum       0xB0 0xB3
+ *
+ * Byte 0-1:   0xA0 0xA2           ← SIRF Header (fisso)
+ * Byte 2-3:   Length (big-endian) ← Lunghezza del payload (Ti dice DOVE finisce il payload) - se manca non sai dove finisce il payload
+ * Byte 4-N:   PAYLOAD             ← I dati veri
+ *             Byte 0: Packet Type (0x01, 0x0A, 0x10, 0x15, ecc)
+ *             Byte 1-N: Dati specifici del packet type
+ * Byte N+1-2: CRC (15-bit sum)    ← Checksum (Ti dice SE il payload è integro) - se manca non sai se i dati son corrotti
+ * Byte N+3-4: 0xB0 0xB3           ← SIRF Footer (fisso)
+ *
+ */
 const HEADER_BYTE1 = 0xa0;
 const HEADER_BYTE2 = 0xa2;
 const FOOTER_BYTE1 = 0xb0;
@@ -411,7 +426,9 @@ export class PacketFromSentinel {
     }
 
     logger.debug(`Decapsulating packet: ${packet.toString("hex")}`);
-    logger.debug(`First 4 bytes: 0x${packet[0]?.toString(16)}, 0x${packet[1]?.toString(16)}, 0x${packet[2]?.toString(16)}, 0x${packet[3]?.toString(16)}`);
+    logger.debug(
+      `First 4 bytes: 0x${packet[0]?.toString(16)}, 0x${packet[1]?.toString(16)}, 0x${packet[2]?.toString(16)}, 0x${packet[3]?.toString(16)}`,
+    );
 
     // Verifica header
     if (packet[0] !== HEADER_BYTE1 || packet[1] !== HEADER_BYTE2) {
@@ -431,7 +448,9 @@ export class PacketFromSentinel {
 
     // Verifica footer
     if (packet[length + 6] !== FOOTER_BYTE1 || packet[length + 7] !== FOOTER_BYTE2) {
-      logger.debug(`Invalid footer at position ${length + 6}-${length + 7}: got 0x${packet[length + 6]?.toString(16)}${packet[length + 7]?.toString(16)}, expected 0xb0b3`);
+      logger.debug(
+        `Invalid footer at position ${length + 6}-${length + 7}: got 0x${packet[length + 6]?.toString(16)}${packet[length + 7]?.toString(16)}, expected 0xb0b3`,
+      );
       return null;
     }
 

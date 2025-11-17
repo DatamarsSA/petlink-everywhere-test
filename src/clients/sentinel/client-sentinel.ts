@@ -8,6 +8,15 @@ interface SentinelConfig {
   port: number;
 }
 
+export interface ParsedSiRFPacket {
+  index: number;
+  type: number;
+  payload: Buffer;
+  hex: string;
+  parsed?: unknown;
+  error?: string;
+}
+
 export class SentinelTcpClient {
   private socket: Socket | null = null;
   private config: SentinelConfig;
@@ -139,6 +148,68 @@ export class SentinelTcpClient {
    */
   getReceivedData(): Buffer {
     return this.dataBuffer;
+  }
+
+  // Funzione helper per loggare TUTTI i pacchetti SIRF dal rawData
+  logAllSiRFPackets(rawData: Buffer): void {
+    logger.info(`🔍 Splitting rawData of ${rawData.length} bytes into single SIRF packets...`);
+    const packets: Array<{ index: number; packet: Buffer }> = [];
+    let offset = 0;
+    let packetIndex = 0;
+
+    while (offset < rawData.length) {
+      // Cerca il prossimo header (0xA0 0xA2)
+      if (offset + 4 > rawData.length) break;
+      if (rawData[offset] !== 0xa0 || rawData[offset + 1] !== 0xa2) {
+        offset++;
+        continue;
+      }
+
+      // Leggi la lunghezza del payload (big-endian)
+      const length = (rawData[offset + 2]! << 8) | rawData[offset + 3]!;
+      const totalPacketSize = 8 + length; // header(2) + length(2) + payload(length) + crc(2) + footer(2)
+
+      // Verifica che il pacchetto sia completo
+      if (offset + totalPacketSize > rawData.length) {
+        logger.warn(`⚠️ Incomplete packet at offset ${offset}: expected ${totalPacketSize} bytes, only ${rawData.length - offset} available`);
+        break;
+      }
+
+      // Estrai il pacchetto completo (header + length + payload + crc + footer)
+      const packet = rawData.slice(offset, offset + totalPacketSize);
+      packets.push({ index: packetIndex, packet });
+
+      // Log del pacchetto
+      this.logSingleSiRFPacket(packet, packetIndex);
+
+      offset += totalPacketSize;
+      packetIndex++;
+    }
+
+    logger.info(`✅ Found ${packets.length} SIRF packets total\n`);
+  }
+
+  // Funzione helper per loggare un singolo pacchetto SIRF
+  private logSingleSiRFPacket(packet: Buffer, packetIndex: number): void {
+    logger.info(`📦 SIRF Packet #${packetIndex}:`);
+    logger.info(`  Hex: ${packet.toString("hex").toUpperCase()}`);
+    logger.info(`  Total Length: ${packet.length} bytes`);
+
+    // Estrai header, length, payload, crc, footer
+    const header = `0x${packet[0]?.toString(16).toUpperCase()} 0x${packet[1]?.toString(16).toUpperCase()}`;
+    const length = (packet[2]! << 8) | packet[3]!;
+    const payloadStart = 4;
+    const payloadEnd = payloadStart + length;
+    const payload = packet.slice(payloadStart, payloadEnd);
+    const crc = (packet[payloadEnd]! << 8) | packet[payloadEnd + 1]!;
+    const footer = `0x${packet[payloadEnd + 2]?.toString(16).toUpperCase()} 0x${packet[payloadEnd + 3]?.toString(16).toUpperCase()}`;
+
+    logger.info(`  Header: ${header}`);
+    logger.info(`  Payload Length: ${length} bytes`);
+    logger.info(`  Packet Type: 0x${payload[0]?.toString(16).toUpperCase()}`);
+    logger.info(`  Payload (hex): ${payload.toString("hex").toUpperCase()}`);
+    logger.info(`  CRC: 0x${crc.toString(16).toUpperCase()}`);
+    logger.info(`  Footer: ${footer}`);
   }
 }
 

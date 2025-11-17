@@ -53,12 +53,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(fxt.isKippyRun && evoDevice
         ? [
-          petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-            productId: evoDevice.id,
-            countryCode: evoDevice.countryCode,
-            serialNumber: evoDevice.serialNumber,
-          }),
-        ]
+            petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+              productId: evoDevice.id,
+              countryCode: evoDevice.countryCode,
+              serialNumber: evoDevice.serialNumber,
+            }),
+          ]
         : []),
     ];
 
@@ -235,7 +235,7 @@ describe("DEFAULT subscription flow", () => {
           { id: setup.user!.id },
           {
             next: (event: any) => {
-              logger.info("WebSocket event received", { event });
+              logger.info("GraphQlSocket event received", { event });
               subStatusUpdated = event.data;
 
               // Resolve only when subscription is ACTIVE

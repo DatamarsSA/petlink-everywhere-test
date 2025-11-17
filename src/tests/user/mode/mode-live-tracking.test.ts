@@ -107,7 +107,7 @@ describe("User Mode - Live Tracking", () => {
         { id: setup.devices.dogStandard!.id },
         {
           next: (event: any) => {
-            logger.info("📡 WebSocket event received", { event });
+            logger.info("📡 GraphQlSocket event received", { event });
             const position = event.data?.onGpsMessagePosition;
             if (position) {
               positionsReceived = position;
@@ -147,24 +147,30 @@ describe("User Mode - Live Tracking", () => {
       `sendCommand should succeed - Error: ${activateResponse.sendCommand.message}${activateResponse.sendCommand.translationCode ? ` (${activateResponse.sendCommand.translationCode})` : ""}`,
     ).toBe("200");
     logger.info("✓ Live Tracking activated");
-    // Wait for command to reach Sentinel
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    logger.info("📍 STEP 3.5: Device sends Packet 0x01 to trigger Packet 0x0A from Sentinel");
+    // Clear buffer before sending the packet
+    sentinelTcpClient.clearBuffer();
+    // Send a heartbeat to trigger Sentinel to send the Packet 0x0A command
+    await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 22,
+    });
+    // Wait a bit for Sentinel to process and send the command
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     logger.info("📍 STEP 4: Verify device received Packet 0x0A (LIVE_TRACKING command)");
     const rawData = sentinelTcpClient.getReceivedData();
-    logger.info("Raw data received: ", rawData);
-    expect(rawData.length, "Device should have received data from Sentinel").toBeGreaterThan(0);
+    // 🔍 Log tutti i pacchetti SIRF estratti dal rawData
+    sentinelTcpClient.logAllSiRFPackets(rawData);
 
-    logger.debug(`Raw data received: ${rawData.toString("hex")}`);
-    logger.debug(`Raw data length: ${rawData.length}`);
-    logger.debug(
-      `First bytes: 0x${rawData[0]?.toString(16)}, 0x${rawData[1]?.toString(16)}, 0x${rawData[2]?.toString(16)}, 0x${rawData[3]?.toString(16)}`,
-    );
+    expect(rawData.length, "Device should have received data from Sentinel").toBeGreaterThan(0);
 
     // Decapsula il pacchetto dal formato SIRF protocol
     const payload = PacketFromSentinel.decapsulateFromSIRFProtocol(rawData);
     expect(payload, "Payload should be decapsulated successfully").toBeDefined();
-
     logger.debug(`Payload after decapsulation: ${payload!.toString("hex")}`);
     logger.debug(`Payload length: ${payload!.length}`);
     logger.debug(`Payload first byte: 0x${payload![0].toString(16)}`);
@@ -203,7 +209,7 @@ describe("User Mode - Live Tracking", () => {
     });
 
     logger.info("📍 STEP 7: Deactivate Live Tracking");
-    sentinelTcpClient.clearBuffer();
+    // sentinelTcpClient.clearBuffer();
     let commandSentToDeviceDeactivate = CommandEnum.LiveTracking;
     let durationCommandSentToDeviceDeactivate = 0;
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
