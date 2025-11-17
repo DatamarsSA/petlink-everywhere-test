@@ -1,8 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
-import { sentinelTcpClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketFromSentinel } from "../../../clients/sentinel/packet-builders.js";
+import { petlink as sentinelClient, PacketToSentinel } from "../../../clients/sentinel/client-sentinel.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import {
@@ -77,13 +76,13 @@ describe("User Mode - Live Tracking", () => {
 
     // STEP 5: Connect to Sentinel TCP server
     logger.info("🔌 Connecting to Sentinel TCP server...");
-    await sentinelTcpClient.connect();
+    await sentinelClient.connect();
     logger.info("✓ Connected to Sentinel TCP server");
   });
 
   afterAll(() => {
     logger.info("🧹 Cleaning up...");
-    sentinelTcpClient.disconnect();
+    sentinelClient.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
 
@@ -91,12 +90,13 @@ describe("User Mode - Live Tracking", () => {
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
 
     logger.info("📍 STEP 1: Register device on Sentinel socketMap (send initial Packet 0x01)");
-    await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
+    const welcomePacket = PacketToSentinel.packet01(deviceSerialNumber, {
       latitude: 44.5024,
       longitude: 11.3463,
       battery: 4200,
       temperature: 22,
     });
+    await sentinelClient.send(welcomePacket);
     logger.info("✓ Device registered on Sentinel cache map");
 
     logger.info("📍 STEP 2: Subscribe to position updates via GraphQl Sub WebSocket");
@@ -144,28 +144,25 @@ describe("User Mode - Live Tracking", () => {
     ).toBe("200");
 
     logger.info("📍 STEP 4: Verify device received Packet 0x0A (LIVE_TRACKING command)");
-    const packets = await sentinelTcpClient.waitForPackets(5000);
-    //todo: implement logics to handle "LIVE_TRACKING activation command" from device
-
-    // const activateCommand = packets.find((packet) => );
-
-    // const activateCommand = PacketFromSentinel.packet0x0A(payload!);
-    // expect(activateCommand, "Should parse Packet 0x0A").toBeDefined();
-    // expect(activateCommand!.commandName, "Command name should match").toBe(commandSentToDevice);
-    // expect(activateCommand!.duration, "Duration should match").toBe(durationCommandSentToDevice);
-    // logger.info(`✓ Device received LIVE_TRACKING command with duration: ${activateCommand!.duration}s`);
+    const packets = await sentinelClient.waitForPackets(5000);
+    const liveTrackingCommand = packets.find((p) => p.type === 0x0a && p.parsed);
+    expect(liveTrackingCommand, "Should receive Packet 0x0A (LIVE_TRACKING command)").toBeDefined();
+    expect(liveTrackingCommand!.parsed, "Should parse Packet 0x0A").toBeDefined();
+    logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: liveTrackingCommand!.parsed });
 
     logger.info("📍 STEP 5: Simulate device sending 1 Packet 0x01");
     let latutideSentoFromDevice = 44.5024;
     let longitudeSentoFromDevice = 11.3463;
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
-    await sentinelTcpClient.sendWelcome(deviceSerialNumber, {
-      latitude: 44.5024,
-      longitude: 11.3463,
-      battery: 4200,
-      temperature: 22,
+    sentinelClient.clearBuffer();
+    const heartbeatPacket = PacketToSentinel.packet01(deviceSerialNumber, {
+      latitude: latutideSentoFromDevice,
+      longitude: longitudeSentoFromDevice,
+      battery: batterySentoFromDevice,
+      temperature: temperatureSentoFromDevice,
     });
+    await sentinelClient.send(heartbeatPacket);
     logger.info("✓ Packet 0x01 #1 sent");
 
     logger.info("📍 STEP 6: Wait for positions to arrive via WebSocket");
@@ -192,6 +189,7 @@ describe("User Mode - Live Tracking", () => {
         modeType: ModeType.Sentinel,
       },
     });
+
     expect(
       deactivateResponse.sendCommand.code,
       `sendCommand should succeed - Error: ${deactivateResponse.sendCommand.message}${deactivateResponse.sendCommand.translationCode ? ` (${deactivateResponse.sendCommand.translationCode})` : ""}`,
