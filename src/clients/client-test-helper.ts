@@ -47,6 +47,7 @@ class TestSetupBuilder {
   private includeDogDevice = false;
   private includeDogEvoDevice = false;
   private includeCatDevice = false;
+  private includeSubscription = false;
 
   constructor(private helper: TestHelper) {}
 
@@ -89,13 +90,25 @@ class TestSetupBuilder {
     return this;
   }
 
+  /**
+   * Acquista una subscription per il device
+   * Prerequisiti: withUser(), withDogDevice() devono essere chiamati prima
+   * Internamente: aggiorna billing info + acquista subscription in parallelo
+   * Card utilizzata: fxt.current.card.valid
+   */
+  withSubscription(): this {
+    this.includeSubscription = true;
+    return this;
+  }
+
   async build(): Promise<TestSetup> {
+    //create USER
     if (this.includeUser) {
       this.setup.user = await this.helper.createUser(this.userOptions);
     }
 
+    //create PETS
     const petPromises: Promise<void>[] = [];
-
     if (this.includeDog) {
       petPromises.push(
         this.helper.createPet(SpeciesEnum.Dog).then((dog) => {
@@ -122,8 +135,8 @@ class TestSetupBuilder {
 
     await Promise.all(petPromises);
 
+    //create DEVICES
     const devicePromises: Promise<void>[] = [];
-
     if (this.includeDogDevice && this.setup.pets.dog) {
       devicePromises.push(
         this.helper.createDeviceForPet(this.setup.pets.dog, DeviceTypeEnum.Dog).then((device) => {
@@ -149,6 +162,11 @@ class TestSetupBuilder {
     }
 
     await Promise.all(devicePromises);
+
+    // Acquista subscription se richiesto
+    if (this.includeSubscription && this.setup.user && this.setup.devices.dogStandard) {
+      await this.helper.purchaseSubscription(this.setup.user, this.setup.devices.dogStandard);
+    }
 
     return this.setup;
   }
@@ -395,6 +413,78 @@ export class TestHelper {
       }
     }
     return null;
+  }
+
+  /**
+   * Acquista una subscription per il device
+   * Internamente:
+   *   1. Aggiorna billing info dell'utente
+   *   2. Ottiene i piani disponibili
+   *   3. Acquista il primo piano disponibile
+   */
+  async purchaseSubscription(user: User, device: PetlinkGps): Promise<void> {
+    logger.debug("→ Purchasing subscription");
+
+    // STEP 1 & 2: Aggiorna billing info + ottieni piani
+    const [_, plansResponse] = await Promise.all([
+      // Aggiorna billing info (non serve il risultato)
+      petlink.core.graphqlHttp.authJwt.updateBillingInfo({
+        updateBillingInfoInput: {
+          billingInfo: {
+            address: user.streetAddress!,
+            city: user.city!,
+            country: user.countryCode!,
+            zip: user.zipCode!,
+          },
+          email: user.email!,
+          firstName: user.name!,
+          lastName: user.surname!,
+          phone: user.phone!,
+        },
+      }),
+
+      // Ottieni i piani disponibili
+      petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+        productId: device.id,
+        countryCode: device.countryCode,
+        serialNumber: device.serialNumber,
+      }),
+    ]);
+
+    if (plansResponse.getSubscriptionPlans.code !== "200") {
+      throw new Error(`Failed to get subscription plans: ${plansResponse.getSubscriptionPlans.message}`);
+    }
+
+    // STEP 3: Seleziona il primo piano disponibile
+    const selectedPlan = plansResponse.getSubscriptionPlans.plans?.[0];
+    if (!selectedPlan || !selectedPlan.pricings[0]) {
+      throw new Error("No subscription plans available");
+    }
+
+    const chosenPricing = selectedPlan.pricings[0];
+
+    logger.debug("✓ Billing info updated and subscription plan found", {
+      planId: chosenPricing.id,
+      price: chosenPricing.price,
+      period: chosenPricing.period,
+    });
+
+    // STEP 4: Acquista la subscription
+    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+        phone: user.phone,
+        productId: device.id,
+        priceIds: [chosenPricing.id],
+        card: fxt.current.card.valid,
+      },
+    });
+
+    if (purchaseResponse.utilityIntegrationTest.code !== "200") {
+      throw new Error(`Failed to purchase subscription: ${purchaseResponse.utilityIntegrationTest.message}`);
+    }
+
+    logger.debug("✓ Subscription purchased successfully");
   }
 
   setupBuilder(): TestSetupBuilder {
