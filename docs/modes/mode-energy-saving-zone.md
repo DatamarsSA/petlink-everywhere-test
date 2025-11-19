@@ -126,7 +126,7 @@ Device scansiona WiFi ogni heartbeat:
   
   ├─ Trova: "MioWiFi" con BSSID "AA:BB:CC:DD:EE:FF"
   ├─ Confronta: "Corrisponde alla mia zona ESZ!"
-  ├─ Imposta: collar_detached = 1
+  ├─ Imposta: Byte 81 (spare_c5) bit 0x01 = 1 (collar_detached = 1)
   ├─ Spegne GPS (lat=0, lon=0)
   ├─ Riduce heartbeat: ogni 30-60 sec (invece di 5-10)
   └─ Invia Packet 0x01 (SiRF Welcome) con collar_detached=1
@@ -134,43 +134,53 @@ Device scansiona WiFi ogni heartbeat:
   ↓
 Sentinel Rust Server riceve il pacchetto:
   ├─ Parsa il binary packet 0x01
-  ├─ Legge: collar_detached = 1 (CHANGED from 0!)
+  ├─ Estrae extended_notifications:
+  │  └─ extended_notifications = byte_76 (notifications) + (byte_81 (spare_c5) * 256)
+  │  └─ Se bit 0x0100 è settato → collar_detached = 1 (CHANGED from 0!)
+  ├─ Verifica: energy_saving_mode == 1 && subscription_active == true
+  ├─ Aggiorna DB: operating_status = HOME_WIFI
   └─ Pubblica SQS message a queue "gpsMessages"
-     └─ Event type: ENERGY_SAVING_ZONE_IN
-     └─ Aggiorna operating_status = HOME_WIFI
+     └─ Message type: STATUS
+     └─ in_energy_saving_zone: true
   
   ↓
 Backend Lambda Consumer (gpsMessagesConsumer):
-  ├─ Consuma il messaggio SQS
-  ├─ Verifica il cambio di stato (0→1)
-  ├─ Invia GraphQL mutation: publishOnOperatingStatusChanged
+  ├─ Consuma il messaggio SQS (message type: STATUS)
+  ├─ Estrae: in_energy_saving_zone = true
+  ├─ Invia GraphQL mutation: publishOnGpsMessageStatus
   │  └─ payload: {
-  │       deviceId: "device123",
-  │       operatingStatus: "HOME_WIFI",
-  │       timestamp: now(),
-  │       message: "Il tuo pet è entrato nella zona sicura! Modalità risparmio attiva."
+  │       id: "device123",
+  │       messageType: "STATUS",
+  │       status: {
+  │         inEnergySavingZone: true,
+  │         timestamp: now(),
+  │         ...
+  │       }
   │     }
-  └─ Aggiorna MongoDB: device.operating_status = HOME_WIFI
+  └─ Aggiorna MongoDB: device.lastKnownStatus.inEnergySavingZone = true
   
   ↓
 AppSync (GraphQL Subscriptions):
-  ├─ Riceve il mutation publishOnOperatingStatusChanged
+  ├─ Riceve il mutation publishOnGpsMessageStatus
   └─ Pubblica a tutti i client sottoscritti
   
   ↓
 App riceve notifica via WebSocket subscription:
 
-  subscription onOperatingStatusChanged {
-    operatingStatusChanged {
-      deviceId
-      operatingStatus      // "HOME_WIFI"
-      timestamp
-      message              // "Il tuo pet è entrato nella zona sicura!..."
+  subscription onGpsMessageStatus {
+    onGpsMessageStatus(id: "device123") {
+      id
+      messageType              // "STATUS"
+      status {
+        inEnergySavingZone     // true
+        timestamp
+        ...
+      }
     }
   }
   
   ↓
-✅ User vede notifica sulla app
+✅ User vede notifica sulla app (device è in zona sicura)
 ```
 
 ---
@@ -181,7 +191,7 @@ App riceve notifica via WebSocket subscription:
 Device scansiona WiFi:
   
   ├─ NON trova "MioWiFi"
-  ├─ Imposta: collar_detached = 0
+  ├─ Imposta: Byte 81 (spare_c5) bit 0x01 = 0 (collar_detached = 0)
   ├─ Riaccende GPS
   ├─ Aumenta heartbeat: ogni 5-10 sec (NORMALE)
   └─ Invia Packet 0x01 con collar_detached=0
@@ -189,29 +199,50 @@ Device scansiona WiFi:
   ↓
 Sentinel Rust Server riceve il pacchetto:
   ├─ Parsa il binary packet 0x01
-  ├─ Legge: collar_detached = 0 (CHANGED from 1!)
+  ├─ Estrae extended_notifications:
+  │  └─ extended_notifications = byte_76 (notifications) + (byte_81 (spare_c5) * 256)
+  │  └─ Se bit 0x0100 è NOT settato → collar_detached = 0 (CHANGED from 1!)
+  ├─ Aggiorna DB: operating_status = DEFAULT
   └─ Pubblica SQS message a queue "gpsMessages"
-     └─ Event type: ENERGY_SAVING_ZONE_OUT
-     └─ Aggiorna operating_status = DEFAULT
+     └─ Message type: STATUS
+     └─ in_energy_saving_zone: false
   
   ↓
-Backend Lambda Consumer:
-  ├─ Consuma il messaggio SQS
-  ├─ Verifica il cambio di stato (1→0)
-  ├─ Invia GraphQL mutation: publishOnOperatingStatusChanged
+Backend Lambda Consumer (gpsMessagesConsumer):
+  ├─ Consuma il messaggio SQS (message type: STATUS)
+  ├─ Estrae: in_energy_saving_zone = false
+  ├─ Invia GraphQL mutation: publishOnGpsMessageStatus
   │  └─ payload: {
-  │       deviceId: "device123",
-  │       operatingStatus: "DEFAULT",
-  │       timestamp: now(),
-  │       message: "Il tuo pet è uscito dalla zona sicura! Tracciamento attivato."
+  │       id: "device123",
+  │       messageType: "STATUS",
+  │       status: {
+  │         inEnergySavingZone: false,
+  │         timestamp: now(),
+  │         ...
+  │       }
   │     }
-  └─ Aggiorna MongoDB: device.operating_status = DEFAULT
+  └─ Aggiorna MongoDB: device.lastKnownStatus.inEnergySavingZone = false
   
   ↓
 AppSync pubblica agli client sottoscritti
   
   ↓
-✅ User riceve notifica di uscita dalla zona
+App riceve notifica via WebSocket subscription:
+
+  subscription onGpsMessageStatus {
+    onGpsMessageStatus(id: "device123") {
+      id
+      messageType              // "STATUS"
+      status {
+        inEnergySavingZone     // false
+        timestamp
+        ...
+      }
+    }
+  }
+  
+  ↓
+✅ User riceve notifica di uscita dalla zona (device è fuori dalla zona sicura)
 ```
 
 ---
@@ -231,14 +262,15 @@ App chiama GraphQL mutation:
 
   ↓
 Backend (Core API):
-  ├─ Crea comando: "DEACTIVATE_ESZ"
-  ├─ Salva in MongoDB
+  ├─ Aggiorna DB: energy_saving_mode = 0
+  ├─ Crea comando: EnergySavingModeCommand { active: false }
   └─ Pubblica SQS message a queue "settings"
   
   ↓
-Sentinel Lambda Consumer:
-  ├─ Consuma e chiama Sentinel Rust server
-  ├─ Invia comando binario al device
+Sentinel Lambda Consumer (settingsConsumer):
+  ├─ Consuma il messaggio SQS
+  ├─ Aggiorna DB: energy_saving_mode = 0
+  ├─ Invia comando binario al device via TCP
   └─ Device riceve DEACTIVATE_ESZ
   
   ↓
@@ -251,8 +283,16 @@ Device:
   ↓
 Sentinel Rust Server:
   ├─ Riceve il pacchetto
-  ├─ Pubblica SQS message: operatingStatus = DEFAULT
-  └─ Backend aggiorna stato nel DB
+  ├─ Estrae: collar_detached = 0
+  ├─ Verifica: energy_saving_mode == 0 (disattivato)
+  ├─ Aggiorna DB: operating_status = DEFAULT
+  └─ Pubblica SQS message a queue "gpsMessages" (message type: STATUS)
+  
+  ↓
+Backend Lambda Consumer (gpsMessagesConsumer):
+  ├─ Consuma il messaggio SQS
+  ├─ Invia GraphQL mutation: publishOnGpsMessageStatus
+  └─ Aggiorna MongoDB: device.lastKnownStatus.inEnergySavingZone = false
   
   ↓
 ✅ ESZ disattivato, tracciamento normale ripreso
@@ -267,7 +307,7 @@ Sentinel Rust Server:
 Campi rilevanti per ESZ:
 
 ```
-collar_detached: 1 byte
+collar_detached: Byte 81 (spare_c5), bit 0x01
 ├─ 0 = Device is NOT in home zone
 │      └─ GPS on, normal heartbeat (5-10 sec)
 │      └─ operatingStatus: DEFAULT
@@ -275,6 +315,12 @@ collar_detached: 1 byte
 └─ 1 = Device IS in home zone
        └─ GPS off (lat=0, lon=0), reduced heartbeat (30-60 sec)
        └─ operatingStatus: HOME_WIFI
+
+Come viene estratto dal pacchetto:
+  ├─ Byte 76 (notifications): contiene geofence flags
+  ├─ Byte 81 (spare_c5): contiene collar_detached flag
+  ├─ extended_notifications = byte_76 + (byte_81 * 256)
+  └─ Se (extended_notifications & 0x0100) != 0 → collar_detached = 1
 
 Usato per rilevare: Entered zone? (0→1) o Left zone? (1→0)
 ```
@@ -363,15 +409,5 @@ sequenceDiagram
     Sentinel->>Device: Send DEACTIVATE command
 ```
 
-
-## Edge Cases
-
-1. **Device moves between zones**: If user has multiple ESZ zones, device prioritizes by closest/strongest WiFi signal
-2. **WiFi interference**: If WiFi network name changes but BSSID same → still detected (BSSID is primary identifier)
-3. **Subscription inactive**: ESZ commands ignored if device subscription is not active
-4. **Network latency**: Command may take 30 sec - 2 min to reach device (TCP connection dependent)
-5. **Battery too low**: Device may skip WiFi scanning if battery < 5%
-
----
 
 
