@@ -9,7 +9,6 @@
  */
 
 /** DOCS
- * - add docs flow registration user, pet and device
  *
  */
 
@@ -21,5 +20,4 @@
  */
 
 /** TODO:
- * - add assert on timestamp puchased sucription (how? now() + 1week/month/year +-how much?)
  */

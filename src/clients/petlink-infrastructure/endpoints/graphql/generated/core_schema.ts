@@ -709,6 +709,7 @@ export interface Mutation {
   replacement: ResponseReplacement;
   resetPetlinkGps: Response;
   sendCommand: Response;
+  sendCustomerSuggestions: Response;
   sendMessageFoundPet: Response;
   sendOtp: ResponseOtp;
   sendOtpForgotPassword: ResponseOtp;
@@ -869,6 +870,11 @@ export type MutationResetPetlinkGpsArgs = {
 
 export type MutationSendCommandArgs = {
   command: Command;
+};
+
+export type MutationSendCustomerSuggestionsArgs = {
+  productId: Scalars["String"]["input"];
+  suggestion: Scalars["String"]["input"];
 };
 
 export type MutationSendMessageFoundPetArgs = {
@@ -3059,6 +3065,75 @@ export type SendCommandMutation = {
   sendCommand: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
+export type SendSettingMutationVariables = Exact<{
+  setting: Setting;
+}>;
+
+export type SendSettingMutation = {
+  __typename?: "Mutation";
+  sendSetting: {
+    __typename?: "ResponseSendSetting";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      subscriptionId?: string | null;
+      subscriptionIsActive?: boolean | null;
+      endOfLifeDevice?: boolean | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
+      settings: { __typename?: "GpsSettings"; updateFrequency: number; enableGpsOnDefault: boolean };
+    } | null;
+    energySavingZone?: {
+      __typename?: "EnergySavingZone";
+      entityType: EntityTypeEnum;
+      id: string;
+      name: string;
+      icon: string;
+      ssid: string;
+      bssid: string;
+      userId: string;
+      radius: number;
+      creationDate: string;
+      updateDate: string;
+      position: { __typename?: "Coordinates"; lat: number; lng: number };
+    } | null;
+  };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -4824,6 +4899,152 @@ export const SendCommandDocument = {
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SendSettingDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "sendSetting" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "setting" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "Setting" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "sendSetting" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "setting" }, value: { kind: "Variable", name: { kind: "Name", value: "setting" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                            { kind: "Field", name: { kind: "Name", value: "alt" } },
+                            { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "speed" } },
+                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
+                            { kind: "Field", name: { kind: "Name", value: "sound" } },
+                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
+                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
+                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                            { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
+                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "endOfLifeDevice" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "energySavingZone" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "icon" } },
+                      { kind: "Field", name: { kind: "Name", value: "ssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "bssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "radius" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -6696,6 +6917,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "sendCommand",
+        "mutation",
+        variables,
+      );
+    },
+    sendSetting(
+      variables: SendSettingMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendSettingMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SendSettingMutation>({
+            document: SendSettingDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "sendSetting",
         "mutation",
         variables,
       );

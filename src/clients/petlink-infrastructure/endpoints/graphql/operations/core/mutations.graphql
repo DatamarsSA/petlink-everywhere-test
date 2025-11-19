@@ -354,3 +354,71 @@ mutation sendCommand($command: Command!) {
     message
   }
 }
+
+mutation sendSetting($setting: Setting!) {
+  sendSetting(setting: $setting) {
+    code
+    translationCode
+    message
+    petlinkGps {
+      id
+      entityType
+      serialNumber
+      petId
+      userId
+      creationDate
+      updateDate
+      countryCode
+      timezone
+      lastKnownPosition {
+        lat
+        lng
+        alt
+        radius
+        speed
+        positionType
+        date
+      }
+      lastKnownStatus {
+        battery
+        flashlight
+        sound
+        liveTracking
+        geofence
+        inGeofence
+        energySavingMode
+        inEnergySavingZone
+        firmwareVersion
+        offline
+        date
+      }
+      geofenceCoordinates {
+        lat
+        lng
+      }
+      settings {
+        updateFrequency
+        enableGpsOnDefault
+      }
+      subscriptionId
+      subscriptionIsActive
+      endOfLifeDevice
+    }
+    energySavingZone {
+      entityType
+      id
+      name
+      icon
+      ssid
+      bssid
+      userId
+      position {
+        lat
+        lng
+      }
+      radius
+      creationDate
+      updateDate
+    }
+  }
+}
