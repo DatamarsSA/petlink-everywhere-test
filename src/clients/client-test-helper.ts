@@ -172,7 +172,7 @@ class TestSetupBuilder {
   }
 }
 
-export class TestHelper {
+class TestHelper {
   constructor() {}
 
   cleanTestReports(): void {

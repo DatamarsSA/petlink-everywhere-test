@@ -474,65 +474,7 @@ class PacketFromSentinel {
       rawData: payload,
     };
   }
-
-  /**
-   * PARSA il Packet 0x02 (ACK dal device)
-   *
-   * INPUT:  [0x02, sequenceNumber_lo, sequenceNumber_hi, status, ...]
-   *         Byte 0: 0x02 (packet type)
-   *         Byte 1-2: sequenceNumber (uint16 LE)
-   *         Byte 3: status (0=OK, 1=ERROR, ecc)
-   *
-   * OUTPUT: {
-   *   packetType: 0x02,
-   *   sequenceNumber: 1,
-   *   status: 0,
-   *   rawData: Buffer
-   * }
-   */
-  static packet0x02(payload: Buffer): {
-    packetType: number;
-    sequenceNumber: number;
-    status: number;
-    rawData: Buffer;
-  } | null {
-    if (payload.length < 4 || payload[0] !== 0x02) return null;
-
-    return {
-      packetType: 0x02,
-      sequenceNumber: payload.readUInt16LE(1),
-      status: payload[3],
-      rawData: payload,
-    };
-  }
-
-  /**
-   * PARSA il Packet 0x03 (Settings Response dal device)
-   *
-   * INPUT:  [0x03, settings_flags, ...]
-   *         Byte 0: 0x03 (packet type)
-   *         Byte 1: settings_flags (bitmask)
-   *
-   * OUTPUT: {
-   *   packetType: 0x03,
-   *   settingsFlags: 0x00,
-   *   rawData: Buffer
-   * }
-   */
-  static packet0x03(payload: Buffer): {
-    packetType: number;
-    settingsFlags: number;
-    rawData: Buffer;
-  } | null {
-    if (payload.length < 2 || payload[0] !== 0x03) return null;
-
-    return {
-      packetType: 0x03,
-      settingsFlags: payload[1],
-      rawData: payload,
-    };
-  }
-}
+\}
 
 // --------------------------------------- CLIENT ----------------------------------------- //
 
@@ -618,12 +560,12 @@ class SentinelTcpClient {
    *   await petlink.send(packet);
    */
   async send(packet: Buffer): Promise<void> {
-    if (!this.socket || !this.connected) {
+    if (!this.socket) {
       throw new Error("Not connected to Sentinel");
     }
     logger.debug(`→ Sending ${packet.length} bytes to Sentinel`);
     logger.debug(`   Hex: ${packet.toString("hex").toUpperCase()}`);
-    this.socket.write(packet);
+    this.socket!.write(packet);
   }
 
   /**
@@ -698,7 +640,7 @@ class SentinelTcpClient {
         continue;
       }
 
-      const packetType = payload[0] ?? 0x00;
+      const packetType = payload[0];
       logger.info(`   Packet Type: 0x${packetType.toString(16).toUpperCase()}`);
       logger.info(`   Payload Length: ${payload.length} bytes`);
       logger.info(`   Payload (hex): ${payload.toString("hex").toUpperCase()}`);
@@ -713,14 +655,7 @@ class SentinelTcpClient {
             parsed = PacketFromSentinel.packet0x0A(payload);
             logger.info(`   ✓ Parsed as Packet 0x0A (LIVE_TRACKING Command)`);
             break;
-          case 0x02:
-            parsed = PacketFromSentinel.packet0x02(payload);
-            logger.info(`   ✓ Parsed as Packet 0x02 (ACK)`);
-            break;
-          case 0x03:
-            parsed = PacketFromSentinel.packet0x03(payload);
-            logger.info(`   ✓ Parsed as Packet 0x03 (Settings Response)`);
-            break;
+          //todo: implement other case parsing
           default:
             logger.debug(`   ℹ️  No parser for packet type 0x${packetType.toString(16).toUpperCase()}`);
         }
@@ -751,7 +686,7 @@ class SentinelTcpClient {
 
 // ================================ EXPORT ================================ //
 
-export const petlink = new SentinelTcpClient({
+export const sentinelTcpSocketClient = new SentinelTcpClient({
   host: process.env.SENTINEL_HOST!,
   port: parseInt(process.env.SENTINEL_PORT!, 10),
 });
