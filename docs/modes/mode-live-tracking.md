@@ -354,63 +354,50 @@ Energy Saving:   ~30-60 seconds (when in ESZ zone)
 
 ```mermaid
 sequenceDiagram
-    participant User as User (App)
-    participant Core as Core API
-    participant DB as MongoDB
-    participant SQS as SQS Queue
-    participant Sentinel as Sentinel Rust
-    participant Device as GPS Device
-    participant AppSync as AppSync
+    participant Mobile as 📱 Mobile App
+    participant Core as 🔵 Core API<br/>(+ AppSync)
+    participant MongoDB as 🗄️ MongoDB
+    participant SQS as 📨 SQS Queue
+    participant Lambda as ⚙️ Lambda<br/>Consumers
+    participant Sentinel as 🦀 Sentinel<br/>(Rust TCP)
+    participant Device as 📡 GPS Device
 
-    Note over User,Device: STEP 1: Activate Live Tracking
-    User->>Core: sendCommand(LIVE_TRACKING, duration: 900)
-    Core->>DB: Store command, update status
-    Core->>SQS: Queue commands message
-    SQS->>Sentinel: commandsConsumer trigger
-    Sentinel->>Device: Send command (binary 0x05)
+    Note over Mobile,Device: STEP 1: Send Command (User → Device)
 
-    Note over User,Device: STEP 2: Device increases frequency
-    Device->>Device: Set heartbeat to ~5 sec
-    Device->>Sentinel: Send position (packet 0x01)
+    Mobile->>Core: GraphQL mutation<br/>sendCommand(LIVE_TRACKING, 900)
+    Core->>MongoDB: Store command<br/>Update device status
+    Core->>SQS: Publish: commands message
+    SQS->>Lambda: Trigger: commandsConsumer
+    Lambda->>Sentinel: HTTP POST /send_packet<br/>command: LIVE_TRACKING<br/>duration: 900
+    Sentinel->>Sentinel: Create Packet 0x05<br/>Encapsulate SIRF protocol
+    Sentinel->>Device: TCP binary packet<br/>Port 8080
+    Device->>Device: Parse Packet 0x05<br/>Activate Live Tracking:<br/>✓ Timer: 900s<br/>✓ Freq: 5 sec<br/>✓ GPS: ON
 
-    Note over User,Device: STEP 3: App subscribes
-    User->>AppSync: Subscribe onGpsMessagePosition
+    Note over Mobile,Device: STEP 2: Frequent Position Updates (Device → User)
 
-    Note over User,Device: STEP 4: Frequent position updates
-    loop Every ~5 seconds
-        Device->>Sentinel: Send position (packet 0x01)
-        Sentinel->>SQS: Queue gpsMessage
-        SQS->>Core: gpsMessagesConsumer trigger
-        Core->>DB: Update lastKnownPosition
-        Core->>AppSync: publishOnGpsMessagePosition
-        AppSync->>User: WebSocket position update
+    loop Every ~5 seconds (for 900 seconds)
+        Device->>Sentinel: TCP packet (SiRF 0x01)<br/>lat, lon, battery
+        Sentinel->>Sentinel: Parse position
+        Sentinel->>SQS: Publish: gpsMessages
+        SQS->>Lambda: Trigger: gpsMessagesConsumer
+        Lambda->>MongoDB: Update lastKnownPosition
+        Lambda->>Core: GraphQL mutation<br/>publishOnGpsMessagePosition
+        Core->>Core: AppSync: Publish subscription<br/>onGpsMessagePosition
+        Core->>Mobile: Real-time update<br/>via WebSocket
+        Mobile->>Mobile: Update map
     end
 
-    Note over User,Device: STEP 5: Deactivate (manual or auto)
-    User->>Core: sendCommand(LIVE_TRACKING, duration: 0)
-    Core->>SQS: Queue commands message
-    SQS->>Sentinel: Disable Live Tracking
-    Sentinel->>Device: Send DEACTIVATE command
-    Device->>Device: Reset heartbeat to ~4 min
+    Note over Mobile,Device: STEP 3: Live Tracking Expires
+
+    Device->>Device: Timer expires (900s)
+    Device->>Sentinel: TCP packet (normal freq)
+    Sentinel->>SQS: Publish: gpsMessages
+    SQS->>Lambda: Trigger: gpsMessagesConsumer
+    Lambda->>Core: Update + Publish
+    Core->>Mobile: Position update<br/>(every ~4 min now)
+
+    Note over Mobile,Device: ✅ Complete
 ```
-
----
-
-## Edge Cases
-
-1. **Device offline**: Se il device è offline quando arriva il comando, il comando viene messo in coda e inviato al prossimo heartbeat. Il timer parte quando il device riceve effettivamente il comando.
-
-2. **Subscription disconnessa**: Se l'app perde la connessione WebSocket durante Live Tracking, può riconnettersi e risottoscriversi. Continuerà a ricevere posizioni finché il device è in modalità Live Tracking.
-
-3. **Duration scade durante offline**: Se il device è offline quando scade la duration, il timer interno del device gestisce la scadenza. Quando torna online, invierà posizioni a frequenza normale.
-
-4. **Multiple activations**: Se l'utente attiva Live Tracking mentre è già attivo, il nuovo comando sovrascrive il precedente. Il timer viene resettato alla nuova duration.
-
-5. **Battery low**: Il device può ridurre automaticamente la frequenza se la batteria è molto bassa (< 5%), anche durante Live Tracking, per preservare la batteria.
-
-6. **Network latency**: Il comando può impiegare 30 sec - 2 minuti per raggiungere il device (dipende dalla connessione TCP). L'app dovrebbe mostrare uno stato "Attivazione in corso..." durante questo periodo.
-
-7. **Position type variations**: Durante Live Tracking, il device può inviare posizioni di tipo GPS, WIFI o LBS a seconda della disponibilità del segnale. L'app dovrebbe gestire tutti i tipi.
 
 ---
 

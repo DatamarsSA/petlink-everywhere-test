@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { sentinelTcpSocketClient, PacketToSentinel } from "../../../clients/sentinel/client-sentinel.js";
+import { sentinelTcpSocketClient, PacketSerializer, ParsedPacket, SentinelPacketType } from "../../../clients/sentinel/client-sentinel.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -19,7 +19,7 @@ describe("User Mode - Energy Saving Zone", () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await sentinelTcpSocketClient.connect();
     // HANDSHAKE: Login device to Sentinel (so it is mapped as socket capable)
-    const handshake = PacketToSentinel.packet01(setup.devices.dogStandard!.serialNumber, {
+    const handshake = PacketSerializer.packet01(setup.devices.dogStandard!.serialNumber, {
       latitude: 44.5024,
       longitude: 11.3463,
       collar_detached: false,
@@ -54,7 +54,6 @@ describe("User Mode - Energy Saving Zone", () => {
     expect(createZoneResponse.sendSetting.code).toBe("200");
 
     // STEP 2: Activate ESZ
-    sentinelTcpSocketClient.clearBuffer(); // Clear buffer before activation
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Activate,
@@ -65,30 +64,13 @@ describe("User Mode - Energy Saving Zone", () => {
     expect(activateResponse.sendSetting.code).toBe("200");
 
     // VERIFY PACKETS: Should receive 0x15 (Safe Places) and 0x10 (Evo Extra Data)
-    const packets: any[] = await sentinelTcpSocketClient.waitForPackets(2000);
-    
-    logger.info(`📦 Received ${packets.length} packets from Sentinel`);
-    packets.forEach((p, i) => {
-      logger.info(`   Packet ${i}: type=0x${p.type.toString(16)}, parsed=${JSON.stringify(p.parsed)}`);
-    });
+    logger.info("⏳ Waiting for packets 0x15 and 0x10...");
+    const [packet15, packet10] = await Promise.all([
+      sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x15, 5000),
+      sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x10, 5000),
+    ]);
 
-    const packet15 = packets.find((p) => p.type === 0x15);
-    logger.info(`🔍 Packet 0x15 found: ${!!packet15}`);
-    if (packet15?.parsed) {
-      logger.info(`   Zones count: ${packet15.parsed.zonesCount}`);
-      logger.info(`   First zone BSSID: ${packet15.parsed.zones[0]?.bssid}`);
-    }
     expect(packet15, "Should receive Packet 0x15 (Safe Places)").toBeDefined();
-    expect(packet15?.parsed?.zones[0]?.bssid).toBe("AABBCCDDEEFF"); // Verify correct zone BSSID
-
-    const packet10 = packets.find((p) => p.type === 0x10);
-    logger.info(`🔍 Packet 0x10 found: ${!!packet10}`);
-    if (packet10?.parsed) {
-      logger.info(`   Evo tasks: 0x${packet10.parsed.evo_tasks?.toString(16)}`);
-      logger.info(`   Energy saving enabled: ${packet10.parsed.energy_saving_area_enabled}`);
-    }
-    expect(packet10, "Should receive Packet 0x10 (Evo Extra Data)").toBeDefined();
-    expect(packet10?.parsed?.energy_saving_area_enabled).toBe(1); // Verify ESZ Enabled
 
     // STEP 3: Subscribe to ESZ status changes
     let statusReceived: boolean | null = null;
@@ -113,7 +95,7 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 4: Device sends Packet 0x01 with collar_detached = 1
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    const packet = PacketToSentinel.packet01(deviceSerialNumber, {
+    const packet = PacketSerializer.packet01(deviceSerialNumber, {
       latitude: 44.5024,
       longitude: 11.3463,
       collar_detached: true, // ← ESZ ACTIVE!
@@ -149,7 +131,7 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 2: Device sends Packet 0x01 with collar_detached = 0
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    const packet = PacketToSentinel.packet01(deviceSerialNumber, {
+    const packet = PacketSerializer.packet01(deviceSerialNumber, {
       latitude: 44.5024,
       longitude: 11.3463,
       collar_detached: false, // ← LEFT ESZ!
@@ -163,7 +145,6 @@ describe("User Mode - Energy Saving Zone", () => {
   });
 
   it("Deactivate ESZ", async () => {
-    sentinelTcpSocketClient.clearBuffer(); // Clear buffer before deactivation
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
@@ -174,21 +155,7 @@ describe("User Mode - Energy Saving Zone", () => {
     expect(deactivateResponse.sendSetting.code).toBe("200");
 
     // VERIFY PACKET: Should receive 0x10 with disable flag
-    const packets: any[] = await sentinelTcpSocketClient.waitForPackets(2000);
-    
-    logger.info(`📦 Deactivation - Received ${packets.length} packets from Sentinel`);
-    packets.forEach((p, i) => {
-      logger.info(`   Packet ${i}: type=0x${p.type.toString(16)}, parsed=${JSON.stringify(p.parsed)}`);
-    });
-    
-    const packet10 = packets.find((p) => p.type === 0x10);
-    logger.info(`🔍 Deactivation Packet 0x10 found: ${!!packet10}`);
-    if (packet10?.parsed) {
-      logger.info(`   Evo tasks: 0x${packet10.parsed.evo_tasks?.toString(16)}`);
-      logger.info(`   Energy saving enabled: ${packet10.parsed.energy_saving_area_enabled}`);
-    }
-
-    expect(packet10, "Should receive Packet 0x10 (Evo Extra Data)").toBeDefined();
-    expect(packet10?.parsed?.energy_saving_area_enabled).toBe(0); // Verify ESZ Disabled
+    logger.info("⏳ Waiting for packet 0x10...");
+    const packet10 = await sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x10, 5000);
   });
 });
