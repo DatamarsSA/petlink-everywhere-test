@@ -478,12 +478,13 @@ class PacketFromSentinel {
   /**
    * PARSA il Packet 0x15 (Safe Places WiFi)
    * Payload: [0x15] [Lat(8)] [Lng(8)] [Radius(8)] [BSSID(6)] ... repeated
+   * NOTA: NON c'è zonesCount! Il formato è diretto: pck_nr seguito dai dati delle zone
    */
   static packet0x15(payload: Buffer): any {
     if (payload.length < 1 || payload[0] !== 0x15) return null;
 
     const zones = [];
-    let offset = 1;
+    let offset = 1; // Salta il packet type 0x15
     const zoneSize = 30; // 8+8+8+6 = 30 bytes per zone
 
     while (offset + zoneSize <= payload.length) {
@@ -496,7 +497,7 @@ class PacketFromSentinel {
       offset += 8;
       // BSSID è 6 bytes in formato esadecimale
       const bssidBytes = payload.subarray(offset, offset + 6);
-      const bssid = bssidBytes.toString('hex').toUpperCase();
+      const bssid = bssidBytes.toString("hex").toUpperCase();
       offset += 6;
 
       zones.push({ lat, lng, radius, bssid });
@@ -506,7 +507,7 @@ class PacketFromSentinel {
       packetType: 0x15,
       commandName: "SAFE_PLACES_WIFI",
       zonesCount: zones.length,
-      zones
+      zones,
     };
   }
 
@@ -530,7 +531,7 @@ class PacketFromSentinel {
     const result: any = {
       packetType: 0x10,
       commandName: "EVO_EXTRA_DATA",
-      evo_tasks
+      evo_tasks,
     };
 
     if (evo_tasks & EvoFlashlight) {
@@ -607,8 +608,8 @@ class SentinelTcpClient {
       });
 
       this.socket.on("data", (chunk: Buffer) => {
-        logger.debug(`← Received ${chunk.length} bytes from Sentinel`);
-        logger.debug(`   Hex: ${chunk.toString("hex").toUpperCase()}`);
+        // logger.debug(`← Received ${chunk.length} bytes from Sentinel`);
+        // logger.debug(`   Hex: ${chunk.toString("hex").toUpperCase()}`);
 
         // Accumula i dati ricevuti
         this.dataBuffer = Buffer.concat([this.dataBuffer, chunk]);
@@ -683,9 +684,6 @@ class SentinelTcpClient {
     await new Promise((resolve) => setTimeout(resolve, timeBeforeReadSocket));
     let rawData: Buffer = this.dataBuffer;
 
-    logger.info(`🔍 Parsing rawData of ${rawData.length} bytes`);
-    logger.info(`Raw Hex (before split): ${rawData.toString("hex").toUpperCase()}`);
-
     const packets: ParsedSiRFPacket[] = [];
     let offset = 0;
     let packetIndex = 0;
@@ -711,6 +709,7 @@ class SentinelTcpClient {
       const packetHex = sirf_packet.toString("hex").toUpperCase();
 
       // Log del pacchetto SIRF
+      logger.info(``);
       logger.info(`📦 SIRF Packet #${packetIndex}:`);
       logger.info(`   Hex: ${packetHex}`);
       logger.info(`   Total Length: ${sirf_packet.length} bytes`);
@@ -736,20 +735,23 @@ class SentinelTcpClient {
       try {
         switch (packetType) {
           case 0x0a:
+            logger.info(`   Try to parse Packet 0x0A (LIVE_TRACKING Command), payload = `, payload);
             parsed = PacketFromSentinel.packet0x0A(payload);
             logger.info(`   ✓ Parsed as Packet 0x0A (LIVE_TRACKING Command)`);
             break;
           case 0x15:
+            logger.info(`   Try to parse Packet 0x15 (SAFE_PLACES_WIFI), payload = `, payload);
             parsed = PacketFromSentinel.packet0x15(payload);
             logger.info(`   ✓ Parsed as Packet 0x15 (SAFE_PLACES_WIFI)`);
             break;
           case 0x10:
+            logger.info(`   Try to parse Packet 0x10 (EVO_EXTRA_DATA), payload = `, payload);
             parsed = PacketFromSentinel.packet0x10(payload);
             logger.info(`   ✓ Parsed as Packet 0x10 (EVO_EXTRA_DATA)`);
             break;
           //todo: implement other case parsing
           default:
-            logger.debug(`   ℹ️  No parser for packet type 0x${packetType.toString(16).toUpperCase()}`);
+            logger.info(`   ℹ️  No parser for packet type 0x${packetType.toString(16).toUpperCase()}`);
         }
       } catch (err) {
         error = err instanceof Error ? err.message : String(err);
@@ -770,8 +772,15 @@ class SentinelTcpClient {
       packetIndex++;
     }
 
-    logger.info(`✅ Found ${packets.length} SIRF packets total\n`);
-    this.clearBuffer();
+    logger.info(`📦 Received ${packets.length} packets from Sentinel`);
+    packets.forEach((p, i) => {
+      logger.info(
+        `   Packet ${i}: type=0x${p.type.toString(16).padStart(2, "0")} ` +
+          `,payloadHex=${p.payload.toString("hex").toUpperCase()} ` +
+          `,parsed=${JSON.stringify(p.parsed)}`,
+      );
+    });
+
     return packets;
   }
 }
