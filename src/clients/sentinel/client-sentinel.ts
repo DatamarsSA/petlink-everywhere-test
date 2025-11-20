@@ -484,16 +484,19 @@ class PacketFromSentinel {
 
     const zones = [];
     let offset = 1;
-    const zoneSize = 30;
+    const zoneSize = 30; // 8+8+8+6 = 30 bytes per zone
 
     while (offset + zoneSize <= payload.length) {
+      // Rust usa f64 (double) per lat/lng/radius
       const lat = payload.readDoubleLE(offset);
       offset += 8;
       const lng = payload.readDoubleLE(offset);
       offset += 8;
       const radius = payload.readDoubleLE(offset);
       offset += 8;
-      const bssid = payload.subarray(offset, offset + 6).toString('hex').toUpperCase();
+      // BSSID è 6 bytes in formato esadecimale
+      const bssidBytes = payload.subarray(offset, offset + 6);
+      const bssid = bssidBytes.toString('hex').toUpperCase();
       offset += 6;
 
       zones.push({ lat, lng, radius, bssid });
@@ -533,20 +536,24 @@ class PacketFromSentinel {
     if (evo_tasks & EvoFlashlight) {
       result.torch_duration = payload.readInt16LE(offset);
       offset += 2;
+      logger.debug(`   🔦 EvoFlashlight: torch_duration = ${result.torch_duration}`);
     }
     if (evo_tasks & EVO_TOUR_RECORDING) {
       result.tour_recording_enabled = payload.readInt8(offset);
       offset += 1;
+      logger.debug(`   🎥 EvoTourRecording: tour_recording_enabled = ${result.tour_recording_enabled}`);
     }
     if (evo_tasks & EvoSound) {
       result.sound_command = payload.readInt16LE(offset);
       offset += 2;
       result.sound_duration = payload.readInt16LE(offset);
       offset += 2;
+      logger.debug(`   🔊 EvoSound: sound_command = ${result.sound_command}, sound_duration = ${result.sound_duration}`);
     }
     if (evo_tasks & EvoEnergySaveArea) {
       result.energy_saving_area_enabled = payload.readInt8(offset); // 1 = ON, 0 = OFF
       offset += 1;
+      logger.debug(`   🏠 EvoEnergySaveArea: energy_saving_area_enabled = ${result.energy_saving_area_enabled}`);
     }
 
     return result;
