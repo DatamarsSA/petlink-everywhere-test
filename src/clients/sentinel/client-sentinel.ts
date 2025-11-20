@@ -1,4 +1,5 @@
 import { createConnection, Socket } from "net";
+import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
 
 // ================================ CONSTANTS & INTERFACES ================================ //
@@ -331,79 +332,14 @@ export class PacketToSentinel {
       },
     });
   }
-
-  /**
-   * Crea il pacchetto 0x06 HEARTBEAT (device → Sentinel)
-   * Struttura simile al welcome ma con packet type 0x06
-   * Per ora implementazione minimale
-   */
-  static packet06(serialNumber: string): Buffer {
-    return this.buildPacket({
-      packetType: 0x06,
-      payloadBuilder: (buffer, offset) => {
-        // Serial number (10 bytes)
-        this.stringToBytes(serialNumber, 10).copy(buffer, offset);
-        offset += 10;
-
-        // IMEI (15 bytes)
-        this.stringToBytes("123456789012345", 15).copy(buffer, offset);
-        offset += 15;
-
-        // CCID (20 bytes)
-        this.stringToBytes("12345678901234567890", 20).copy(buffer, offset);
-        offset += 20;
-
-        // FW version (3 bytes)
-        buffer[offset++] = 1;
-        buffer[offset++] = 0;
-        buffer[offset++] = 0;
-
-        // Boot version (3 bytes)
-        buffer[offset++] = 1;
-        buffer[offset++] = 0;
-        buffer[offset++] = 0;
-
-        // Latitude (4 bytes, f32 - LITTLE ENDIAN)
-        buffer.writeFloatLE(0, offset);
-        offset += 4;
-
-        // Longitude (4 bytes, f32 - LITTLE ENDIAN)
-        buffer.writeFloatLE(0, offset);
-        offset += 4;
-
-        // Altitude (2 bytes, int16 - LITTLE ENDIAN)
-        buffer.writeInt16LE(0, offset);
-        offset += 2;
-
-        // Last GPS time (4 bytes, uint32 - LITTLE ENDIAN)
-        buffer.writeUInt32LE(Math.floor(Date.now() / 1000), offset);
-        offset += 4;
-
-        // Temperature (2 bytes, int16 - LITTLE ENDIAN)
-        buffer.writeInt16LE(200, offset);
-        offset += 2;
-
-        // Speed (2 bytes, int16 - LITTLE ENDIAN)
-        buffer.writeInt16LE(0, offset);
-        offset += 2;
-
-        // Battery (2 bytes, int16 - LITTLE ENDIAN)
-        buffer.writeInt16LE(4200, offset);
-        offset += 2;
-
-        return offset;
-      },
-    });
-  }
 }
 
 // ================================ PACKET DESERIALIZERS (Binary → Structured) ================================ //
 
 /**
- * Parsa pacchetti ricevuti da Sentinel
- * Tutti i metodi ricevono il payload DECAPSULATO (senza SIRF header/footer)
+ * PacketFromSentinel class - made public for export
  */
-class PacketFromSentinel {
+export class PacketFromSentinel {
   /**
    * DECAPSULA un pacchetto dal formato SIRF protocol
    *
@@ -559,6 +495,32 @@ class PacketFromSentinel {
 
     return result;
   }
+
+  /**
+   * PARSA il Packet 0x02 (placeholder - not implemented yet)
+   */
+  static packet0x02(payload: Buffer): any {
+    if (payload.length < 1 || payload[0] !== 0x02) return null;
+
+    return {
+      packetType: 0x02,
+      commandName: "PACKET_0x02",
+      rawData: payload.toString("hex"),
+    };
+  }
+
+  /**
+   * PARSA il Packet 0x03 (placeholder - not implemented yet)
+   */
+  static packet0x03(payload: Buffer): any {
+    if (payload.length < 1 || payload[0] !== 0x03) return null;
+
+    return {
+      packetType: 0x03,
+      commandName: "PACKET_0x03",
+      rawData: payload.toString("hex"),
+    };
+  }
 }
 
 // --------------------------------------- CLIENT ----------------------------------------- //
@@ -569,24 +531,28 @@ interface SentinelConfig {
   port: number;
 }
 
-interface ParsedSiRFPacket {
+export interface ParsedSiRFPacket {
   index: number;
   type: number;
   payload: Buffer;
   hex: string;
   parsed?: unknown;
   error?: string;
+  startOffset?: number;
+  endOffset?: number;
 }
 
-//------ Facad Client (unique export) ------
-class SentinelTcpClient {
+//------ Facade Client (unique export) ------
+export class SentinelTcpClient {
   private socket: Socket | null = null;
   private config: SentinelConfig;
-  private connected = false;
   private dataBuffer: Buffer = Buffer.alloc(0);
+  private packetCounter: number = 0;
+  private eventEmitter: EventEmitter;
 
   constructor(config: SentinelConfig) {
     this.config = config;
+    this.eventEmitter = new EventEmitter();
   }
 
   /**
@@ -602,20 +568,13 @@ class SentinelTcpClient {
       });
 
       this.socket.on("connect", () => {
-        this.connected = true;
         logger.debug("✓ Connected to Sentinel TCP server");
         resolve();
       });
 
-      this.socket.on("data", (chunk: Buffer) => {
-        // logger.debug(`← Received ${chunk.length} bytes from Sentinel`);
-        // logger.debug(`   Hex: ${chunk.toString("hex").toUpperCase()}`);
-
-        // Accumula i dati ricevuti
-        this.dataBuffer = Buffer.concat([this.dataBuffer, chunk]);
-
-        // Qui puoi parsare le risposte se necessario
-        // (per ora logghiamo solo)
+      this.socket.on("data", (data: Buffer) => {
+        this.dataBuffer = Buffer.concat([this.dataBuffer, data]);
+        this.processIncomingData(this.dataBuffer);
       });
 
       this.socket.on("error", (err) => {
@@ -624,7 +583,6 @@ class SentinelTcpClient {
       });
 
       this.socket.on("close", () => {
-        this.connected = false;
         logger.debug("✓ Connection closed");
       });
 
@@ -660,7 +618,6 @@ class SentinelTcpClient {
     if (this.socket) {
       this.socket.destroy();
       this.socket = null;
-      this.connected = false;
     }
   }
 
@@ -672,116 +629,178 @@ class SentinelTcpClient {
   }
 
   /**
-   * Parsa tutti i pacchetti SIRF dal buffer grezzo
-   * STEP 0: await 'timeBeforeReadSocket' to accumulate data on this.dataBuffer
-   * STEP 1: Cerca header SIRF (0xA0A2)
-   * STEP 2: Estrai pacchetto SIRF completo
-   * STEP 3: DECAPSULA (rimuove SIRF header/footer/CRC)
-   * STEP 4: PARSA (converte payload in oggetto strutturato)
-   * STEP 5: Ritorna array di ParsedSiRFPacket
+   * Processa i dati in arrivo e emette eventi per ogni pacchetto parsato
    */
-  async waitForPackets(timeBeforeReadSocket: number): Promise<ParsedSiRFPacket[]> {
-    await new Promise((resolve) => setTimeout(resolve, timeBeforeReadSocket));
-    let rawData: Buffer = this.dataBuffer;
+  private processIncomingData(buffer: Buffer): void {
+    while (true) {
+      const packet = this.extractPacket(buffer);
 
-    const packets: ParsedSiRFPacket[] = [];
-    let offset = 0;
-    let packetIndex = 0;
+      if (!packet) return;
 
-    while (offset < rawData.length) {
-      // STEP 1: Cerca header SIRF (0xA0 0xA2)
-      if (offset + 4 > rawData.length) break;
-      if (rawData[offset] !== 0xa0 || rawData[offset + 1] !== 0xa2) {
-        offset++;
-        continue;
-      }
+      this.packetCounter++;
+      logger.debug(`[${this.packetCounter}] Emitting packet: 0x${packet.type.toString(16)}`);
+      this.eventEmitter.emit("packet", packet);
+      this.eventEmitter.emit(`packet:${packet.type.toString(16)}`, packet);
+    }
+  }
 
-      // STEP 2: Estrai pacchetto SIRF completo
-      const length = (rawData[offset + 2]! << 8) | rawData[offset + 3]!;
-      const totalPacketSize = 8 + length;
+  /**
+   * Estrae un pacchetto dal buffer e lo rimuove dal buffer
+   */
+  private extractPacket(buffer: Buffer): ParsedSiRFPacket | null {
+    // Early return: minimum packet length check
+    if (buffer.length < 8) return null;
 
-      if (offset + totalPacketSize > rawData.length) {
-        logger.warn(`⚠️  Incomplete packet at offset ${offset}: expected ${totalPacketSize} bytes, only ${rawData.length - offset} available`);
-        break;
-      }
-
-      const sirf_packet = rawData.slice(offset, offset + totalPacketSize);
-      const packetHex = sirf_packet.toString("hex").toUpperCase();
-
-      // Log del pacchetto SIRF
-      logger.info(``);
-      logger.info(`📦 SIRF Packet #${packetIndex}:`);
-      logger.info(`   Hex: ${packetHex}`);
-      logger.info(`   Total Length: ${sirf_packet.length} bytes`);
-
-      // STEP 3: DECAPSULA (rimuove SIRF header/footer/CRC)
-      const payload = PacketFromSentinel.decapsulateFromSIRFProtocol(sirf_packet);
-      if (!payload) {
-        logger.warn(`   ⚠️  Failed to decapsulate packet`);
-        offset += totalPacketSize;
-        packetIndex++;
-        continue;
-      }
-
-      const packetType = payload[0];
-      logger.info(`   Packet Type: 0x${packetType.toString(16).toUpperCase()}`);
-      logger.info(`   Payload Length: ${payload.length} bytes`);
-      logger.info(`   Payload (hex): ${payload.toString("hex").toUpperCase()}`);
-
-      // STEP 4: PARSA (converte payload in oggetto strutturato)
-      let parsed: unknown;
-      let error: string | undefined;
-
-      try {
-        switch (packetType) {
-          case 0x0a:
-            logger.info(`   Try to parse Packet 0x0A (LIVE_TRACKING Command), payload = `, payload);
-            parsed = PacketFromSentinel.packet0x0A(payload);
-            logger.info(`   ✓ Parsed as Packet 0x0A (LIVE_TRACKING Command)`);
-            break;
-          case 0x15:
-            logger.info(`   Try to parse Packet 0x15 (SAFE_PLACES_WIFI), payload = `, payload);
-            parsed = PacketFromSentinel.packet0x15(payload);
-            logger.info(`   ✓ Parsed as Packet 0x15 (SAFE_PLACES_WIFI)`);
-            break;
-          case 0x10:
-            logger.info(`   Try to parse Packet 0x10 (EVO_EXTRA_DATA), payload = `, payload);
-            parsed = PacketFromSentinel.packet0x10(payload);
-            logger.info(`   ✓ Parsed as Packet 0x10 (EVO_EXTRA_DATA)`);
-            break;
-          //todo: implement other case parsing
-          default:
-            logger.info(`   ℹ️  No parser for packet type 0x${packetType.toString(16).toUpperCase()}`);
-        }
-      } catch (err) {
-        error = err instanceof Error ? err.message : String(err);
-        logger.warn(`   ⚠️  Parsing error: ${error}`);
-      }
-
-      // STEP 5: Ritorna il pacchetto parsato
-      packets.push({
-        index: packetIndex,
-        type: packetType,
-        payload: payload,
-        hex: packetHex,
-        parsed: parsed,
-        error: error,
-      });
-
-      offset += totalPacketSize;
-      packetIndex++;
+    // Early return: find header
+    const packetStart = this.findHeader(buffer);
+    if (packetStart === -1) {
+      this.discardGarbageData(buffer);
+      return null;
     }
 
-    logger.info(`📦 Received ${packets.length} packets from Sentinel`);
-    packets.forEach((p, i) => {
-      logger.info(
-        `   Packet ${i}: type=0x${p.type.toString(16).padStart(2, "0")} ` +
-          `,payloadHex=${p.payload.toString("hex").toUpperCase()} ` +
-          `,parsed=${JSON.stringify(p.parsed)}`,
-      );
-    });
+    // Early return: handle garbage before header
+    if (packetStart > 0) {
+      logger.warn(`Discarding ${packetStart} bytes of garbage data before packet header.`);
+      buffer.copy(buffer, 0, packetStart);
+      buffer.length = buffer.length - packetStart;
+    }
 
-    return packets;
+    // Early return: re-check after garbage removal
+    if (buffer.length < 8) return null;
+
+    const length = buffer.readUInt16BE(2);
+    const totalPacketLength = 8 + length;
+
+    // Early return: incomplete packet
+    if (buffer.length < totalPacketLength) return null;
+
+    // Early return: invalid footer
+    if (buffer[totalPacketLength - 2] !== 0xb0 || buffer[totalPacketLength - 1] !== 0xb3) {
+      logger.warn("Invalid packet footer. Discarding malformed packet.");
+      buffer.copy(buffer, 0, totalPacketLength);
+      buffer.length = buffer.length - totalPacketLength;
+      return null;
+    }
+
+    const fullPacket = buffer.subarray(0, totalPacketLength);
+    buffer.copy(buffer, 0, totalPacketLength);
+    buffer.length = buffer.length - totalPacketLength;
+
+    const payload = fullPacket.subarray(4, fullPacket.length - 4);
+    const packetType = payload[0];
+
+    const parsed = this.parsePayload(packetType, payload);
+    if (!parsed) return null;
+
+    return {
+      index: this.packetCounter,
+      type: packetType,
+      payload: payload,
+      hex: fullPacket.toString("hex").toUpperCase(),
+      parsed: parsed,
+    };
+  }
+
+  private findHeader(buffer: Buffer): number {
+    for (let i = 0; i <= buffer.length - 2; i++) {
+      if (buffer[i] === 0xa0 && buffer[i + 1] === 0xa2) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private discardGarbageData(buffer: Buffer): void {
+    const lastA0 = buffer.lastIndexOf(0xa0);
+    if (lastA0 > -1) {
+      buffer.copy(buffer, 0, lastA0);
+      buffer.length = buffer.length - lastA0;
+    } else {
+      buffer.length = 0;
+    }
+  }
+
+  private parsePayload(packetType: number, payload: Buffer): any {
+    try {
+      switch (packetType) {
+        case 0x0a:
+          return PacketFromSentinel.packet0x0A(payload);
+        case 0x10:
+          return PacketFromSentinel.packet0x10(payload);
+        case 0x15:
+          return PacketFromSentinel.packet0x15(payload);
+        case 0x02:
+          return PacketFromSentinel.packet0x02(payload);
+        case 0x03:
+          return PacketFromSentinel.packet0x03(payload);
+        default:
+          logger.warn(`Unknown packet type received: 0x${packetType.toString(16)}`);
+          return { packetType, rawData: payload.toString("hex") };
+      }
+    } catch (e: any) {
+      logger.error(`Error parsing packet 0x${packetType.toString(16)}: ${e.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Wait for a specific packet type
+   */
+  async waitForPacket(packetType: number, timeout: number = 5000, validator?: (packet: ParsedSiRFPacket) => boolean): Promise<ParsedSiRFPacket> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.eventEmitter.off(`packet:${packetType.toString(16)}`, onPacket);
+        reject(new Error(`Timeout waiting for packet 0x${packetType.toString(16)}`));
+      }, timeout);
+
+      const onPacket = (packet: ParsedSiRFPacket) => {
+        if (!validator || validator(packet)) {
+          clearTimeout(timer);
+          this.eventEmitter.off(`packet:${packetType.toString(16)}`, onPacket);
+          resolve(packet);
+        }
+      };
+
+      this.eventEmitter.on(`packet:${packetType.toString(16)}`, onPacket);
+    });
+  }
+
+  /**
+   * Wait for multiple packet types in order
+   */
+  async waitForPackets(
+    expectedPacketTypes: number[],
+    timeout: number = 5000,
+  ): Promise<{ byType: { [key: string]: ParsedSiRFPacket[] }; all: ParsedSiRFPacket[] }> {
+    return new Promise((resolve, reject) => {
+      const receivedPackets: ParsedSiRFPacket[] = [];
+      const packetsByType: { [key: string]: ParsedSiRFPacket[] } = {};
+      const expectedCount = expectedPacketTypes.length;
+
+      const timer = setTimeout(() => {
+        this.eventEmitter.off("packet", onPacket);
+        reject(new Error(`Timeout waiting for ${expectedCount} packets. Received ${receivedPackets.length}`));
+      }, timeout);
+
+      const onPacket = (packet: ParsedSiRFPacket) => {
+        if (expectedPacketTypes.includes(packet.type)) {
+          receivedPackets.push(packet);
+          const typeKey = `0x${packet.type.toString(16)}`;
+          if (!packetsByType[typeKey]) {
+            packetsByType[typeKey] = [];
+          }
+          packetsByType[typeKey].push(packet);
+
+          if (receivedPackets.length >= expectedCount) {
+            clearTimeout(timer);
+            this.eventEmitter.off("packet", onPacket);
+            resolve({ byType: packetsByType, all: receivedPackets });
+          }
+        }
+      };
+
+      this.eventEmitter.on("packet", onPacket);
+    });
   }
 }
 
@@ -802,11 +821,27 @@ export const sentinelTcpSocketClient = new SentinelTcpClient({
  *   battery: 4200,
  *   collar_detached: false
  * });
- * await petlink.send(packet);
+ * await sentinelTcpSocketClient.send(packet);
  *
- * ===== RICEZIONE =====
- * const packets = await petlink.waitForPackets(5000);
- * packets.forEach(p => {
- *   console.log(`Packet 0x${p.type.toString(16)}: ${JSON.stringify(p.parsed)}`);
+ * ===== RICEZIONE (EVENT-DRIVEN) =====
+ * // Ascolta tutti i pacchetti
+ * sentinelTcpSocketClient.on('packet', (packet) => {
+ *   console.log(`Packet 0x${packet.type.toString(16)}: ${JSON.stringify(packet.parsed)}`);
  * });
+ *
+ * // Ascolta pacchetti specifici
+ * sentinelTcpSocketClient.on('packet:0x0A', (packet) => {
+ *   console.log('LIVE_TRACKING command received:', packet.parsed);
+ * });
+ *
+ * // Wait for single packet type with validation
+ * const commandPacket = await sentinelTcpSocketClient.waitForPacket(0x0A, 5000, (packet) => {
+ *   return packet.parsed?.commandType === 0x01; // Only LIVE_TRACKING commands
+ * });
+ *
+ * // Wait for multiple packet types
+ * const { byType, all } = await sentinelTcpSocketClient.waitForPackets([0x15, 0x10], 5000);
+ * console.log('Safe Places packets:', byType['0x15']);
+ * console.log('Evo Extra Data packets:', byType['0x10']);
+ * console.log('Total packets received:', all.length);
  */
