@@ -47,6 +47,7 @@ describe("User Mode - Energy Saving Zone", () => {
     expect(createZoneResponse.sendSetting.code).toBe("200");
 
     // STEP 2: Activate ESZ
+    sentinelTcpSocketClient.clearBuffer(); // Clear buffer before activation
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Activate,
@@ -55,6 +56,17 @@ describe("User Mode - Energy Saving Zone", () => {
       },
     });
     expect(activateResponse.sendSetting.code).toBe("200");
+
+    // VERIFY PACKETS: Should receive 0x15 (Safe Places) and 0x10 (Evo Extra Data)
+    const packets: any[] = await sentinelTcpSocketClient.waitForPackets(2000);
+
+    const packet15 = packets.find((p) => p.type === 0x15);
+    expect(packet15, "Should receive Packet 0x15 (Safe Places)").toBeDefined();
+    expect(packet15?.parsed?.zones[0]?.bssid).toBe("AABBCCDDEEFF"); // Verify correct zone BSSID
+
+    const packet10 = packets.find((p) => p.type === 0x10);
+    expect(packet10, "Should receive Packet 0x10 (Evo Extra Data)").toBeDefined();
+    expect(packet10?.parsed?.energy_saving_area_enabled).toBe(1); // Verify ESZ Enabled
 
     // STEP 3: Subscribe to ESZ status changes
     let statusReceived: boolean | null = null;
@@ -129,6 +141,7 @@ describe("User Mode - Energy Saving Zone", () => {
   });
 
   it("Deactivate ESZ", async () => {
+    sentinelTcpSocketClient.clearBuffer(); // Clear buffer before deactivation
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
@@ -137,5 +150,12 @@ describe("User Mode - Energy Saving Zone", () => {
       },
     });
     expect(deactivateResponse.sendSetting.code).toBe("200");
+
+    // VERIFY PACKET: Should receive 0x10 with disable flag
+    const packets: any[] = await sentinelTcpSocketClient.waitForPackets(2000);
+    const packet10 = packets.find((p) => p.type === 0x10);
+
+    expect(packet10, "Should receive Packet 0x10 (Evo Extra Data)").toBeDefined();
+    expect(packet10?.parsed?.energy_saving_area_enabled).toBe(0); // Verify ESZ Disabled
   });
 });

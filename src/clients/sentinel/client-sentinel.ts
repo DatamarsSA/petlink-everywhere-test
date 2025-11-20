@@ -474,6 +474,83 @@ class PacketFromSentinel {
       rawData: payload,
     };
   }
+
+  /**
+   * PARSA il Packet 0x15 (Safe Places WiFi)
+   * Payload: [0x15] [Lat(8)] [Lng(8)] [Radius(8)] [BSSID(6)] ... repeated
+   */
+  static packet0x15(payload: Buffer): any {
+    if (payload.length < 1 || payload[0] !== 0x15) return null;
+
+    const zones = [];
+    let offset = 1;
+    const zoneSize = 30;
+
+    while (offset + zoneSize <= payload.length) {
+      const lat = payload.readDoubleLE(offset);
+      offset += 8;
+      const lng = payload.readDoubleLE(offset);
+      offset += 8;
+      const radius = payload.readDoubleLE(offset);
+      offset += 8;
+      const bssid = payload.subarray(offset, offset + 6).toString('hex').toUpperCase();
+      offset += 6;
+
+      zones.push({ lat, lng, radius, bssid });
+    }
+
+    return {
+      packetType: 0x15,
+      commandName: "SAFE_PLACES_WIFI",
+      zonesCount: zones.length,
+      zones
+    };
+  }
+
+  /**
+   * PARSA il Packet 0x10 (Evo Extra Data)
+   */
+  static packet0x10(payload: Buffer): any {
+    if (payload.length < 1 || payload[0] !== 0x10) return null;
+
+    let offset = 1;
+    const evo_tasks = payload.readUInt32LE(offset);
+    offset += 4;
+
+    // Bitmasks from Rust:
+    const EvoFlashlight = 0x01;
+    const EVO_TOUR_RECORDING = 0x02;
+    const EvoSound = 0x04;
+    const EvoEnergySaveArea = 0x08;
+    // const EvoTimestamp = 0x0020; // Not used in parsing for now
+
+    const result: any = {
+      packetType: 0x10,
+      commandName: "EVO_EXTRA_DATA",
+      evo_tasks
+    };
+
+    if (evo_tasks & EvoFlashlight) {
+      result.torch_duration = payload.readInt16LE(offset);
+      offset += 2;
+    }
+    if (evo_tasks & EVO_TOUR_RECORDING) {
+      result.tour_recording_enabled = payload.readInt8(offset);
+      offset += 1;
+    }
+    if (evo_tasks & EvoSound) {
+      result.sound_command = payload.readInt16LE(offset);
+      offset += 2;
+      result.sound_duration = payload.readInt16LE(offset);
+      offset += 2;
+    }
+    if (evo_tasks & EvoEnergySaveArea) {
+      result.energy_saving_area_enabled = payload.readInt8(offset); // 1 = ON, 0 = OFF
+      offset += 1;
+    }
+
+    return result;
+  }
 }
 
 // --------------------------------------- CLIENT ----------------------------------------- //
@@ -654,6 +731,14 @@ class SentinelTcpClient {
           case 0x0a:
             parsed = PacketFromSentinel.packet0x0A(payload);
             logger.info(`   ✓ Parsed as Packet 0x0A (LIVE_TRACKING Command)`);
+            break;
+          case 0x15:
+            parsed = PacketFromSentinel.packet0x15(payload);
+            logger.info(`   ✓ Parsed as Packet 0x15 (SAFE_PLACES_WIFI)`);
+            break;
+          case 0x10:
+            parsed = PacketFromSentinel.packet0x10(payload);
+            logger.info(`   ✓ Parsed as Packet 0x10 (EVO_EXTRA_DATA)`);
             break;
           //todo: implement other case parsing
           default:
