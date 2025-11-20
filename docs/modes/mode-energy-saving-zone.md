@@ -102,11 +102,11 @@ Sentinel Lambda Consumer (settingsConsumer):
   ↓
 Sentinel Rust TCP Server:
   ├─ Trova la connessione TCP del device
-  ├─ Converte comando in pacchetto binario (SiRF 0x05)
-  └─ Invia al device via TCP
+  ├─ Invia Packet 0x15 (Safe Places): Contiene lista zone (Lat, Lng, Radius, BSSID)
+  └─ Invia Packet 0x10 (Evo Extra Data): Abilita flag 'energy_saving_area_enabled = 1'
   
   ↓
-✅ Device riceve il comando e memorizza il WiFi
+✅ Device riceve le zone e abilita la modalità risparmio energetico
 ```
 
 **Response**:
@@ -274,8 +274,12 @@ Sentinel Lambda Consumer (settingsConsumer):
   └─ Device riceve DEACTIVATE_ESZ
   
   ↓
+Sentinel Rust TCP Server:
+  ├─ Invia Packet 0x10 (Evo Extra Data): Disabilita flag 'energy_saving_area_enabled = 0'
+  
+  ↓
 Device:
-  ├─ Dimentica il WiFi della zona
+  ├─ Dimentica il WiFi della zona (o ignora la modalità)
   ├─ Riaccende GPS (sempre)
   ├─ Torna a heartbeat normale: ogni 5-10 sec
   └─ Invia Packet 0x01 con collar_detached=0
@@ -378,7 +382,8 @@ sequenceDiagram
     Core->>DB: Store command
     Core->>SQS: Queue settings message
     SQS->>Sentinel: settingsConsumer trigger
-    Sentinel->>Device: Send command (binary 0x05)
+    Sentinel->>Device: Send Packet 0x15 (Zones)
+    Sentinel->>Device: Send Packet 0x10 (Enable ESZ)
 
     Note over User,Device: STEP 3: Device in zone
     Device->>Device: Scan WiFi, find match
@@ -406,8 +411,5 @@ sequenceDiagram
     User->>Core: sendSetting(DEACTIVATE, ESZ, deviceId)
     Core->>SQS: Queue settings message
     SQS->>Sentinel: Disable ESZ
-    Sentinel->>Device: Send DEACTIVATE command
+    Sentinel->>Device: Send Packet 0x10 (Disable ESZ)
 ```
-
-
-
