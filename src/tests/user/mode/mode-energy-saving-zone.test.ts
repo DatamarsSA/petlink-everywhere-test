@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { sentinelTcpSocketClient, SentinelPacketType } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01 } from "../../../clients/sentinel/packet-encode-decode.js";
+import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
+import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -62,8 +62,8 @@ describe("User Mode - Energy Saving Zone", () => {
     // VERIFY PACKETS: Should receive 0x15 (Safe Places) and 0x10 (Evo Extra Data)
     logger.info("⏳ Waiting for packets 0x15 and 0x10...");
     const [packet15, packet10] = await Promise.all([
-      sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x15, 5000),
-      sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x10, 5000),
+      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15, 5000),
+      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, 5000),
     ]);
 
     expect(packet15, "Should receive Packet 0x15 (Safe Places)").toBeDefined();
@@ -142,6 +142,6 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // VERIFY PACKET: Should receive 0x10 with disable flag
     logger.info("⏳ Waiting for packet 0x10...");
-    const packet10 = await sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x10, 5000);
+    const packet10 = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, 5000);
   });
 });

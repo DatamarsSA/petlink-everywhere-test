@@ -1,7 +1,7 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket } from "./packet-encode-decode.js";
+import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketType } from "./packet-encode-decode.js";
 
 /**
  * ==================== SIRF PROTOCOL LEGEND ====================
@@ -13,24 +13,6 @@ import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket } from "./packe
  * [CRC: (2bytes) CHECKSUM]
  * [FOOTER: (2bytes) B0B3]
  */
-
-// ================================ CONSTANTS ================================ //
-
-const PROTOCOL = {
-  HEADER: Buffer.from([0xa0, 0xa2]), // 2 bytes
-  LENGTH_FIELD: 2, // 2 bytes
-  CRC: 2, // 2 bytes
-  FOOTER: Buffer.from([0xb0, 0xb3]), // 2 bytes
-} as const;
-
-// ================================ SENTINEL PACKET TYPES ================================ //
-
-export enum SentinelPacketType {
-  PACKET_0x01 = 0x01,
-  PACKET_0x0A = 0x0a,
-  PACKET_0x10 = 0x10,
-  PACKET_0x15 = 0x15,
-}
 
 // ================================ 3. CLIENT (Network & Logic) ================================ //
 
@@ -100,7 +82,7 @@ export class SentinelTcpClient {
    * @param timeoutMs Timeout in milliseconds
    * @param validator Optional function to filter the packet
    */
-  async waitForPacket(type: SentinelPacketType, timeoutMs = 5000, validator?: (p: ParsedPacket) => boolean): Promise<ParsedPacket> {
+  async waitForPacket(type: PacketType, timeoutMs = 5000, validator?: (p: ParsedPacket) => boolean): Promise<ParsedPacket> {
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16)}`;
 
@@ -138,12 +120,12 @@ export class SentinelTcpClient {
     // 2. Loop infinito: Continua a processare finché ci sono pacchetti completi nel buffer.
     while (true) {
       // 3. Ricerca Header: Cerca la sequenza di byte 0xA0, 0xA2 che indica l'inizio di un pacchetto SIRF.
-      const start = this.buffer.indexOf(PROTOCOL.HEADER);
+      const start = this.buffer.indexOf(SIRF.HEADER);
       if (start === -1) {
         // Nessun header, scarta tutto tranne l'ultimo byte se è 0xA0 (caso bordo)
         // Perché se l'ultimo byte è 0xA0, potrebbe essere la prima metà dell'header (0xA0 0xA2)
         // e il resto arriverà nel prossimo chunk.
-        if (this.buffer.length > 0 && this.buffer[this.buffer.length - 1] === PROTOCOL.HEADER[0]) {
+        if (this.buffer.length > 0 && this.buffer[this.buffer.length - 1] === SIRF.HEADER[0]) {
           this.buffer = this.buffer.subarray(this.buffer.length - 1);
         } else {
           this.buffer = Buffer.alloc(0);
@@ -152,13 +134,13 @@ export class SentinelTcpClient {
       }
 
       // 4. Verifica se abbiamo abbastanza dati per leggere la lunghezza (HEADER + LENGTH_FIELD)
-      const headerAndLengthSize = PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD;
+      const headerAndLengthSize = SIRF.HEADER.length + SIRF.LENGTH_FIELD;
       if (this.buffer.length < start + headerAndLengthSize) return;
 
-      const len = this.buffer.readUInt16BE(start + PROTOCOL.HEADER.length);
+      const len = this.buffer.readUInt16BE(start + SIRF.HEADER.length);
       // 5. Calcolo Lunghezza Totale Pacchetto:
       //    Header + LENGTH_FIELD + Payload (len) + CRC + Footer
-      const totalLen = PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD + len + PROTOCOL.CRC + PROTOCOL.FOOTER.length;
+      const totalLen = SIRF.HEADER.length + SIRF.LENGTH_FIELD + len + SIRF.CRC + SIRF.FOOTER.length;
 
       // 6. Verifica se abbiamo ricevuto l'intero pacchetto
       if (this.buffer.length < start + totalLen) return;
@@ -167,9 +149,9 @@ export class SentinelTcpClient {
       const rawPacket = this.buffer.subarray(start, start + totalLen);
       this.buffer = this.buffer.subarray(start + totalLen); // Avanza buffer
 
-      // 8. Parsing Payload
+      // 8. Parsing Payload (DECAPSULATE manuale)
       //    Il payload inizia dopo l'header e il length field, finisce prima del CRC
-      const payloadStart = PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD;
+      const payloadStart = SIRF.HEADER.length + SIRF.LENGTH_FIELD;
       const payload: Buffer = rawPacket.subarray(payloadStart, payloadStart + len);
       const type: number = payload[0];
 

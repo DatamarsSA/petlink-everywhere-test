@@ -1,8 +1,8 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
-import { sentinelTcpSocketClient, SentinelPacketType } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01 } from "../../../clients/sentinel/packet-encode-decode.js";
+import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
+import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, GpsMessagePosition, ModeType } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -93,9 +93,9 @@ describe("User Mode - Live Tracking", () => {
 
     logger.info("📍 STEP 4: Verify device received Packet 0x0A (LIVE_TRACKING command)");
 
-    const commandPacket = await sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x0A, 5000);
+    const commandPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x0A, 5000);
     expect(commandPacket, "Should receive Packet 0x0A (LIVE_TRACKING command)").toBeDefined();
-    expect(commandPacket.type).toBe(SentinelPacketType.PACKET_0x0A);
+    expect(commandPacket.type).toBe(PacketType.PACKET_0x0A);
     expect(commandPacket.payload, "Should parse Packet 0x0A").toBeDefined();
     logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket.payload });
 
@@ -147,7 +147,7 @@ describe("User Mode - Live Tracking", () => {
 
     logger.info("📍 STEP 8: Verify device received Packet 0x0A (LIVE_TRACKING deactivation command)");
 
-    const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(SentinelPacketType.PACKET_0x0A, 3000);
+    const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x0A, 3000);
 
     expect(deactivationPacket, "Should receive Deactivation Packet").toBeDefined();
     logger.info(`✓ Device received LIVE_TRACKING deactivation command`, { parsed: deactivationPacket.payload });

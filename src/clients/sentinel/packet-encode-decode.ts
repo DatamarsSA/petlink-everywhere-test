@@ -7,19 +7,30 @@
  * - static fromBuffer(): deserializza da Buffer (manuale)
  *
  * SIRF Protocol:
- * [HEADER: 0xA0A2] [LEN: 2bytes BE] [PAYLOAD] [CRC: 2bytes BE] [FOOTER: 0xB0B3]
+ * [HEADER: 0xA0A2] [LEN: 2bytes BE] [PAYLOAD = [PACKET_TYPE: (1byte) 0x01] [PAYLOAD: (variable size)]] [CRC: 2bytes BE] [FOOTER: 0xB0B3]
+ * [HEADER: (2bytes) A0A2] [LEN: (2bytes)] [PAYLOAD = [PACKET_TYPE: (1byte) 0x01] [PAYLOAD: (variable size)]] [CRC: (2bytes) CHECKSUM] [FOOTER: (2bytes) B0B3]
  */
 
 import { logger } from "../../config/logger.js";
 
 // ================================ SIRF PROTOCOL UTILITIES ================================ //
 
-const SIRF = {
+// Esporta costanti SIRF per uso in client e logging
+export const SIRF = {
   HEADER: Buffer.from([0xa0, 0xa2]),
   LENGTH_FIELD: 2, // 2 bytes
   CRC: 2, // 2 bytes
   FOOTER: Buffer.from([0xb0, 0xb3]),
 } as const;
+
+// ================================ SENTINEL PACKET TYPES ================================ //
+
+export enum PacketType {
+  PACKET_0x01 = 0x01,
+  PACKET_0x0A = 0x0a,
+  PACKET_0x10 = 0x10,
+  PACKET_0x15 = 0x15,
+}
 
 export class SirfProtocol {
   /**
@@ -47,33 +58,6 @@ export class SirfProtocol {
   }
 
   /**
-   * Decapsula pacchetto SIRF e ritorna solo il payload
-   */
-  static decapsulate(packet: Buffer): Buffer {
-    if (packet.length < 8) throw new Error("Packet too short");
-
-    const header = packet.subarray(0, 2);
-    if (!header.equals(SIRF.HEADER)) throw new Error("Invalid SIRF header");
-
-    const length = packet.readUInt16BE(2);
-    const payload = packet.subarray(4, 4 + length);
-    const crc = packet.readUInt16BE(4 + length);
-    const footer = packet.subarray(4 + length + 2, 4 + length + 4);
-
-    if (!footer.equals(SIRF.FOOTER)) throw new Error("Invalid SIRF footer");
-
-    // Verifica CRC
-    let calculatedCrc = 0;
-    for (let i = 0; i < length; i++) {
-      calculatedCrc += payload[i];
-      calculatedCrc &= 0x7fff;
-    }
-    if (calculatedCrc !== crc) throw new Error("CRC mismatch");
-
-    return payload;
-  }
-
-  /**
    * Logga pacchetto SIRF in modo simmetrico (hex + parsed)
    */
   static logPacket(direction: "INCOMING" | "OUTGOING", rawSirfPacket: Buffer, parsedPayload?: any): void {
@@ -86,7 +70,7 @@ export class SirfProtocol {
     const protocolLegend =
       `[SIRF-PROTOCOL]: [HEADER: (${SIRF.HEADER.length}bytes) ${SIRF.HEADER.toString("hex").toUpperCase()}] ` +
       `[LEN: (${SIRF.LENGTH_FIELD}bytes)] ` +
-      `[PAYLOAD: [PACKET_TYPE: (1byte)] [KIPPY_DATA: (variable bytes)]] ` +
+      `[PAYLOAD: [PACKET_TYPE: (1byte)] [PAYLOAD: (variable bytes)]] ` +
       `[CRC: (${SIRF.CRC}bytes) CHECKSUM] ` +
       `[FOOTER: (${SIRF.FOOTER.length}bytes) ${SIRF.FOOTER.toString("hex").toUpperCase()}]`;
 
@@ -127,9 +111,6 @@ function stringToBytes(str: string, length: number): Buffer {
 
 // ================================ PACKET CLASSES ================================ //
 
-/**
- * Packet 0x01 - Welcome/Heartbeat
- */
 export class Packet01 {
   constructor(
     public readonly serialNumber: string,
@@ -436,9 +417,6 @@ export class Packet01 {
   }
 }
 
-/**
- * Packet 0x0A - Command from Sentinel
- */
 export class Packet0A {
   constructor(
     public readonly commandType: number,
@@ -462,9 +440,6 @@ export class Packet0A {
   }
 }
 
-/**
- * Packet 0x10 - EVO Extra Data from Sentinel
- */
 export class Packet10 {
   constructor(
     public readonly evo_tasks: number,
@@ -514,9 +489,6 @@ export class Packet10 {
   }
 }
 
-/**
- * Packet 0x15 - Safe Places WiFi from Sentinel
- */
 export class Packet15 {
   constructor(public readonly zones: { lat: number; lng: number; radius: number; bssid: string }[]) {}
 
@@ -553,21 +525,18 @@ export interface ParsedPacket {
   raw: Buffer;
 }
 
-/**
- * Factory per parsing (centralizzato)
- */
 export function parsePacketByType(payload: Buffer): ParsedPacket {
   const type = payload[0];
 
   try {
     switch (type) {
-      case 0x01:
+      case PacketType.PACKET_0x01:
         return { type, payload: Packet01.fromBuffer(payload), raw: payload };
-      case 0x0a:
+      case PacketType.PACKET_0x0A:
         return { type, payload: Packet0A.fromBuffer(payload), raw: payload };
-      case 0x10:
+      case PacketType.PACKET_0x10:
         return { type, payload: Packet10.fromBuffer(payload), raw: payload };
-      case 0x15:
+      case PacketType.PACKET_0x15:
         return { type, payload: Packet15.fromBuffer(payload), raw: payload };
       default:
         return { type, payload: { raw: payload.toString("hex") }, raw: payload };
