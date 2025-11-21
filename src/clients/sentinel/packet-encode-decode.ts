@@ -13,6 +13,14 @@
 
 import { logger } from "../../config/logger.js";
 
+// ================================ ENUMS ================================ //
+
+export enum OperatingStatus {
+  DEFAULT = 0x00,
+  GEOFENCE_ON = 0x01,
+  FAST_TRACKING = 0x02,
+}
+
 // ================================ SIRF PROTOCOL UTILITIES ================================ //
 
 // Esporta costanti SIRF per uso in client e logging
@@ -111,23 +119,75 @@ function stringToBytes(str: string, length: number): Buffer {
 
 // ================================ PACKET CLASSES ================================ //
 
+/**
+ * Packet 0x01 - BIDIREZIONALE
+ * 
+ * 1️⃣ Device → Sentinel (Welcome/Heartbeat) - 109+ bytes
+ *    - Uso: new Packet01(serialNumber, lat, lng, battery, temp)
+ *    - Parsing: Packet01.fromBufferDeviceToSentinel(payload)
+ * 
+ * 2️⃣ Sentinel → Device (PacketGeofenceResponse) - 71 bytes
+ *    - Uso: new Packet01({ lbsCurrentLatitude, ... })
+ *    - Parsing: Packet01.fromBufferSentinelToDevice(payload)
+ */
 export class Packet01 {
+  // Device → Sentinel
+  public readonly serialNumber?: string;
+  public readonly latitude?: number;
+  public readonly longitude?: number;
+  public readonly battery?: number;
+  public readonly temperature?: number;
+  public readonly collar_detached?: boolean;
+  public readonly geofence_status?: "inside" | "outside" | "none";
+  public readonly wifi_cells?: { bssid: string; rssi: number; channel: number }[];
+  public readonly gsm_cells?: { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[];
+
+  // Sentinel → Device
+  public readonly lbsCurrentLatitude?: number;
+  public readonly lbsCurrentLongitude?: number;
+  public readonly serverPositionSource?: number;
+  public readonly geofenceCoordinates?: { lat: number; lng: number }[];
+  public readonly requestedOperatingStatus?: number;
+  public readonly updateFrequency?: number;
+  public readonly utcTimestamp?: number;
+  public readonly txEveryCheck?: number;
+  public readonly lbsCurrentRadius?: number;
+
   constructor(
-    public readonly serialNumber: string,
-    public readonly latitude: number = 0,
-    public readonly longitude: number = 0,
-    public readonly battery: number = 4200,
-    public readonly temperature: number = 20,
-    public readonly collar_detached: boolean = false,
-    public readonly geofence_status: "inside" | "outside" | "none" = "none",
-    public readonly wifi_cells?: { bssid: string; rssi: number; channel: number }[],
-    public readonly gsm_cells?: { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[],
-  ) {}
+    serialNumberOrData: string | Partial<Packet01>,
+    latitude?: number,
+    longitude?: number,
+    battery?: number,
+    temperature?: number,
+    collar_detached?: boolean,
+    geofence_status?: "inside" | "outside" | "none",
+    wifi_cells?: { bssid: string; rssi: number; channel: number }[],
+    gsm_cells?: { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[],
+  ) {
+    if (typeof serialNumberOrData === "string") {
+      this.serialNumber = serialNumberOrData;
+      this.latitude = latitude ?? 0;
+      this.longitude = longitude ?? 0;
+      this.battery = battery ?? 4200;
+      this.temperature = temperature ?? 20;
+      this.collar_detached = collar_detached ?? false;
+      this.geofence_status = geofence_status ?? "none";
+      this.wifi_cells = wifi_cells;
+      this.gsm_cells = gsm_cells;
+    } else {
+      Object.assign(this, serialNumberOrData);
+    }
+  }
 
   /**
-   * Serializza in Buffer (manuale)
+   * Serializza in Buffer (Device → Sentinel)
+   * Questo metodo funziona solo per pacchetti Device → Sentinel
    */
   toBuffer(): Buffer {
+    if (!this.serialNumber) {
+      throw new Error("serialNumber is required for Device → Sentinel packets");
+    }
+
     const MAX_SIZE = 600;
     const buffer = Buffer.alloc(MAX_SIZE);
     let offset = 0;
@@ -161,11 +221,11 @@ export class Packet01 {
     buffer[offset++] = 0;
 
     // Latitude (4 bytes, float32 LE)
-    buffer.writeFloatLE(this.latitude, offset);
+    buffer.writeFloatLE(this.latitude ?? 0, offset);
     offset += 4;
 
     // Longitude (4 bytes, float32 LE)
-    buffer.writeFloatLE(this.longitude, offset);
+    buffer.writeFloatLE(this.longitude ?? 0, offset);
     offset += 4;
 
     // Altitude (2 bytes, int16 LE)
@@ -177,7 +237,7 @@ export class Packet01 {
     offset += 4;
 
     // Temperature (2 bytes, int16 LE, in 0.1°C)
-    buffer.writeInt16LE(this.temperature * 10, offset);
+    buffer.writeInt16LE((this.temperature ?? 20) * 10, offset);
     offset += 2;
 
     // Speed (2 bytes, int16 LE)
@@ -185,7 +245,7 @@ export class Packet01 {
     offset += 2;
 
     // Battery (2 bytes, int16 LE, in mV)
-    buffer.writeInt16LE(this.battery, offset);
+    buffer.writeInt16LE(this.battery ?? 4200, offset);
     offset += 2;
 
     // CSQ (1 byte)
@@ -219,7 +279,7 @@ export class Packet01 {
     buffer[offset++] = 80;
 
     // ESZ flag (spare_c5) (1 byte)
-    buffer[offset++] = this.collar_detached ? 0x01 : 0x00;
+    buffer[offset++] = (this.collar_detached ?? false) ? 0x01 : 0x00;
 
     // Modem GMR (spare_c6) (1 byte)
     buffer[offset++] = 0;
@@ -312,9 +372,9 @@ export class Packet01 {
   }
 
   /**
-   * Deserializza da Buffer (manuale)
+   * Parser: Device → Sentinel (109+ bytes)
    */
-  static fromBuffer(payload: Buffer): Packet01 {
+  static fromBufferDeviceToSentinel(payload: Buffer): Packet01 {
     let offset = 1; // Skip packet type
 
     const serialNumber = payload
@@ -414,6 +474,53 @@ export class Packet01 {
     }
 
     return new Packet01(serialNumber, latitude, longitude, battery, temperature, collar_detached, geofence_status, wifi_cells, gsm_cells);
+  }
+
+  /**
+   * Parser: Sentinel → Device (71 bytes)
+   */
+  static fromBufferSentinelToDevice(payload: Buffer): Packet01 {
+    let offset = 0;
+    const packetNumber = payload[offset++];
+    if (packetNumber !== 0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
+
+    const lbsCurrentLatitude = payload.readFloatLE(offset); offset += 4;
+    const lbsCurrentLongitude = payload.readFloatLE(offset); offset += 4;
+    const serverPositionSource = payload[offset++];
+
+    const geofenceCoordinates: { lat: number; lng: number }[] = [];
+    for (let i = 0; i < 6; i++) {
+      geofenceCoordinates.push({
+        lat: payload.readFloatLE(offset),
+        lng: payload.readFloatLE(offset + 4)
+      });
+      offset += 8;
+    }
+
+    const requestedOperatingStatus = payload[offset++];
+    const updateFrequency = payload.readUInt16LE(offset); offset += 2;
+    const utcTimestamp = payload.readUInt32LE(offset); offset += 4;
+    const txEveryCheck = payload.readUInt16LE(offset); offset += 2;
+    const lbsCurrentRadius = payload.readUInt32LE(offset);
+
+    return new Packet01({
+      lbsCurrentLatitude, lbsCurrentLongitude, serverPositionSource,
+      geofenceCoordinates, requestedOperatingStatus, updateFrequency,
+      utcTimestamp, txEveryCheck, lbsCurrentRadius
+    });
+  }
+
+  isGeofenceCommand(): boolean { return this.requestedOperatingStatus === OperatingStatus.GEOFENCE_ON; }
+  isLiveTrackingCommand(): boolean { return this.requestedOperatingStatus === OperatingStatus.FAST_TRACKING; }
+  isReturnToDefaultCommand(): boolean { return this.requestedOperatingStatus === OperatingStatus.DEFAULT; }
+  getCommandName(): string {
+    if (!this.requestedOperatingStatus) return "UNKNOWN";
+    switch (this.requestedOperatingStatus) {
+      case OperatingStatus.GEOFENCE_ON: return "GEOFENCE_ON";
+      case OperatingStatus.FAST_TRACKING: return "LIVE_TRACKING";
+      case OperatingStatus.DEFAULT: return "RETURN_TO_DEFAULT";
+      default: return `UNKNOWN_0x${this.requestedOperatingStatus.toString(16)}`;
+    }
   }
 }
 
@@ -531,7 +638,11 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
   try {
     switch (type) {
       case PacketType.PACKET_0x01:
-        return { type, payload: Packet01.fromBuffer(payload), raw: payload };
+        if (payload.length === 71) {
+          return { type, payload: Packet01.fromBufferSentinelToDevice(payload), raw: payload };
+        } else {
+          return { type, payload: Packet01.fromBufferDeviceToSentinel(payload), raw: payload };
+        }
       case PacketType.PACKET_0x0A:
         return { type, payload: Packet0A.fromBuffer(payload), raw: payload };
       case PacketType.PACKET_0x10:
