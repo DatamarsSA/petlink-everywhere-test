@@ -1,6 +1,7 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
+import { parsePacketByType } from "./packet-parsers.js";
 
 /**
  * ==================== SIRF PROTOCOL LEGEND ====================
@@ -281,107 +282,13 @@ export class PacketSerializer {
 }
 
 // ================================ 2. DESERIALIZER (Response Parser - fromSentinel) ================================ //
+// NOTE: Parsing is now handled by binary-parser in packet-parsers.ts
+// This section is kept for backward compatibility with existing code
 
 export interface ParsedPacket {
   type: number;
   payload: any;
   raw: Buffer;
-}
-
-export class PacketDeserializer {
-  static parse0x0A(payload: Buffer) {
-    if (payload.length < 2) return { commandName: "INVALID" };
-
-    const commandType = payload[1];
-    const commandMap: Record<number, string> = {
-      0x01: "LIVE_TRACKING",
-      0x02: "GEOFENCE",
-      0x03: "ENERGY_SAVING_ZONE",
-      0x04: "SETTINGS",
-      0x05: "WAKEUP",
-    };
-
-    return {
-      commandType,
-      commandName: commandMap[commandType] || "UNKNOWN",
-      duration: payload.length >= 4 ? payload.readInt16LE(2) : undefined,
-    };
-  }
-
-  static parse0x15(payload: Buffer) {
-    // Payload: [0x15] [Lat(8)] [Lng(8)] [Radius(8)] [BSSID(6)] ... repeated
-    if (payload.length < 1) return null;
-
-    const zones = [];
-    let offset = 1; // Salta il packet type 0x15
-    const zoneSize = 30; // 8+8+8+6 = 30 bytes per zone
-
-    while (offset + zoneSize <= payload.length) {
-      const lat = payload.readDoubleLE(offset);
-      offset += 8;
-      const lng = payload.readDoubleLE(offset);
-      offset += 8;
-      const radius = payload.readDoubleLE(offset);
-      offset += 8;
-      const bssidBytes = payload.subarray(offset, offset + 6);
-      const bssid = bssidBytes.toString("hex").toUpperCase();
-      offset += 6;
-
-      zones.push({ lat, lng, radius, bssid });
-    }
-
-    return {
-      zonesCount: zones.length,
-      zones,
-    };
-  }
-
-  static parse0x10(payload: Buffer) {
-    if (payload.length < 5) return null;
-
-    let offset = 1;
-    const evo_tasks = payload.readUInt32LE(offset);
-    offset += 4;
-
-    // Bitmasks from Rust
-    const EvoFlashlight = 0x01;
-    const EVO_TOUR_RECORDING = 0x02;
-    const EvoSound = 0x04;
-    const EvoEnergySaveArea = 0x08;
-
-    const result: any = {
-      evo_tasks,
-    };
-
-    if (evo_tasks & EvoFlashlight) {
-      if (offset + 2 <= payload.length) {
-        result.torch_duration = payload.readInt16LE(offset);
-        offset += 2;
-      }
-    }
-    if (evo_tasks & EVO_TOUR_RECORDING) {
-      if (offset + 1 <= payload.length) {
-        result.tour_recording_enabled = payload.readInt8(offset);
-        offset += 1;
-      }
-    }
-    if (evo_tasks & EvoSound) {
-      if (offset + 4 <= payload.length) {
-        result.sound_command = payload.readInt16LE(offset);
-        offset += 2;
-        result.sound_duration = payload.readInt16LE(offset);
-        offset += 2;
-      }
-    }
-    if (evo_tasks & EvoEnergySaveArea) {
-      if (offset + 1 <= payload.length) {
-        result.energy_saving_area_enabled = payload.readInt8(offset); // 1 = ON, 0 = OFF
-        offset += 1;
-      }
-    }
-
-    return result;
-  }
 }
 
 // ================================ 3. CLIENT (Network & Logic) ================================ //
@@ -390,11 +297,6 @@ export class SentinelTcpClient {
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
-
-  // Utility to access raw socket for cleanup if needed, though usage should be minimal
-  public get rawSocket(): Socket | null {
-    return this.socket;
-  }
 
   constructor(private config: { host: string; port: number }) {}
 
@@ -424,7 +326,10 @@ export class SentinelTcpClient {
 
   async send(data: Buffer): Promise<void> {
     if (!this.socket) throw new Error("Not connected");
-    logger.debug(`→ Sending ${data.length} bytes to Sentinel`);
+
+    // LOG BEFORE SENDING (OUTGOING)
+    this.logSirfPacket(data, "OUTGOING");
+
     this.socket.write(data);
   }
 
@@ -515,61 +420,69 @@ export class SentinelTcpClient {
       const payloadStart = PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD;
       const payload: Buffer = rawPacket.subarray(payloadStart, payloadStart + len);
       const type: number = payload[0];
-      const base = { type, raw: payload };
 
       try {
-        let parsed: ParsedPacket;
-        switch (type) {
-          case SentinelPacketType.PACKET_0x0A:
-            parsed = { ...base, payload: PacketDeserializer.parse0x0A(payload) };
-            break;
-          case SentinelPacketType.PACKET_0x15:
-            parsed = { ...base, payload: PacketDeserializer.parse0x15(payload) };
-            break;
-          case SentinelPacketType.PACKET_0x10:
-            parsed = { ...base, payload: PacketDeserializer.parse0x10(payload) };
-            break;
-          default:
-            parsed = { ...base, payload: { raw: payload.toString("hex") } };
-            break;
-        }
+        // // LOG BEFORE PARSING (INCOMING)
+        // this.logSirfPacket(rawPacket, "INCOMING");
 
-        const protocolLegend =
-          `[SIRF-PROTOCOL]: [HEADER: (${PROTOCOL.HEADER.length}bytes) ${PROTOCOL.HEADER.toString("hex").toUpperCase()}] ` +
-          `[LEN: (${PROTOCOL.LENGTH_FIELD}bytes)] ` +
-          `[PAYLOAD: [PACKET_TYPE: (1byte)] [KIPPY_DATA: (variable bytes)]] ` +
-          `[CRC: (${PROTOCOL.CRC}bytes) CHECKSUM] ` +
-          `[FOOTER: (${PROTOCOL.FOOTER.length}bytes) ${PROTOCOL.FOOTER.toString("hex").toUpperCase()}]`;
+        // Parse with binary-parser
+        const parsedPayload = parsePacketByType(payload);
 
-        const packetVisualization =
-          `\n\nSIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
-          `${protocolLegend}\n` +
-          `[ORIGINAL-HEX]: ${rawPacket.toString("hex").toUpperCase()}\n` +
-          `[HEADER: ${rawPacket.subarray(0, PROTOCOL.HEADER.length).toString("hex").toUpperCase()}]\n` +
-          `[LEN-PAYLOAD: (hex: ${rawPacket
-            .subarray(PROTOCOL.HEADER.length, PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD)
-            .toString("hex")
-            .toUpperCase()}) (decimal: ${len} B)]\n` +
-          `[PAYLOAD-HEX]: ${payload.toString("hex").toUpperCase()}\n` +
-          `[PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payload.length}\n` +
-          `[PAYLOAD-PARSED]: ${JSON.stringify(parsed.payload)}\n` +
-          `[CRC: ${rawPacket
-            .subarray(payloadStart + len, payloadStart + len + PROTOCOL.CRC)
-            .toString("hex")
-            .toUpperCase()}]\n` +
-          `[FOOTER: ${rawPacket
-            .subarray(payloadStart + len + PROTOCOL.CRC)
-            .toString("hex")
-            .toUpperCase()}]`;
+        // LOG BEFORE PARSING (INCOMING)
+        this.logSirfPacket(rawPacket, "INCOMING", parsedPayload);
 
-        // LOG UNICO E LEGGIBILE
-        logger.info(packetVisualization);
+        const parsed: ParsedPacket = {
+          type,
+          payload: parsedPayload,
+          raw: payload,
+        };
 
         this.events.emit("packet", parsed);
       } catch (e) {
         logger.error(`Error processing packet: ${e}`);
       }
     }
+  }
+
+  /**
+   * Logs a SIRF packet with detailed information
+   * @param rawSirfPacket Full SIRF packet (header + length + payload + crc + footer)
+   * @param direction INCOMING or OUTGOING
+   * @param parsedPayload payload packet after parsing/before serialization
+   */
+  private logSirfPacket(rawSirfPacket: Buffer, direction: "INCOMING" | "OUTGOING", parsedPayload: any): void {
+    const arrow = direction === "INCOMING" ? "←" : "→";
+
+    // Extract components
+    const header = rawSirfPacket.slice(0, 2);
+    const lengthBytes = rawSirfPacket.slice(2, 4);
+    const payloadLength = lengthBytes.readUInt16BE(0);
+    const payload = rawSirfPacket.slice(4, 4 + payloadLength);
+    const crc = rawSirfPacket.slice(4 + payloadLength, 6 + payloadLength);
+    const footer = rawSirfPacket.slice(6 + payloadLength, 8 + payloadLength);
+    const packetType = payload[0];
+
+    // Parse payload with binary-parser
+    // const parsedPayload = parsePacketByType(payload);
+
+    const protocolLegend =
+      `[SIRF-PROTOCOL]: [HEADER: (${PROTOCOL.HEADER.length}bytes) ${PROTOCOL.HEADER.toString("hex").toUpperCase()}] ` +
+      `[LEN: (${PROTOCOL.LENGTH_FIELD}bytes)] ` +
+      `[PAYLOAD: [PACKET_TYPE: (1byte)] [KIPPY_DATA: (variable bytes)]] ` +
+      `[CRC: (${PROTOCOL.CRC}bytes) CHECKSUM] ` +
+      `[FOOTER: (${PROTOCOL.FOOTER.length}bytes) ${PROTOCOL.FOOTER.toString("hex").toUpperCase()}]`;
+
+    logger.info(`\n${"=".repeat(80)}`);
+    logger.info(`${arrow} (${direction}) SIRF Packet: 0x${packetType.toString(16).padStart(2, "0").toUpperCase()}`);
+    logger.info(protocolLegend);
+    logger.info(`   [ORIGINAL-HEX]: ${rawSirfPacket.toString("hex").toUpperCase()}`);
+    logger.info(`   [HEADER: ${header.toString("hex").toUpperCase()}]`);
+    logger.info(`   [LEN-PAYLOAD: (hex: ${lengthBytes.toString("hex").toUpperCase()}) (decimal: ${payloadLength} B)]`);
+    logger.info(`   [PAYLOAD-HEX]: ${payload.toString("hex").toUpperCase()}`);
+    logger.info(`   [PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payloadLength}`);
+    logger.info(`   [PAYLOAD-PARSED]: ${JSON.stringify(parsedPayload)}`);
+    logger.info(`   [CRC: ${crc.toString("hex").toUpperCase()}]`);
+    logger.info(`   [FOOTER: ${footer.toString("hex").toUpperCase()}]`);
   }
 }
 

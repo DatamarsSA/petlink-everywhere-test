@@ -1,7 +1,6 @@
 {
   "name": "petlink-everywhere-test",
   "version": "1.0.0",
-  "type": "module",
   "license": "UNLICENSED",
   "scripts": {
     "precommit": "yarn run tsc --noEmit",
