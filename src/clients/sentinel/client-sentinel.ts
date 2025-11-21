@@ -525,14 +525,16 @@ export class SentinelTcpClient {
         }
 
         const packetVisualization =
-          `SIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
+          `\nSIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
           `[ORIGINAL-HEX]: ${rawPacket.toString("hex").toUpperCase()}\n` +
           `[HEADER: ${rawPacket.subarray(0, PROTOCOL.HEADER.length).toString("hex").toUpperCase()}]\n` +
-          `[LEN: ${rawPacket
+          `[LEN-PAYLOAD: (hex: ${rawPacket
             .subarray(PROTOCOL.HEADER.length, PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD)
             .toString("hex")
-            .toUpperCase()} (${len}B)]\n` +
-          `[PAYLOAD-HEX: ${payload.toString("hex").toUpperCase()}]\n` +
+            .toUpperCase()}) (decimal: ${len} B)]\n` +
+          `[PAYLOAD-HEX]: ${payload.toString("hex").toUpperCase()}\n` +
+          `[PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payload.length}\n` +
+          `[PAYLOAD-PARSED]: ${JSON.stringify(parsed.payload)}\n` +
           `[CRC: ${rawPacket
             .subarray(payloadStart + len, payloadStart + len + PROTOCOL.CRC)
             .toString("hex")
@@ -540,8 +542,7 @@ export class SentinelTcpClient {
           `[FOOTER: ${rawPacket
             .subarray(payloadStart + len + PROTOCOL.CRC)
             .toString("hex")
-            .toUpperCase()}]\n` +
-          `[PAYLOAD-PARSED]: ${JSON.stringify(parsed.payload)}\n\n`;
+            .toUpperCase()}]\n`;
 
         // LOG UNICO E LEGGIBILE
         logger.info(packetVisualization);
