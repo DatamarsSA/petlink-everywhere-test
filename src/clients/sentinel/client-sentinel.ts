@@ -284,7 +284,6 @@ export class PacketSerializer {
 
 export interface ParsedPacket {
   type: number;
-  name: string;
   payload: any;
   raw: Buffer;
 }
@@ -522,16 +521,16 @@ export class SentinelTcpClient {
         let parsed: ParsedPacket;
         switch (type) {
           case SentinelPacketType.PACKET_0x0A:
-            parsed = { ...base, name: "COMMAND", payload: PacketDeserializer.parse0x0A(payload) };
+            parsed = { ...base, payload: PacketDeserializer.parse0x0A(payload) };
             break;
           case SentinelPacketType.PACKET_0x15:
-            parsed = { ...base, name: "SAFE_PLACES", payload: PacketDeserializer.parse0x15(payload) };
+            parsed = { ...base, payload: PacketDeserializer.parse0x15(payload) };
             break;
           case SentinelPacketType.PACKET_0x10:
-            parsed = { ...base, name: "EVO_EXTRA", payload: PacketDeserializer.parse0x10(payload) };
+            parsed = { ...base, payload: PacketDeserializer.parse0x10(payload) };
             break;
           default:
-            parsed = { ...base, name: "UNKNOWN", payload: { raw: payload.toString("hex") } };
+            parsed = { ...base, payload: { raw: payload.toString("hex") } };
             break;
         }
 
