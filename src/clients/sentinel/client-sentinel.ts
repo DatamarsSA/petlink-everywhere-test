@@ -524,7 +524,27 @@ export class SentinelTcpClient {
             break;
         }
 
-        logger.debug(`[RX] 0x${type.toString(16)} ${parsed.name}`);
+        const packetVisualization =
+          `SIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
+          `[ORIGINAL-HEX]: ${rawPacket.toString("hex").toUpperCase()}\n` +
+          `[HEADER: ${rawPacket.subarray(0, PROTOCOL.HEADER.length).toString("hex").toUpperCase()}]\n` +
+          `[LEN: ${rawPacket
+            .subarray(PROTOCOL.HEADER.length, PROTOCOL.HEADER.length + PROTOCOL.LENGTH_FIELD)
+            .toString("hex")
+            .toUpperCase()} (${len}B)]\n` +
+          `[PAYLOAD-HEX: ${payload.toString("hex").toUpperCase()}]\n` +
+          `[CRC: ${rawPacket
+            .subarray(payloadStart + len, payloadStart + len + PROTOCOL.CRC)
+            .toString("hex")
+            .toUpperCase()}]\n` +
+          `[FOOTER: ${rawPacket
+            .subarray(payloadStart + len + PROTOCOL.CRC)
+            .toString("hex")
+            .toUpperCase()}]\n` +
+          `[PAYLOAD-PARSED]: ${JSON.stringify(parsed.payload)}\n\n`;
+
+        // LOG UNICO E LEGGIBILE
+        logger.info(packetVisualization);
 
         this.events.emit("packet", parsed);
       } catch (e) {
