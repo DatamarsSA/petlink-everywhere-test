@@ -2,6 +2,17 @@ import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
 
+/**
+ * ==================== SIRF PROTOCOL LEGEND ====================
+ * [HEADER: (2bytes) A0A2]
+ * [LEN: (2bytes) SIZE] ← length of payload (includes PACKET_TYPE)
+ * [PAYLOAD: (variable length bytes) TOTAL]
+ *    └─ [PACKET_TYPE: (1byte) 0x01] ← FIRST byte of payload
+ *    └─ [KIPPY_DATA: (N bytes) REST] ← serialNumber, IMEI, GPS, etc
+ * [CRC: (2bytes) CHECKSUM]
+ * [FOOTER: (2bytes) B0B3]
+ */
+
 // ================================ CONSTANTS ================================ //
 
 const PROTOCOL = {
@@ -524,8 +535,16 @@ export class SentinelTcpClient {
             break;
         }
 
+        const protocolLegend =
+          `[SIRF-PROTOCOL]: [HEADER: (${PROTOCOL.HEADER.length}bytes) ${PROTOCOL.HEADER.toString("hex").toUpperCase()}] ` +
+          `[LEN: (${PROTOCOL.LENGTH_FIELD}bytes)] ` +
+          `[PAYLOAD: [PACKET_TYPE: (1byte)] [KIPPY_DATA: (variable bytes)]] ` +
+          `[CRC: (${PROTOCOL.CRC}bytes) CHECKSUM] ` +
+          `[FOOTER: (${PROTOCOL.FOOTER.length}bytes) ${PROTOCOL.FOOTER.toString("hex").toUpperCase()}]`;
+
         const packetVisualization =
-          `\nSIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
+          `\n\nSIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
+          `${protocolLegend}\n` +
           `[ORIGINAL-HEX]: ${rawPacket.toString("hex").toUpperCase()}\n` +
           `[HEADER: ${rawPacket.subarray(0, PROTOCOL.HEADER.length).toString("hex").toUpperCase()}]\n` +
           `[LEN-PAYLOAD: (hex: ${rawPacket
@@ -542,7 +561,7 @@ export class SentinelTcpClient {
           `[FOOTER: ${rawPacket
             .subarray(payloadStart + len + PROTOCOL.CRC)
             .toString("hex")
-            .toUpperCase()}]\n`;
+            .toUpperCase()}]`;
 
         // LOG UNICO E LEGGIBILE
         logger.info(packetVisualization);
