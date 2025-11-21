@@ -66,15 +66,23 @@ export class SentinelTcpClient {
   }
 
   /**
-   * Send packet (Rust-like: pass payload object, log before serialization)
+   * Invia pacchetto a Sentinel
+   * @param packet - Oggetto packet (es. Packet01, Packet0A, ecc) con metodo toBuffer()
    */
-  async send(data: Buffer, payload?: any): Promise<void> {
+  async send(packet: { toBuffer(): Buffer }): Promise<void> {
     if (!this.socket) throw new Error("Not connected");
 
-    // LOG BEFORE SENDING (OUTGOING) - symmetric logging with parsed payload
-    SirfProtocol.logPacket("OUTGOING", data, payload);
+    // STEP 1: Serializza l'oggetto → Buffer Kippy
+    const kippyPayload = packet.toBuffer();
 
-    this.socket.write(data);
+    // STEP 2: Encapsula Kippy payload → SIRF packet
+    const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
+
+    // STEP 3: LOG (oggetto originale + binario finale)
+    SirfProtocol.logPacket("OUTGOING", sirfPacket, packet);
+
+    // STEP 4: Invia sulla socket
+    this.socket.write(sirfPacket);
   }
 
   disconnect() {

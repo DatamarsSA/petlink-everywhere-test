@@ -2,7 +2,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
 import { sentinelTcpSocketClient, SentinelPacketType } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01, SirfProtocol } from "../../../clients/sentinel/packet-encode-decode.js";
+import { Packet01 } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, GpsMessagePosition, ModeType } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -41,11 +41,8 @@ describe("User Mode - Live Tracking", () => {
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
 
     logger.info("📍 STEP 1: Register device on Sentinel socketMap (send initial Packet 0x01)");
-    // Rust-like: Create packet instance directly (no factory)
-    const welcomePacketObj = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 22);
-    const welcomePayload = welcomePacketObj.toBuffer();
-    const welcomePacket = SirfProtocol.encapsulate(welcomePayload);
-    await sentinelTcpSocketClient.send(welcomePacket, welcomePacketObj);
+    const welcomePacket = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 22);
+    await sentinelTcpSocketClient.send(welcomePacket);
     logger.info("✓ Device registered on Sentinel cache map");
 
     logger.info("📍 STEP 2: Subscribe to position updates via GraphQl Sub WebSocket");
@@ -107,17 +104,14 @@ describe("User Mode - Live Tracking", () => {
     let longitudeSentoFromDevice = 11.3463;
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
-    // Rust-like: Create packet instance directly
-    const heartbeatPacketObj = new Packet01(
+    const heartbeatPacket = new Packet01(
       deviceSerialNumber,
       latutideSentoFromDevice,
       longitudeSentoFromDevice,
       batterySentoFromDevice,
       temperatureSentoFromDevice,
     );
-    const heartbeatPayload = heartbeatPacketObj.toBuffer();
-    const heartbeatPacket = SirfProtocol.encapsulate(heartbeatPayload);
-    await sentinelTcpSocketClient.send(heartbeatPacket, heartbeatPacketObj);
+    await sentinelTcpSocketClient.send(heartbeatPacket);
     logger.info("✓ Packet 0x01 #1 sent");
 
     logger.info("📍 STEP 6: Wait for positions to arrive via WebSocket");

@@ -76,11 +76,11 @@ export class SirfProtocol {
   /**
    * Logga pacchetto SIRF in modo simmetrico (hex + parsed)
    */
-  static logPacket(direction: "INCOMING" | "OUTGOING", rawPacket: Buffer, parsedPayload?: any): void {
-    const type = rawPacket[4];
-    const length = rawPacket.readUInt16BE(2);
-    const payload = rawPacket.subarray(4, 4 + length);
-    const crc = rawPacket.readUInt16BE(4 + length);
+  static logPacket(direction: "INCOMING" | "OUTGOING", rawSirfPacket: Buffer, parsedPayload?: any): void {
+    const type = rawSirfPacket[4];
+    const length = rawSirfPacket.readUInt16BE(2);
+    const payload = rawSirfPacket.subarray(4, 4 + length);
+    const crc = rawSirfPacket.readUInt16BE(4 + length);
 
     // Legenda del protocollo SIRF (statica)
     const protocolLegend =
@@ -94,20 +94,20 @@ export class SirfProtocol {
     const packetVisualization =
       `\n\n[${direction}] SIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
       `${protocolLegend}\n` +
-      `[ORIGINAL-HEX]: ${rawPacket.toString("hex").toUpperCase()}\n` +
-      `[HEADER: ${rawPacket.subarray(0, SIRF.HEADER.length).toString("hex").toUpperCase()}]\n` +
-      `[LEN-PAYLOAD:] (hex: ${rawPacket
+      `[ORIGINAL-HEX]: ${rawSirfPacket.toString("hex").toUpperCase()}\n` +
+      `[HEADER: ${rawSirfPacket.subarray(0, SIRF.HEADER.length).toString("hex").toUpperCase()}]\n` +
+      `[LEN-PAYLOAD:] (hex: ${rawSirfPacket
         .subarray(SIRF.HEADER.length, SIRF.HEADER.length + SIRF.LENGTH_FIELD)
         .toString("hex")
         .toUpperCase()}) (decimal: ${length} B)\n` +
       `[PAYLOAD-HEX]: ${payload.toString("hex").toUpperCase()}\n` +
       `[PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payload.length}\n` +
       (parsedPayload ? `[PAYLOAD-PARSED]: ${JSON.stringify(parsedPayload)}\n` : "") +
-      `[CRC: ${rawPacket
+      `[CRC: ${rawSirfPacket
         .subarray(SIRF.HEADER.length + SIRF.LENGTH_FIELD + length, SIRF.HEADER.length + SIRF.LENGTH_FIELD + length + SIRF.CRC)
         .toString("hex")
         .toUpperCase()}]\n` +
-      `[FOOTER: ${rawPacket
+      `[FOOTER: ${rawSirfPacket
         .subarray(SIRF.HEADER.length + SIRF.LENGTH_FIELD + length + SIRF.CRC)
         .toString("hex")
         .toUpperCase()}]`;

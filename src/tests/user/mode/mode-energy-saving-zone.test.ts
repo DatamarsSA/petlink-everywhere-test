@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient, SentinelPacketType } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01, SirfProtocol } from "../../../clients/sentinel/packet-encode-decode.js";
+import { Packet01 } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -20,10 +20,8 @@ describe("User Mode - Energy Saving Zone", () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await sentinelTcpSocketClient.connect();
     // HANDSHAKE: Login device to Sentinel (so it is mapped as socket capable)
-    const handshakeObj = new Packet01(setup.devices.dogStandard!.serialNumber, 44.5024, 11.3463, 4200, 20, false);
-    const handshakePayload = handshakeObj.toBuffer();
-    const handshake = SirfProtocol.encapsulate(handshakePayload);
-    await sentinelTcpSocketClient.send(handshake, handshakeObj);
+    const handshakePacket = new Packet01(setup.devices.dogStandard!.serialNumber, 44.5024, 11.3463, 4200, 20, false);
+    await sentinelTcpSocketClient.send(handshakePacket);
   });
 
   afterAll(() => {
@@ -93,11 +91,8 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 4: Device sends Packet 0x01 with collar_detached = 1
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    // Rust-like: Create packet instance directly
-    const packetObj = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 20, true); // ← ESZ ACTIVE!
-    const packetPayload = packetObj.toBuffer();
-    const packet = SirfProtocol.encapsulate(packetPayload);
-    await sentinelTcpSocketClient.send(packet, packetObj);
+    const eszEntryPacket = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 20, true); // ← ESZ ACTIVE!
+    await sentinelTcpSocketClient.send(eszEntryPacket);
 
     // STEP 5: Wait for ESZ entry notification
     await subscriptionPromise;
@@ -127,11 +122,8 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 2: Device sends Packet 0x01 with collar_detached = 0
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    // Rust-like: Create packet instance directly
-    const packetObj = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 20, false); // ← LEFT ESZ!
-    const packetPayload = packetObj.toBuffer();
-    const packet = SirfProtocol.encapsulate(packetPayload);
-    await sentinelTcpSocketClient.send(packet, packetObj);
+    const eszExitPacket = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 20, false); // ← LEFT ESZ!
+    await sentinelTcpSocketClient.send(eszExitPacket);
 
     // STEP 3: Wait for ESZ exit notification
     await subscriptionPromise;
