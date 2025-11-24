@@ -1,5 +1,5 @@
 /**
- * ==================== PACKET ENCODE/DECODE (Rust-like) ====================
+ * ==================== SIRF PROTOCOL LEGEND for packet ENCODE/DECODE (Rust-like) ====================
  *
  * Ogni classe rappresenta un packet type con:
  * - constructor(): crea l'istanza con i dati
@@ -7,11 +7,17 @@
  * - static fromBuffer(): deserializza da Buffer (manuale)
  *
  * SIRF Protocol:
- * [HEADER: 0xA0A2] [LEN: 2bytes BE] [PAYLOAD = [PACKET_TYPE: (1byte) 0x01] [PAYLOAD: (variable size)]] [CRC: 2bytes BE] [FOOTER: 0xB0B3]
- * [HEADER: (2bytes) A0A2] [LEN: (2bytes)] [PAYLOAD = [PACKET_TYPE: (1byte) 0x01] [PAYLOAD: (variable size)]] [CRC: (2bytes) CHECKSUM] [FOOTER: (2bytes) B0B3]
+ * [HEADER: (2bytes) A0A2]
+ * [LEN: (2bytes) SIZE] ← length of payload (includes PACKET_TYPE)
+ * [PAYLOAD: (variable length bytes) TOTAL]
+ *    └─ [PACKET_TYPE: (1byte) 0x01] ← FIRST byte of payload
+ *    └─ [KIPPY_DATA: (N bytes) REST] ← serialNumber, IMEI, GPS, etc
+ * [CRC: (2bytes) CHECKSUM]
+ * [FOOTER: (2bytes) B0B3]
  */
 
 import { logger } from "../../config/logger.js";
+import { petlink } from "../petlink-infrastructure/client-petlink-infrastructure";
 
 // ================================ ENUMS ================================ //
 
@@ -121,11 +127,11 @@ function stringToBytes(str: string, length: number): Buffer {
 
 /**
  * Packet 0x01 - BIDIREZIONALE
- * 
+ *
  * 1️⃣ Device → Sentinel (Welcome/Heartbeat) - 109+ bytes
  *    - Uso: new Packet01(serialNumber, lat, lng, battery, temp)
  *    - Parsing: Packet01.fromBufferDeviceToSentinel(payload)
- * 
+ *
  * 2️⃣ Sentinel → Device (PacketGeofenceResponse) - 71 bytes
  *    - Uso: new Packet01({ lbsCurrentLatitude, ... })
  *    - Parsing: Packet01.fromBufferSentinelToDevice(payload)
@@ -484,43 +490,41 @@ export class Packet01 {
     const packetNumber = payload[offset++];
     if (packetNumber !== 0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
 
-    const lbsCurrentLatitude = payload.readFloatLE(offset); offset += 4;
-    const lbsCurrentLongitude = payload.readFloatLE(offset); offset += 4;
+    const lbsCurrentLatitude = payload.readFloatLE(offset);
+    offset += 4;
+    const lbsCurrentLongitude = payload.readFloatLE(offset);
+    offset += 4;
     const serverPositionSource = payload[offset++];
 
     const geofenceCoordinates: { lat: number; lng: number }[] = [];
     for (let i = 0; i < 6; i++) {
       geofenceCoordinates.push({
         lat: payload.readFloatLE(offset),
-        lng: payload.readFloatLE(offset + 4)
+        lng: payload.readFloatLE(offset + 4),
       });
       offset += 8;
     }
 
     const requestedOperatingStatus = payload[offset++];
-    const updateFrequency = payload.readUInt16LE(offset); offset += 2;
-    const utcTimestamp = payload.readUInt32LE(offset); offset += 4;
-    const txEveryCheck = payload.readUInt16LE(offset); offset += 2;
+    const updateFrequency = payload.readUInt16LE(offset);
+    offset += 2;
+    const utcTimestamp = payload.readUInt32LE(offset);
+    offset += 4;
+    const txEveryCheck = payload.readUInt16LE(offset);
+    offset += 2;
     const lbsCurrentRadius = payload.readUInt32LE(offset);
 
     return new Packet01({
-      lbsCurrentLatitude, lbsCurrentLongitude, serverPositionSource,
-      geofenceCoordinates, requestedOperatingStatus, updateFrequency,
-      utcTimestamp, txEveryCheck, lbsCurrentRadius
+      lbsCurrentLatitude,
+      lbsCurrentLongitude,
+      serverPositionSource,
+      geofenceCoordinates,
+      requestedOperatingStatus,
+      updateFrequency,
+      utcTimestamp,
+      txEveryCheck,
+      lbsCurrentRadius,
     });
-  }
-
-  isGeofenceCommand(): boolean { return this.requestedOperatingStatus === OperatingStatus.GEOFENCE_ON; }
-  isLiveTrackingCommand(): boolean { return this.requestedOperatingStatus === OperatingStatus.FAST_TRACKING; }
-  isReturnToDefaultCommand(): boolean { return this.requestedOperatingStatus === OperatingStatus.DEFAULT; }
-  getCommandName(): string {
-    if (!this.requestedOperatingStatus) return "UNKNOWN";
-    switch (this.requestedOperatingStatus) {
-      case OperatingStatus.GEOFENCE_ON: return "GEOFENCE_ON";
-      case OperatingStatus.FAST_TRACKING: return "LIVE_TRACKING";
-      case OperatingStatus.DEFAULT: return "RETURN_TO_DEFAULT";
-      default: return `UNKNOWN_0x${this.requestedOperatingStatus.toString(16)}`;
-    }
   }
 }
 

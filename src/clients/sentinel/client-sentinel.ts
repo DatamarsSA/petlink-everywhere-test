@@ -3,17 +3,6 @@ import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
 import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketType } from "./packet-encode-decode.js";
 
-/**
- * ==================== SIRF PROTOCOL LEGEND ====================
- * [HEADER: (2bytes) A0A2]
- * [LEN: (2bytes) SIZE] ← length of payload (includes PACKET_TYPE)
- * [PAYLOAD: (variable length bytes) TOTAL]
- *    └─ [PACKET_TYPE: (1byte) 0x01] ← FIRST byte of payload
- *    └─ [KIPPY_DATA: (N bytes) REST] ← serialNumber, IMEI, GPS, etc
- * [CRC: (2bytes) CHECKSUM]
- * [FOOTER: (2bytes) B0B3]
- */
-
 // ================================ 3. CLIENT (Network & Logic) ================================ //
 
 export class SentinelTcpClient {

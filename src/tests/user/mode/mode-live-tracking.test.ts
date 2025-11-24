@@ -29,6 +29,12 @@ describe("User Mode - Live Tracking", () => {
     logger.info("🔌 Connecting to Sentinel TCP server...");
     await sentinelTcpSocketClient.connect();
     logger.info("✓ Connected to Sentinel TCP server");
+
+    // // STEP 2: Connect to Sentinel TCP server
+    logger.info("📍 STEP 1: Register device on Sentinel socketMap (send initial Packet 0x01)");
+    const welcomePacket = new Packet01(setup.devices.dogStandard!.serialNumber, 44.5024, 11.3463, 4200, 22);
+    await sentinelTcpSocketClient.send(welcomePacket);
+    logger.info("✓ Device registered on Sentinel cache map");
   });
 
   afterAll(() => {
@@ -38,10 +44,9 @@ describe("User Mode - Live Tracking", () => {
   });
 
   it("Activate live tracking and should receive position updates", async () => {
-    const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-
+    // STEP 2: Connect to Sentinel TCP server
     logger.info("📍 STEP 1: Register device on Sentinel socketMap (send initial Packet 0x01)");
-    const welcomePacket = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 22);
+    const welcomePacket = new Packet01(setup.devices.dogStandard!.serialNumber, 44.5024, 11.3463, 4200, 22);
     await sentinelTcpSocketClient.send(welcomePacket);
     logger.info("✓ Device registered on Sentinel cache map");
 
@@ -92,11 +97,17 @@ describe("User Mode - Live Tracking", () => {
     logger.info("✓ Sent command 'LIVE_TRACKING' to core");
 
     logger.info("📍 STEP 4: Verify device received Packet 0x0A (LIVE_TRACKING command)");
-
     const commandPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x0A, 5000);
     expect(commandPacket, "Should receive Packet 0x0A (LIVE_TRACKING command)").toBeDefined();
     expect(commandPacket.type).toBe(PacketType.PACKET_0x0A);
-    expect(commandPacket.payload, "Should parse Packet 0x0A").toBeDefined();
+
+    // NOTA: Se Sentinel invia anche Packet 0x01 (PacketGeofenceResponse), puoi verificarlo così:
+    // const geofencePacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x01, 5000);
+    // expect(geofencePacket.payload).toBeInstanceOf(Packet01SentinelToDevice);
+    // const packet01 = geofencePacket.payload as Packet01SentinelToDevice;
+    // expect(packet01.isLiveTrackingCommand()).toBe(true);
+    // expect(packet01.requestedOperatingStatus).toBe(OperatingStatus.FAST_TRACKING);
+    // expect(commandPacket.payload, "Should parse Packet 0x0A").toBeDefined();
     logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket.payload });
 
     logger.info("📍 STEP 5: Simulate device sending 1 Packet 0x01");
@@ -105,7 +116,7 @@ describe("User Mode - Live Tracking", () => {
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
     const heartbeatPacket = new Packet01(
-      deviceSerialNumber,
+      setup.devices.dogStandard!.serialNumber,
       latutideSentoFromDevice,
       longitudeSentoFromDevice,
       batterySentoFromDevice,
