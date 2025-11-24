@@ -1,7 +1,18 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketType } from "./packet-encode-decode.js";
+import {
+  Packet01D2S,
+  Packet01S2D,
+  SirfProtocol,
+  parsePacketByType,
+  ParsedPacket,
+  SIRF,
+  PacketType,
+  Packet0A,
+  Packet10,
+  Packet15,
+} from "./packet-encode-decode.js";
 
 // ================================ 3. CLIENT (Network & Logic) ================================ //
 
@@ -10,7 +21,7 @@ export class SentinelTcpClient {
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
 
-  constructor(private config: { host: string; port: number }) {}
+  constructor(private config: { host: string; port: number }) { }
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -37,14 +48,14 @@ export class SentinelTcpClient {
   }
 
   /**
-   * Invia pacchetto a Sentinel
-   * @param packet - Oggetto packet (es. Packet01, Packet0A, ecc) con metodo toBuffer()
+   * Invia pacchetto a Sentinel. Il pacchetto deve avere una prop `buffer` pre-calcolata.
+   * @param packet - Oggetto packet (es. Packet01) con la prop `buffer`
    */
-  async send(packet: { toBuffer(): Buffer }): Promise<void> {
+  async send(packet: { buffer: Buffer }): Promise<void> {
     if (!this.socket) throw new Error("Not connected");
 
-    // STEP 1: Serializza l'oggetto → Buffer Kippy
-    const kippyPayload = packet.toBuffer();
+    // STEP 1: Il payload Kippy è già calcolato nel costruttore del pacchetto
+    const kippyPayload = packet.buffer;
 
     // STEP 2: Encapsula Kippy payload → SIRF packet
     const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
@@ -71,7 +82,15 @@ export class SentinelTcpClient {
    * @param timeoutMs Timeout in milliseconds
    * @param validator Optional function to filter the packet
    */
-  async waitForPacket(type: PacketType, timeoutMs = 5000, validator?: (p: ParsedPacket) => boolean): Promise<ParsedPacket> {
+  async waitForPacket(type: PacketType.PACKET_0x01, timeoutMs?: number, validator?: (p: Packet01S2D) => boolean): Promise<Packet01S2D>;
+  async waitForPacket(type: PacketType.PACKET_0x0A, timeoutMs?: number, validator?: (p: Packet0A) => boolean): Promise<Packet0A>;
+  async waitForPacket(type: PacketType.PACKET_0x10, timeoutMs?: number, validator?: (p: Packet10) => boolean): Promise<Packet10>;
+  async waitForPacket(type: PacketType.PACKET_0x15, timeoutMs?: number, validator?: (p: Packet15) => boolean): Promise<Packet15>;
+  async waitForPacket<T extends Packet01S2D | Packet0A | Packet10 | Packet15>(
+    type: PacketType,
+    timeoutMs = 5000,
+    validator?: (p: T) => boolean,
+  ): Promise<T> {
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16)}`;
 
@@ -82,10 +101,11 @@ export class SentinelTcpClient {
 
       const onPacket = (packet: ParsedPacket) => {
         if (packet.type === type) {
-          if (!validator || validator(packet)) {
+          const typedPacket = packet.payload as T;
+          if (!validator || validator(typedPacket)) {
             logger.debug(`✓ Received expected packet ${typeHex}`);
             cleanup();
-            resolve(packet);
+            resolve(typedPacket);
           } else {
             logger.debug(`- Skipped packet ${typeHex} (validator failed)`);
           }

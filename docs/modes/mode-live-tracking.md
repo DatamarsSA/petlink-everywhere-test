@@ -67,7 +67,8 @@ Sentinel Lambda Consumer (commandsConsumer):
   ↓
 Sentinel Rust TCP Server:
   ├─ Trova la connessione TCP del device
-  ├─ Converte comando in pacchetto binario (SiRF 0x05)
+  ├─ Converte comando in pacchetto binario (Packet 0x01 - PacketGeofenceResponse)
+  │  └─ operating_status = FAST_TRACKING
   └─ Invia al device via TCP
   
   ↓
@@ -369,9 +370,9 @@ sequenceDiagram
     Core->>SQS: Publish: commands message
     SQS->>Lambda: Trigger: commandsConsumer
     Lambda->>Sentinel: HTTP POST /send_packet<br/>command: LIVE_TRACKING<br/>duration: 900
-    Sentinel->>Sentinel: Create Packet 0x05<br/>Encapsulate SIRF protocol
+    Sentinel->>Sentinel: Create Packet 0x01<br/>(PacketGeofenceResponse)<br/>status=FAST_TRACKING
     Sentinel->>Device: TCP binary packet<br/>Port 8080
-    Device->>Device: Parse Packet 0x05<br/>Activate Live Tracking:<br/>✓ Timer: 900s<br/>✓ Freq: 5 sec<br/>✓ GPS: ON
+    Device->>Device: Parse Packet 0x01<br/>Activate Live Tracking:<br/>✓ Timer: 900s<br/>✓ Freq: 5 sec<br/>✓ GPS: ON
 
     Note over Mobile,Device: STEP 2: Frequent Position Updates (Device → User)
 

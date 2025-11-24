@@ -235,7 +235,7 @@ describe("DEFAULT subscription flow", () => {
           { id: setup.user!.id },
           {
             next: (event: any) => {
-              logger.info("GraphQlSocket event received", { event });
+              logger.info("GraphQlSocket event received -> onSubscriptionStatus", { event });
               subStatusUpdated = event.data;
 
               // Resolve only when subscription is ACTIVE

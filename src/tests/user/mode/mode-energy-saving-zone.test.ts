@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
+import { Packet01D2S, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -20,7 +20,17 @@ describe("User Mode - Energy Saving Zone", () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await sentinelTcpSocketClient.connect();
     // HANDSHAKE: Login device to Sentinel (so it is mapped as socket capable)
-    const handshakePacket = new Packet01(setup.devices.dogStandard!.serialNumber, 44.5024, 11.3463, 4200, 20, false);
+    const handshakePacket = new Packet01D2S({
+      serialNumber: setup.devices.dogStandard!.serialNumber,
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 20,
+      collar_detached: false,
+      geofence_status: "none",
+      wifi_cells: undefined,
+      gsm_cells: undefined,
+    });
     await sentinelTcpSocketClient.send(handshakePacket);
   });
 
@@ -31,6 +41,19 @@ describe("User Mode - Energy Saving Zone", () => {
   });
 
   it("Device enters ESZ (collar_detached = 1)", async () => {
+    // Send a keep-alive packet right before triggering the command to ensure the socket is fresh.
+    const keepAlivePacket = new Packet01D2S({
+      serialNumber: setup.devices.dogStandard!.serialNumber,
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 20,
+      collar_detached: false,
+      geofence_status: "none",
+      wifi_cells: undefined,
+      gsm_cells: undefined,
+    });
+    await sentinelTcpSocketClient.send(keepAlivePacket);
     // STEP 1: Create ESZ zone
     const createZoneResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
@@ -91,7 +114,17 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 4: Device sends Packet 0x01 with collar_detached = 1
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    const eszEntryPacket = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 20, true); // ← ESZ ACTIVE!
+    const eszEntryPacket = new Packet01D2S({
+      serialNumber: deviceSerialNumber,
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 20,
+      collar_detached: true, // ← ESZ ACTIVE!
+      geofence_status: "none",
+      wifi_cells: undefined,
+      gsm_cells: undefined,
+    });
     await sentinelTcpSocketClient.send(eszEntryPacket);
 
     // STEP 5: Wait for ESZ entry notification
@@ -122,7 +155,17 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 2: Device sends Packet 0x01 with collar_detached = 0
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    const eszExitPacket = new Packet01(deviceSerialNumber, 44.5024, 11.3463, 4200, 20, false); // ← LEFT ESZ!
+    const eszExitPacket = new Packet01D2S({
+      serialNumber: deviceSerialNumber,
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 20,
+      collar_detached: false, // ← LEFT ESZ!
+      geofence_status: "none",
+      wifi_cells: undefined,
+      gsm_cells: undefined,
+    });
     await sentinelTcpSocketClient.send(eszExitPacket);
 
     // STEP 3: Wait for ESZ exit notification
@@ -131,6 +174,19 @@ describe("User Mode - Energy Saving Zone", () => {
   });
 
   it("Deactivate ESZ", async () => {
+    // Send a keep-alive packet right before triggering the command to ensure the socket is fresh.
+    const keepAlivePacket = new Packet01D2S({
+      serialNumber: setup.devices.dogStandard!.serialNumber,
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 20,
+      collar_detached: false,
+      geofence_status: "none",
+      wifi_cells: undefined,
+      gsm_cells: undefined,
+    });
+    await sentinelTcpSocketClient.send(keepAlivePacket);
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,

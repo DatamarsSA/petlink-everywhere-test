@@ -68,7 +68,7 @@ commandsConsumer riceve il comando
 Sentinel riceve il comando via REST
   ├─ Controlla: device è connesso?
   ├─ Controlla: device è pronto per nuovo comando?
-  ├─ Prepara Packet 0x09 (PacketGeofenceResponse)
+  ├─ Prepara Packet 0x01 (PacketGeofenceResponse)
   │  ├─ operating_status = OPERATING_STATUS_GEOFENCE_ON
   │  ├─ coordinates = [6 markers]
   │  └─ upd_freq = 30 (secondi, normale)
@@ -125,7 +125,7 @@ Sentinel riceve il pacchetto
   ├─ Invia notifica: GEOFENCE_OUT a SQS
   ├─ Imposta: geofence_triggered_lt = true
   ├─ AUTO-ATTIVA Live Tracking
-  │  ├─ Prepara Packet 0x09 (FAST_TRACKING)
+  │  ├─ Prepara Packet 0x01 (FAST_TRACKING)
   │  ├─ upd_freq = 5 (secondi)
   │  └─ Invia comando al device
   └─ Aggiorna DB: operating_status = FAST_TRACKING
@@ -181,7 +181,7 @@ Backend invia comando a SQS
   ↓
 Sentinel riceve il comando
   ├─ Legge: geofence_coordinates = [0,0,0,0,0,0] (tutti uguali = deactivate)
-  ├─ Prepara Packet 0x09 (PacketGeofenceResponse)
+  ├─ Prepara Packet 0x01 (PacketGeofenceResponse)
   │  └─ operating_status = OPERATING_STATUS_DEFAULT
   └─ Invia il pacchetto al device
     ↓
@@ -219,7 +219,7 @@ sequenceDiagram
     Core->>DB: Update device: operating_status = ACTIVATING_GEOFENCE
     Core->>SQS: Queue settings message
     SQS->>Sentinel: settingsConsumer trigger
-    Sentinel->>Device: Send Packet 0x09 (coordinates + GEOFENCE_ON)
+    Sentinel->>Device: Send Packet 0x01 (coordinates + GEOFENCE_ON)
 
     Note over User,Device: STEP 3: Device Inside Geofence
     Device->>Device: Calculate: inside polygon?
@@ -247,7 +247,7 @@ sequenceDiagram
     AppSync->>User: "Pet left home!" 🚨
     
     SQS->>Sentinel: commandsConsumer trigger
-    Sentinel->>Device: Send Packet 0x09 (FAST_TRACKING, upd_freq=5)
+    Sentinel->>Device: Send Packet 0x01 (FAST_TRACKING, upd_freq=5)
 
     Note over User,Device: STEP 5: Device in Live Tracking (Auto-activated)
     Device->>Device: Set heartbeat frequency = 5 seconds
@@ -273,55 +273,8 @@ sequenceDiagram
     Note over User,Device: STEP 7: Deactivate Geofence
     User->>Core: sendSetting(DEACTIVATE, GEOFENCE, deviceId)
     Core->>SQS: Queue settings message
-    SQS->>Sentinel: Send Packet 0x09 (coordinates=[0,0,0,0,0,0])
+    SQS->>Sentinel: Send Packet 0x01 (coordinates=[0,0,0,0,0,0])
     Sentinel->>Device: Deactivate geofence
     Device->>Device: Reset to normal mode
     Sentinel->>DB: Update: operating_status = DEFAULT
 ```
-
-## Logica Sentinel (geofence_manager.rs)
-
-```rust
-// Riceve Packet 0x01 con geofence flags
-if outside_geofence == true && valid_gps_position == true {
-  // Device è FUORI dal geofence
-  go_to_fasttracking = true
-  geofence_triggered_lt = true
-  
-  // Invia notifica GEOFENCE_OUT
-  send_notification_message(GEOFENCE_OUT)
-  
-  // Aggiorna DB
-  db_update_petlink_operating_status(FAST_TRACKING)
-  
-} else if inside_geofence == true {
-  // Device è DENTRO il geofence
-  update_db = true
-  
-  // Invia notifica GEOFENCE_ACTIVE
-  send_notification_message(GEOFENCE_ACTIVE)
-  
-  // Aggiorna DB
-  db_update_petlink_operating_status(GEOFENCE_ON)
-}
-```
-
-## Notifiche
-
-### GEOFENCE_ACTIVE
-- **Quando**: Device entra/rimane dentro il geofence
-- **Payload**: `{ action: "GEOFENCE_ACTIVE" }`
-- **Effetto**: App mostra "Pet is safe at home"
-
-### GEOFENCE_OUT
-- **Quando**: Device esce dal geofence
-- **Payload**: `{ action: "GEOFENCE_OUT" }`
-- **Effetto**: 
-  - App mostra "Pet left home!"
-  - Auto-attiva Live Tracking
-  - Invia posizioni ogni 5 secondi
-
-### GEOFENCE_NO_PET
-- **Quando**: Geofence attivato ma device NON è dentro (errore di attivazione)
-- **Payload**: `{ action: "GEOFENCE_NO_PET" }`
-- **Effetto**: Geofence disattivato automaticamente

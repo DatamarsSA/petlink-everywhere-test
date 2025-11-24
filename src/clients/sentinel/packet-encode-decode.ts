@@ -21,6 +21,14 @@ import { petlink } from "../petlink-infrastructure/client-petlink-infrastructure
 
 // ================================ ENUMS ================================ //
 
+export enum CommandType {
+  LIVE_TRACKING = 0x01,
+  GEOFENCE = 0x02,
+  ENERGY_SAVING_ZONE = 0x03,
+  SETTINGS = 0x04,
+  WAKEUP = 0x05,
+}
+
 export enum OperatingStatus {
   DEFAULT = 0x00,
   GEOFENCE_ON = 0x01,
@@ -136,208 +144,112 @@ function stringToBytes(str: string, length: number): Buffer {
  *    - Uso: new Packet01({ lbsCurrentLatitude, ... })
  *    - Parsing: Packet01.fromBufferSentinelToDevice(payload)
  */
-export class Packet01 {
-  // Device → Sentinel
-  public readonly serialNumber?: string;
-  public readonly latitude?: number;
-  public readonly longitude?: number;
-  public readonly battery?: number;
-  public readonly temperature?: number;
-  public readonly collar_detached?: boolean;
-  public readonly geofence_status?: "inside" | "outside" | "none";
-  public readonly wifi_cells?: { bssid: string; rssi: number; channel: number }[];
-  public readonly gsm_cells?: { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[];
 
-  // Sentinel → Device
-  public readonly lbsCurrentLatitude?: number;
-  public readonly lbsCurrentLongitude?: number;
-  public readonly serverPositionSource?: number;
-  public readonly geofenceCoordinates?: { lat: number; lng: number }[];
-  public readonly requestedOperatingStatus?: number;
-  public readonly updateFrequency?: number;
-  public readonly utcTimestamp?: number;
-  public readonly txEveryCheck?: number;
-  public readonly lbsCurrentRadius?: number;
+// Represents a packet sent FROM the Device TO Sentinel
+export class Packet01D2S {
+  static readonly type = PacketType.PACKET_0x01;
 
-  constructor(
-    serialNumberOrData: string | Partial<Packet01>,
-    latitude?: number,
-    longitude?: number,
-    battery?: number,
-    temperature?: number,
-    collar_detached?: boolean,
-    geofence_status?: "inside" | "outside" | "none",
-    wifi_cells?: { bssid: string; rssi: number; channel: number }[],
-    gsm_cells?: { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[],
-  ) {
-    if (typeof serialNumberOrData === "string") {
-      this.serialNumber = serialNumberOrData;
-      this.latitude = latitude ?? 0;
-      this.longitude = longitude ?? 0;
-      this.battery = battery ?? 4200;
-      this.temperature = temperature ?? 20;
-      this.collar_detached = collar_detached ?? false;
-      this.geofence_status = geofence_status ?? "none";
-      this.wifi_cells = wifi_cells;
-      this.gsm_cells = gsm_cells;
-    } else {
-      Object.assign(this, serialNumberOrData);
-    }
+  static Data = {
+    serialNumber: "" as string,
+    latitude: 0 as number,
+    longitude: 0 as number,
+    battery: 4200 as number,
+    temperature: 20 as number,
+    collar_detached: false as boolean,
+    geofence_status: "none" as "inside" | "outside" | "none",
+    wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined,
+    gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined,
+  };
+
+  public readonly data: typeof Packet01D2S.Data;
+  public readonly buffer: Buffer;
+
+  constructor(data: typeof Packet01D2S.Data) {
+    this.data = data;
+    this.buffer = this.toBuffer();
   }
 
-  /**
-   * Serializza in Buffer (Device → Sentinel)
-   * Questo metodo funziona solo per pacchetti Device → Sentinel
-   */
-  toBuffer(): Buffer {
-    if (!this.serialNumber) {
-      throw new Error("serialNumber is required for Device → Sentinel packets");
-    }
+  private toBuffer(): Buffer {
+    const inputData = this.data;
 
     const MAX_SIZE = 600;
     const buffer = Buffer.alloc(MAX_SIZE);
     let offset = 0;
 
-    // Packet Type
-    buffer[offset++] = 0x01;
+    buffer[offset++] = Packet01D2S.type;
 
-    const hasWiFi = this.wifi_cells && this.wifi_cells.length > 0;
-    const hasGSM = this.gsm_cells && this.gsm_cells.length > 0;
+    const hasWiFi = inputData.wifi_cells && inputData.wifi_cells.length > 0;
+    const hasGSM = inputData.gsm_cells && inputData.gsm_cells.length > 0;
 
-    // Serial number (10 bytes)
-    stringToBytes(this.serialNumber, 10).copy(buffer, offset);
+    stringToBytes(inputData.serialNumber, 10).copy(buffer, offset);
     offset += 10;
-
-    // IMEI (15 bytes)
     stringToBytes("123456789012345", 15).copy(buffer, offset);
     offset += 15;
-
-    // ICCID (20 bytes)
     stringToBytes("12345678901234567890", 20).copy(buffer, offset);
     offset += 20;
-
-    // FW version (3 bytes)
     buffer[offset++] = 10;
     buffer[offset++] = 0;
     buffer[offset++] = 73;
-
-    // Boot version (3 bytes)
     buffer[offset++] = 1;
     buffer[offset++] = 0;
     buffer[offset++] = 0;
-
-    // Latitude (4 bytes, float32 LE)
-    buffer.writeFloatLE(this.latitude ?? 0, offset);
+    buffer.writeFloatLE(inputData.latitude ?? 0, offset);
     offset += 4;
-
-    // Longitude (4 bytes, float32 LE)
-    buffer.writeFloatLE(this.longitude ?? 0, offset);
+    buffer.writeFloatLE(inputData.longitude ?? 0, offset);
     offset += 4;
-
-    // Altitude (2 bytes, int16 LE)
     buffer.writeInt16LE(0, offset);
     offset += 2;
-
-    // Last GPS time (4 bytes, uint32 LE)
     buffer.writeUInt32LE(Math.floor(Date.now() / 1000), offset);
     offset += 4;
-
-    // Temperature (2 bytes, int16 LE, in 0.1°C)
-    buffer.writeInt16LE((this.temperature ?? 20) * 10, offset);
+    buffer.writeInt16LE((inputData.temperature ?? 20) * 10, offset);
     offset += 2;
-
-    // Speed (2 bytes, int16 LE)
     buffer.writeInt16LE(0, offset);
     offset += 2;
-
-    // Battery (2 bytes, int16 LE, in mV)
-    buffer.writeInt16LE(this.battery ?? 4200, offset);
+    buffer.writeInt16LE(inputData.battery ?? 4200, offset);
     offset += 2;
-
-    // CSQ (1 byte)
     buffer[offset++] = 20;
-
-    // BER (1 byte)
+    buffer[offset++] = 0;
+    buffer[offset++] = 0;
     buffer[offset++] = 0;
 
-    // New status (1 byte)
-    buffer[offset++] = 0;
-
-    // Current status (1 byte)
-    buffer[offset++] = 0;
-
-    // Notifications (1 byte) - geofence flags
     let notifications = 0x00;
-    if (this.geofence_status === "inside") notifications |= 0x20;
-    else if (this.geofence_status === "outside") notifications |= 0x40;
+    if (inputData.geofence_status === "inside") notifications |= 0x20;
+    else if (inputData.geofence_status === "outside") notifications |= 0x40;
     buffer[offset++] = notifications;
 
-    // Reset cause (1 byte)
     buffer[offset++] = 0;
-
-    // GPRS retry (1 byte)
     buffer[offset++] = 0;
-
-    // GPS sat (1 byte)
     buffer[offset++] = 0;
-
-    // Battery % (spare_c4) (1 byte)
     buffer[offset++] = 80;
-
-    // ESZ flag (spare_c5) (1 byte)
-    buffer[offset++] = (this.collar_detached ?? false) ? 0x01 : 0x00;
-
-    // Modem GMR (spare_c6) (1 byte)
+    buffer[offset++] = (inputData.collar_detached ?? false) ? 0x01 : 0x00;
     buffer[offset++] = 0;
-
-    // Modem retry (spare_c7) (1 byte)
     buffer[offset++] = 0;
-
-    // Modem error (spare_c8) (1 byte)
     buffer[offset++] = 0;
-
-    // Last GPRS (2 bytes, int16 LE)
     buffer.writeInt16LE(0, offset);
     offset += 2;
-
-    // Last GPS (2 bytes, int16 LE)
     buffer.writeInt16LE(0, offset);
     offset += 2;
-
-    // spare_s3 (2 bytes, int16 LE)
     buffer.writeInt16LE(0, offset);
     offset += 2;
-
-    // spare_s4 (2 bytes, uint16 LE)
     buffer.writeUInt16LE(0, offset);
     offset += 2;
-
-    // spare_s5 (2 bytes, int16 LE)
+    buffer.writeInt16LE(0, offset);
+    offset += 2;
+    buffer.writeInt16LE(0, offset);
+    offset += 2;
+    buffer.writeInt16LE(0, offset);
+    offset += 2;
     buffer.writeInt16LE(0, offset);
     offset += 2;
 
-    // spare_s6 (2 bytes, int16 LE)
-    buffer.writeInt16LE(0, offset);
-    offset += 2;
-
-    // spare_s7 (2 bytes, int16 LE)
-    buffer.writeInt16LE(0, offset);
-    offset += 2;
-
-    // spare_s8 (2 bytes, int16 LE)
-    buffer.writeInt16LE(0, offset);
-    offset += 2;
-
-    // Info flag (1 byte)
     let infoFlag = 0x00;
     if (hasWiFi) infoFlag |= 0x01;
     if (hasGSM) infoFlag |= 0x04;
     buffer[offset++] = infoFlag;
 
-    // WiFi cells (90 bytes opzionali)
     if (hasWiFi) {
       for (let i = 0; i < 10; i++) {
-        const wifi = this.wifi_cells![i];
+        const wifi = inputData.wifi_cells![i];
         if (wifi) {
           const bssidBytes = Buffer.from(wifi.bssid.replace(/:/g, ""), "hex");
           bssidBytes.copy(buffer, offset);
@@ -351,10 +263,9 @@ export class Packet01 {
       }
     }
 
-    // GSM cells (161 bytes opzionali)
     if (hasGSM) {
       for (let i = 0; i < 7; i++) {
-        const gsm = this.gsm_cells![i];
+        const gsm = inputData.gsm_cells![i];
         if (gsm) {
           buffer.writeUInt16LE(gsm.cid, offset);
           offset += 2;
@@ -377,71 +288,54 @@ export class Packet01 {
     return buffer.subarray(0, offset);
   }
 
-  /**
-   * Parser: Device → Sentinel (109+ bytes)
-   */
-  static fromBufferDeviceToSentinel(payload: Buffer): Packet01 {
-    let offset = 1; // Skip packet type
+  static fromBuffer(payload: Buffer): Packet01D2S {
+    let offset = 1;
 
     const serialNumber = payload
       .subarray(offset, offset + 10)
       .toString("ascii")
       .replace(/\0/g, "");
     offset += 10;
-
-    offset += 15; // IMEI
-    offset += 20; // ICCID
-    offset += 3; // FW version
-    offset += 3; // Boot version
-
+    offset += 15;
+    offset += 20;
+    offset += 3;
+    offset += 3;
     const latitude = payload.readFloatLE(offset);
     offset += 4;
-
     const longitude = payload.readFloatLE(offset);
     offset += 4;
-
-    offset += 2; // Altitude
-    offset += 4; // Last GPS time
-
+    offset += 2;
+    offset += 4;
     const temperature = payload.readInt16LE(offset) / 10;
     offset += 2;
-
-    offset += 2; // Speed
-
+    offset += 2;
     const battery = payload.readInt16LE(offset);
     offset += 2;
-
-    offset += 1; // CSQ
-    offset += 1; // BER
-    offset += 1; // New status
-    offset += 1; // Current status
-
+    offset += 1;
+    offset += 1;
+    offset += 1;
+    offset += 1;
     const notifications = payload[offset++];
     const geofence_status: "inside" | "outside" | "none" = notifications & 0x20 ? "inside" : notifications & 0x40 ? "outside" : "none";
-
-    offset += 1; // Reset cause
-    offset += 1; // GPRS retry
-    offset += 1; // GPS sat
-    offset += 1; // Battery %
-
+    offset += 1;
+    offset += 1;
+    offset += 1;
+    offset += 1;
     const collar_detached = (payload[offset++] & 0x01) === 0x01;
-
-    offset += 1; // Modem GMR
-    offset += 1; // Modem retry
-    offset += 1; // Modem error
-    offset += 2; // Last GPRS
-    offset += 2; // Last GPS
-    offset += 2; // spare_s3
-    offset += 2; // spare_s4
-    offset += 2; // spare_s5
-    offset += 2; // spare_s6
-    offset += 2; // spare_s7
-    offset += 2; // spare_s8
-
+    offset += 1;
+    offset += 1;
+    offset += 1;
+    offset += 2;
+    offset += 2;
+    offset += 2;
+    offset += 2;
+    offset += 2;
+    offset += 2;
+    offset += 2;
+    offset += 2;
     const infoFlag = payload[offset++];
     const hasWiFi = (infoFlag & 0x01) !== 0;
     const hasGSM = (infoFlag & 0x04) !== 0;
-
     let wifi_cells: { bssid: string; rssi: number; channel: number }[] | undefined;
     if (hasWiFi) {
       wifi_cells = [];
@@ -458,7 +352,6 @@ export class Packet01 {
         }
       }
     }
-
     let gsm_cells: { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined;
     if (hasGSM) {
       gsm_cells = [];
@@ -472,20 +365,51 @@ export class Packet01 {
         const mnc = payload.readUInt16LE(offset);
         offset += 2;
         const rxl = payload[offset++];
-        offset += 14; // spare
+        offset += 14;
         if (cid !== 0) {
           gsm_cells.push({ cid, lac, mcc, mnc, rxl });
         }
       }
     }
 
-    return new Packet01(serialNumber, latitude, longitude, battery, temperature, collar_detached, geofence_status, wifi_cells, gsm_cells);
+    const data: typeof Packet01D2S.Data = {
+      serialNumber,
+      latitude,
+      longitude,
+      battery,
+      temperature,
+      collar_detached,
+      geofence_status,
+      wifi_cells,
+      gsm_cells,
+    };
+    return new Packet01D2S(data);
+  }
+}
+
+// Represents a packet sent FROM Sentinel TO the Device
+export class Packet01S2D {
+  static readonly type = PacketType.PACKET_0x01;
+
+  static Parsed = {
+    lbsCurrentLatitude: 0 as number,
+    lbsCurrentLongitude: 0 as number,
+    serverPositionSource: 0 as number,
+    geofenceCoordinates: [] as { lat: number; lng: number }[],
+    requestedOperatingStatus: 0 as number,
+    updateFrequency: 0 as number,
+    utcTimestamp: 0 as number,
+    txEveryCheck: 0 as number,
+    lbsCurrentRadius: 0 as number,
+  };
+
+  public readonly data: typeof Packet01S2D.Parsed;
+
+  constructor(data: typeof Packet01S2D.Parsed) {
+    this.data = data;
   }
 
-  /**
-   * Parser: Sentinel → Device (71 bytes)
-   */
-  static fromBufferSentinelToDevice(payload: Buffer): Packet01 {
+  static fromBuffer(payload: Buffer): Packet01S2D {
     let offset = 0;
     const packetNumber = payload[offset++];
     if (packetNumber !== 0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
@@ -514,7 +438,7 @@ export class Packet01 {
     offset += 2;
     const lbsCurrentRadius = payload.readUInt32LE(offset);
 
-    return new Packet01({
+    return new Packet01S2D({
       lbsCurrentLatitude,
       lbsCurrentLongitude,
       serverPositionSource,
@@ -529,25 +453,39 @@ export class Packet01 {
 }
 
 export class Packet0A {
-  constructor(
-    public readonly commandType: number,
-    public readonly commandName: string,
-    public readonly duration?: number,
-  ) {}
+  static readonly type = PacketType.PACKET_0x0A;
+
+  static Data = {
+    commandType: 0 as CommandType,
+    duration: undefined as number | undefined,
+  };
+
+  public readonly data: typeof Packet0A.Data;
+  public readonly buffer: Buffer;
+
+  constructor(data: typeof Packet0A.Data) {
+    this.data = data;
+    this.buffer = this.toBuffer();
+  }
+
+  private toBuffer(): Buffer {
+    const hasDuration = this.data.duration !== undefined;
+    const buffer = Buffer.alloc(2 + (hasDuration ? 2 : 0));
+    let offset = 0;
+    buffer.writeUInt8(Packet0A.type, offset++);
+    buffer.writeUInt8(this.data.commandType, offset++);
+    if (hasDuration) {
+      buffer.writeInt16LE(this.data.duration!, offset);
+    }
+    return buffer;
+  }
 
   static fromBuffer(payload: Buffer): Packet0A {
     const commandType = payload[1];
-    const commandMap: Record<number, string> = {
-      0x01: "LIVE_TRACKING",
-      0x02: "GEOFENCE",
-      0x03: "ENERGY_SAVING_ZONE",
-      0x04: "SETTINGS",
-      0x05: "WAKEUP",
-    };
-    const commandName = commandMap[commandType] || "UNKNOWN";
     const duration = payload.length >= 4 ? payload.readInt16LE(2) : undefined;
 
-    return new Packet0A(commandType, commandName, duration);
+    const data: typeof Packet0A.Data = { commandType, duration };
+    return new Packet0A(data);
   }
 }
 
@@ -632,7 +570,7 @@ export class Packet15 {
 
 export interface ParsedPacket {
   type: number;
-  payload: Packet01 | Packet0A | Packet10 | Packet15 | { raw: string };
+  payload: Packet01S2D | Packet01D2S | Packet0A | Packet10 | Packet15 | { error: string };
   raw: Buffer;
 }
 
@@ -643,9 +581,9 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
     switch (type) {
       case PacketType.PACKET_0x01:
         if (payload.length === 71) {
-          return { type, payload: Packet01.fromBufferSentinelToDevice(payload), raw: payload };
+          return { type, payload: Packet01S2D.fromBuffer(payload), raw: payload };
         } else {
-          return { type, payload: Packet01.fromBufferDeviceToSentinel(payload), raw: payload };
+          return { type, payload: Packet01D2S.fromBuffer(payload), raw: payload };
         }
       case PacketType.PACKET_0x0A:
         return { type, payload: Packet0A.fromBuffer(payload), raw: payload };
@@ -654,10 +592,13 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
       case PacketType.PACKET_0x15:
         return { type, payload: Packet15.fromBuffer(payload), raw: payload };
       default:
-        return { type, payload: { raw: payload.toString("hex") }, raw: payload };
+        const errorMessage = `Parser for packet type 0x${type.toString(16)} not found.`;
+        logger.warn(errorMessage);
+        return { type, payload: { error: errorMessage }, raw: payload };
     }
   } catch (e) {
-    logger.error(`Error parsing packet 0x${type.toString(16)}: ${e}`);
-    return { type, payload: { raw: payload.toString("hex") }, raw: payload };
+    const errorMessage = `Error parsing packet 0x${type.toString(16)}: ${e instanceof Error ? e.message : String(e)}`;
+    logger.error(errorMessage);
+    return { type, payload: { error: errorMessage }, raw: payload };
   }
 }
