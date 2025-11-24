@@ -5,11 +5,7 @@ import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentin
 import { OperatingStatus, Packet01D2S, Packet01S2D, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
-import {
-  CommandEnum,
-  GpsMessagePosition,
-  ModeType,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { CommandEnum, GpsMessagePosition, ModeType } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
 describe("User Mode - Live Tracking", () => {
@@ -34,21 +30,9 @@ describe("User Mode - Live Tracking", () => {
     await sentinelTcpSocketClient.connect();
     logger.info("✓ Connected to Sentinel TCP server");
 
-    // // STEP 2: Connect to Sentinel TCP server
-    logger.info("📍 STEP 1: Register device on Sentinel socketMap (send initial Packet 0x01)");
-    const welcomePacket = new Packet01D2S({
-      serialNumber: setup.devices.dogStandard!.serialNumber,
-      latitude: 44.5024,
-      longitude: 11.3463,
-      battery: 4200,
-      temperature: 22,
-      collar_detached: false,
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(welcomePacket);
-    logger.info("✓ Device registered on Sentinel cache map");
+    logger.info("📍 STEP 1: Sending Handshake Packet to Sentinel");
+    await sentinelTcpSocketClient.keepAlive(setup.devices.dogStandard!.serialNumber);
+    logger.info("✓ Handshake complete");
   });
 
   afterAll(() => {
@@ -58,22 +42,6 @@ describe("User Mode - Live Tracking", () => {
   });
 
   it("Activate live tracking and should receive position updates", async () => {
-    // STEP 2: Connect to Sentinel TCP server
-    logger.info("📍 STEP 1: Register device on Sentinel socketMap (send initial Packet 0x01)");
-    const welcomePacket = new Packet01D2S({
-      serialNumber: setup.devices.dogStandard!.serialNumber,
-      latitude: 44.5024,
-      longitude: 11.3463,
-      battery: 4200,
-      temperature: 22,
-      collar_detached: false,
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(welcomePacket);
-    logger.info("✓ Device registered on Sentinel cache map");
-
     logger.info("📍 STEP 2: Subscribe to position updates via GraphQl Sub WebSocket");
     let positionsReceived: GpsMessagePosition | null = null;
     const subscriptionPromise = new Promise<void>((resolve, reject) => {
@@ -103,9 +71,16 @@ describe("User Mode - Live Tracking", () => {
     });
 
     logger.info("📍 STEP 3: Activate Live Tracking via GraphQL");
-    sentinelTcpSocketClient.clearBuffer();
     let commandSentToDevice = CommandEnum.LiveTracking;
     let durationCommandSentToDevice = 900;
+    // HANDSHAKE: Ensure device is connected before starting the test flow
+    logger.info("📍 STEP 1: Sending Handshake Packet to Sentinel");
+    const handshakePacket = {
+      ...Packet01D2S.Data,
+      serialNumber: setup.devices.dogStandard!.serialNumber,
+    };
+    await sentinelTcpSocketClient.send(Packet01D2S.toBuffer(handshakePacket), handshakePacket);
+    logger.info("✓ Handshake complete");
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: commandSentToDevice,
@@ -123,28 +98,24 @@ describe("User Mode - Live Tracking", () => {
     logger.info("📍 STEP 4: Verify device received Packet 0x01 (LIVE_TRACKING command)");
     const commandPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x01, 5000);
     expect(commandPacket, "Should receive Packet 0x01 (LIVE_TRACKING command)").toBeDefined();
-    const parsedData = commandPacket.data as typeof Packet01S2D.Parsed;
-    expect(parsedData.requestedOperatingStatus).toBe(OperatingStatus.FAST_TRACKING);
+    expect(commandPacket.requestedOperatingStatus).toBe(OperatingStatus.FAST_TRACKING);
 
-    logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket.data });
+    logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket });
 
     logger.info("📍 STEP 5: Simulate device sending 1 Packet 0x01");
     let latutideSentoFromDevice = 44.5024;
     let longitudeSentoFromDevice = 11.3463;
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
-    const heartbeatPacket = new Packet01D2S({
+    const heartbeatData = {
+      ...Packet01D2S.Data,
       serialNumber: setup.devices.dogStandard!.serialNumber,
       latitude: latutideSentoFromDevice,
       longitude: longitudeSentoFromDevice,
       battery: batterySentoFromDevice,
       temperature: temperatureSentoFromDevice,
-      collar_detached: false,
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(heartbeatPacket);
+    };
+    await sentinelTcpSocketClient.send(Packet01D2S.toBuffer(heartbeatData), heartbeatData);
     logger.info("✓ Packet 0x01 #1 sent");
 
     logger.info("📍 STEP 6: Wait for positions to arrive via WebSocket");
@@ -183,8 +154,7 @@ describe("User Mode - Live Tracking", () => {
     const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x01, 3000);
 
     expect(deactivationPacket, "Should receive Deactivation Packet").toBeDefined();
-    const parsedDeactivationData = deactivationPacket.data as typeof Packet01S2D.Parsed;
-    expect(parsedDeactivationData.requestedOperatingStatus).toBe(OperatingStatus.DEFAULT);
-    logger.info(`✓ Device received LIVE_TRACKING deactivation command`, { parsed: deactivationPacket.data });
+    expect(deactivationPacket.requestedOperatingStatus).toBe(OperatingStatus.DEFAULT);
+    logger.info(`✓ Device received LIVE_TRACKING deactivation command`, { parsed: deactivationPacket });
   });
 });

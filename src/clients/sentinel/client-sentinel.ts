@@ -12,6 +12,7 @@ import {
   Packet0A,
   Packet10,
   Packet15,
+  PacketTypeMap,
 } from "./packet-encode-decode.js";
 
 // ================================ 3. CLIENT (Network & Logic) ================================ //
@@ -21,7 +22,7 @@ export class SentinelTcpClient {
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
 
-  constructor(private config: { host: string; port: number }) { }
+  constructor(private config: { host: string; port: number }) {}
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -48,22 +49,15 @@ export class SentinelTcpClient {
   }
 
   /**
-   * Invia pacchetto a Sentinel. Il pacchetto deve avere una prop `buffer` pre-calcolata.
-   * @param packet - Oggetto packet (es. Packet01) con la prop `buffer`
+   * Invia pacchetto a Sentinel.
+   * @param kippyPayload - Il payload del pacchetto già serializzato in Buffer
+   * @param originalPacketData - L'oggetto dati originale, usato per il logging
    */
-  async send(packet: { buffer: Buffer }): Promise<void> {
+  async send(kippyPayload: Buffer, originalPacketData: object): Promise<void> {
     if (!this.socket) throw new Error("Not connected");
 
-    // STEP 1: Il payload Kippy è già calcolato nel costruttore del pacchetto
-    const kippyPayload = packet.buffer;
-
-    // STEP 2: Encapsula Kippy payload → SIRF packet
     const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
-
-    // STEP 3: LOG (oggetto originale + binario finale)
-    SirfProtocol.logPacket("OUTGOING", sirfPacket, packet);
-
-    // STEP 4: Invia sulla socket
+    SirfProtocol.logPacket("OUTGOING", sirfPacket, originalPacketData);
     this.socket.write(sirfPacket);
   }
 
@@ -82,15 +76,20 @@ export class SentinelTcpClient {
    * @param timeoutMs Timeout in milliseconds
    * @param validator Optional function to filter the packet
    */
-  async waitForPacket(type: PacketType.PACKET_0x01, timeoutMs?: number, validator?: (p: Packet01S2D) => boolean): Promise<Packet01S2D>;
-  async waitForPacket(type: PacketType.PACKET_0x0A, timeoutMs?: number, validator?: (p: Packet0A) => boolean): Promise<Packet0A>;
-  async waitForPacket(type: PacketType.PACKET_0x10, timeoutMs?: number, validator?: (p: Packet10) => boolean): Promise<Packet10>;
-  async waitForPacket(type: PacketType.PACKET_0x15, timeoutMs?: number, validator?: (p: Packet15) => boolean): Promise<Packet15>;
-  async waitForPacket<T extends Packet01S2D | Packet0A | Packet10 | Packet15>(
-    type: PacketType,
-    timeoutMs = 5000,
-    validator?: (p: T) => boolean,
-  ): Promise<T> {
+  async waitForPacket<T extends PacketType>(type: T, timeoutMs = 5000, validator?: (p: PacketTypeMap[T]) => boolean): Promise<PacketTypeMap[T]> {
+    // First, check the buffer for an already-received packet
+    const existingPacketIndex = this.receivedPackets.findIndex((p) => {
+      if (p.type !== type) return false;
+    });
+
+    if (existingPacketIndex !== -1) {
+      const [foundPacket] = this.receivedPackets.splice(existingPacketIndex, 1);
+      const typeHex = `0x${type.toString(16)}`;
+      logger.debug(`✓ Found pre-received expected packet ${typeHex}`);
+      return Promise.resolve(foundPacket.payload as PacketTypeMap[T]);
+    }
+
+    // If not found in buffer, wait for the next one
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16)}`;
 
@@ -101,7 +100,7 @@ export class SentinelTcpClient {
 
       const onPacket = (packet: ParsedPacket) => {
         if (packet.type === type) {
-          const typedPacket = packet.payload as T;
+          const typedPacket = packet.payload as PacketTypeMap[T];
           if (!validator || validator(typedPacket)) {
             logger.debug(`✓ Received expected packet ${typeHex}`);
             cleanup();
@@ -121,6 +120,7 @@ export class SentinelTcpClient {
     });
   }
 
+  private receivedPackets: ParsedPacket[] = [];
   private handleData(chunk: Buffer) {
     // 1. Accumulo: Aggiunge i nuovi dati arrivati (chunk) al buffer esistente.
     //    TCP non garantisce che un chunk = un pacchetto. Potrebbe essere mezzo pacchetto o dieci pacchetti.
@@ -172,10 +172,27 @@ export class SentinelTcpClient {
         SirfProtocol.logPacket("INCOMING", rawPacket, parsed.payload);
 
         this.events.emit("packet", parsed);
+        this.receivedPackets.push(parsed);
       } catch (e) {
         logger.error(`Error processing packet: ${e}`);
       }
     }
+  }
+
+  /**
+   * Sends a lightweight heartbeat packet to keep the TCP connection alive
+   * and ensure Sentinel considers the device "socket capable".
+   * @param serialNumber The device's serial number.
+   */
+  public async keepAlive(serialNumber: string): Promise<void> {
+    // 1. Crea l'oggetto dati usando il template
+    const keepAliveData = {
+      ...Packet01D2S.Data,
+      serialNumber: serialNumber, // 2. Inserisce il serial number specifico
+    };
+    // 3. Invia il pacchetto
+    await this.send(Packet01D2S.toBuffer(keepAliveData), keepAliveData);
+    logger.info(`✓ Sent keep-alive packet for ${serialNumber}`);
   }
 }
 

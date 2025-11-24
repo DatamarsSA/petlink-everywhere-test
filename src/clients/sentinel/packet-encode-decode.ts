@@ -35,6 +35,15 @@ export enum OperatingStatus {
   FAST_TRACKING = 0x02,
 }
 
+// ================================ DIZIONARIO DEI TIPI ================================ //
+
+export interface PacketTypeMap {
+  [PacketType.PACKET_0x01]: typeof Packet01S2D.Data;
+  [PacketType.PACKET_0x0A]: typeof Packet0A.Data;
+  [PacketType.PACKET_0x10]: Packet10;
+  [PacketType.PACKET_0x15]: Packet15;
+}
+
 // ================================ SIRF PROTOCOL UTILITIES ================================ //
 
 // Esporta costanti SIRF per uso in client e logging
@@ -147,8 +156,6 @@ function stringToBytes(str: string, length: number): Buffer {
 
 // Represents a packet sent FROM the Device TO Sentinel
 export class Packet01D2S {
-  static readonly type = PacketType.PACKET_0x01;
-
   static Data = {
     serialNumber: "" as string,
     latitude: 0 as number,
@@ -161,27 +168,17 @@ export class Packet01D2S {
     gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined,
   };
 
-  public readonly data: typeof Packet01D2S.Data;
-  public readonly buffer: Buffer;
-
-  constructor(data: typeof Packet01D2S.Data) {
-    this.data = data;
-    this.buffer = this.toBuffer();
-  }
-
-  private toBuffer(): Buffer {
-    const inputData = this.data;
-
+  static toBuffer(data: typeof Packet01D2S.Data): Buffer {
     const MAX_SIZE = 600;
     const buffer = Buffer.alloc(MAX_SIZE);
     let offset = 0;
 
-    buffer[offset++] = Packet01D2S.type;
+    buffer[offset++] = PacketType.PACKET_0x01;
 
-    const hasWiFi = inputData.wifi_cells && inputData.wifi_cells.length > 0;
-    const hasGSM = inputData.gsm_cells && inputData.gsm_cells.length > 0;
+    const hasWiFi = data.wifi_cells && data.wifi_cells.length > 0;
+    const hasGSM = data.gsm_cells && data.gsm_cells.length > 0;
 
-    stringToBytes(inputData.serialNumber, 10).copy(buffer, offset);
+    stringToBytes(data.serialNumber, 10).copy(buffer, offset);
     offset += 10;
     stringToBytes("123456789012345", 15).copy(buffer, offset);
     offset += 15;
@@ -193,19 +190,19 @@ export class Packet01D2S {
     buffer[offset++] = 1;
     buffer[offset++] = 0;
     buffer[offset++] = 0;
-    buffer.writeFloatLE(inputData.latitude ?? 0, offset);
+    buffer.writeFloatLE(data.latitude ?? 0, offset);
     offset += 4;
-    buffer.writeFloatLE(inputData.longitude ?? 0, offset);
+    buffer.writeFloatLE(data.longitude ?? 0, offset);
     offset += 4;
     buffer.writeInt16LE(0, offset);
     offset += 2;
     buffer.writeUInt32LE(Math.floor(Date.now() / 1000), offset);
     offset += 4;
-    buffer.writeInt16LE((inputData.temperature ?? 20) * 10, offset);
+    buffer.writeInt16LE((data.temperature ?? 20) * 10, offset);
     offset += 2;
     buffer.writeInt16LE(0, offset);
     offset += 2;
-    buffer.writeInt16LE(inputData.battery ?? 4200, offset);
+    buffer.writeInt16LE(data.battery ?? 4200, offset);
     offset += 2;
     buffer[offset++] = 20;
     buffer[offset++] = 0;
@@ -213,15 +210,15 @@ export class Packet01D2S {
     buffer[offset++] = 0;
 
     let notifications = 0x00;
-    if (inputData.geofence_status === "inside") notifications |= 0x20;
-    else if (inputData.geofence_status === "outside") notifications |= 0x40;
+    if (data.geofence_status === "inside") notifications |= 0x20;
+    else if (data.geofence_status === "outside") notifications |= 0x40;
     buffer[offset++] = notifications;
 
     buffer[offset++] = 0;
     buffer[offset++] = 0;
     buffer[offset++] = 0;
     buffer[offset++] = 80;
-    buffer[offset++] = (inputData.collar_detached ?? false) ? 0x01 : 0x00;
+    buffer[offset++] = (data.collar_detached ?? false) ? 0x01 : 0x00;
     buffer[offset++] = 0;
     buffer[offset++] = 0;
     buffer[offset++] = 0;
@@ -249,7 +246,7 @@ export class Packet01D2S {
 
     if (hasWiFi) {
       for (let i = 0; i < 10; i++) {
-        const wifi = inputData.wifi_cells![i];
+        const wifi = data.wifi_cells![i];
         if (wifi) {
           const bssidBytes = Buffer.from(wifi.bssid.replace(/:/g, ""), "hex");
           bssidBytes.copy(buffer, offset);
@@ -265,7 +262,7 @@ export class Packet01D2S {
 
     if (hasGSM) {
       for (let i = 0; i < 7; i++) {
-        const gsm = inputData.gsm_cells![i];
+        const gsm = data.gsm_cells![i];
         if (gsm) {
           buffer.writeUInt16LE(gsm.cid, offset);
           offset += 2;
@@ -284,11 +281,10 @@ export class Packet01D2S {
         }
       }
     }
-
     return buffer.subarray(0, offset);
   }
 
-  static fromBuffer(payload: Buffer): Packet01D2S {
+  static fromBuffer(payload: Buffer): typeof Packet01D2S.Data {
     let offset = 1;
 
     const serialNumber = payload
@@ -383,15 +379,13 @@ export class Packet01D2S {
       wifi_cells,
       gsm_cells,
     };
-    return new Packet01D2S(data);
+    return data;
   }
 }
 
 // Represents a packet sent FROM Sentinel TO the Device
 export class Packet01S2D {
-  static readonly type = PacketType.PACKET_0x01;
-
-  static Parsed = {
+  static Data = {
     lbsCurrentLatitude: 0 as number,
     lbsCurrentLongitude: 0 as number,
     serverPositionSource: 0 as number,
@@ -403,13 +397,7 @@ export class Packet01S2D {
     lbsCurrentRadius: 0 as number,
   };
 
-  public readonly data: typeof Packet01S2D.Parsed;
-
-  constructor(data: typeof Packet01S2D.Parsed) {
-    this.data = data;
-  }
-
-  static fromBuffer(payload: Buffer): Packet01S2D {
+  static fromBuffer(payload: Buffer): typeof Packet01S2D.Data {
     let offset = 0;
     const packetNumber = payload[offset++];
     if (packetNumber !== 0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
@@ -438,7 +426,7 @@ export class Packet01S2D {
     offset += 2;
     const lbsCurrentRadius = payload.readUInt32LE(offset);
 
-    return new Packet01S2D({
+    return {
       lbsCurrentLatitude,
       lbsCurrentLongitude,
       serverPositionSource,
@@ -448,44 +436,33 @@ export class Packet01S2D {
       utcTimestamp,
       txEveryCheck,
       lbsCurrentRadius,
-    });
+    };
   }
 }
 
 export class Packet0A {
-  static readonly type = PacketType.PACKET_0x0A;
-
   static Data = {
     commandType: 0 as CommandType,
     duration: undefined as number | undefined,
   };
 
-  public readonly data: typeof Packet0A.Data;
-  public readonly buffer: Buffer;
-
-  constructor(data: typeof Packet0A.Data) {
-    this.data = data;
-    this.buffer = this.toBuffer();
-  }
-
-  private toBuffer(): Buffer {
-    const hasDuration = this.data.duration !== undefined;
+  static toBuffer(data: typeof Packet0A.Data): Buffer {
+    const hasDuration = data.duration !== undefined;
     const buffer = Buffer.alloc(2 + (hasDuration ? 2 : 0));
     let offset = 0;
-    buffer.writeUInt8(Packet0A.type, offset++);
-    buffer.writeUInt8(this.data.commandType, offset++);
+    buffer.writeUInt8(PacketType.PACKET_0x0A, offset++);
+    buffer.writeUInt8(data.commandType, offset++);
     if (hasDuration) {
-      buffer.writeInt16LE(this.data.duration!, offset);
+      buffer.writeInt16LE(data.duration!, offset);
     }
     return buffer;
   }
 
-  static fromBuffer(payload: Buffer): Packet0A {
+  static fromBuffer(payload: Buffer): typeof Packet0A.Data {
     const commandType = payload[1];
     const duration = payload.length >= 4 ? payload.readInt16LE(2) : undefined;
 
-    const data: typeof Packet0A.Data = { commandType, duration };
-    return new Packet0A(data);
+    return { commandType, duration };
   }
 }
 
@@ -570,7 +547,7 @@ export class Packet15 {
 
 export interface ParsedPacket {
   type: number;
-  payload: Packet01S2D | Packet01D2S | Packet0A | Packet10 | Packet15 | { error: string };
+  payload: typeof Packet01S2D.Data | typeof Packet01D2S.Data | typeof Packet0A.Data | Packet10 | Packet15 | { error: string };
   raw: Buffer;
 }
 
@@ -592,7 +569,7 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
       case PacketType.PACKET_0x15:
         return { type, payload: Packet15.fromBuffer(payload), raw: payload };
       default:
-        const errorMessage = `Parser for packet type 0x${type.toString(16)} not found.`;
+        const errorMessage = `Parser for packet not found.`;
         logger.warn(errorMessage);
         return { type, payload: { error: errorMessage }, raw: payload };
     }

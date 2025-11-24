@@ -19,19 +19,10 @@ describe("User Mode - Energy Saving Zone", () => {
     // SETUP: User, Pet, Device, Subscription
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await sentinelTcpSocketClient.connect();
-    // HANDSHAKE: Login device to Sentinel (so it is mapped as socket capable)
-    const handshakePacket = new Packet01D2S({
-      serialNumber: setup.devices.dogStandard!.serialNumber,
-      latitude: 44.5024,
-      longitude: 11.3463,
-      battery: 4200,
-      temperature: 20,
-      collar_detached: false,
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(handshakePacket);
+
+    logger.info("📍 STEP 1: Sending Handshake Packet to Sentinel");
+    await sentinelTcpSocketClient.keepAlive(setup.devices.dogStandard!.serialNumber);
+    logger.info("✓ Handshake complete");
   });
 
   afterAll(() => {
@@ -41,19 +32,6 @@ describe("User Mode - Energy Saving Zone", () => {
   });
 
   it("Device enters ESZ (collar_detached = 1)", async () => {
-    // Send a keep-alive packet right before triggering the command to ensure the socket is fresh.
-    const keepAlivePacket = new Packet01D2S({
-      serialNumber: setup.devices.dogStandard!.serialNumber,
-      latitude: 44.5024,
-      longitude: 11.3463,
-      battery: 4200,
-      temperature: 20,
-      collar_detached: false,
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(keepAlivePacket);
     // STEP 1: Create ESZ zone
     const createZoneResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
@@ -114,18 +92,14 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 4: Device sends Packet 0x01 with collar_detached = 1
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    const eszEntryPacket = new Packet01D2S({
+    const eszEntryData = {
+      ...Packet01D2S.Data,
       serialNumber: deviceSerialNumber,
       latitude: 44.5024,
       longitude: 11.3463,
-      battery: 4200,
-      temperature: 20,
       collar_detached: true, // ← ESZ ACTIVE!
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(eszEntryPacket);
+    };
+    await sentinelTcpSocketClient.send(Packet01D2S.toBuffer(eszEntryData), eszEntryData);
 
     // STEP 5: Wait for ESZ entry notification
     await subscriptionPromise;
@@ -155,18 +129,14 @@ describe("User Mode - Energy Saving Zone", () => {
 
     // STEP 2: Device sends Packet 0x01 with collar_detached = 0
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
-    const eszExitPacket = new Packet01D2S({
+    const eszExitData = {
+      ...Packet01D2S.Data,
       serialNumber: deviceSerialNumber,
       latitude: 44.5024,
       longitude: 11.3463,
-      battery: 4200,
-      temperature: 20,
       collar_detached: false, // ← LEFT ESZ!
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(eszExitPacket);
+    };
+    await sentinelTcpSocketClient.send(Packet01D2S.toBuffer(eszExitData), eszExitData);
 
     // STEP 3: Wait for ESZ exit notification
     await subscriptionPromise;
@@ -174,19 +144,6 @@ describe("User Mode - Energy Saving Zone", () => {
   });
 
   it("Deactivate ESZ", async () => {
-    // Send a keep-alive packet right before triggering the command to ensure the socket is fresh.
-    const keepAlivePacket = new Packet01D2S({
-      serialNumber: setup.devices.dogStandard!.serialNumber,
-      latitude: 44.5024,
-      longitude: 11.3463,
-      battery: 4200,
-      temperature: 20,
-      collar_detached: false,
-      geofence_status: "none",
-      wifi_cells: undefined,
-      gsm_cells: undefined,
-    });
-    await sentinelTcpSocketClient.send(keepAlivePacket);
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
