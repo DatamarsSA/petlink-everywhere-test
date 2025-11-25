@@ -370,14 +370,14 @@ sequenceDiagram
     Core->>SQS: Publish: commands message
     SQS->>Lambda: Trigger: commandsConsumer
     Lambda->>Sentinel: HTTP POST /send_packet<br/>command: LIVE_TRACKING<br/>duration: 900
-    Sentinel->>Sentinel: Create Packet 0x01<br/>(PacketGeofenceResponse)<br/>status=FAST_TRACKING
-    Sentinel->>Device: TCP binary packet<br/>Port 8080
+    Sentinel->>Sentinel: Create Packet 0x01<br/>(PacketGeofenceResponse)<br/>requested_operating_status=FAST_TRACKING
+    Sentinel->>Device: send PacketGeofenceResponse (SiRF 0x01)<br/>Port 8080
     Device->>Device: Parse Packet 0x01<br/>Activate Live Tracking:<br/>✓ Timer: 900s<br/>✓ Freq: 5 sec<br/>✓ GPS: ON
 
     Note over Mobile,Device: STEP 2: Frequent Position Updates (Device → User)
 
     loop Every ~5 seconds (for 900 seconds)
-        Device->>Sentinel: TCP packet (SiRF 0x01)<br/>lat, lon, battery
+        Device->>Sentinel: send PacketWelcomeHeartBeat (SiRF 0x01)<br/>lat, lon, battery...
         Sentinel->>Sentinel: Parse position
         Sentinel->>SQS: Publish: gpsMessages
         SQS->>Lambda: Trigger: gpsMessagesConsumer
