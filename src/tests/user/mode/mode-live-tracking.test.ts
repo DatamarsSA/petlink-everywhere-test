@@ -29,6 +29,9 @@ describe("User Mode - Live Tracking", () => {
   it("Activate live tracking and should receive position updates", async () => {
     logger.info("📍 STEP 1: Subscribe to position updates via GraphQl Sub WebSocket");
     let positionsReceived: GpsMessagePosition | null = null;
+    let latutideSentoFromDevice = 44.5024;
+    let longitudeSentoFromDevice = 11.3463;
+
     const subscriptionPromise = new Promise<void>((resolve, reject) => {
       petlink.core.graphqlWS.authJwt.subscribe(
         subscriptions.onGpsMessagePosition,
@@ -37,7 +40,8 @@ describe("User Mode - Live Tracking", () => {
           next: (event: any) => {
             logger.info("📡 GraphQlSocket event received -> onGpsMessagePosition", { event });
             const position = event.data?.onGpsMessagePosition;
-            if (position) {
+            // Validate that this is the position we sent (ignore interim LBS/Status messages with lat=0)
+            if (position && position.position.lat === latutideSentoFromDevice) {
               positionsReceived = position;
               resolve();
             }
@@ -78,8 +82,6 @@ describe("User Mode - Live Tracking", () => {
     logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket });
 
     logger.info("📍 STEP 4: Simulate device sending 1 Packet 0x01 (WelcomeHeartBeat) with position update");
-    let latutideSentoFromDevice = 44.5024;
-    let longitudeSentoFromDevice = 11.3463;
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
     const heartbeatData = {
@@ -89,6 +91,8 @@ describe("User Mode - Live Tracking", () => {
       longitude: longitudeSentoFromDevice,
       battery: batterySentoFromDevice,
       temperature: temperatureSentoFromDevice,
+      notifications: Packet01D2SWelcomeHeartBeat.Notifications.NOutsideFence,
+      last_gps_time: Math.floor(Date.now() / 1000),
     };
     await sentinelTcpSocketClient.send(Packet01D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
     logger.info("✓ Packet 0x01 #1 sent");

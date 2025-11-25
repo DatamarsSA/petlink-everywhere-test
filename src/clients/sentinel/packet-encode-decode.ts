@@ -14,6 +14,9 @@
  *    └─ [KIPPY_DATA: (N bytes) REST] ← serialNumber, IMEI, GPS, etc
  * [CRC: (2bytes) CHECKSUM]
  * [FOOTER: (2bytes) B0B3]
+ *
+ * - packet 01 - Geofence & Live tracking
+ * - packet 10 - suono, torcia - ESZ
  */
 
 import { logger } from "../../config/logger.js";
@@ -33,6 +36,13 @@ export enum OperatingStatus {
   DEFAULT = 0x01, // to DEACTIVATE live-tracking (matches Rust's OPERATING_STATUS_DEFAULT = 1)
   FAST_TRACKING = 0x02, // to ACTIVATE live-tracking (matches Rust's OPERATING_STATUS_FAST_TRACKING = 2)
   GEOFENCE_ON = 0x03, // (matches Rust's OPERATING_STATUS_GEOFENCE_ON = 3)
+}
+
+export enum PacketType {
+  PACKET_0x01 = 0x01,
+  PACKET_0x0A = 0x0a,
+  PACKET_0x10 = 0x10,
+  PACKET_0x15 = 0x15,
 }
 
 // ================================ DIZIONARIO DEI TIPI ================================ //
@@ -55,13 +65,6 @@ export const SIRF = {
 } as const;
 
 // ================================ SENTINEL PACKET TYPES ================================ //
-
-export enum PacketType {
-  PACKET_0x01 = 0x01,
-  PACKET_0x0A = 0x0a,
-  PACKET_0x10 = 0x10,
-  PACKET_0x15 = 0x15,
-}
 
 export class SirfProtocol {
   /**
@@ -156,6 +159,39 @@ function stringToBytes(str: string, length: number): Buffer {
 
 // Represents a packet sent FROM the Device TO Sentinel
 export class Packet01D2SWelcomeHeartBeat {
+  static readonly Notifications = {
+    NJustPowered: 0x01,
+    NPoweringOFF: 0x02,
+    NSMSReceived: 0x04,
+    NNoGPS: 0x08,
+    NJustUpgraded: 0x10,
+    NInsideFence: 0x20,
+    NOutsideFence: 0x40,
+    NFullCharge: 0x80,
+  } as const;
+
+  static readonly SpareC5 = {
+    NDetached: 0x01,
+    NTempWarning: 0x02,
+    NJustBooted: 0x04,
+    NProductionTest: 0x08,
+    NTempAlarm: 0x10,
+    NContinousMode: 0x20,
+    NGeran: 0x40,
+    NEutran: 0x80,
+  } as const;
+
+  static readonly InfoFlags = {
+    InfoGsmCellsFlag: 0x01,
+    InfoAgpsEnable: 0x02,
+    InfoAgps2: 0x04,
+    InfoAgps3: 0x08,
+    InfoActivity: 0x10,
+    InfoFmwDisable: 0x20,
+    InfoUbloxEph: 0x40,
+    InfoWifiCells: 0x80,
+  } as const;
+
   static Data = {
     // Main fields
     serial_number: "" as string,
@@ -174,12 +210,12 @@ export class Packet01D2SWelcomeHeartBeat {
     ber: 0 as number,
     new_status: 0 as number,
     curr_status: 0 as number,
-    notifications: 0 as number, // Raw value, geofence_status is for convenience
+    notifications: 0 as number, // Use Packet01D2SWelcomeHeartBeat.Notifications.NJustPowered (example value)
     reset_cause: 0 as number,
     gprs_retry: 0 as number,
     gps_sat: 8 as number,
     spare_c4: 0 as number,
-    spare_c5: 0 as number, // Raw value, collar_detached is for convenience
+    spare_c5: 0 as number, // Use Packet01D2SWelcomeHeartBeat.SpareC5.NDetached (example value)
     spare_c6: 0 as number,
     spare_c7: 0 as number,
     spare_c8: 0 as number,
@@ -191,11 +227,7 @@ export class Packet01D2SWelcomeHeartBeat {
     spare_s6: 0 as number,
     spare_s7: 0 as number,
     spare_s8: 0 as number,
-    info_flag: 0 as number, // Raw value, wifi/gsm cells are for convenience
-
-    // Convenience fields
-    collar_detached: false as boolean,
-    geofence_status: "none" as "inside" | "outside" | "none",
+    info_flag: 0 as number, // Use Packet01D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag (example value)
 
     // Optional cell data
     wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined,
@@ -209,15 +241,21 @@ export class Packet01D2SWelcomeHeartBeat {
 
     buffer[offset++] = PacketType.PACKET_0x01;
 
-    stringToBytes(data.serial_number, 15).copy(buffer, offset);
-    offset += 15;
+    // DEVICE_ID_LENGTH = 10
+    stringToBytes(data.serial_number, 10).copy(buffer, offset);
+    offset += 10;
+    // IMEI_LENGTH = 15
     stringToBytes(data.imei, 15).copy(buffer, offset);
     offset += 15;
+    // ICCID_LENGTH = 20
     stringToBytes(data.iccid, 20).copy(buffer, offset);
     offset += 20;
 
+    // FIRMWARE_VERSION_LENGTH = 3
     const fwParts = data.fw_version.split(".").map(Number);
-    for (let i = 0; i < 4; i++) buffer[offset++] = fwParts[i] || 0;
+    for (let i = 0; i < 3; i++) buffer[offset++] = fwParts[i] || 0;
+
+    // BOOTLOADER_VERSION_LENGTH = 3
     const blParts = data.bl_version.split(".").map(Number);
     for (let i = 0; i < 3; i++) buffer[offset++] = blParts[i] || 0;
 
@@ -239,23 +277,12 @@ export class Packet01D2SWelcomeHeartBeat {
     buffer.writeUInt8(data.ber, offset++);
     buffer.writeUInt8(data.new_status, offset++);
     buffer.writeUInt8(data.curr_status, offset++);
-
-    // Combine convenience geofence_status into notifications byte
-    let notifications = data.notifications;
-    if (data.geofence_status === "inside") notifications |= 0x20;
-    else if (data.geofence_status === "outside") notifications |= 0x40;
-    buffer.writeUInt8(notifications, offset++);
-
+    buffer.writeUInt8(data.notifications, offset++);
     buffer.writeUInt8(data.reset_cause, offset++);
     buffer.writeUInt8(data.gprs_retry, offset++);
     buffer.writeUInt8(data.gps_sat, offset++);
     buffer.writeUInt8(data.spare_c4, offset++);
-
-    // Combine convenience collar_detached into spare_c5 byte
-    let spare_c5 = data.spare_c5;
-    if (data.collar_detached) spare_c5 |= 0x01;
-    buffer.writeUInt8(spare_c5, offset++);
-
+    buffer.writeUInt8(data.spare_c5, offset++);
     buffer.writeUInt8(data.spare_c6, offset++);
     buffer.writeUInt8(data.spare_c7, offset++);
     buffer.writeUInt8(data.spare_c8, offset++);
@@ -280,8 +307,8 @@ export class Packet01D2SWelcomeHeartBeat {
     const hasWiFi = data.wifi_cells && data.wifi_cells.length > 0;
     const hasGSM = data.gsm_cells && data.gsm_cells.length > 0;
     let info_flag = data.info_flag;
-    if (hasWiFi) info_flag |= 0x80; // As per Rust InfoFlags enum
-    if (hasGSM) info_flag |= 0x01; // As per Rust InfoFlags enum
+    if (hasWiFi) info_flag |= Packet01D2SWelcomeHeartBeat.InfoFlags.InfoWifiCells;
+    if (hasGSM) info_flag |= Packet01D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag;
     buffer.writeUInt8(info_flag, offset++);
 
     // Note: GSM/WiFi cell serialization is complex and not fully implemented
@@ -293,23 +320,29 @@ export class Packet01D2SWelcomeHeartBeat {
   static fromBuffer(payload: Buffer): typeof Packet01D2SWelcomeHeartBeat.Data {
     let offset = 1; // Skip packet type
 
+    // DEVICE_ID_LENGTH = 10
     const serial_number = payload
-      .subarray(offset, offset + 15)
+      .subarray(offset, offset + 10)
       .toString("ascii")
       .replace(/\0/g, "");
-    offset += 15;
+    offset += 10;
+    // IMEI_LENGTH = 15
     const imei = payload
       .subarray(offset, offset + 15)
       .toString("ascii")
       .replace(/\0/g, "");
     offset += 15;
+    // ICCID_LENGTH = 20
     const iccid = payload
       .subarray(offset, offset + 20)
       .toString("ascii")
       .replace(/\0/g, "");
     offset += 20;
-    const fw_version = [...payload.subarray(offset, offset + 4)].join(".");
-    offset += 4;
+
+    // FIRMWARE_VERSION_LENGTH = 3
+    const fw_version = [...payload.subarray(offset, offset + 3)].join(".");
+    offset += 3;
+    // BOOTLOADER_VERSION_LENGTH = 3
     const bl_version = [...payload.subarray(offset, offset + 3)].join(".");
     offset += 3;
 
@@ -358,13 +391,9 @@ export class Packet01D2SWelcomeHeartBeat {
     offset += 2;
     const info_flag = payload.readUInt8(offset++);
 
-    // Convenience fields
-    const geofence_status: "inside" | "outside" | "none" = notifications & 0x20 ? "inside" : notifications & 0x40 ? "outside" : "none";
-    const collar_detached = (spare_c5 & 0x01) === 0x01;
-
     // Basic support for wifi/gsm, not fully parsed as it's complex and not needed yet.
-    const wifi_cells = (info_flag & 0x80) !== 0 ? [] : undefined;
-    const gsm_cells = (info_flag & 0x01) !== 0 ? [] : undefined;
+    const wifi_cells = (info_flag & Packet01D2SWelcomeHeartBeat.InfoFlags.InfoWifiCells) !== 0 ? [] : undefined;
+    const gsm_cells = (info_flag & Packet01D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag) !== 0 ? [] : undefined;
 
     const data: typeof Packet01D2SWelcomeHeartBeat.Data = {
       serial_number,
@@ -401,8 +430,6 @@ export class Packet01D2SWelcomeHeartBeat {
       spare_s7,
       spare_s8,
       info_flag,
-      geofence_status,
-      collar_detached,
       wifi_cells,
       gsm_cells,
     };
@@ -427,7 +454,7 @@ export class Packet01S2DGeofenceResponse {
   static fromBuffer(payload: Buffer): typeof Packet01S2DGeofenceResponse.Data {
     let offset = 0;
     const packetNumber = payload[offset++];
-    if (packetNumber !== 0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
+    if (packetNumber !== PacketType.PACKET_0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
 
     const lbs_current_latitude = payload.readFloatLE(offset);
     offset += 4;

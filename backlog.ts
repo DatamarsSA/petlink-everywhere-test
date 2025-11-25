@@ -20,4 +20,5 @@
  */
 
 /** TODO:
+ * - valorrize value fo pakcet in packet-encode-decode with fixtures device value
  */
