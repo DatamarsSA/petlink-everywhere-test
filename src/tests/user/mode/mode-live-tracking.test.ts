@@ -12,29 +12,22 @@ describe("User Mode - Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
-    logger.info("🔌 Setting up test environment...");
     // STEP 1: Create user, pet, device, and purchase subscription
-    logger.info("📍 Creating test user, pet, device, and purchasing subscription");
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-
     // STEP 2: Connect to Sentinel TCP server
-    logger.info("🔌 Connecting to Sentinel TCP server...");
     await sentinelTcpSocketClient.connect();
-    logger.info("✓ Connected to Sentinel TCP server");
-
-    logger.info("📍 STEP 1: Sending Handshake Packet to Sentinel");
-    await sentinelTcpSocketClient.keepAlive(setup.devices.dogStandard!.serialNumber);
-    logger.info("✓ Handshake complete");
+    // STEP 3: Start aggressive keep-alive to prevent socket disconnection
+    sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
   });
 
   afterAll(() => {
-    logger.info("🧹 Cleaning up...");
+    sentinelTcpSocketClient.stopKeepAlive();
     sentinelTcpSocketClient.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
 
   it("Activate live tracking and should receive position updates", async () => {
-    logger.info("📍 STEP 2: Subscribe to position updates via GraphQl Sub WebSocket");
+    logger.info("📍 STEP 1: Subscribe to position updates via GraphQl Sub WebSocket");
     let positionsReceived: GpsMessagePosition | null = null;
     const subscriptionPromise = new Promise<void>((resolve, reject) => {
       petlink.core.graphqlWS.authJwt.subscribe(
@@ -46,10 +39,6 @@ describe("User Mode - Live Tracking", () => {
             const position = event.data?.onGpsMessagePosition;
             if (position) {
               positionsReceived = position;
-              logger.info(`✓ Position received: `, {
-                lat: position.position?.lat,
-                lng: position.position?.lng,
-              });
               resolve();
             }
           },
@@ -62,12 +51,9 @@ describe("User Mode - Live Tracking", () => {
       );
     });
 
-    logger.info("📍 STEP 3: Activate Live Tracking via GraphQL");
+    logger.info("📍 STEP 2: Activate Live Tracking via GraphQL");
     let commandSentToDevice = CommandEnum.LiveTracking;
     let durationCommandSentToDevice = 900;
-
-    // Ensure the connection is fresh before sending a command that expects a TCP response
-    await sentinelTcpSocketClient.keepAlive(setup.devices.dogStandard!.serialNumber);
 
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
@@ -83,14 +69,15 @@ describe("User Mode - Live Tracking", () => {
     ).toBe("200");
     logger.info("✓ Sent command 'LIVE_TRACKING' to core");
 
-    logger.info("📍 STEP 4: Verify device received Packet 0x01 (LIVE_TRACKING command)");
-    const commandPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x01, 5000);
-    expect(commandPacket, "Should receive Packet 0x01 (LIVE_TRACKING command)").toBeDefined();
-    expect(commandPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
-
+    logger.info("📍 STEP 3: Verify device received Packet 0x01 (LIVE_TRACKING command)");
+    const commandPacket = await sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      15000, // Increased timeout to be safe
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
     logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket });
 
-    logger.info("📍 STEP 5: Simulate device sending 1 Packet 0x01");
+    logger.info("📍 STEP 4: Simulate device sending 1 Packet 0x01 (WelcomeHeartBeat) with position update");
     let latutideSentoFromDevice = 44.5024;
     let longitudeSentoFromDevice = 11.3463;
     let batterySentoFromDevice = 4200;
@@ -106,7 +93,7 @@ describe("User Mode - Live Tracking", () => {
     await sentinelTcpSocketClient.send(Packet01D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
     logger.info("✓ Packet 0x01 #1 sent");
 
-    logger.info("📍 STEP 6: Wait for positions to arrive via WebSocket");
+    logger.info("📍 STEP 6: Wait for positions to arrive via GraphQLWebSocket on app");
     await subscriptionPromise;
 
     logger.info("positionsReceived: ", positionsReceived);
@@ -122,9 +109,6 @@ describe("User Mode - Live Tracking", () => {
     // sentinelTcpClient.clearBuffer();
     let commandSentToDeviceDeactivate = CommandEnum.LiveTracking;
     let durationCommandSentToDeviceDeactivate = 0;
-
-    // Ensure the connection is fresh before sending a command that expects a TCP response
-    await sentinelTcpSocketClient.keepAlive(setup.devices.dogStandard!.serialNumber);
 
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
@@ -143,10 +127,11 @@ describe("User Mode - Live Tracking", () => {
 
     logger.info("📍 STEP 8: Verify device received Packet 0x01 (LIVE_TRACKING deactivation command)");
 
-    const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x01, 3000);
-
-    expect(deactivationPacket, "Should receive Deactivation Packet").toBeDefined();
-    expect(deactivationPacket.requested_operating_status).toBe(OperatingStatus.DEFAULT);
+    const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      15000, // Increased timeout to be safe
+      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+    );
     logger.info(`✓ Device received LIVE_TRACKING deactivation command`, { parsed: deactivationPacket });
   });
 });

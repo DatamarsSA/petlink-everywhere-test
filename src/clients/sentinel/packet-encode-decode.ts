@@ -30,9 +30,9 @@ export enum CommandType {
 }
 
 export enum OperatingStatus {
-  DEFAULT = 0x00, //to DEACTIVATE live-tracking
-  GEOFENCE_ON = 0x01,
-  FAST_TRACKING = 0x02, //to ACTIVATE live-tracking
+  DEFAULT = 0x01, // to DEACTIVATE live-tracking (matches Rust's OPERATING_STATUS_DEFAULT = 1)
+  FAST_TRACKING = 0x02, // to ACTIVATE live-tracking (matches Rust's OPERATING_STATUS_FAST_TRACKING = 2)
+  GEOFENCE_ON = 0x03, // (matches Rust's OPERATING_STATUS_GEOFENCE_ON = 3)
 }
 
 // ================================ DIZIONARIO DEI TIPI ================================ //

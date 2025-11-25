@@ -21,6 +21,7 @@ export class SentinelTcpClient {
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
+  private keepAliveInterval: NodeJS.Timeout | null = null;
 
   constructor(private config: { host: string; port: number }) { }
 
@@ -62,6 +63,7 @@ export class SentinelTcpClient {
   }
 
   disconnect() {
+    this.stopKeepAlive();
     this.socket?.destroy();
     this.socket = null;
   }
@@ -80,6 +82,8 @@ export class SentinelTcpClient {
     // First, check the buffer for an already-received packet
     const existingPacketIndex = this.receivedPackets.findIndex((p) => {
       if (p.type !== type) return false;
+      const typedPayload = p.payload as PacketTypeMap[T];
+      return !validator || validator(typedPayload);
     });
 
     if (existingPacketIndex !== -1) {
@@ -193,6 +197,34 @@ export class SentinelTcpClient {
     // 3. Invia il pacchetto
     await this.send(Packet01D2SWelcomeHeartBeat.toBuffer(keepAliveData), keepAliveData);
     logger.info(`✓ Sent keep-alive packet for ${serialNumber}`);
+  }
+
+  /**
+   * Starts a keep-alive loop to prevent socket disconnection from Sentinel.
+   * @param serialNumber The device's serial number.
+   * @param intervalMs The interval in milliseconds (default: 3000).
+   */
+  public startKeepAlive(serialNumber: string, intervalMs = 3000): void {
+    this.stopKeepAlive(); // Stop any existing loop
+    logger.info(`Starting keep-alive loop for ${serialNumber} every ${intervalMs}ms`);
+    this.keepAliveInterval = setInterval(() => {
+      if (this.socket?.writable) {
+        this.keepAlive(serialNumber).catch((err) => {
+          logger.warn(`Keep-alive interval failed: ${err.message}`);
+        });
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stops the keep-alive loop.
+   */
+  public stopKeepAlive(): void {
+    if (this.keepAliveInterval) {
+      logger.info("Stopping keep-alive loop");
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+    }
   }
 }
 
