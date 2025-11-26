@@ -8,7 +8,7 @@ import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, GpsMessagePosition, ModeType } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
-describe("User Mode - Live Tracking", () => {
+describe("Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
   let positionsReceived: GpsMessagePosition | null = null;
   let latutideSentoFromDevice = 44.5024;
