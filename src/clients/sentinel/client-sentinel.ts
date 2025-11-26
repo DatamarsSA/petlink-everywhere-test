@@ -2,8 +2,7 @@ import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
 import {
-  Packet01D2SWelcomeHeartBeat,
-  Packet01S2DGeofenceResponse,
+  Packet01,
   SirfProtocol,
   parsePacketByType,
   ParsedPacket,
@@ -23,7 +22,7 @@ export class SentinelTcpClient {
   private events = new EventEmitter();
   private keepAliveInterval: NodeJS.Timeout | null = null;
 
-  constructor(private config: { host: string; port: number }) { }
+  constructor(private config: { host: string; port: number }) {}
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -191,11 +190,11 @@ export class SentinelTcpClient {
   public async keepAlive(serialNumber: string): Promise<void> {
     // 1. Crea l'oggetto dati usando il template
     const keepAliveData = {
-      ...Packet01D2SWelcomeHeartBeat.Data,
+      ...Packet01.D2SWelcomeHeartBeat.Data,
       serial_number: serialNumber, // 2. Inserisce il serial number specifico
     };
     // 3. Invia il pacchetto
-    await this.send(Packet01D2SWelcomeHeartBeat.toBuffer(keepAliveData), keepAliveData);
+    await this.send(Packet01.D2SWelcomeHeartBeat.toBuffer(keepAliveData), keepAliveData);
     logger.info(`✓ Sent keep-alive packet for ${serialNumber}`);
   }
 

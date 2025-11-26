@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01D2SWelcomeHeartBeat, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
+import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -93,13 +93,13 @@ describe("User Mode - Energy Saving Zone", () => {
     // STEP 4: Device sends Packet 0x01 with collar_detached = 1
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
     const eszEntryData = {
-      ...Packet01D2SWelcomeHeartBeat.Data,
+      ...Packet01.D2SWelcomeHeartBeat.Data,
       serial_number: deviceSerialNumber,
       latitude: 44.5024,
       longitude: 11.3463,
       collar_detached: true, // ← ESZ ACTIVE!
     };
-    await sentinelTcpSocketClient.send(Packet01D2SWelcomeHeartBeat.toBuffer(eszEntryData), eszEntryData);
+    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(eszEntryData), eszEntryData);
 
     // STEP 5: Wait for ESZ entry notification
     await subscriptionPromise;
@@ -130,13 +130,13 @@ describe("User Mode - Energy Saving Zone", () => {
     // STEP 2: Device sends Packet 0x01 with collar_detached = 0
     const deviceSerialNumber = setup.devices.dogStandard!.serialNumber;
     const eszExitData = {
-      ...Packet01D2SWelcomeHeartBeat.Data,
+      ...Packet01.D2SWelcomeHeartBeat.Data,
       serial_number: deviceSerialNumber,
       latitude: 44.5024,
       longitude: 11.3463,
       collar_detached: false, // ← LEFT ESZ!
     };
-    await sentinelTcpSocketClient.send(Packet01D2SWelcomeHeartBeat.toBuffer(eszExitData), eszExitData);
+    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(eszExitData), eszExitData);
 
     // STEP 3: Wait for ESZ exit notification
     await subscriptionPromise;

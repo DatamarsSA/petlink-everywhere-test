@@ -48,7 +48,7 @@ export enum PacketType {
 // ================================ DIZIONARIO DEI TIPI ================================ //
 
 export interface PacketTypeMap {
-  [PacketType.PACKET_0x01]: typeof Packet01S2DGeofenceResponse.Data;
+  [PacketType.PACKET_0x01]: typeof Packet01.D2SWelcomeHeartBeat.Data | typeof Packet01.S2DGeofenceResponse.Data;
   [PacketType.PACKET_0x0A]: typeof Packet0A.Data;
   [PacketType.PACKET_0x10]: typeof Packet10.Data;
   [PacketType.PACKET_0x15]: typeof Packet15.Data;
@@ -147,355 +147,395 @@ function stringToBytes(str: string, length: number): Buffer {
 
 /**
  * Packet 0x01 - BIDIREZIONALE
- *
  * 1️⃣ Device → Sentinel (PacketWelcomeHeartBeat) - 109+ bytes
- *    - Uso: new Packet01(serialNumber, lat, lng, battery, temp)
- *    - Parsing: Packet01.fromBufferDeviceToSentinel(payload)
  *
  * 2️⃣ Sentinel → Device (PacketGeofenceResponse) - 71 bytes
- *    - Uso: new Packet01({ lbsCurrentLatitude, ... })
- *    - Parsing: Packet01.fromBufferSentinelToDevice(payload)
  */
+export class Packet01 {
+  /**
+   * Device → Sentinel (WelcomeHeartBeat)
+   */
+  static D2SWelcomeHeartBeat = class {
+    static readonly Notifications = {
+      NJustPowered: 0x01,
+      NPoweringOFF: 0x02,
+      NSMSReceived: 0x04,
+      NNoGPS: 0x08,
+      NJustUpgraded: 0x10,
+      NInsideFence: 0x20,
+      NOutsideFence: 0x40,
+      NFullCharge: 0x80,
+    } as const;
 
-// Represents a packet sent FROM the Device TO Sentinel
-export class Packet01D2SWelcomeHeartBeat {
-  static readonly Notifications = {
-    NJustPowered: 0x01,
-    NPoweringOFF: 0x02,
-    NSMSReceived: 0x04,
-    NNoGPS: 0x08,
-    NJustUpgraded: 0x10,
-    NInsideFence: 0x20,
-    NOutsideFence: 0x40,
-    NFullCharge: 0x80,
-  } as const;
+    static readonly SpareC5 = {
+      NDetached: 0x01,
+      NTempWarning: 0x02,
+      NJustBooted: 0x04,
+      NProductionTest: 0x08,
+      NTempAlarm: 0x10,
+      NContinousMode: 0x20,
+      NGeran: 0x40,
+      NEutran: 0x80,
+    } as const;
 
-  static readonly SpareC5 = {
-    NDetached: 0x01,
-    NTempWarning: 0x02,
-    NJustBooted: 0x04,
-    NProductionTest: 0x08,
-    NTempAlarm: 0x10,
-    NContinousMode: 0x20,
-    NGeran: 0x40,
-    NEutran: 0x80,
-  } as const;
+    static readonly InfoFlags = {
+      InfoGsmCellsFlag: 0x01,
+      InfoAgpsEnable: 0x02,
+      InfoAgps2: 0x04,
+      InfoAgps3: 0x08,
+      InfoActivity: 0x10,
+      InfoFmwDisable: 0x20,
+      InfoUbloxEph: 0x40,
+      InfoWifiCells: 0x80,
+    } as const;
 
-  static readonly InfoFlags = {
-    InfoGsmCellsFlag: 0x01,
-    InfoAgpsEnable: 0x02,
-    InfoAgps2: 0x04,
-    InfoAgps3: 0x08,
-    InfoActivity: 0x10,
-    InfoFmwDisable: 0x20,
-    InfoUbloxEph: 0x40,
-    InfoWifiCells: 0x80,
-  } as const;
+    static Data = {
+      // Main fields
+      serial_number: "" as string,
+      imei: "123456789012345" as string,
+      iccid: "12345678901234567890" as string,
+      fw_version: "1.2.3" as string,
+      bl_version: "4.5.6" as string,
+      latitude: 0 as number,
+      longitude: 0 as number,
+      altitude: 0 as number,
+      last_gps_time: 0 as number,
+      temperature: 20 as number,
+      speed: 0 as number,
+      battery: 4200 as number,
+      csq: 20 as number,
+      ber: 0 as number,
+      new_status: 0 as number,
+      curr_status: 0 as number,
+      notifications: 0 as number, // Use Packet01.D2SWelcomeHeartBeat.Notifications.NJustPowered (example value)
+      reset_cause: 0 as number,
+      gprs_retry: 0 as number,
+      gps_sat: 8 as number,
+      spare_c4: 0 as number,
+      spare_c5: 0 as number, // Use Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached (example value)
+      spare_c6: 0 as number,
+      spare_c7: 0 as number,
+      spare_c8: 0 as number,
+      last_gprs: 0 as number,
+      last_gps: 0 as number,
+      spare_s3: 0 as number,
+      spare_s4: 0 as number,
+      spare_s5: 0 as number,
+      spare_s6: 0 as number,
+      spare_s7: 0 as number,
+      spare_s8: 0 as number,
+      info_flag: 0 as number, // Use Packet01.D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag (example value)
 
-  static Data = {
-    // Main fields
-    serial_number: "" as string,
-    imei: "123456789012345" as string,
-    iccid: "12345678901234567890" as string,
-    fw_version: "1.2.3" as string,
-    bl_version: "4.5.6" as string,
-    latitude: 0 as number,
-    longitude: 0 as number,
-    altitude: 0 as number,
-    last_gps_time: 0 as number,
-    temperature: 20 as number,
-    speed: 0 as number,
-    battery: 4200 as number,
-    csq: 20 as number,
-    ber: 0 as number,
-    new_status: 0 as number,
-    curr_status: 0 as number,
-    notifications: 0 as number, // Use Packet01D2SWelcomeHeartBeat.Notifications.NJustPowered (example value)
-    reset_cause: 0 as number,
-    gprs_retry: 0 as number,
-    gps_sat: 8 as number,
-    spare_c4: 0 as number,
-    spare_c5: 0 as number, // Use Packet01D2SWelcomeHeartBeat.SpareC5.NDetached (example value)
-    spare_c6: 0 as number,
-    spare_c7: 0 as number,
-    spare_c8: 0 as number,
-    last_gprs: 0 as number,
-    last_gps: 0 as number,
-    spare_s3: 0 as number,
-    spare_s4: 0 as number,
-    spare_s5: 0 as number,
-    spare_s6: 0 as number,
-    spare_s7: 0 as number,
-    spare_s8: 0 as number,
-    info_flag: 0 as number, // Use Packet01D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag (example value)
-
-    // Optional cell data
-    wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined,
-    gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined,
-  };
-
-  static toBuffer(data: typeof Packet01D2SWelcomeHeartBeat.Data): Buffer {
-    const MAX_SIZE = 600;
-    const buffer = Buffer.alloc(MAX_SIZE);
-    let offset = 0;
-
-    buffer[offset++] = PacketType.PACKET_0x01;
-
-    // DEVICE_ID_LENGTH = 10
-    stringToBytes(data.serial_number, 10).copy(buffer, offset);
-    offset += 10;
-    // IMEI_LENGTH = 15
-    stringToBytes(data.imei, 15).copy(buffer, offset);
-    offset += 15;
-    // ICCID_LENGTH = 20
-    stringToBytes(data.iccid, 20).copy(buffer, offset);
-    offset += 20;
-
-    // FIRMWARE_VERSION_LENGTH = 3
-    const fwParts = data.fw_version.split(".").map(Number);
-    for (let i = 0; i < 3; i++) buffer[offset++] = fwParts[i] || 0;
-
-    // BOOTLOADER_VERSION_LENGTH = 3
-    const blParts = data.bl_version.split(".").map(Number);
-    for (let i = 0; i < 3; i++) buffer[offset++] = blParts[i] || 0;
-
-    buffer.writeFloatLE(data.latitude, offset);
-    offset += 4;
-    buffer.writeFloatLE(data.longitude, offset);
-    offset += 4;
-    buffer.writeInt16LE(data.altitude, offset);
-    offset += 2;
-    buffer.writeUInt32LE(data.last_gps_time || Math.floor(Date.now() / 1000), offset);
-    offset += 4;
-    buffer.writeInt16LE(data.temperature * 10, offset); // Scale temperature
-    offset += 2;
-    buffer.writeInt16LE(data.speed, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.battery, offset);
-    offset += 2;
-    buffer.writeUInt8(data.csq, offset++);
-    buffer.writeUInt8(data.ber, offset++);
-    buffer.writeUInt8(data.new_status, offset++);
-    buffer.writeUInt8(data.curr_status, offset++);
-    buffer.writeUInt8(data.notifications, offset++);
-    buffer.writeUInt8(data.reset_cause, offset++);
-    buffer.writeUInt8(data.gprs_retry, offset++);
-    buffer.writeUInt8(data.gps_sat, offset++);
-    buffer.writeUInt8(data.spare_c4, offset++);
-    buffer.writeUInt8(data.spare_c5, offset++);
-    buffer.writeUInt8(data.spare_c6, offset++);
-    buffer.writeUInt8(data.spare_c7, offset++);
-    buffer.writeUInt8(data.spare_c8, offset++);
-    buffer.writeInt16LE(data.last_gprs, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.last_gps, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.spare_s3, offset);
-    offset += 2;
-    buffer.writeUInt16LE(data.spare_s4, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.spare_s5, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.spare_s6, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.spare_s7, offset);
-    offset += 2;
-    buffer.writeInt16LE(data.spare_s8, offset);
-    offset += 2;
-
-    // Combine convenience wifi/gsm flags into info_flag byte
-    const hasWiFi = data.wifi_cells && data.wifi_cells.length > 0;
-    const hasGSM = data.gsm_cells && data.gsm_cells.length > 0;
-    let info_flag = data.info_flag;
-    if (hasWiFi) info_flag |= Packet01D2SWelcomeHeartBeat.InfoFlags.InfoWifiCells;
-    if (hasGSM) info_flag |= Packet01D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag;
-    buffer.writeUInt8(info_flag, offset++);
-
-    // Note: GSM/WiFi cell serialization is complex and not fully implemented
-    // This is sufficient for current tests but may need expansion.
-
-    return buffer.subarray(0, offset);
-  }
-
-  static fromBuffer(payload: Buffer): typeof Packet01D2SWelcomeHeartBeat.Data {
-    let offset = 1; // Skip packet type
-
-    // DEVICE_ID_LENGTH = 10
-    const serial_number = payload
-      .subarray(offset, offset + 10)
-      .toString("ascii")
-      .replace(/\0/g, "");
-    offset += 10;
-    // IMEI_LENGTH = 15
-    const imei = payload
-      .subarray(offset, offset + 15)
-      .toString("ascii")
-      .replace(/\0/g, "");
-    offset += 15;
-    // ICCID_LENGTH = 20
-    const iccid = payload
-      .subarray(offset, offset + 20)
-      .toString("ascii")
-      .replace(/\0/g, "");
-    offset += 20;
-
-    // FIRMWARE_VERSION_LENGTH = 3
-    const fw_version = [...payload.subarray(offset, offset + 3)].join(".");
-    offset += 3;
-    // BOOTLOADER_VERSION_LENGTH = 3
-    const bl_version = [...payload.subarray(offset, offset + 3)].join(".");
-    offset += 3;
-
-    const latitude = payload.readFloatLE(offset);
-    offset += 4;
-    const longitude = payload.readFloatLE(offset);
-    offset += 4;
-    const altitude = payload.readInt16LE(offset);
-    offset += 2;
-    const last_gps_time = payload.readUInt32LE(offset);
-    offset += 4;
-    const temperature = payload.readInt16LE(offset) / 10;
-    offset += 2;
-    const speed = payload.readInt16LE(offset);
-    offset += 2;
-    const battery = payload.readInt16LE(offset);
-    offset += 2;
-    const csq = payload.readUInt8(offset++);
-    const ber = payload.readUInt8(offset++);
-    const new_status = payload.readUInt8(offset++);
-    const curr_status = payload.readUInt8(offset++);
-    const notifications = payload.readUInt8(offset++);
-    const reset_cause = payload.readUInt8(offset++);
-    const gprs_retry = payload.readUInt8(offset++);
-    const gps_sat = payload.readUInt8(offset++);
-    const spare_c4 = payload.readUInt8(offset++);
-    const spare_c5 = payload.readUInt8(offset++);
-    const spare_c6 = payload.readUInt8(offset++);
-    const spare_c7 = payload.readUInt8(offset++);
-    const spare_c8 = payload.readUInt8(offset++);
-    const last_gprs = payload.readInt16LE(offset);
-    offset += 2;
-    const last_gps = payload.readInt16LE(offset);
-    offset += 2;
-    const spare_s3 = payload.readInt16LE(offset);
-    offset += 2;
-    const spare_s4 = payload.readUInt16LE(offset);
-    offset += 2;
-    const spare_s5 = payload.readInt16LE(offset);
-    offset += 2;
-    const spare_s6 = payload.readInt16LE(offset);
-    offset += 2;
-    const spare_s7 = payload.readInt16LE(offset);
-    offset += 2;
-    const spare_s8 = payload.readInt16LE(offset);
-    offset += 2;
-    const info_flag = payload.readUInt8(offset++);
-
-    // Basic support for wifi/gsm, not fully parsed as it's complex and not needed yet.
-    const wifi_cells = (info_flag & Packet01D2SWelcomeHeartBeat.InfoFlags.InfoWifiCells) !== 0 ? [] : undefined;
-    const gsm_cells = (info_flag & Packet01D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag) !== 0 ? [] : undefined;
-
-    const data: typeof Packet01D2SWelcomeHeartBeat.Data = {
-      serial_number,
-      imei,
-      iccid,
-      fw_version,
-      bl_version,
-      latitude,
-      longitude,
-      altitude,
-      last_gps_time,
-      temperature,
-      speed,
-      battery,
-      csq,
-      ber,
-      new_status,
-      curr_status,
-      notifications,
-      reset_cause,
-      gprs_retry,
-      gps_sat,
-      spare_c4,
-      spare_c5,
-      spare_c6,
-      spare_c7,
-      spare_c8,
-      last_gprs,
-      last_gps,
-      spare_s3,
-      spare_s4,
-      spare_s5,
-      spare_s6,
-      spare_s7,
-      spare_s8,
-      info_flag,
-      wifi_cells,
-      gsm_cells,
+      // Optional cell data
+      wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined,
+      gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined,
     };
-    return data;
-  }
-}
 
-// Represents a packet sent FROM Sentinel TO the Device
-export class Packet01S2DGeofenceResponse {
-  static Data = {
-    lbs_current_latitude: 0 as number,
-    lbs_current_longitude: 0 as number,
-    server_position_source: 0 as number,
-    geofence_latitude_longitude: [] as { lat: number; lng: number }[],
-    requested_operating_status: 0 as number,
-    update_frequency: 0 as number,
-    utc_timestamp: 0 as number,
-    tx_every_check: 0 as number,
-    lbs_current_radius: 0 as number,
-  };
+    static toBuffer(data: typeof Packet01.D2SWelcomeHeartBeat.Data): Buffer {
+      const MAX_SIZE = 600;
+      const buffer = Buffer.alloc(MAX_SIZE);
+      let offset = 0;
 
-  static fromBuffer(payload: Buffer): typeof Packet01S2DGeofenceResponse.Data {
-    let offset = 0;
-    const packetNumber = payload[offset++];
-    if (packetNumber !== PacketType.PACKET_0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
+      buffer[offset++] = PacketType.PACKET_0x01;
 
-    const lbs_current_latitude = payload.readFloatLE(offset);
-    offset += 4;
-    const lbs_current_longitude = payload.readFloatLE(offset);
-    offset += 4;
-    const server_position_source = payload[offset++];
+      // DEVICE_ID_LENGTH = 10
+      stringToBytes(data.serial_number, 10).copy(buffer, offset);
+      offset += 10;
+      // IMEI_LENGTH = 15
+      stringToBytes(data.imei, 15).copy(buffer, offset);
+      offset += 15;
+      // ICCID_LENGTH = 20
+      stringToBytes(data.iccid, 20).copy(buffer, offset);
+      offset += 20;
 
-    const geofence_latitude_longitude: { lat: number; lng: number }[] = [];
-    for (let i = 0; i < 6; i++) {
-      const lat = payload.readFloatLE(offset);
+      // FIRMWARE_VERSION_LENGTH = 3
+      const fwParts = data.fw_version.split(".").map(Number);
+      for (let i = 0; i < 3; i++) buffer[offset++] = fwParts[i] || 0;
+
+      // BOOTLOADER_VERSION_LENGTH = 3
+      const blParts = data.bl_version.split(".").map(Number);
+      for (let i = 0; i < 3; i++) buffer[offset++] = blParts[i] || 0;
+
+      buffer.writeFloatLE(data.latitude, offset);
       offset += 4;
-      const lng = payload.readFloatLE(offset);
+      buffer.writeFloatLE(data.longitude, offset);
       offset += 4;
-      // Don't add empty coordinates
-      if (lat !== 0 || lng !== 0) {
-        geofence_latitude_longitude.push({ lat, lng });
-      }
+      buffer.writeInt16LE(data.altitude, offset);
+      offset += 2;
+      buffer.writeUInt32LE(data.last_gps_time || Math.floor(Date.now() / 1000), offset);
+      offset += 4;
+      buffer.writeInt16LE(data.temperature * 10, offset); // Scale temperature
+      offset += 2;
+      buffer.writeInt16LE(data.speed, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.battery, offset);
+      offset += 2;
+      buffer.writeUInt8(data.csq, offset++);
+      buffer.writeUInt8(data.ber, offset++);
+      buffer.writeUInt8(data.new_status, offset++);
+      buffer.writeUInt8(data.curr_status, offset++);
+      buffer.writeUInt8(data.notifications, offset++);
+      buffer.writeUInt8(data.reset_cause, offset++);
+      buffer.writeUInt8(data.gprs_retry, offset++);
+      buffer.writeUInt8(data.gps_sat, offset++);
+      buffer.writeUInt8(data.spare_c4, offset++);
+      buffer.writeUInt8(data.spare_c5, offset++);
+      buffer.writeUInt8(data.spare_c6, offset++);
+      buffer.writeUInt8(data.spare_c7, offset++);
+      buffer.writeUInt8(data.spare_c8, offset++);
+      buffer.writeInt16LE(data.last_gprs, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.last_gps, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.spare_s3, offset);
+      offset += 2;
+      buffer.writeUInt16LE(data.spare_s4, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.spare_s5, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.spare_s6, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.spare_s7, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.spare_s8, offset);
+      offset += 2;
+
+      // Combine convenience wifi/gsm flags into info_flag byte
+      const hasWiFi = data.wifi_cells && data.wifi_cells.length > 0;
+      const hasGSM = data.gsm_cells && data.gsm_cells.length > 0;
+      let info_flag = data.info_flag;
+      if (hasWiFi) info_flag |= Packet01.D2SWelcomeHeartBeat.InfoFlags.InfoWifiCells;
+      if (hasGSM) info_flag |= Packet01.D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag;
+      buffer.writeUInt8(info_flag, offset++);
+
+      // Note: GSM/WiFi cell serialization is complex and not fully implemented
+      // This is sufficient for current tests but may need expansion.
+
+      return buffer.subarray(0, offset);
     }
 
-    const requested_operating_status = payload[offset++];
-    const update_frequency = payload.readUInt16LE(offset);
-    offset += 2;
-    const utc_timestamp = payload.readUInt32LE(offset);
-    offset += 4;
-    const tx_every_check = payload.readUInt16LE(offset);
-    offset += 2;
-    const lbs_current_radius = payload.readUInt32LE(offset);
+    static fromBuffer(payload: Buffer): typeof Packet01.D2SWelcomeHeartBeat.Data {
+      let offset = 1; // Skip packet type
 
-    const data: typeof Packet01S2DGeofenceResponse.Data = {
-      lbs_current_latitude,
-      lbs_current_longitude,
-      server_position_source,
-      geofence_latitude_longitude,
-      requested_operating_status,
-      update_frequency,
-      utc_timestamp,
-      tx_every_check,
-      lbs_current_radius,
+      // DEVICE_ID_LENGTH = 10
+      const serial_number = payload
+        .subarray(offset, offset + 10)
+        .toString("ascii")
+        .replace(/\0/g, "");
+      offset += 10;
+      // IMEI_LENGTH = 15
+      const imei = payload
+        .subarray(offset, offset + 15)
+        .toString("ascii")
+        .replace(/\0/g, "");
+      offset += 15;
+      // ICCID_LENGTH = 20
+      const iccid = payload
+        .subarray(offset, offset + 20)
+        .toString("ascii")
+        .replace(/\0/g, "");
+      offset += 20;
+
+      // FIRMWARE_VERSION_LENGTH = 3
+      const fw_version = [...payload.subarray(offset, offset + 3)].join(".");
+      offset += 3;
+      // BOOTLOADER_VERSION_LENGTH = 3
+      const bl_version = [...payload.subarray(offset, offset + 3)].join(".");
+      offset += 3;
+
+      const latitude = payload.readFloatLE(offset);
+      offset += 4;
+      const longitude = payload.readFloatLE(offset);
+      offset += 4;
+      const altitude = payload.readInt16LE(offset);
+      offset += 2;
+      const last_gps_time = payload.readUInt32LE(offset);
+      offset += 4;
+      const temperature = payload.readInt16LE(offset) / 10;
+      offset += 2;
+      const speed = payload.readInt16LE(offset);
+      offset += 2;
+      const battery = payload.readInt16LE(offset);
+      offset += 2;
+      const csq = payload.readUInt8(offset++);
+      const ber = payload.readUInt8(offset++);
+      const new_status = payload.readUInt8(offset++);
+      const curr_status = payload.readUInt8(offset++);
+      const notifications = payload.readUInt8(offset++);
+      const reset_cause = payload.readUInt8(offset++);
+      const gprs_retry = payload.readUInt8(offset++);
+      const gps_sat = payload.readUInt8(offset++);
+      const spare_c4 = payload.readUInt8(offset++);
+      const spare_c5 = payload.readUInt8(offset++);
+      const spare_c6 = payload.readUInt8(offset++);
+      const spare_c7 = payload.readUInt8(offset++);
+      const spare_c8 = payload.readUInt8(offset++);
+      const last_gprs = payload.readInt16LE(offset);
+      offset += 2;
+      const last_gps = payload.readInt16LE(offset);
+      offset += 2;
+      const spare_s3 = payload.readInt16LE(offset);
+      offset += 2;
+      const spare_s4 = payload.readUInt16LE(offset);
+      offset += 2;
+      const spare_s5 = payload.readInt16LE(offset);
+      offset += 2;
+      const spare_s6 = payload.readInt16LE(offset);
+      offset += 2;
+      const spare_s7 = payload.readInt16LE(offset);
+      offset += 2;
+      const spare_s8 = payload.readInt16LE(offset);
+      offset += 2;
+      const info_flag = payload.readUInt8(offset++);
+
+      // Basic support for wifi/gsm, not fully parsed as it's complex and not needed yet.
+      const wifi_cells = (info_flag & Packet01.D2SWelcomeHeartBeat.InfoFlags.InfoWifiCells) !== 0 ? [] : undefined;
+      const gsm_cells = (info_flag & Packet01.D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag) !== 0 ? [] : undefined;
+
+      const data: typeof Packet01.D2SWelcomeHeartBeat.Data = {
+        serial_number,
+        imei,
+        iccid,
+        fw_version,
+        bl_version,
+        latitude,
+        longitude,
+        altitude,
+        last_gps_time,
+        temperature,
+        speed,
+        battery,
+        csq,
+        ber,
+        new_status,
+        curr_status,
+        notifications,
+        reset_cause,
+        gprs_retry,
+        gps_sat,
+        spare_c4,
+        spare_c5,
+        spare_c6,
+        spare_c7,
+        spare_c8,
+        last_gprs,
+        last_gps,
+        spare_s3,
+        spare_s4,
+        spare_s5,
+        spare_s6,
+        spare_s7,
+        spare_s8,
+        info_flag,
+        wifi_cells,
+        gsm_cells,
+      };
+      return data;
+    }
+  };
+
+  /**
+   * Sentinel → Device (GeofenceResponse)
+   */
+  static S2DGeofenceResponse = class {
+    static Data = {
+      lbs_current_latitude: 0 as number,
+      lbs_current_longitude: 0 as number,
+      server_position_source: 0 as number,
+      geofence_latitude_longitude: [] as { lat: number; lng: number }[],
+      requested_operating_status: 0 as number,
+      update_frequency: 0 as number,
+      utc_timestamp: 0 as number,
+      tx_every_check: 0 as number,
+      lbs_current_radius: 0 as number,
     };
-    return data;
-  }
+
+    static toBuffer(data: typeof Packet01.S2DGeofenceResponse.Data): Buffer {
+      const buffer = Buffer.alloc(71); // Fixed size
+      let offset = 0;
+
+      buffer[offset++] = PacketType.PACKET_0x01;
+
+      buffer.writeFloatLE(data.lbs_current_latitude, offset);
+      offset += 4;
+      buffer.writeFloatLE(data.lbs_current_longitude, offset);
+      offset += 4;
+      buffer[offset++] = data.server_position_source;
+
+      // Serialize up to 6 geofence points, pad with zeros
+      const geofences = data.geofence_latitude_longitude.slice(0, 6);
+      geofences.forEach(({ lat, lng }) => {
+        buffer.writeFloatLE(lat, offset);
+        offset += 4;
+        buffer.writeFloatLE(lng, offset);
+        offset += 4;
+      });
+      // Pad remaining to 48 bytes (6*8)
+      while (offset < 1 + 8 + 1 + 48) {
+        buffer.writeFloatLE(0, offset);
+        offset += 4;
+        buffer.writeFloatLE(0, offset);
+        offset += 4;
+      }
+
+      buffer[offset++] = data.requested_operating_status;
+      buffer.writeUInt16LE(data.update_frequency, offset);
+      offset += 2;
+      buffer.writeUInt32LE(data.utc_timestamp, offset);
+      offset += 4;
+      buffer.writeUInt16LE(data.tx_every_check, offset);
+      offset += 2;
+      buffer.writeUInt32LE(data.lbs_current_radius, offset);
+
+      return buffer;
+    }
+
+    static fromBuffer(payload: Buffer): typeof Packet01.S2DGeofenceResponse.Data {
+      let offset = 0;
+      const packetNumber = payload[offset++];
+      if (packetNumber !== PacketType.PACKET_0x01) throw new Error(`Invalid packet: 0x${packetNumber.toString(16)}`);
+
+      const lbs_current_latitude = payload.readFloatLE(offset);
+      offset += 4;
+      const lbs_current_longitude = payload.readFloatLE(offset);
+      offset += 4;
+      const server_position_source = payload[offset++];
+
+      const geofence_latitude_longitude: { lat: number; lng: number }[] = [];
+      for (let i = 0; i < 6; i++) {
+        const lat = payload.readFloatLE(offset);
+        offset += 4;
+        const lng = payload.readFloatLE(offset);
+        offset += 4;
+        // Don't add empty coordinates
+        if (lat !== 0 || lng !== 0) {
+          geofence_latitude_longitude.push({ lat, lng });
+        }
+      }
+
+      const requested_operating_status = payload[offset++];
+      const update_frequency = payload.readUInt16LE(offset);
+      offset += 2;
+      const utc_timestamp = payload.readUInt32LE(offset);
+      offset += 4;
+      const tx_every_check = payload.readUInt16LE(offset);
+      offset += 2;
+      const lbs_current_radius = payload.readUInt32LE(offset);
+
+      const data: typeof Packet01.S2DGeofenceResponse.Data = {
+        lbs_current_latitude,
+        lbs_current_longitude,
+        server_position_source,
+        geofence_latitude_longitude,
+        requested_operating_status,
+        update_frequency,
+        utc_timestamp,
+        tx_every_check,
+        lbs_current_radius,
+      };
+      return data;
+    }
+  };
 }
 
 export class Packet0A {
@@ -618,8 +658,8 @@ export class Packet15 {
 export interface ParsedPacket {
   type: number;
   payload:
-    | typeof Packet01S2DGeofenceResponse.Data
-    | typeof Packet01D2SWelcomeHeartBeat.Data
+    | typeof Packet01.D2SWelcomeHeartBeat.Data
+    | typeof Packet01.S2DGeofenceResponse.Data
     | typeof Packet0A.Data
     | typeof Packet10.Data
     | typeof Packet15.Data
@@ -634,9 +674,9 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
     switch (type) {
       case PacketType.PACKET_0x01:
         if (payload.length === 71) {
-          return { type, payload: Packet01S2DGeofenceResponse.fromBuffer(payload), raw: payload };
+          return { type, payload: Packet01.S2DGeofenceResponse.fromBuffer(payload), raw: payload };
         } else {
-          return { type, payload: Packet01D2SWelcomeHeartBeat.fromBuffer(payload), raw: payload };
+          return { type, payload: Packet01.D2SWelcomeHeartBeat.fromBuffer(payload), raw: payload };
         }
       case PacketType.PACKET_0x0A:
         return { type, payload: Packet0A.fromBuffer(payload), raw: payload };

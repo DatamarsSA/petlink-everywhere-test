@@ -2,7 +2,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { OperatingStatus, Packet01D2SWelcomeHeartBeat, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
+import { Packet01, PacketType, OperatingStatus } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, GpsMessagePosition, ModeType } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -77,7 +77,7 @@ describe("User Mode - Live Tracking", () => {
     const commandPacket = await sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
       15000, // Increased timeout to be safe
-      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+      (p: any) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
     );
     logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket });
 
@@ -85,16 +85,16 @@ describe("User Mode - Live Tracking", () => {
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
     const heartbeatData = {
-      ...Packet01D2SWelcomeHeartBeat.Data,
+      ...Packet01.D2SWelcomeHeartBeat.Data,
       serial_number: setup.devices.dogStandard!.serialNumber,
       latitude: latutideSentoFromDevice,
       longitude: longitudeSentoFromDevice,
       battery: batterySentoFromDevice,
       temperature: temperatureSentoFromDevice,
-      notifications: Packet01D2SWelcomeHeartBeat.Notifications.NOutsideFence,
+      notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NOutsideFence,
       last_gps_time: Math.floor(Date.now() / 1000),
     };
-    await sentinelTcpSocketClient.send(Packet01D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
+    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
     logger.info("✓ Packet 0x01 #1 sent");
 
     logger.info("📍 STEP 6: Wait for positions to arrive via GraphQLWebSocket on app");
@@ -134,7 +134,7 @@ describe("User Mode - Live Tracking", () => {
     const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
       15000, // Increased timeout to be safe
-      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+      (p: any) => p.requested_operating_status === OperatingStatus.DEFAULT,
     );
     logger.info(`✓ Device received LIVE_TRACKING deactivation command`, { parsed: deactivationPacket });
   });
