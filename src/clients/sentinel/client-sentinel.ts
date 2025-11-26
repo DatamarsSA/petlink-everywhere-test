@@ -195,7 +195,7 @@ export class SentinelTcpClient {
     };
     // 3. Invia il pacchetto
     await this.send(Packet01.D2SWelcomeHeartBeat.toBuffer(keepAliveData), keepAliveData);
-    logger.info(`✓ Sent keep-alive packet for ${serialNumber}`);
+    logger.debug(`✓ Sent keep-alive packet for ${serialNumber}`);
   }
 
   /**
@@ -205,7 +205,7 @@ export class SentinelTcpClient {
    */
   public startKeepAlive(serialNumber: string, intervalMs = 3000): void {
     this.stopKeepAlive(); // Stop any existing loop
-    logger.info(`Starting keep-alive loop for ${serialNumber} every ${intervalMs}ms`);
+    logger.debug(`Starting keep-alive loop for ${serialNumber} every ${intervalMs}ms`);
     this.keepAliveInterval = setInterval(() => {
       if (this.socket?.writable) {
         this.keepAlive(serialNumber).catch((err) => {

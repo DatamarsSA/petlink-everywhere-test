@@ -47,8 +47,11 @@ export enum PacketType {
 
 // ================================ DIZIONARIO DEI TIPI ================================ //
 
+/**
+ * Map for types of pacekt received on sokcet by Sentinel
+ */
 export interface PacketTypeMap {
-  [PacketType.PACKET_0x01]: typeof Packet01.D2SWelcomeHeartBeat.Data | typeof Packet01.S2DGeofenceResponse.Data;
+  [PacketType.PACKET_0x01]: typeof Packet01.S2DGeofenceResponse.Data;
   [PacketType.PACKET_0x0A]: typeof Packet0A.Data;
   [PacketType.PACKET_0x10]: typeof Packet10.Data;
   [PacketType.PACKET_0x15]: typeof Packet15.Data;
@@ -194,8 +197,8 @@ export class Packet01 {
       serial_number: "" as string,
       imei: "123456789012345" as string,
       iccid: "12345678901234567890" as string,
-      fw_version: "1.2.3" as string,
-      bl_version: "4.5.6" as string,
+      fw_version: "10.1.70" as string,
+      bl_version: "2.0.1" as string,
       latitude: 0 as number,
       longitude: 0 as number,
       altitude: 0 as number,

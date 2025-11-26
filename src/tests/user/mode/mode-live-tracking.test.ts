@@ -10,6 +10,10 @@ import * as subscriptions from "../../../clients/petlink-infrastructure/endpoint
 
 describe("User Mode - Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
+  let positionsReceived: GpsMessagePosition | null = null;
+  let latutideSentoFromDevice = 44.5024;
+  let longitudeSentoFromDevice = 11.3463;
+  let subscriptionPromise: Promise<void>;
 
   beforeAll(async () => {
     // STEP 1: Create user, pet, device, and purchase subscription
@@ -26,13 +30,10 @@ describe("User Mode - Live Tracking", () => {
     petlink.core.graphqlWS.disconnect();
   });
 
-  it("Activate live tracking and should receive position updates", async () => {
+  it("Subscribe to position updates via GraphQLSocket onGpsMessagePosition", async () => {
     logger.info("📍 STEP 1: Subscribe to position updates via GraphQl Sub WebSocket");
-    let positionsReceived: GpsMessagePosition | null = null;
-    let latutideSentoFromDevice = 44.5024;
-    let longitudeSentoFromDevice = 11.3463;
 
-    const subscriptionPromise = new Promise<void>((resolve, reject) => {
+    subscriptionPromise = new Promise<void>((resolve, reject) => {
       petlink.core.graphqlWS.authJwt.subscribe(
         subscriptions.onGpsMessagePosition,
         { id: setup.devices.dogStandard!.id },
@@ -54,8 +55,10 @@ describe("User Mode - Live Tracking", () => {
         { timeoutMs: fxt.socket.timeoutMs },
       );
     });
+  });
 
-    logger.info("📍 STEP 2: Activate Live Tracking via GraphQL");
+  it("Activate Live Tracking via GraphQL and verify success", async () => {
+    logger.info("📍 STEP 2: Activate Live Tracking via sendCommand()");
     let commandSentToDevice = CommandEnum.LiveTracking;
     let durationCommandSentToDevice = 900;
 
@@ -72,15 +75,22 @@ describe("User Mode - Live Tracking", () => {
       `sendCommand should succeed - Error: ${activateResponse.sendCommand.message}${activateResponse.sendCommand.translationCode ? ` (${activateResponse.sendCommand.translationCode})` : ""}`,
     ).toBe("200");
     logger.info("✓ Sent command 'LIVE_TRACKING' to core");
+  });
 
+  it("Verify device received Packet 0x01 (LIVE_TRACKING command)", async () => {
     logger.info("📍 STEP 3: Verify device received Packet 0x01 (LIVE_TRACKING command)");
     const commandPacket = await sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
       15000, // Increased timeout to be safe
-      (p: any) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
+    expect(commandPacket.requested_operating_status, "Received packet should have requested_operating_status = FAST_TRACKING").toBe(
+      OperatingStatus.FAST_TRACKING,
     );
     logger.info(`✓ Device received LIVE_TRACKING command`, { parsed: commandPacket });
+  });
 
+  it("Simulate device sending Packet 0x01 and verify position via subscription", async () => {
     logger.info("📍 STEP 4: Simulate device sending 1 Packet 0x01 (WelcomeHeartBeat) with position update");
     let batterySentoFromDevice = 4200;
     let temperatureSentoFromDevice = 22;
@@ -108,9 +118,10 @@ describe("User Mode - Live Tracking", () => {
       lat: positionsReceived!.position.lat,
       lng: positionsReceived!.position.lng,
     });
+  });
 
+  it("Deactivate Live Tracking and verify device response", async () => {
     logger.info("📍 STEP 7: Deactivate Live Tracking");
-    // sentinelTcpClient.clearBuffer();
     let commandSentToDeviceDeactivate = CommandEnum.LiveTracking;
     let durationCommandSentToDeviceDeactivate = 0;
 
@@ -134,7 +145,10 @@ describe("User Mode - Live Tracking", () => {
     const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
       15000, // Increased timeout to be safe
-      (p: any) => p.requested_operating_status === OperatingStatus.DEFAULT,
+      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+    );
+    expect(deactivationPacket.requested_operating_status, "Received deactivation packet should have requested_operating_status = DEFAULT").toBe(
+      OperatingStatus.DEFAULT,
     );
     logger.info(`✓ Device received LIVE_TRACKING deactivation command`, { parsed: deactivationPacket });
   });
