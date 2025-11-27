@@ -14,8 +14,6 @@ import {
   PacketTypeMap,
 } from "./packet-encode-decode.js";
 
-// ================================ 3. CLIENT (Network & Logic) ================================ //
-
 export class SentinelTcpClient {
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
@@ -78,21 +76,6 @@ export class SentinelTcpClient {
    * @param validator Optional function to filter the packet
    */
   async waitForPacket<T extends PacketType>(type: T, timeoutMs = 5000, validator?: (p: PacketTypeMap[T]) => boolean): Promise<PacketTypeMap[T]> {
-    // First, check the buffer for an already-received packet
-    const existingPacketIndex = this.receivedPackets.findIndex((p) => {
-      if (p.type !== type) return false;
-      const typedPayload = p.payload as PacketTypeMap[T];
-      return !validator || validator(typedPayload);
-    });
-
-    if (existingPacketIndex !== -1) {
-      const [foundPacket] = this.receivedPackets.splice(existingPacketIndex, 1);
-      const typeHex = `0x${type.toString(16)}`;
-      logger.debug(`✓ Found pre-received expected packet ${typeHex}`);
-      return Promise.resolve(foundPacket.payload as PacketTypeMap[T]);
-    }
-
-    // If not found in buffer, wait for the next one
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16)}`;
 
@@ -123,7 +106,6 @@ export class SentinelTcpClient {
     });
   }
 
-  private receivedPackets: ParsedPacket[] = [];
   private handleData(chunk: Buffer) {
     // 1. Accumulo: Aggiunge i nuovi dati arrivati (chunk) al buffer esistente.
     //    TCP non garantisce che un chunk = un pacchetto. Potrebbe essere mezzo pacchetto o dieci pacchetti.
@@ -175,7 +157,6 @@ export class SentinelTcpClient {
         SirfProtocol.logPacket("INCOMING", rawPacket, parsed.payload);
 
         this.events.emit("packet", parsed);
-        this.receivedPackets.push(parsed);
       } catch (e) {
         logger.error(`Error processing packet: ${e}`);
       }
