@@ -78,6 +78,7 @@ export enum CancelReasonCodeEnum {
   MissingPet = "MISSING_PET",
   NotSuitable = "NOT_SUITABLE",
   Other = "OTHER",
+  RetentionFlow = "RETENTION_FLOW",
   TooExpensive = "TOO_EXPENSIVE",
 }
 
@@ -1120,6 +1121,7 @@ export interface PetlinkSubscription {
   paymentStatus?: Maybe<PaymentStatusTypeEnum>;
   planChangeNotAllowed?: Maybe<Scalars["Boolean"]["output"]>;
   productId?: Maybe<Scalars["String"]["output"]>;
+  retentionCoupon?: Maybe<RetentionDiscountItem>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
   startedAt?: Maybe<Scalars["String"]["output"]>;
   status?: Maybe<SubscriptionStatusEnum>;
@@ -1348,6 +1350,7 @@ export interface ReplacementHistory {
   brand?: Maybe<Scalars["String"]["output"]>;
   creationDate: Scalars["String"]["output"];
   customerEmail: Scalars["String"]["output"];
+  deviceProtectionId?: Maybe<Scalars["String"]["output"]>;
   expirationDate?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
   model?: Maybe<Scalars["String"]["output"]>;
@@ -1429,6 +1432,15 @@ export interface ResponseGetShelterOrders {
   message: Scalars["String"]["output"];
   pagination: Pagination;
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface RetentionDiscountItem {
+  __typename?: "RetentionDiscountItem";
+  amount?: Maybe<Scalars["Float"]["output"]>;
+  couponId: Scalars["String"]["output"];
+  couponName: Scalars["String"]["output"];
+  discountPercentage?: Maybe<Scalars["Float"]["output"]>;
+  discountType: Scalars["String"]["output"];
 }
 
 export enum RoleEnum {

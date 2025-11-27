@@ -134,7 +134,10 @@ export class SirfProtocol {
         .toUpperCase()}]`;
 
     // LOG UNICO E LEGGIBILE
-    logger.info(packetVisualization);
+    if (type != PacketType.PACKET_0x01) {
+      // not log 01 packet to hide rumors from heartbeat keepalive
+      logger.info(packetVisualization);
+    }
   }
 }
 

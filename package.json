@@ -5,6 +5,8 @@
   "scripts": {
     "precommit": "yarn run tsc --noEmit",
     "codegen": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts",
+    "fetch-schema": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts fetch",
+    "generate-sdk": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts generate",
     "test": "vitest run",
     "pipeline:develop": "TEST_ENV=develop yarn codegen && yarn test",
     "pipeline:test": "TEST_ENV=test yarn codegen && yarn test"

@@ -2,14 +2,6 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
-
-"""
 Tells the service which subscriptions will be published to when this mutation is
 called. This directive is deprecated use @aws_susbscribe directive instead.
 """
@@ -21,22 +13,19 @@ directive @aws_publish(
 ) on FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
-
-"""
 Tells the service this field/object has access authorized by a Lambda Authorizer.
 """
 directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 """Directs the schema to enforce authorization on a field"""
 directive @aws_auth(
@@ -50,9 +39,20 @@ Tells the service this field/object has access authorized by an API key.
 directive @aws_api_key on OBJECT | FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by sigv4 signing.
+Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
-directive @aws_iam on OBJECT | FIELD_DEFINITION
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -111,9 +111,9 @@ type ActivityReportAverageCat {
 }
 
 type ActivityReportCat {
-  serialNumber: String
   petId: String!
-  activitiesLevel: Float
+  healthRate: Float
+  healthRateReliability: Float
   walk: ActivityValueCat!
   sleep: ActivityValueCat!
   calories: ActivityValueCat!
@@ -207,6 +207,7 @@ enum CancelReasonCodeEnum {
   TOO_EXPENSIVE
   NOT_SUITABLE
   OTHER
+  RETENTION_FLOW
 }
 
 type Card {
@@ -221,6 +222,26 @@ type Card {
 type CareProtectionPlan {
   itemId: String!
   pricings: [Pricing]!
+}
+
+type ClearCacheMessageStatus {
+  id: String!
+  status: ClearCacheStatus!
+}
+
+input ClearCacheMessageStatusIn {
+  id: String!
+  status: ClearCacheStatusIn!
+}
+
+type ClearCacheStatus {
+  entityType: String!
+  id: String!
+}
+
+input ClearCacheStatusIn {
+  entityType: String!
+  id: String!
 }
 
 type Color {
@@ -541,7 +562,7 @@ type Highlights {
   jumps: HighlightEnum
   grooming: HighlightEnum
   feed: HighlightEnum
-  isStressed: HighlightEnum
+  isStressed: Boolean
 }
 
 input HostedPageOptionsInput {
@@ -677,7 +698,7 @@ type Mutation {
   updateEmailUser(email: String!, languageId: LanguageId, appBrand: AppBrand!): ResponseUser!
   updatePhoneNumberUser(phone: String!, languageId: LanguageId, verificationId: String!, otp: String!): ResponseUser!
   forgotEmail(productNumber: String!, entityType: ProductTypeEnum, languageId: LanguageId): Response
-  sendOtpForgotPassword(contact: String!, languageId: LanguageId): ResponseOtp!
+  sendOtpForgotPassword(contact: String!, languageId: LanguageId, migrationFlow: Boolean): ResponseOtp!
   changeForgotPassword(otp: String!, verificationId: String!, password: String!): Response!
   changePassword(oldPassword: String!, password: String!): Response!
 
@@ -725,6 +746,7 @@ type Mutation {
 
   """  cct"""
   updateUserContact(userId: String!, contact: String!, contactType: ContactType!, appBrand: AppBrand!): Response!
+  forceClearCache(clearCacheStatus: ClearCacheMessageStatusIn!): Response!
 
   """  sso"""
   setSsoToken(productId: String, appBrand: AppBrand!, pageType: PageTypeEnum!): ResponseSsoUrl!
@@ -748,6 +770,7 @@ type Mutation {
   publishOnGpsMessagePosition(gpsPosition: GpsMessagePositionIn!): GpsMessagePosition!
   publishOnGpsMessageStatus(gpsStatus: GpsMessageStatusIn!): GpsMessageStatus!
   publishOnSubscriptionStatus(subscriptionStatus: SubscriptionMessageStatusIn!): SubscriptionMessageStatus!
+  publishOnForceClearCache(clearCacheStatus: ClearCacheMessageStatusIn): ClearCacheMessageStatus!
 
   """  end of life"""
   updateEndOfLife(eolId: String, deviceId: String, input: EndOfLifeIn): ResponseUpdateEndOfLife!
@@ -1237,6 +1260,7 @@ type Query {
   getBillingInfo: ResponseBillingInfo!
   checkoutAddons(subscriptionId: String!, productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutAddons!
   checkoutNewSubscription(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutNewSubscription!
+  churnDeflection(subscriptionId: String!, redirectUrl: String!, cancelUrl: String!): ResponseChurnDeflection!
   checkoutCareProtection(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseCheckoutCareProtection!
   checkoutPrepaid(orderId: String!, serialNumber: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput, appBrand: AppBrand): ResponseCheckoutNewSubscription!
   changeSubscriptionPlan(productId: String!, priceIds: [String!]!, hostedPageOptions: HostedPageOptionsInput): ResponseChangeSubscriptionPlan!
@@ -1272,7 +1296,7 @@ type Query {
   getActivitiesByHour(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesByHour!
 
   """  TODO: rename in dog"""
-  getActivitiesCat(petId: String!, serialNumber: String, fromHealtRate: Int!, toHealtRate: Int!, fromActivities: Int!, toActivities: Int!): ResponseActivitiesCat!
+  getActivitiesCat(petId: String!, weekIndex: Int!, from: Int!, to: Int!): ResponseActivitiesCat!
   getActivitiesAverageCat(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesAverageCat
   getActiveSubscriptions(subscriptionsIds: [String!]): ResponseActiveSubscriptions!
   getPosts(languageId: String, pagination: PaginationInput): ResponseGetPosts!
@@ -1383,6 +1407,12 @@ type ResponseCheckoutNewSubscription {
   message: String!
   url: String
   checkoutId: String
+}
+
+type ResponseChurnDeflection {
+  code: String!
+  message: String!
+  url: String
 }
 
 type ResponseCreatePetlinkGps {
@@ -1764,6 +1794,14 @@ type ResponseUtilityIntegrationTest {
   userId: String
 }
 
+type RetentionDiscountItem {
+  amount: Float
+  couponId: String!
+  couponName: String!
+  discountPercentage: Float
+  discountType: String!
+}
+
 input Setting {
   operationType: SettingOperationEnum!
   settingType: SettingTypeEnum!
@@ -1774,6 +1812,7 @@ input Setting {
   """  id and deviceId both used for activation ESZ and eventually others"""
   updateObject: AWSJSON
   createObject: AWSJSON
+  modeType: ModeType
 }
 
 enum SettingOperationEnum {
@@ -1834,6 +1873,7 @@ type Subscription {
   onGpsMessagePosition(id: String!): GpsMessagePosition
   onGpsMessageStatus(id: String!): GpsMessageStatus
   onSubscriptionStatus(id: String!): SubscriptionMessageStatus
+  onForceClearCache(id: String!): ClearCacheMessageStatus
 }
 
 type SubscriptionMessageStatus {
@@ -1848,6 +1888,7 @@ input SubscriptionMessageStatusIn {
 
 type SubscriptionShortInfo {
   card: Card
+  businessEntityId: String!
   creationDate: String!
   currencyCode: String!
   currentTermEnd: String
@@ -1862,6 +1903,7 @@ type SubscriptionShortInfo {
   billingPeriod: Int!
   billingPeriodUnit: String!
   addonToStopIds: [String!]
+  retentionCoupon: RetentionDiscountItem
 }
 
 type SubscriptionShortInfoItem {

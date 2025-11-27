@@ -86,15 +86,15 @@ export interface ActivityReportAverageCat {
 
 export interface ActivityReportCat {
   __typename?: "ActivityReportCat";
-  activitiesLevel?: Maybe<Scalars["Float"]["output"]>;
   calories: ActivityValueCat;
   feed: ActivityValueCat;
   grooming: ActivityValueCat;
+  healthRate?: Maybe<Scalars["Float"]["output"]>;
+  healthRateReliability?: Maybe<Scalars["Float"]["output"]>;
   highMovement: ActivityValueCat;
   jumps: ActivityValueCat;
   onTheMove: ActivityValueCat;
   petId: Scalars["String"]["output"];
-  serialNumber?: Maybe<Scalars["String"]["output"]>;
   sleep: ActivityValueCat;
   steps: ActivityValueCat;
   walk: ActivityValueCat;
@@ -174,6 +174,7 @@ export enum CancelReasonCodeEnum {
   MissingPet = "MISSING_PET",
   NotSuitable = "NOT_SUITABLE",
   Other = "OTHER",
+  RetentionFlow = "RETENTION_FLOW",
   TooExpensive = "TOO_EXPENSIVE",
 }
 
@@ -191,6 +192,28 @@ export interface CareProtectionPlan {
   __typename?: "CareProtectionPlan";
   itemId: Scalars["String"]["output"];
   pricings: Array<Maybe<Pricing>>;
+}
+
+export interface ClearCacheMessageStatus {
+  __typename?: "ClearCacheMessageStatus";
+  id: Scalars["String"]["output"];
+  status: ClearCacheStatus;
+}
+
+export interface ClearCacheMessageStatusIn {
+  id: Scalars["String"]["input"];
+  status: ClearCacheStatusIn;
+}
+
+export interface ClearCacheStatus {
+  __typename?: "ClearCacheStatus";
+  entityType: Scalars["String"]["output"];
+  id: Scalars["String"]["output"];
+}
+
+export interface ClearCacheStatusIn {
+  entityType: Scalars["String"]["input"];
+  id: Scalars["String"]["input"];
 }
 
 export interface Color {
@@ -532,7 +555,7 @@ export interface Highlights {
   feed?: Maybe<HighlightEnum>;
   grooming?: Maybe<HighlightEnum>;
   highMovement?: Maybe<HighlightEnum>;
-  isStressed?: Maybe<HighlightEnum>;
+  isStressed?: Maybe<Scalars["Boolean"]["output"]>;
   jumps?: Maybe<HighlightEnum>;
 }
 
@@ -695,8 +718,10 @@ export interface Mutation {
   deletePet: Response;
   deleteRegistrationToken: Response;
   deleteUser: Response;
+  forceClearCache: Response;
   forgotEmail?: Maybe<Response>;
   logDisabled?: Maybe<Response>;
+  publishOnForceClearCache: ClearCacheMessageStatus;
   /**   subscription publishers */
   publishOnGpsMessagePosition: GpsMessagePosition;
   publishOnGpsMessageStatus: GpsMessageStatus;
@@ -819,6 +844,10 @@ export type MutationDeleteUserArgs = {
   id?: InputMaybe<Scalars["String"]["input"]>;
 };
 
+export type MutationForceClearCacheArgs = {
+  clearCacheStatus: ClearCacheMessageStatusIn;
+};
+
 export type MutationForgotEmailArgs = {
   entityType?: InputMaybe<ProductTypeEnum>;
   languageId?: InputMaybe<LanguageId>;
@@ -827,6 +856,10 @@ export type MutationForgotEmailArgs = {
 
 export type MutationLogDisabledArgs = {
   deviceId: Scalars["String"]["input"];
+};
+
+export type MutationPublishOnForceClearCacheArgs = {
+  clearCacheStatus?: InputMaybe<ClearCacheMessageStatusIn>;
 };
 
 export type MutationPublishOnGpsMessagePositionArgs = {
@@ -889,6 +922,7 @@ export type MutationSendOtpArgs = {
 export type MutationSendOtpForgotPasswordArgs = {
   contact: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
+  migrationFlow?: InputMaybe<Scalars["Boolean"]["input"]>;
 };
 
 export type MutationSendSettingArgs = {
@@ -1488,6 +1522,7 @@ export interface Query {
   checkoutEOLNewDevice: ResponseCheckoutEolNewDevice;
   checkoutNewSubscription: ResponseCheckoutNewSubscription;
   checkoutPrepaid: ResponseCheckoutNewSubscription;
+  churnDeflection: ResponseChurnDeflection;
   getActiveSubscriptions: ResponseActiveSubscriptions;
   getActivities: ResponseActivities;
   /**   TODO: rename in dog */
@@ -1591,6 +1626,12 @@ export type QueryCheckoutPrepaidArgs = {
   serialNumber: Scalars["String"]["input"];
 };
 
+export type QueryChurnDeflectionArgs = {
+  cancelUrl: Scalars["String"]["input"];
+  redirectUrl: Scalars["String"]["input"];
+  subscriptionId: Scalars["String"]["input"];
+};
+
 export type QueryGetActiveSubscriptionsArgs = {
   subscriptionsIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
 };
@@ -1624,12 +1665,10 @@ export type QueryGetActivitiesByHourArgs = {
 };
 
 export type QueryGetActivitiesCatArgs = {
-  fromActivities: Scalars["Int"]["input"];
-  fromHealtRate: Scalars["Int"]["input"];
+  from: Scalars["Int"]["input"];
   petId: Scalars["String"]["input"];
-  serialNumber?: InputMaybe<Scalars["String"]["input"]>;
-  toActivities: Scalars["Int"]["input"];
-  toHealtRate: Scalars["Int"]["input"];
+  to: Scalars["Int"]["input"];
+  weekIndex: Scalars["Int"]["input"];
 };
 
 export type QueryGetBreedArgs = {
@@ -1893,6 +1932,13 @@ export interface ResponseCheckoutEolNewDevice {
 export interface ResponseCheckoutNewSubscription {
   __typename?: "ResponseCheckoutNewSubscription";
   checkoutId?: Maybe<Scalars["String"]["output"]>;
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  url?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseChurnDeflection {
+  __typename?: "ResponseChurnDeflection";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
   url?: Maybe<Scalars["String"]["output"]>;
@@ -2329,11 +2375,21 @@ export interface ResponseUtilityIntegrationTest {
   userId?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface RetentionDiscountItem {
+  __typename?: "RetentionDiscountItem";
+  amount?: Maybe<Scalars["Float"]["output"]>;
+  couponId: Scalars["String"]["output"];
+  couponName: Scalars["String"]["output"];
+  discountPercentage?: Maybe<Scalars["Float"]["output"]>;
+  discountType: Scalars["String"]["output"];
+}
+
 export interface Setting {
   createObject?: InputMaybe<Scalars["AWSJSON"]["input"]>;
   deviceId?: InputMaybe<Scalars["String"]["input"]>;
   geofence?: InputMaybe<Array<InputMaybe<CoordinatesIn>>>;
   id?: InputMaybe<Scalars["String"]["input"]>;
+  modeType?: InputMaybe<ModeType>;
   operationType: SettingOperationEnum;
   settingType: SettingTypeEnum;
   /**   id and deviceId both used for activation ESZ and eventually others */
@@ -2396,11 +2452,16 @@ export enum StatusState {
 
 export interface Subscription {
   __typename?: "Subscription";
+  onForceClearCache?: Maybe<ClearCacheMessageStatus>;
   onGpsMessagePosition?: Maybe<GpsMessagePosition>;
   onGpsMessageStatus?: Maybe<GpsMessageStatus>;
   onSendingOtp?: Maybe<ResponseOtp>;
   onSubscriptionStatus?: Maybe<SubscriptionMessageStatus>;
 }
+
+export type SubscriptionOnForceClearCacheArgs = {
+  id: Scalars["String"]["input"];
+};
 
 export type SubscriptionOnGpsMessagePositionArgs = {
   id: Scalars["String"]["input"];
@@ -2434,6 +2495,7 @@ export interface SubscriptionShortInfo {
   addonToStopIds?: Maybe<Array<Scalars["String"]["output"]>>;
   billingPeriod: Scalars["Int"]["output"];
   billingPeriodUnit: Scalars["String"]["output"];
+  businessEntityId: Scalars["String"]["output"];
   card?: Maybe<Card>;
   creationDate: Scalars["String"]["output"];
   currencyCode: Scalars["String"]["output"];
@@ -2443,6 +2505,7 @@ export interface SubscriptionShortInfo {
   invoice?: Maybe<InvoiceShortInfo>;
   paymentStatus?: Maybe<PaymentStatusTypeEnum>;
   planChangeNotAllowed: Scalars["Boolean"]["output"];
+  retentionCoupon?: Maybe<RetentionDiscountItem>;
   status: SubscriptionStatusEnum;
   subscriptionItems: Array<SubscriptionShortInfoItem>;
   totalAmount: Scalars["Float"]["output"];
