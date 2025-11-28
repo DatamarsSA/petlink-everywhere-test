@@ -226,33 +226,13 @@ describe("DEFAULT subscription flow", () => {
         periodUnit: choosenPlan.periodUnit,
       });
 
-      let subStatusUpdated = null;
-
       // Open WebSocket subscription BEFORE purchase (event-driven)
-      const activationPromise = new Promise<void>(async (resolve, reject) => {
-        const wsSub = await petlink.core.graphqlWS.authJwt.subscribe(
-          subscriptions.onSubscriptionStatus,
-          { id: setup.user!.id },
-          {
-            next: (event: any) => {
-              logger.info("GraphQlSocket event received -> onSubscriptionStatus", { event });
-              subStatusUpdated = event.data;
-
-              // Resolve only when subscription is ACTIVE
-              const status = event.data?.onSubscriptionStatus?.status;
-              if (status?.subscriptionIsActive === true) {
-                wsSub.unsubscribe();
-                resolve();
-              }
-            },
-            error: (error: any) => {
-              logger.error("WebSocket error", { error: error.message });
-              reject(error);
-            },
-          },
-          { timeoutMs: fxt.socket.timeoutMs },
-        );
-      });
+      const activationPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+        subscriptions.onSubscriptionStatus,
+        { id: setup.user!.id },
+        (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
+        { timeoutMs: fxt.socket.timeoutMs }
+      );
 
       // Wait for WebSocket to establish connection
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -274,13 +254,14 @@ describe("DEFAULT subscription flow", () => {
       ).toBe("200");
 
       // Wait for WebSocket event (pure event-driven)
-      await activationPromise;
+      const subStatusUpdated = await activationPromise;
+      logger.info("GraphQlSocket event received -> onSubscriptionStatus", { event: subStatusUpdated });
 
       // Assert on WebSocket event
-      expect(subStatusUpdated, "Should arrive update of sub status from subscription").not.toBeNull();
-      expect(subStatusUpdated!.onSubscriptionStatus.id).toBe(setup.user!.id);
-      expect(subStatusUpdated!.onSubscriptionStatus.status.subscriptionIsActive).toBe(true);
-      expect(subStatusUpdated!.onSubscriptionStatus.status.productId).toBe(deviceId);
+      expect(subStatusUpdated, "Should arrive update of sub status from subscription").toBeDefined();
+      expect(subStatusUpdated.onSubscriptionStatus.id).toBe(setup.user!.id);
+      expect(subStatusUpdated.onSubscriptionStatus.status.subscriptionIsActive).toBe(true);
+      expect(subStatusUpdated.onSubscriptionStatus.status.productId).toBe(deviceId);
 
       // Fetch final subscription details
       const subsDetails = await petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({

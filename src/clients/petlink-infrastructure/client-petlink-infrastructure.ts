@@ -328,10 +328,6 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
               const subId = message.id;
               const sub = this.subscriptions.get(subId);
               if (sub && message.payload?.data) {
-                if (sub.timeout) {
-                  clearTimeout(sub.timeout);
-                  sub.timeout = null;
-                }
                 sub.callbacks.next({ data: message.payload.data });
               }
               break;
@@ -341,10 +337,6 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
               const subId = message.id;
               const sub = this.subscriptions.get(subId);
               if (sub) {
-                if (sub.timeout) {
-                  clearTimeout(sub.timeout);
-                  sub.timeout = null;
-                }
                 logger.error("Subscription error", { subId, errors: message.payload?.errors });
                 sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
               }
@@ -385,76 +377,100 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
       });
     }
 
-    async subscribe(
+    async subscribeUntil<T = any>(
       query: string,
       variables: Record<string, any>,
-      callbacks: { next: (data: any) => void; error: (err: any) => void },
+      predicate: (data: any) => boolean,
       options?: { timeoutMs?: number },
-    ): Promise<{ unsubscribe: () => void }> {
-      await this.ensureConnected();
+    ): Promise<T> {
+      return new Promise<T>(async (resolve, reject) => {
+        await this.ensureConnected();
 
-      const subId = (++this.subscriptionCounter).toString();
-      const operationNameMatch = query.match(/subscription\s+(\w+)/);
-      const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
+        const subId = (++this.subscriptionCounter).toString();
+        const operationNameMatch = query.match(/subscription\s+(\w+)/);
+        const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
 
-      const endpoint = EnvConfig.getEndpoint(serviceType);
-      const host = new URL(endpoint).host;
+        const endpoint = EnvConfig.getEndpoint(serviceType);
+        const host = new URL(endpoint).host;
 
-      let timeout: NodeJS.Timeout | null = null;
+        let timeout: NodeJS.Timeout | null = null;
+        let isCleanedUp = false;
 
-      if (options?.timeoutMs) {
-        timeout = setTimeout(() => {
-          logger.error("WebSocket timeout", { subId, timeoutMs: options.timeoutMs });
-          callbacks.error(new Error(`Timeout: no event received in ${options.timeoutMs}ms`));
-          this.subscriptions.delete(subId);
-        }, options.timeoutMs);
-      }
+        // Cleanup function
+        const cleanup = () => {
+          if (isCleanedUp) return;
+          isCleanedUp = true;
 
-      this.subscriptions.set(subId, { callbacks, timeout });
-
-      const authPayload =
-        this.authType === "jwt"
-          ? {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-                operationName,
-                variables,
-                authToken: this.token,
-              }),
-            }
-          : {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.API_KEY]: this.apiKey!,
-            };
-
-      const subscriptionPayload = {
-        id: subId,
-        type: "start",
-        payload: {
-          data: JSON.stringify({ query, variables }),
-          extensions: {
-            authorization: authPayload,
-          },
-        },
-      };
-
-      this.ws!.send(JSON.stringify(subscriptionPayload));
-      logger.debug("Subscription started", { subId, operationName, variables });
-
-      return {
-        unsubscribe: () => {
-          const sub = this.subscriptions.get(subId);
-          if (sub?.timeout) {
-            clearTimeout(sub.timeout);
+          if (timeout) {
+            clearTimeout(timeout);
+            timeout = null;
           }
           this.subscriptions.delete(subId);
 
           if (this.isConnected) {
             this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
           }
-          logger.debug("Subscription unsubscribed", { subId });
-        },
-      };
+          logger.debug("Subscription auto-unsubscribed", { subId });
+        };
+
+        // Setup timeout
+        if (options?.timeoutMs) {
+          timeout = setTimeout(() => {
+            logger.error("WebSocket timeout", { subId, timeoutMs: options.timeoutMs });
+            cleanup();
+            reject(new Error(`Timeout: no matching event received in ${options.timeoutMs}ms`));
+          }, options.timeoutMs);
+        }
+
+        // Setup callbacks
+        this.subscriptions.set(subId, {
+          callbacks: {
+            next: (event: any) => {
+              // Check if event matches predicate
+              if (predicate(event.data)) {
+                cleanup();
+                resolve(event.data);
+              }
+              // Events that don't match are ignored
+            },
+            error: (err: any) => {
+              cleanup();
+              reject(err);
+            },
+          },
+          timeout,
+        });
+
+        // Send subscription payload
+        const authPayload =
+          this.authType === "jwt"
+            ? {
+                [HTTP_HEADERS.HOST]: host,
+                [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+                  operationName,
+                  variables,
+                  authToken: this.token,
+                }),
+              }
+            : {
+                [HTTP_HEADERS.HOST]: host,
+                [HTTP_HEADERS.API_KEY]: this.apiKey!,
+              };
+
+        const subscriptionPayload = {
+          id: subId,
+          type: "start",
+          payload: {
+            data: JSON.stringify({ query, variables }),
+            extensions: {
+              authorization: authPayload,
+            },
+          },
+        };
+
+        this.ws!.send(JSON.stringify(subscriptionPayload));
+        logger.debug("Subscription started", { subId, operationName, variables });
+      });
     }
 
     disconnect(): void {
@@ -479,15 +495,15 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
 
   return {
     authJwt: {
-      subscribe: async (query: string, variables: Record<string, any>, callbacks: any, options?: any) => {
+      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, predicate: (data: any) => boolean, options?: any) => {
         client.setAuthJwt();
-        return await client.subscribe(query, variables, callbacks, options);
+        return await client.subscribeUntil<T>(query, variables, predicate, options);
       },
     },
     authApiKey: {
-      subscribe: async (query: string, variables: Record<string, any>, callbacks: any, options?: any) => {
+      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, predicate: (data: any) => boolean, options?: any) => {
         client.setAuthApiKey();
-        return await client.subscribe(query, variables, callbacks, options);
+        return await client.subscribeUntil<T>(query, variables, predicate, options);
       },
     },
     disconnect: () => client.disconnect(),

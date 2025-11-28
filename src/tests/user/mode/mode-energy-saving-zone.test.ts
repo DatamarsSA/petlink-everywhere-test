@@ -114,30 +114,13 @@ describe("Energy Saving Zone", () => {
   it("Device DETECT wifi (emula enter) - Send 0x01 + GraphQL Sub Assert", async () => {
     logger.info("📍 Emula device enters ESZ (WiFi detect)");
 
-    // Sub prima (aspetta event)
-    let statusReceived: boolean | null = null;
-    const subscriptionPromise = new Promise<void>((resolve, reject) => {
-      petlink.core.graphqlWS.authJwt.subscribe(
-        subscriptions.onGpsMessageStatus,
-        { id: setup.devices.dogStandard!.id },
-        {
-          next: (event: any) => {
-            logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
-            const status = event.data?.onGpsMessageStatus?.status?.inEnergySavingZone;
-            if (status === true) {
-              // Esatto match
-              statusReceived = status;
-              resolve();
-            }
-          },
-          error: (error: any) => {
-            logger.error("Sub error:", error);
-            reject(error);
-          },
-        },
-        { timeoutMs: fxt.socket.timeoutMs },
-      );
-    });
+    // Start listening for ESZ enter event
+    const eventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onGpsMessageStatus,
+      { id: setup.devices.dogStandard!.id },
+      (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
+      { timeoutMs: fxt.socket.timeoutMs },
+    );
 
     // Emula: Send 0x01 con detached=true (TS setta byte 81 bit raw)
     const enterData = {
@@ -149,10 +132,10 @@ describe("Energy Saving Zone", () => {
     };
     await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(enterData), enterData);
 
-    // Aspetta sub trigger (Rust calcola detached=1 → SQS → publish → sub)
-    await subscriptionPromise;
-    expect(statusReceived).toBe(true);
-
+    // Wait for event and assert
+    const event = await eventPromise;
+    logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
+    expect(event.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
     logger.info("✓ Enter emulato, sub received true");
   });
 
@@ -160,25 +143,13 @@ describe("Energy Saving Zone", () => {
   it("Device LEAVES wifi (emula exit) - Send 0x01 + GraphQL Sub Assert", async () => {
     logger.info("📍 Emula device leaves ESZ (WiFi lost)");
 
-    let statusReceived: boolean | null = null;
-    const subscriptionPromise = new Promise<void>((resolve, reject) => {
-      petlink.core.graphqlWS.authJwt.subscribe(
-        subscriptions.onGpsMessageStatus,
-        { id: setup.devices.dogStandard!.id },
-        {
-          next: (event: any) => {
-            logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
-            const status = event.data?.onGpsMessageStatus?.status?.inEnergySavingZone;
-            if (status === false) {
-              statusReceived = status;
-              resolve();
-            }
-          },
-          error: (error: any) => reject(error),
-        },
-        { timeoutMs: fxt.socket.timeoutMs },
-      );
-    });
+    // Start listening for ESZ exit event
+    const eventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onGpsMessageStatus,
+      { id: setup.devices.dogStandard!.id },
+      (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
+      { timeoutMs: fxt.socket.timeoutMs },
+    );
 
     // Emula: detached=false (byte 81 bit=0)
     const exitData = {
@@ -190,9 +161,10 @@ describe("Energy Saving Zone", () => {
     };
     await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(exitData), exitData);
 
-    await subscriptionPromise;
-    expect(statusReceived).toBe(false);
-
+    // Wait for event and assert
+    const event = await eventPromise;
+    logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
+    expect(event.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
     logger.info("✓ Exit emulato, sub received false");
   });
 

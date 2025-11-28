@@ -33,28 +33,21 @@ describe("Live Tracking", () => {
   it("Subscribe to position updates via GraphQLSocket onGpsMessagePosition", async () => {
     logger.info("📍 STEP 1: Subscribe to position updates via GraphQl Sub WebSocket");
 
-    subscriptionPromise = new Promise<void>((resolve, reject) => {
-      petlink.core.graphqlWS.authJwt.subscribe(
+    subscriptionPromise = petlink.core.graphqlWS.authJwt
+      .subscribeUntil(
         subscriptions.onGpsMessagePosition,
         { id: setup.devices.dogStandard!.id },
-        {
-          next: (event: any) => {
-            logger.info("📡 GraphQlSocket event received -> onGpsMessagePosition", { event });
-            const position = event.data?.onGpsMessagePosition;
-            // Validate that this is the position we sent (ignore interim LBS/Status messages with lat=0)
-            if (position && position.position.lat === latutideSentoFromDevice) {
-              positionsReceived = position;
-              resolve();
-            }
-          },
-          error: (error: any) => {
-            logger.error("❌ WebSocket subscription error", { error: error.message });
-            reject(error);
-          },
+        (data) => {
+          const position = data?.onGpsMessagePosition;
+          // Validate that this is the position we sent (ignore interim LBS/Status messages with lat=0)
+          return position && position.position.lat === latutideSentoFromDevice;
         },
-        { timeoutMs: fxt.socket.timeoutMs },
-      );
-    });
+        { timeoutMs: fxt.socket.timeoutMs }
+      )
+      .then((event) => {
+        logger.info("📡 GraphQlSocket event received -> onGpsMessagePosition", { event });
+        positionsReceived = event.onGpsMessagePosition;
+      });
   });
 
   it("Activate Live Tracking via GraphQL and verify success", async () => {
