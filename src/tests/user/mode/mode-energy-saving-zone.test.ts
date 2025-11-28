@@ -1,4 +1,3 @@
-// petlink-everywhere-test/src/tests/user/mode/mode-energy-saving-zone.test.ts
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
@@ -31,7 +30,7 @@ describe("Energy Saving Zone", () => {
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
     // STEP 3: Start aggressive keep-alive to prevent socket disconnection
-    sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
+    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
   });
 
   afterAll(() => {
@@ -48,7 +47,7 @@ describe("Energy Saving Zone", () => {
       setting: {
         operationType: SettingOperationEnum.Create,
         settingType: SettingTypeEnum.EnergySavingZone,
-        createObject: JSON.stringify(createZonePayload), // Esplicito
+        createObject: JSON.stringify(createZonePayload),
       },
     });
 

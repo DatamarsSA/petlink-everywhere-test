@@ -21,7 +21,7 @@ describe("Live Tracking", () => {
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
     // STEP 3: Start aggressive keep-alive to prevent socket disconnection
-    sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
+    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
   });
 
   afterAll(() => {
@@ -42,7 +42,7 @@ describe("Live Tracking", () => {
           // Validate that this is the position we sent (ignore interim LBS/Status messages with lat=0)
           return position && position.position.lat === latutideSentoFromDevice;
         },
-        { timeoutMs: fxt.socket.timeoutMs }
+        { timeoutMs: fxt.socket.timeoutMs },
       )
       .then((event) => {
         logger.info("📡 GraphQlSocket event received -> onGpsMessagePosition", { event });

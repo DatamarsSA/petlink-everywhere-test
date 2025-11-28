@@ -75,7 +75,11 @@ export class SentinelTcpClient {
    * @param timeoutMs Timeout in milliseconds
    * @param validator Optional function to filter the packet
    */
-  async waitForPacket<T extends PacketType>(type: T, timeoutMs = 5000, validator?: (p: PacketTypeMap[T]) => boolean): Promise<PacketTypeMap[T]> {
+  async waitForPacket<T extends keyof PacketTypeMap>(
+    type: T,
+    timeoutMs = 5000,
+    validator?: (p: PacketTypeMap[T]) => boolean,
+  ): Promise<PacketTypeMap[T]> {
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16)}`;
 
@@ -184,9 +188,10 @@ export class SentinelTcpClient {
    * @param serialNumber The device's serial number.
    * @param intervalMs The interval in milliseconds (default: 3000).
    */
-  public startKeepAlive(serialNumber: string, intervalMs = 3000): void {
+  public async startKeepAlive(serialNumber: string, intervalMs = 3000): Promise<void> {
     this.stopKeepAlive(); // Stop any existing loop
     logger.debug(`Starting keep-alive loop for ${serialNumber} every ${intervalMs}ms`);
+    await this.keepAlive(serialNumber);
     this.keepAliveInterval = setInterval(() => {
       if (this.socket?.writable) {
         this.keepAlive(serialNumber).catch((err) => {
