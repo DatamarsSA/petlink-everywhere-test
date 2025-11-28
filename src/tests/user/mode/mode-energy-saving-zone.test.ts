@@ -134,7 +134,7 @@ describe("Energy Saving Zone", () => {
 
     // Wait for event and assert
     const event = await eventPromise;
-    logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
+    logger.info("onGpsMessageStatus:", event);
     expect(event.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
     logger.info("✓ Enter emulato, sub received true");
   });
@@ -163,7 +163,7 @@ describe("Energy Saving Zone", () => {
 
     // Wait for event and assert
     const event = await eventPromise;
-    logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
+    logger.info("onGpsMessageStatus:", event);
     expect(event.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
     logger.info("✓ Exit emulato, sub received false");
   });

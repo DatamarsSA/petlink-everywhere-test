@@ -118,22 +118,22 @@ export class SirfProtocol {
       `\n\n[${direction}] SIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
       `${protocolLegend}\n` +
       `[ORIGINAL-HEX]: ${rawSirfPacket.toString("hex").toUpperCase()}\n` +
-      `[HEADER: ${rawSirfPacket.subarray(0, SIRF.HEADER.length).toString("hex").toUpperCase()}]\n` +
-      `[LEN-PAYLOAD:] (hex: ${rawSirfPacket
+      `[SPLITTED-HEX]: HEADER:${rawSirfPacket.subarray(0, SIRF.HEADER.length).toString("hex").toUpperCase()} - ` +
+      `LEN:${rawSirfPacket
         .subarray(SIRF.HEADER.length, SIRF.HEADER.length + SIRF.LENGTH_FIELD)
         .toString("hex")
-        .toUpperCase()}) (decimal: ${length} B)\n` +
-      `[PAYLOAD-HEX]: ${payload.toString("hex").toUpperCase()}\n` +
-      `[PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payload.length}\n` +
-      (parsedPayload ? `[PAYLOAD-PARSED]: ${JSON.stringify(parsedPayload)}\n` : "") +
-      `[CRC: ${rawSirfPacket
+        .toUpperCase()} - ` +
+      `PAYLOAD:${payload.toString("hex").toUpperCase()} - ` +
+      `CRC:${rawSirfPacket
         .subarray(SIRF.HEADER.length + SIRF.LENGTH_FIELD + length, SIRF.HEADER.length + SIRF.LENGTH_FIELD + length + SIRF.CRC)
         .toString("hex")
-        .toUpperCase()}]\n` +
-      `[FOOTER: ${rawSirfPacket
+        .toUpperCase()} - ` +
+      `FOOTER:${rawSirfPacket
         .subarray(SIRF.HEADER.length + SIRF.LENGTH_FIELD + length + SIRF.CRC)
         .toString("hex")
-        .toUpperCase()}]`;
+        .toUpperCase()}\n` +
+      `[PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payload.length}\n` +
+      (parsedPayload ? `[PAYLOAD-PARSED]: ${JSON.stringify(parsedPayload)}` : "");
 
     // LOG UNICO E LEGGIBILE
     if (type != PacketType.PACKET_0x01 && type != PacketType.PACKET_0x08 && type != PacketType.PACKET_0x14) {
@@ -202,6 +202,8 @@ export class Packet01 {
       serial_number: "" as string,
       imei: "123456789012345" as string,
       iccid: "12345678901234567890" as string,
+      // imei: "359999999999999" as string, // 15 cifre che identificano il dispositivo fisico GPS (hardware)- Non cambia mai (è legato al device)
+      // iccid: "89390200000000000001" as string, // 19-20 cifre che identifica la SIM card (Assicurati che NON inizi con l'IMEI) - Può cambiare se sostituisci la SIM
       fw_version: "10.1.80" as string, //should be > 10.1.73 to be socket capable and not forcing SMS
       bl_version: "2.0.1" as string,
       latitude: 0 as number,
