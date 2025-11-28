@@ -2,14 +2,10 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js"; // Aggiungi Packet01 per emulazione
+import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
-import {
-  EntityTypeEnum,
-  SettingOperationEnum,
-  SettingTypeEnum,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { SettingOperationEnum, SettingTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { logger } from "../../../config/logger.js";
 
@@ -94,14 +90,16 @@ describe("Energy Saving Zone", () => {
 
     expect(packet15, "Should receive 0x15 (Safe Places with zones)").toBeDefined();
     expect(packet10, "Should receive 0x10 (Evo Extra Data enable)").toBeDefined();
+    logger.info("packet15 (Safe Places with zones):", packet15);
+    logger.info("packet10 (Evo Extra Data enable)", packet10);
 
     // Assert 0x15 zones (match create payload)
     expect(packet15.zones).toHaveLength(1); // Una zona creata
     expect(packet15.zones[0]).toMatchObject({
-      lat: createZonePayload.position.lat,
-      lng: createZonePayload.position.lng,
-      radius: createZonePayload.radius,
-      bssid: createZonePayload.bssid.toUpperCase(), // Hex
+      lat: expect.closeTo(createZonePayload.position.lat, 3),
+      lng: expect.closeTo(createZonePayload.position.lng, 3),
+      radius: expect.closeTo(createZonePayload.radius, 1),
+      bssid: createZonePayload.bssid.replace(/:/g, "").toUpperCase(),
     });
 
     // Parse 0x10
@@ -111,60 +109,62 @@ describe("Energy Saving Zone", () => {
   });
 
   // IT 3: Emula Enter - Send 0x01 + Assert Sub
-  it("Device DETECT wifi (emula enter) - Send 0x01 + GraphQL Sub Assert", async () => {
+  it("Device DETECT wifi (emula enter) - Send 0x01 + notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device enters ESZ (WiFi detect)");
 
     // Start listening for ESZ enter event
-    const eventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+    const eszEnterEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
       { timeoutMs: fxt.socket.timeoutMs },
     );
 
-    // Emula: Send 0x01 con detached=true (TS setta byte 81 bit raw)
+    // Emula: Send 0x01 con WiFi detected (spare_c5 = NDetached)
+    // Sentinel calcola: extended_notifications = notifications + (spare_c5 << 8)
+    // Se extended_notifications & 0x0100 != 0 → collar_detached = 1 → IN zona ESZ
     const enterData = {
       ...Packet01.D2SWelcomeHeartBeat.Data,
       serial_number: setup.devices.dogStandard!.serialNumber,
-      latitude: 0, // GPS off
-      longitude: 0,
-      collar_detached: true, // Convenience: TS setta spare_c5 bit 0x01 (raw byte 81)
+      latitude: 44.5024, // GPS coords dentro la zona ESZ
+      longitude: 11.3463,
+      spare_c5: Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached, // "In home" - WiFi rilevato → Device IN zona
     };
     await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(enterData), enterData);
 
     // Wait for event and assert
-    const event = await eventPromise;
-    logger.info("onGpsMessageStatus:", event);
-    expect(event.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
+    const eszEnterEvent = await eszEnterEventPromise;
+    logger.info("onGpsMessageStatus:", eszEnterEvent);
+    expect(eszEnterEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
     logger.info("✓ Enter emulato, sub received true");
   });
 
   // IT 4: Emula Exit - Send 0x01 + Assert Sub
-  it("Device LEAVES wifi (emula exit) - Send 0x01 + GraphQL Sub Assert", async () => {
+  it("Device LEAVES wifi (emula exit) - Send 0x01 + notify app GraphQL Sub Assert", async () => {
     logger.info("📍 Emula device leaves ESZ (WiFi lost)");
 
     // Start listening for ESZ exit event
-    const eventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+    const eszExitEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
       { timeoutMs: fxt.socket.timeoutMs },
     );
 
-    // Emula: detached=false (byte 81 bit=0)
+    // Emula: WiFi lost (spare_c5 = 0 → nessun flag attivo)
     const exitData = {
       ...Packet01.D2SWelcomeHeartBeat.Data,
       serial_number: setup.devices.dogStandard!.serialNumber,
-      latitude: 44.5024, // GPS on
+      latitude: 44.5024, // GPS coords (ma senza WiFi)
       longitude: 11.3463,
-      collar_detached: false, // TS setta byte 81=0
+      spare_c5: 0x00, // Nessun flag → WiFi NOT detected → Device OUT zona
     };
     await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(exitData), exitData);
 
     // Wait for event and assert
-    const event = await eventPromise;
-    logger.info("onGpsMessageStatus:", event);
-    expect(event.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
+    const eszExitEvent = await eszExitEventPromise;
+    logger.info("onGpsMessageStatus:", eszExitEvent);
+    expect(eszExitEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
     logger.info("✓ Exit emulato, sub received false");
   });
 

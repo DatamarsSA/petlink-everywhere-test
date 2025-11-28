@@ -164,81 +164,113 @@ export class Packet01 {
    * Device → Sentinel (WelcomeHeartBeat)
    */
   static D2SWelcomeHeartBeat = class {
+    /**
+     * Notifications byte: Eventi/stati del dispositivo
+     * Combinabili con bitwise OR (es. NJustPowered | NFullCharge)
+     */
     static readonly Notifications = {
-      NJustPowered: 0x01,
-      NPoweringOFF: 0x02,
-      NSMSReceived: 0x04,
-      NNoGPS: 0x08,
-      NJustUpgraded: 0x10,
-      NInsideFence: 0x20,
-      NOutsideFence: 0x40,
-      NFullCharge: 0x80,
+      NJustPowered: 0x01,      // Device appena acceso
+      NPoweringOFF: 0x02,      // Device in spegnimento
+      NSMSReceived: 0x04,      // SMS ricevuto
+      NNoGPS: 0x08,            // Nessun fix GPS
+      NJustUpgraded: 0x10,     // Firmware appena aggiornato
+      NInsideFence: 0x20,      // Dentro geofence
+      NOutsideFence: 0x40,     // Fuori geofence
+      NFullCharge: 0x80,       // Batteria completamente carica
     } as const;
 
+    /**
+     * SpareC5 byte: Stati estesi del dispositivo
+     * ⚠️ Sentinel calcola: extended_notifications = notifications + (spare_c5 << 8)
+     * - Se extended_notifications & 0x0100 (bit 8 = spare_c5 bit 0) → collar_detached = 1 → Device IN zona ESZ
+     * Combinabili con bitwise OR (es. NDetached | NJustBooted)
+     */
     static readonly SpareC5 = {
-      NDetached: 0x01,
-      NTempWarning: 0x02,
-      NJustBooted: 0x04,
-      NProductionTest: 0x08,
-      NTempAlarm: 0x10,
-      NContinousMode: 0x20,
-      NGeran: 0x40,
-      NEutran: 0x80,
+      NDetached: 0x01,         // "In home" - WiFi della zona ESZ rilevato → Device IN zona
+      NTempWarning: 0x02,      // Warning temperatura
+      NJustBooted: 0x04,       // Device appena avviato
+      NProductionTest: 0x08,   // Modalità test produzione
+      NTempAlarm: 0x10,        // Allarme temperatura
+      NContinousMode: 0x20,    // Modalità continua
+      NGeran: 0x40,            // GERAN (2G/EDGE)
+      NEutran: 0x80,           // E-UTRAN (LTE/4G)
     } as const;
 
+    /**
+     * InfoFlags byte: Flag informativi su dati inclusi nel pacchetto
+     * Combinabili con bitwise OR (es. InfoWifiCells | InfoGsmCellsFlag)
+     */
     static readonly InfoFlags = {
-      InfoGsmCellsFlag: 0x01,
-      InfoAgpsEnable: 0x02,
-      InfoAgps2: 0x04,
-      InfoAgps3: 0x08,
-      InfoActivity: 0x10,
-      InfoFmwDisable: 0x20,
-      InfoUbloxEph: 0x40,
-      InfoWifiCells: 0x80,
+      InfoGsmCellsFlag: 0x01,  // Dati celle GSM inclusi nel pacchetto
+      InfoAgpsEnable: 0x02,    // AGPS abilitato
+      InfoAgps2: 0x04,         // AGPS flag 2
+      InfoAgps3: 0x08,         // AGPS flag 3
+      InfoActivity: 0x10,      // Dati attività inclusi
+      InfoFmwDisable: 0x20,    // Update firmware disabilitato
+      InfoUbloxEph: 0x40,      // Ephemeris Ublox
+      InfoWifiCells: 0x80,     // Dati WiFi cells inclusi nel pacchetto
     } as const;
 
     static Data = {
-      // Main fields
-      serial_number: "" as string,
-      imei: "123456789012345" as string,
-      iccid: "12345678901234567890" as string,
-      // imei: "359999999999999" as string, // 15 cifre che identificano il dispositivo fisico GPS (hardware)- Non cambia mai (è legato al device)
-      // iccid: "89390200000000000001" as string, // 19-20 cifre che identifica la SIM card (Assicurati che NON inizi con l'IMEI) - Può cambiare se sostituisci la SIM
-      fw_version: "10.1.80" as string, //should be > 10.1.73 to be socket capable and not forcing SMS
-      bl_version: "2.0.1" as string,
-      latitude: 0 as number,
-      longitude: 0 as number,
-      altitude: 0 as number,
-      last_gps_time: 0 as number,
-      temperature: 20 as number,
-      speed: 0 as number,
-      battery: 4200 as number,
-      csq: 20 as number,
-      ber: 0 as number,
-      new_status: 0 as number,
-      curr_status: 0 as number,
-      notifications: 0 as number, // Use Packet01.D2SWelcomeHeartBeat.Notifications.NJustPowered (example value)
-      reset_cause: 0 as number,
-      gprs_retry: 0 as number,
-      gps_sat: 8 as number,
-      spare_c4: 0 as number,
-      spare_c5: 0 as number, // Use Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached (example value)
-      spare_c6: 0 as number,
-      spare_c7: 0 as number,
-      spare_c8: 0 as number,
-      last_gprs: 0 as number,
-      last_gps: 0 as number,
-      spare_s3: 0 as number,
-      spare_s4: 0 as number,
-      spare_s5: 0 as number,
-      spare_s6: 0 as number,
-      spare_s7: 0 as number,
-      spare_s8: 0 as number,
-      info_flag: 0 as number, // Use Packet01.D2SWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag (example value)
+      // === Identificativi dispositivo ===
+      serial_number: "" as string, // Serial number del device (es. "UTEST02")
+      imei: "359999999999999" as string, // IMEI (15 cifre): ID univoco del modem GSM (hardware) - NON cambia mai
+      iccid: "89390200000000000001" as string, // ICCID (19-20 cifre): ID della SIM card - ⚠️ NON deve iniziare con IMEI!
 
-      // Optional cell data
-      wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined,
-      gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined,
+      // === Versioni firmware ===
+      fw_version: "10.1.80" as string, // Firmware version - ⚠️ Deve essere >= 10.1.73 per socket TCP (altrimenti SMS fallback)
+      bl_version: "2.0.1" as string, // Bootloader version
+
+      // === Posizione GPS ===
+      latitude: 0 as number, // Latitudine (gradi decimali)
+      longitude: 0 as number, // Longitudine (gradi decimali)
+      altitude: 0 as number, // Altitudine (metri)
+      last_gps_time: 0 as number, // Unix timestamp dell'ultimo fix GPS
+
+      // === Sensori ===
+      temperature: 20 as number, // Temperatura (°C * 10, es. 200 = 20.0°C)
+      speed: 0 as number, // Velocità (km/h * 10)
+      battery: 4200 as number, // Tensione batteria (mV, es. 4200 = 4.2V)
+
+      // === Rete cellulare ===
+      csq: 20 as number, // Cell Signal Quality (0-31, 99 = unknown)
+      ber: 0 as number, // Bit Error Rate
+
+      // === Stati operativi ===
+      new_status: 0 as number, // Nuovo stato richiesto dall'app
+      curr_status: 0 as number, // Stato corrente del device
+      notifications: 0 as number, // Bitfield eventi (usa Packet01.D2SWelcomeHeartBeat.Notifications.*)
+      reset_cause: 0 as number, // Causa dell'ultimo reset
+
+      // === Connettività ===
+      gprs_retry: 0 as number, // Tentativi GPRS falliti
+      gps_sat: 8 as number, // Numero satelliti GPS visibili
+
+      // === Spare bytes (dati estesi) ===
+      spare_c4: 0 as number, // Byte esteso 4
+      spare_c5: 0 as number, // Byte esteso 5 - Bitfield stati (usa Packet01.D2SWelcomeHeartBeat.SpareC5.*)
+      spare_c6: 0 as number, // Byte esteso 6
+      spare_c7: 0 as number, // Byte esteso 7
+      spare_c8: 0 as number, // Byte esteso 8
+
+      // === Timestamp ===
+      last_gprs: 0 as number, // Secondi dall'ultima connessione GPRS
+      last_gps: 0 as number, // Secondi dall'ultimo fix GPS
+
+      // === Spare shorts (dati estesi) ===
+      spare_s3: 0 as number, // Short esteso 3
+      spare_s4: 0 as number, // Short esteso 4 (usato per ephemeris CRC)
+      spare_s5: 0 as number, // Short esteso 5
+      spare_s6: 0 as number, // Short esteso 6
+      spare_s7: 0 as number, // Short esteso 7
+      spare_s8: 0 as number, // Short esteso 8
+
+      // === Info flags ===
+      info_flag: 0 as number, // Bitfield dati inclusi (usa Packet01.D2SWelcomeHeartBeat.InfoFlags.*)
+
+      // === Dati cellulari opzionali (se info_flag ha i bit corrispondenti) ===
+      wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined, // Celle WiFi rilevate
+      gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined, // Celle GSM rilevate
     };
 
     static toBuffer(data: typeof Packet01.D2SWelcomeHeartBeat.Data): Buffer {
@@ -668,12 +700,12 @@ export class Packet15 {
 export interface ParsedPacket {
   type: number;
   payload:
-    | typeof Packet01.D2SWelcomeHeartBeat.Data
-    | typeof Packet01.S2DGeofenceResponse.Data
-    | typeof Packet0A.Data
-    | typeof Packet10.Data
-    | typeof Packet15.Data
-    | { error: string };
+  | typeof Packet01.D2SWelcomeHeartBeat.Data
+  | typeof Packet01.S2DGeofenceResponse.Data
+  | typeof Packet0A.Data
+  | typeof Packet10.Data
+  | typeof Packet15.Data
+  | { error: string };
   raw: Buffer;
 }
 

@@ -55,7 +55,7 @@ export class SentinelTcpClient {
     if (!this.socket) throw new Error("Not connected");
 
     const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
-    // SirfProtocol.logPacket("OUTGOING", sirfPacket, originalPacketData);
+    SirfProtocol.logPacket("OUTGOING", sirfPacket, originalPacketData);
     this.socket.write(sirfPacket);
   }
 
