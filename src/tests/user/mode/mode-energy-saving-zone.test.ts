@@ -30,10 +30,11 @@ describe("Energy Saving Zone", () => {
   };
 
   beforeAll(async () => {
-    // STEP 0: Setup (user, pet, device, sub)
+    // STEP 1: Create user, pet, device, and purchase subscription
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    // Connect Sentinel
+    // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
+    // STEP 3: Start aggressive keep-alive to prevent socket disconnection
     sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
   });
 
@@ -121,7 +122,7 @@ describe("Energy Saving Zone", () => {
         { id: setup.devices.dogStandard!.id },
         {
           next: (event: any) => {
-            logger.debug("onGpsMessageStatus:", JSON.stringify(event, null, 2));
+            logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
             const status = event.data?.onGpsMessageStatus?.status?.inEnergySavingZone;
             if (status === true) {
               // Esatto match
@@ -166,7 +167,7 @@ describe("Energy Saving Zone", () => {
         { id: setup.devices.dogStandard!.id },
         {
           next: (event: any) => {
-            logger.debug("onGpsMessageStatus:", JSON.stringify(event, null, 2));
+            logger.info("onGpsMessageStatus:", JSON.stringify(event, null, 2));
             const status = event.data?.onGpsMessageStatus?.status?.inEnergySavingZone;
             if (status === false) {
               statusReceived = status;

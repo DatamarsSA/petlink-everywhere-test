@@ -41,7 +41,9 @@ export enum OperatingStatus {
 export enum PacketType {
   PACKET_0x01 = 0x01,
   PACKET_0x0A = 0x0a,
+  PACKET_0x08 = 0x08,
   PACKET_0x10 = 0x10,
+  PACKET_0x14 = 0x14,
   PACKET_0x15 = 0x15,
 }
 
@@ -134,7 +136,7 @@ export class SirfProtocol {
         .toUpperCase()}]`;
 
     // LOG UNICO E LEGGIBILE
-    if (type != PacketType.PACKET_0x01) {
+    if (type != PacketType.PACKET_0x01 && type != PacketType.PACKET_0x08 && type != PacketType.PACKET_0x14) {
       // not log 01 packet to hide rumors from heartbeat keepalive
       logger.info(packetVisualization);
     }
@@ -200,7 +202,7 @@ export class Packet01 {
       serial_number: "" as string,
       imei: "123456789012345" as string,
       iccid: "12345678901234567890" as string,
-      fw_version: "10.1.70" as string,
+      fw_version: "10.1.80" as string, //should be > 10.1.73 to be socket capable and not forcing SMS
       bl_version: "2.0.1" as string,
       latitude: 0 as number,
       longitude: 0 as number,
@@ -636,15 +638,15 @@ export class Packet15 {
   static fromBuffer(payload: Buffer): typeof Packet15.Data {
     const zones: { lat: number; lng: number; radius: number; bssid: string }[] = [];
     let offset = 1;
-    const zoneSize = 30;
+    const zoneSize = 18; // Changed from 30 (4+4+4+6 instead of 8+8+8+6)
 
     while (offset + zoneSize <= payload.length) {
-      const lat = payload.readDoubleLE(offset);
-      offset += 8;
-      const lng = payload.readDoubleLE(offset);
-      offset += 8;
-      const radius = payload.readDoubleLE(offset);
-      offset += 8;
+      const lat = payload.readFloatLE(offset); // Changed from readDoubleLE
+      offset += 4; // Changed from 8
+      const lng = payload.readFloatLE(offset); // Changed from readDoubleLE
+      offset += 4; // Changed from 8
+      const radius = payload.readFloatLE(offset); // Changed from readDoubleLE
+      offset += 4; // Changed from 8
       const bssid = payload
         .subarray(offset, offset + 6)
         .toString("hex")
