@@ -1,18 +1,7 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import {
-  Packet01,
-  SirfProtocol,
-  parsePacketByType,
-  ParsedPacket,
-  SIRF,
-  PacketType,
-  Packet0A,
-  Packet10,
-  Packet15,
-  PacketTypeMap,
-} from "./packet-encode-decode.js";
+import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap } from "./packet-encode-decode.js";
 
 export class SentinelTcpClient {
   private socket: Socket | null = null;
@@ -151,7 +140,6 @@ export class SentinelTcpClient {
       //    Il payload inizia dopo l'header e il length field, finisce prima del CRC
       const payloadStart = SIRF.HEADER.length + SIRF.LENGTH_FIELD;
       const payload: Buffer = rawPacket.subarray(payloadStart, payloadStart + len);
-      const type: number = payload[0];
 
       try {
         // Parse with factory (manual parsing)
