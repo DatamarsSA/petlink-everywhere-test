@@ -53,12 +53,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(fxt.isKippyRun && evoDevice
         ? [
-            petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-              productId: evoDevice.id,
-              countryCode: evoDevice.countryCode,
-              serialNumber: evoDevice.serialNumber,
-            }),
-          ]
+          petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+            productId: evoDevice.id,
+            countryCode: evoDevice.countryCode,
+            serialNumber: evoDevice.serialNumber,
+          }),
+        ]
         : []),
     ];
 
@@ -157,7 +157,7 @@ describe("DEFAULT subscription flow", () => {
     const updatedBillingInfo = await petlink.core.graphqlHttp.authJwt.getBillingInfo();
 
     // Debug
-    logger.debug("Billing info updated", {
+    logger.info("Billing info updated", {
       sentCity: user.city,
       returnedCity: updatedBillingInfo.getBillingInfo.billingInfo?.city,
     });
@@ -337,7 +337,7 @@ describe("DEFAULT subscription flow", () => {
     it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY sub + PET-protection", async () => {
       const chosenPlan = availablePlansForThisDevice![0].pricings[0]!;
       const chosenPetProtection = availablePetProtectionForThisPet![0].pricings[0]!;
-      logger.debug("Chosen plans for test", { chosenPlan, chosenPetProtection });
+      logger.info("Chosen plans for test", { chosenPlan, chosenPetProtection });
 
       const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
@@ -393,7 +393,7 @@ describe("DEFAULT subscription flow", () => {
     });
 
     it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY PET-protection alone", async () => {
-      logger.debug("dentro BUY PET-protection alone");
+      logger.info("dentro BUY PET-protection alone");
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
 
@@ -413,7 +413,7 @@ describe("DEFAULT subscription flow", () => {
       ).toBe("200");
 
       // STEP 3: Wait for the subscription to become active with SUCCEEDED payment status
-      logger.debug(`bought SUB for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
+      logger.info(`bought SUB for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
       const activeSubscription = await waitFor(
         async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
         {
@@ -432,7 +432,7 @@ describe("DEFAULT subscription flow", () => {
       expect(activeSub.paymentStatus, "Payment status should be SUCCEEDED before purchasing pet protection").toBe("SUCCEEDED");
 
       // STEP 4: Purchase pet protection alone
-      logger.debug(`bought PET-PROTECTION for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
+      logger.info(`bought PET-PROTECTION for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
       const petProtectionPurchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BuyNewSubscription,
@@ -628,7 +628,7 @@ describe("DEFAULT subscription flow", () => {
       ]);
       // STEP 3: Purchase a subscription that will be available for all tests
       const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-      logger.debug("Purchasing subscription for EDIT tests", { chosenPlan });
+      logger.info("Purchasing subscription for EDIT tests", { chosenPlan });
 
       const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {

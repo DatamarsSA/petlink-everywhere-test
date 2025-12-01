@@ -138,7 +138,7 @@ export class SirfProtocol {
     // LOG UNICO E LEGGIBILE
     if (type != PacketType.PACKET_0x01 && type != PacketType.PACKET_0x08 && type != PacketType.PACKET_0x14) {
       // not log 01 packet to hide rumors from heartbeat keepalive
-      logger.info(packetVisualization);
+      logger.debug(packetVisualization);
     }
   }
 }
@@ -728,7 +728,7 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
         return { type, payload: Packet15.fromBuffer(payload), raw: payload };
       default:
         const errorMessage = `Parser for packet not found.`;
-        logger.warn(errorMessage);
+        logger.error(errorMessage);
         return { type, payload: { error: errorMessage }, raw: payload };
     }
   } catch (e) {

@@ -144,10 +144,25 @@ expect(
   - **Use Enums**: For values like species or device types, always import and use the TypeScript `enum` (e.g., `SpeciesEnum.DOG`). Avoid raw strings.
   - **Prefer `type` or `interface`**: Do not use `const` objects for defining complex type structures.
 
-- **Logging**:
-  - Use the central `logger` (`logger.info`, `logger.debug`). **Do not use `console.log`**.
-  - `logger.info()`: High-level business events (e.g., "Testing subscription purchase").
-  - `logger.debug()`: Internal operations, setup steps, detailed flow tracing.
+- **Logging Strategy**:
+  - **`logger.debug()`** (clients only): Low-level flow (auth, caching, connection state). Use to diagnose client/wrapper issues.
+  - **`logger.error()`** (clients only): Actual failures (catch blocks, timeouts, validation errors).
+  - **`logger.info()`** (tests only): Business flow with full context—log payloads before API calls, responses after. Default run shows only test flow; enable debug to diagnose client issues; errors always visible.
+  
+  ```typescript
+  // Client (debug + error only)
+  try {
+    logger.debug("[WS] Subscription starting", { subId, operationName });
+  } catch (error: any) {
+    logger.error("[WS] Subscription failed", { error: error.message, subId });
+  }
+  
+  // Test (info only)
+  logger.info("▶ Starting pet creation flow");
+  logger.info(`→ Calling createPet:`, dogPayload);
+  const response = await petlink.core.graphql.authJwt.createPet(dogPayload);
+  logger.info(`← Response:`, response);
+  ```
 
 ---
 

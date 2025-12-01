@@ -183,7 +183,7 @@ export class SentinelTcpClient {
     this.keepAliveInterval = setInterval(() => {
       if (this.socket?.writable) {
         this.keepAlive(serialNumber).catch((err) => {
-          logger.warn(`Keep-alive interval failed: ${err.message}`);
+          logger.error(`Keep-alive interval failed: ${err.message}`);
         });
       }
     }, intervalMs);
@@ -194,7 +194,7 @@ export class SentinelTcpClient {
    */
   public stopKeepAlive(): void {
     if (this.keepAliveInterval) {
-      logger.info("Stopping keep-alive loop");
+      logger.debug("Stopping keep-alive loop");
       clearInterval(this.keepAliveInterval);
       this.keepAliveInterval = null;
     }
