@@ -74,7 +74,7 @@ describe("Live Tracking", () => {
     logger.info("📍 STEP 3: Verify device received Packet 0x01 (LIVE_TRACKING command)");
     const commandPacket = await sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
-      15000, // Increased timeout to be safe
+      fxt.socket.timeoutMs,
       (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
     );
     expect(commandPacket.requested_operating_status, "Received packet should have requested_operating_status = FAST_TRACKING").toBe(
@@ -137,7 +137,7 @@ describe("Live Tracking", () => {
 
     const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
-      15000, // Increased timeout to be safe
+      fxt.socket.timeoutMs,
       (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
     );
     expect(deactivationPacket.requested_operating_status, "Received deactivation packet should have requested_operating_status = DEFAULT").toBe(

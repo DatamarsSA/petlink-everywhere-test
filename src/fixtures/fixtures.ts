@@ -118,7 +118,7 @@ export const fxt = {
   current: baseFixtures[currentAppBrand],
   polling: {
     timeoutMs: 30000,
-    intervalMs: 1000,
+    intervalMs: 1500,
   },
   socket: {
     timeoutMs: 30000,
