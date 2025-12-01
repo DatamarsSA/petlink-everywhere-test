@@ -1457,6 +1457,7 @@ export interface Pricing {
 
 export interface Product {
   __typename?: "Product";
+  brand?: Maybe<AppBrand>;
   creationDate: Scalars["String"]["output"];
   endOfLifeDevice?: Maybe<Scalars["Boolean"]["output"]>;
   entityType: ProductTypeEnum;
@@ -2626,6 +2627,7 @@ export interface UploadData {
 
 export interface User {
   __typename?: "User";
+  appBrand: AppBrand;
   arcaPlanetTerms?: Maybe<Scalars["Boolean"]["output"]>;
   birthDate?: Maybe<Scalars["String"]["output"]>;
   chargebeeId?: Maybe<Scalars["String"]["output"]>;

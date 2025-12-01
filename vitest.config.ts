@@ -41,17 +41,15 @@ export default defineConfig(({ mode }) => {
     GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
     GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
     // App Brand
-    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
+    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("PETLINK"),
     // log level console
-    LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
+    LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
     // Sentinel socket tcp
     SENTINEL_HOST: z.ipv4().min(1, "SENTINEL_HOST è richiesto"),
     SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
   });
 
   const result = envSchema.safeParse(process.env);
-  console.log("APP_BRAND", result.data?.APP_BRAND);
-
   if (!result.success) {
     console.error("❌ Envs validation failed");
     result.error.issues.forEach((issue) => {
@@ -61,6 +59,8 @@ export default defineConfig(({ mode }) => {
   }
   Object.assign(process.env, result.data);
   console.log("✅ Envs validated successfully");
+  console.log("APP_BRAND: ", result.data?.APP_BRAND);
+  console.log("LOG_LEVEL: ", result.data?.LOG_LEVEL);
 
   return {
     test: {
@@ -68,8 +68,8 @@ export default defineConfig(({ mode }) => {
       environment: "node",
       env: rawEnv,
       // timeouts più larghi per integrazione/E2E
-      testTimeout: 180000, // singolo test (it) - 3 minutes
-      hookTimeout: 180000, // beforeAll/afterAll/beforeEach/afterEach - 3 minutes
+      testTimeout: 60000, // singolo test (it) - 1 minute
+      hookTimeout: 60000, // beforeAll/afterAll/beforeEach/afterEach - 1 minute
 
       // 1) Eseguito PRIMA di ogni file di test
       setupFiles: ["./src/config/setup-teardown/setup-once-per-file.ts"],

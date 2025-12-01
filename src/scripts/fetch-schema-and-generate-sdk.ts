@@ -7,7 +7,7 @@ import { config } from "dotenv";
  */
 function loadEnvironmentVariables(): void {
   const environment = process.env.TEST_ENV || "develop";
-  console.log(`📦 Loading environment variables from .env.${environment}`);
+  console.log(`\n📦 Loading environment variables from .env.${environment}`);
   config({ path: `.env.${environment}` });
 }
 

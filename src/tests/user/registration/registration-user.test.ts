@@ -206,14 +206,14 @@ describe("User Registration", () => {
     //FIXME: now deleteUser pass also with pet associated because check is on app and not on backend api, when added cehck on backend api this test should test also not.tobe 200
     expect(
       deleteUserResponse.deleteUser.code,
-      `deleteUser should fail - Error: ${deleteUserResponse.deleteUser.message}${deleteUserResponse.deleteUser.translationCode ? ` (${deleteUserResponse.deleteUser.translationCode})` : ""}`,
+      `deleteUser should fail if he's PET associated - Error: ${deleteUserResponse.deleteUser.message}${deleteUserResponse.deleteUser.translationCode ? ` (${deleteUserResponse.deleteUser.translationCode})` : ""}`,
     ).not.toBe("200");
 
     await petlink.core.graphqlHttp.authJwt.deletePet({ petId: createCatResponse.createPet.pet!.id });
     deleteUserResponse = await petlink.core.graphqlHttp.authJwt.deleteUser({ id: userId });
     expect(
       deleteUserResponse.deleteUser.code,
-      `deleteUser should succeed - Error: ${deleteUserResponse.deleteUser.message}${deleteUserResponse.deleteUser.translationCode ? ` (${deleteUserResponse.deleteUser.translationCode})` : ""}`,
+      `deleteUser should succeed if he hasn't PET associated- Error: ${deleteUserResponse.deleteUser.message}${deleteUserResponse.deleteUser.translationCode ? ` (${deleteUserResponse.deleteUser.translationCode})` : ""}`,
     ).toBe("200");
   });
 });

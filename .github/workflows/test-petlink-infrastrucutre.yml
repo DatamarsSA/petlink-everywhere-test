@@ -17,7 +17,7 @@ on:
           - test
 
 jobs:
-  run-integration-tests:
+  run-tests:
     runs-on: ubuntu-latest
     # 1. If repository_dispatch: use branch where other repos has pushed
     # 2. If workflow_dispatch: use value chosen manually
@@ -148,7 +148,7 @@ jobs:
         if: always()
         with:
           report_paths: "test-reports-${{ matrix.app_brand }}/junit.xml"
-          check_name: "Report integration test (${{ matrix.app_brand }} on env ${{ env.NODE_ENV }})"
+          check_name: "Report (test ${{ matrix.app_brand }} on ${{ env.NODE_ENV }})"
           fail_on_failure: true
           require_tests: true
           # Summary (pagina "Summary" del run su Actions)
