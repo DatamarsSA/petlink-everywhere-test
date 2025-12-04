@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
     GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
     GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
     // App Brand
-    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("PETLINK"),
+    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
     // log level console
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
     // Sentinel socket tcp

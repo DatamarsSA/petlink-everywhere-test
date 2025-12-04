@@ -416,9 +416,9 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
         // Setup timeout
         if (options?.timeoutMs) {
           timeout = setTimeout(() => {
-            logger.error("WebSocket timeout", { subId, timeoutMs: options.timeoutMs });
+            logger.error("GraphQl Subscription socket timeout", { subId, timeoutMs: options.timeoutMs });
             cleanup();
-            reject(new Error(`Timeout: no matching event received in ${options.timeoutMs}ms`));
+            reject(new Error(`App not received notification throught GraphQL sub in ${options.timeoutMs}ms`));
           }, options.timeoutMs);
         }
 
@@ -426,6 +426,7 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
         this.subscriptions.set(subId, {
           callbacks: {
             next: (event: any) => {
+              logger.debug("📩 GraphQL subscription event received:", event.data);
               // Check if event matches predicate
               if (predicate(event.data)) {
                 cleanup();

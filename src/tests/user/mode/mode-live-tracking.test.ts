@@ -100,7 +100,7 @@ describe("Live Tracking", () => {
     await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
     logger.info("✓ Packet 0x01 #1 sent");
 
-    logger.info("📍 STEP 6: Wait for positions to arrive via GraphQLWebSocket on app");
+    logger.info("📍 STEP 5: Wait for positions to arrive via GraphQLWebSocket on app");
     await subscriptionPromise;
 
     logger.info("positionsReceived: ", positionsReceived);

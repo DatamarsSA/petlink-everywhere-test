@@ -422,3 +422,23 @@ mutation sendSetting($setting: Setting!) {
     }
   }
 }
+
+mutation createGeofence($geofence: GeofenceIn!) {
+  createGeofence(geofence: $geofence) {
+    code
+    translationCode
+    message
+    geofence {
+      id
+      entityType
+      name
+      position {
+        lat
+        lng
+      }
+      userId
+      creationDate
+      updateDate
+    }
+  }
+}

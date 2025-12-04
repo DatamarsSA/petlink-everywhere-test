@@ -750,6 +750,7 @@ export interface Mutation {
   /**   sso */
   setSsoToken: ResponseSsoUrl;
   signUpUser: Response;
+  startMigration: Response;
   stopRenewingAddon?: Maybe<Response>;
   stopRenewingSubscription?: Maybe<Response>;
   /**   subscriptions */
@@ -959,6 +960,12 @@ export type MutationSignUpUserArgs = {
   languageId?: InputMaybe<LanguageId>;
   otpData: OtpInput;
   user: UserIn;
+};
+
+export type MutationStartMigrationArgs = {
+  appBrand: AppBrand;
+  contact: Scalars["String"]["input"];
+  password: Scalars["String"]["input"];
 };
 
 export type MutationStopRenewingAddonArgs = {
@@ -1457,8 +1464,9 @@ export interface Pricing {
 
 export interface Product {
   __typename?: "Product";
-  brand?: Maybe<AppBrand>;
+  appBrand?: Maybe<AppBrand>;
   creationDate: Scalars["String"]["output"];
+  deviceType?: Maybe<DeviceTypeEnum>;
   endOfLifeDevice?: Maybe<Scalars["Boolean"]["output"]>;
   entityType: ProductTypeEnum;
   id: Scalars["String"]["output"];
@@ -1518,6 +1526,7 @@ export interface Query {
   checkContact: Response;
   checkGps: ResponseCheckGps;
   checkMicrochip: ResponseCheckMicrochip;
+  checkMigration: Response;
   checkoutAddons: ResponseCheckoutAddons;
   checkoutCareProtection: ResponseCheckoutCareProtection;
   checkoutEOLNewDevice: ResponseCheckoutEolNewDevice;
@@ -1594,6 +1603,12 @@ export type QueryCheckGpsArgs = {
 
 export type QueryCheckMicrochipArgs = {
   microchip: Scalars["String"]["input"];
+};
+
+export type QueryCheckMigrationArgs = {
+  appBrand: AppBrand;
+  contact: Scalars["String"]["input"];
+  password: Scalars["String"]["input"];
 };
 
 export type QueryCheckoutAddonsArgs = {
@@ -3195,6 +3210,30 @@ export type SendSettingMutation = {
       creationDate: string;
       updateDate: string;
       position: { __typename?: "Coordinates"; lat: number; lng: number };
+    } | null;
+  };
+};
+
+export type CreateGeofenceMutationVariables = Exact<{
+  geofence: GeofenceIn;
+}>;
+
+export type CreateGeofenceMutation = {
+  __typename?: "Mutation";
+  createGeofence: {
+    __typename?: "ResponseGeofence";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    geofence?: {
+      __typename?: "Geofence";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
     } | null;
   };
 };
@@ -5118,6 +5157,69 @@ export const SendSettingDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const CreateGeofenceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createGeofence" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "geofence" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "GeofenceIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createGeofence" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "geofence" }, value: { kind: "Variable", name: { kind: "Name", value: "geofence" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "geofence" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetUserDocument = {
   kind: "Document",
   definitions: [
@@ -7000,6 +7102,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "sendSetting",
+        "mutation",
+        variables,
+      );
+    },
+    createGeofence(
+      variables: CreateGeofenceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreateGeofenceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateGeofenceMutation>({
+            document: CreateGeofenceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createGeofence",
         "mutation",
         variables,
       );

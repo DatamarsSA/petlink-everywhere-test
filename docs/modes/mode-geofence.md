@@ -26,12 +26,10 @@ Geofence è una **modalità permanente** che crea una zona geografica (poligono 
 ```
 User: "Voglio proteggere il mio pet con una zona sicura"
   ↓
-App chiama: sendSetting({
-  operationType: "CREATE",
-  settingType: "GEOFENCE",
-  createObject: {
+App chiama: createGeofence({
+  geofence: {
     name: "Casa",
-    coordinates: [
+    position: [
       {lat: 44.5, lng: 11.3},      // Marker 1
       {lat: 44.5, lng: 11.35},     // Marker 2
       {lat: 44.55, lng: 11.35},    // Marker 3
@@ -55,7 +53,8 @@ User: "Attiva protezione geofence per il mio device"
 App chiama: sendSetting({
   operationType: "ACTIVATE",
   settingType: "GEOFENCE",
-  deviceId: "device123"
+  deviceId: "device123",
+  geofence: [ ...coordinates... ] // NOTA: Backend richiede coordinate esplicite
 })
   ↓
 Backend invia comando a SQS (commandsConsumer)
@@ -210,12 +209,12 @@ sequenceDiagram
     participant AppSync as AppSync
 
     Note over User,Device: STEP 1: Create Geofence
-    User->>Core: sendSetting(CREATE, GEOFENCE, coordinates)
+    User->>Core: createGeofence(geofence)
     Core->>DB: Store geofence (6 markers)
     Core->>User: Geofence created ✅
 
     Note over User,Device: STEP 2: Activate Geofence
-    User->>Core: sendSetting(ACTIVATE, GEOFENCE, deviceId)
+    User->>Core: sendSetting(ACTIVATE, GEOFENCE, deviceId, coordinates)
     Core->>DB: Update device: operating_status = ACTIVATING_GEOFENCE
     Core->>SQS: Queue settings message
     SQS->>Sentinel: settingsConsumer trigger

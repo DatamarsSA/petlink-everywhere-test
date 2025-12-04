@@ -2,6 +2,7 @@
   "name": "petlink-everywhere-test",
   "version": "1.0.0",
   "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
     "precommit": "yarn run tsc --noEmit",
     "fetch-schema": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts fetch",

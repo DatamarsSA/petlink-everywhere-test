@@ -74,7 +74,7 @@ export class SentinelTcpClient {
 
       const timer = setTimeout(() => {
         cleanup();
-        reject(new Error(`Timeout waiting for packet ${typeHex}`));
+        reject(new Error(`Device not received packet ${typeHex} from socket in ${timeoutMs}ms`));
       }, timeoutMs);
 
       const onPacket = (packet: ParsedPacket) => {

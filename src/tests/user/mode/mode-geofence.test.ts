@@ -1,0 +1,259 @@
+import { describe, it, beforeAll, afterAll, expect } from "vitest";
+import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
+import { Packet01, PacketType, OperatingStatus } from "../../../clients/sentinel/packet-encode-decode.js";
+import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
+import {
+  SettingOperationEnum,
+  SettingTypeEnum,
+  StatusState,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { fxt } from "../../../fixtures/fixtures.js";
+import { logger } from "../../../config/logger.js";
+
+describe("Geofence", () => {
+  // Sequential per dipendenze
+  let setup: TestSetup = {} as TestSetup;
+  let geofenceId: string; // Per activation/deactivation
+
+  // Explicit payload for Geofence creation (6 coordinate GPS)
+  const createGeofencePayload = {
+    name: "Casa Test Geofence",
+    position: [
+      { lat: 44.5, lng: 11.3 }, // Marker 1
+      { lat: 44.5, lng: 11.35 }, // Marker 2
+      { lat: 44.55, lng: 11.35 }, // Marker 3
+      { lat: 44.55, lng: 11.3 }, // Marker 4
+      { lat: 44.505, lng: 11.32 }, // Marker 5
+      { lat: 44.495, lng: 11.32 }, // Marker 6
+    ],
+  };
+
+  beforeAll(async () => {
+    // STEP 1: Create user, pet, device, and purchase subscription
+    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
+    // STEP 2: Connect to Sentinel TCP server
+    await sentinelTcpSocketClient.connect();
+    // STEP 3: Start aggressive keep-alive to prevent socket disconnection
+    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
+  });
+
+  afterAll(() => {
+    sentinelTcpSocketClient.stopKeepAlive();
+    sentinelTcpSocketClient.disconnect();
+    petlink.core.graphqlWS.disconnect();
+  });
+
+  // IT 1: Create Geofence (Core API only)
+  it("User CREATE Geofence (createGeofence) - API Assert", async () => {
+    logger.info("⏳ Waiting 5s for subscription propagation...");
+
+    logger.info("📍 User creates geofence");
+
+    const createGeofenceResponse = await petlink.core.graphqlHttp.authJwt.createGeofence({
+      geofence: createGeofencePayload,
+    });
+
+    expect(
+      createGeofenceResponse.createGeofence.code,
+      `createGeofence should succeed - Error: ${createGeofenceResponse.createGeofence.message}${createGeofenceResponse.createGeofence.translationCode ? ` (${createGeofenceResponse.createGeofence.translationCode})` : ""}`,
+    ).toBe("200");
+
+    // Salva ID per activation
+    geofenceId = createGeofenceResponse.createGeofence.geofence!.id;
+
+    logger.info("✓ Geofence created in DB");
+  });
+
+  // IT 2: Activate Geofence - Wait Packet 0x01 with coordinates
+  it("User ACTIVATE Geofence (sendSetting ACTIVATE) - Packet Assert", async () => {
+    logger.info("📍 User activates geofence");
+
+    const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
+      setting: {
+        operationType: SettingOperationEnum.Activate,
+        settingType: SettingTypeEnum.Geofence,
+        id: geofenceId,
+        deviceId: setup.devices.dogStandard!.id,
+        geofence: createGeofencePayload.position, // REQUIRED: Backend does not fetch from DB, must pass explicitly
+      },
+    });
+
+    expect(
+      activateResponse.sendSetting.code,
+      `sendSetting ACTIVATE should succeed - Error: ${activateResponse.sendSetting.message}${activateResponse.sendSetting.translationCode ? ` (${activateResponse.sendSetting.translationCode})` : ""}`,
+    ).toBe("200");
+
+    // Wait packet 0x01 with geofence data
+    logger.info("⏳ Waiting for 0x01 (geofence activation) on device...");
+    const packet01 = await sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      fxt.socket.timeoutMs,
+      (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
+    );
+
+    expect(packet01, "Should receive 0x01 (Geofence activation)").toBeDefined();
+    logger.info("packet01 (Geofence activation):", packet01);
+
+    // Assert geofence coordinates (match create payload)
+    expect(packet01.geofence_latitude_longitude).toHaveLength(6);
+    expect(packet01.requested_operating_status).toBe(OperatingStatus.GEOFENCE_ON);
+
+    // Verify coordinates match (allow small floating point differences)
+    packet01.geofence_latitude_longitude.forEach((coord, index) => {
+      expect(coord.lat).toBeCloseTo(createGeofencePayload.position[index].lat, 3);
+      expect(coord.lng).toBeCloseTo(createGeofencePayload.position[index].lng, 3);
+    });
+
+    logger.info("✓ Geofence activated, packet with correct coordinates");
+  });
+
+  // IT 3: Device Inside Geofence - Send 0x01 + Assert Sub
+  it("Device INSIDE geofence - Send 0x01 + notify app GraphQL Sub", async () => {
+    logger.info("📍 Emula device inside geofence");
+
+    // Start listening for geofence active event
+    const geofenceActiveEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onGpsMessageStatus,
+      { id: setup.devices.dogStandard!.id },
+      (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
+      { timeoutMs: fxt.socket.timeoutMs },
+    );
+
+    // Emula: Send 0x01 con inside_geofence flag
+    const insideData = {
+      ...Packet01.D2SWelcomeHeartBeat.Data,
+      serial_number: setup.devices.dogStandard!.serialNumber,
+      latitude: 44.505, // GPS coords dentro il poligono
+      longitude: 11.32,
+      notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NInsideFence, // 0x20 = inside geofence
+      last_gps_time: Math.floor(Date.now() / 1000),
+    };
+    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(insideData), insideData);
+
+    // Wait for event and assert
+    const geofenceActiveEvent = await geofenceActiveEventPromise;
+    logger.info("onGpsMessageStatus:", geofenceActiveEvent);
+    expect(geofenceActiveEvent.onGpsMessageStatus.status.inGeofence).toBe(true);
+    expect(geofenceActiveEvent.onGpsMessageStatus.status.geofence).toBe(StatusState.On);
+    logger.info("✓ Inside geofence emulated, sub received true");
+  });
+
+  // IT 4: Device Exits Geofence - Send 0x01 + Assert Auto Live Tracking
+  it("Device EXITS geofence - Send 0x01 + auto-activate Live Tracking", async () => {
+    logger.info("📍 Emula device exits geofence (critical!)");
+
+    // Start listening for geofence exit event
+    const geofenceExitEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onGpsMessageStatus,
+      { id: setup.devices.dogStandard!.id },
+      (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
+      { timeoutMs: fxt.socket.timeoutMs },
+    );
+
+    // Emula: Send 0x01 con outside_geofence flag
+    const exitData = {
+      ...Packet01.D2SWelcomeHeartBeat.Data,
+      serial_number: setup.devices.dogStandard!.serialNumber,
+      latitude: 44.4, // GPS coords fuori dal poligono
+      longitude: 11.2,
+      notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NOutsideFence, // 0x40 = outside geofence
+      last_gps_time: Math.floor(Date.now() / 1000),
+    };
+    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(exitData), exitData);
+
+    // Wait for geofence exit event
+    const geofenceExitEvent = await geofenceExitEventPromise;
+    logger.info("onGpsMessageStatus:", geofenceExitEvent);
+    expect(geofenceExitEvent.onGpsMessageStatus.status.inGeofence).toBe(false);
+
+    // CRITICAL: Sentinel should auto-activate Live Tracking
+    logger.info("⏳ Waiting for auto Live Tracking activation...");
+    const autoLiveTrackingPacket = await sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      fxt.socket.timeoutMs,
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
+
+    expect(autoLiveTrackingPacket, "Should receive auto Live Tracking activation").toBeDefined();
+    expect(autoLiveTrackingPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
+    expect(autoLiveTrackingPacket.update_frequency).toBe(5); // 5 seconds high frequency
+
+    logger.info("✓ Exit emulated, auto Live Tracking activated");
+  });
+
+  // IT 5: Device Re-enters Geofence - Send 0x01 + Assert Back to Geofence
+  it("Device RE-ENTERS geofence - Send 0x01 + deactivate Live Tracking", async () => {
+    logger.info("📍 Emula device re-enters geofence");
+
+    // Start listening for geofence active event again
+    const geofenceActiveEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onGpsMessageStatus,
+      { id: setup.devices.dogStandard!.id },
+      (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
+      { timeoutMs: fxt.socket.timeoutMs },
+    );
+
+    // Emula: Send 0x01 con inside_geofence flag (da Live Tracking)
+    const reenterData = {
+      ...Packet01.D2SWelcomeHeartBeat.Data,
+      serial_number: setup.devices.dogStandard!.serialNumber,
+      latitude: 44.505, // GPS coords dentro il poligono
+      longitude: 11.32,
+      notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NInsideFence, // 0x20 = inside geofence
+      last_gps_time: Math.floor(Date.now() / 1000),
+    };
+    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(reenterData), reenterData);
+
+    // Wait for event and assert
+    const geofenceActiveEvent = await geofenceActiveEventPromise;
+    logger.info("onGpsMessageStatus:", geofenceActiveEvent);
+    expect(geofenceActiveEvent.onGpsMessageStatus.status.inGeofence).toBe(true);
+    expect(geofenceActiveEvent.onGpsMessageStatus.status.geofence).toBe("ACTIVE");
+
+    // Sentinel should send command to return to GEOFENCE_ON
+    logger.info("⏳ Waiting for return to Geofence mode...");
+    const returnToGeofencePacket = await sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      fxt.socket.timeoutMs,
+      (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
+    );
+
+    expect(returnToGeofencePacket, "Should receive return to Geofence command").toBeDefined();
+    expect(returnToGeofencePacket.requested_operating_status).toBe(OperatingStatus.GEOFENCE_ON);
+    expect(returnToGeofencePacket.update_frequency).toBe(30); // Back to normal frequency
+
+    logger.info("✓ Re-enter emulated, back to Geofence mode");
+  });
+
+  // IT 6: Deactivate Geofence - Assert 200 + Wait 0x01 Default
+  it("User DEACTIVATE Geofence (sendSetting DEACTIVATE) - API + Packet Assert", async () => {
+    logger.info("📍 User deactivates geofence");
+
+    const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
+      setting: {
+        operationType: SettingOperationEnum.Deactivate,
+        settingType: SettingTypeEnum.Geofence,
+        id: geofenceId,
+        deviceId: setup.devices.dogStandard!.id,
+      },
+    });
+
+    expect(
+      deactivateResponse.sendSetting.code,
+      `sendSetting DEACTIVATE should succeed - Error: ${deactivateResponse.sendSetting.message}${deactivateResponse.sendSetting.translationCode ? ` (${deactivateResponse.sendSetting.translationCode})` : ""}`,
+    ).toBe("200");
+
+    // Wait 0x01 deactivate
+    logger.info("⏳ Waiting for 0x01 (deactivate)...");
+    const packet01 = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x01, fxt.socket.timeoutMs);
+    logger.info("0x01 received:", packet01);
+
+    expect(packet01, "Should receive 0x01 (Deactivate Geofence)").toBeDefined();
+    expect(packet01.requested_operating_status).toBe(OperatingStatus.DEFAULT);
+    expect(packet01.geofence_latitude_longitude).toHaveLength(0); // Empty coordinates = deactivate
+
+    logger.info("✓ Geofence deactivated, packet default received");
+  });
+});
