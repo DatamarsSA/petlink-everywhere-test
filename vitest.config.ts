@@ -47,6 +47,11 @@ export default defineConfig(({ mode }) => {
     // Sentinel socket tcp
     SENTINEL_HOST: z.ipv4().min(1, "SENTINEL_HOST è richiesto"),
     SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
+    // Sentinel MongoDB
+    SENTINEL_MONGO_HOST: z.string().min(1, "SENTINEL_MONGO_HOST è richiesto"),
+    SENTINEL_MONGO_USER: z.string().min(1, "SENTINEL_MONGO_USER è richiesto"),
+    SENTINEL_MONGO_PASSWORD: z.string().min(1, "SENTINEL_MONGO_PASSWORD è richiesta"),
+    SENTINEL_MONGO_DATABASE: z.string().min(1, "SENTINEL_MONGO_DATABASE è richiesto"),
   });
 
   const result = envSchema.safeParse(process.env);

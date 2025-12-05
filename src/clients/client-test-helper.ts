@@ -12,6 +12,7 @@ import {
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
+import { mongoSentinelClient } from "./mongo-sentinel/client-mongo-sentinel.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { existsSync, mkdirSync } from "fs";
@@ -231,6 +232,11 @@ class TestHelper {
       // 3. Twilio cleanup
       twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone).catch((error) => {
         errors.push({ operation: "Twilio-deleteAllMessages()", error });
+      }),
+
+      // 4. Sentinel MongoDB cleanup
+      mongoSentinelClient.cleanupTestDevices().catch((error) => {
+        errors.push({ operation: "Sentinel-MongoDB-cleanup()", error });
       }),
     ]);
 
