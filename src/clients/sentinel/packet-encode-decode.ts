@@ -16,7 +16,7 @@
  * [FOOTER: (2bytes) B0B3]
  *
  * - packet 01 - Geofence & Live tracking
- * - packet 10 - suono, torcia - ESZ
+ * - packet 10 - suono, torcia, ESZ
  */
 
 import { logger } from "../../config/logger.js";
@@ -39,7 +39,6 @@ export enum OperatingStatus {
 
 export enum PacketType {
   PACKET_0x01 = 0x01,
-  PACKET_0x0A = 0x0a,
   PACKET_0x08 = 0x08,
   PACKET_0x10 = 0x10,
   PACKET_0x14 = 0x14,
@@ -53,7 +52,6 @@ export enum PacketType {
  */
 export interface PacketTypeMap {
   [PacketType.PACKET_0x01]: typeof Packet01.S2DGeofenceResponse.Data;
-  [PacketType.PACKET_0x0A]: typeof Packet0A.Data;
   [PacketType.PACKET_0x10]: typeof Packet10.Data;
   [PacketType.PACKET_0x15]: typeof Packet15.Data;
 }
@@ -579,33 +577,6 @@ export class Packet01 {
   };
 }
 
-export class Packet0A {
-  static Data = {
-    command_type: 0 as CommandType,
-    duration: undefined as number | undefined,
-  };
-
-  static toBuffer(data: typeof Packet0A.Data): Buffer {
-    const hasDuration = data.duration !== undefined;
-    const buffer = Buffer.alloc(2 + (hasDuration ? 2 : 0));
-    let offset = 0;
-    buffer.writeUInt8(PacketType.PACKET_0x0A, offset++);
-    buffer.writeUInt8(data.command_type, offset++);
-    if (hasDuration) {
-      buffer.writeInt16LE(data.duration!, offset);
-    }
-    return buffer;
-  }
-
-  static fromBuffer(payload: Buffer): typeof Packet0A.Data {
-    const command_type = payload[1];
-    const duration = payload.length >= 4 ? payload.readInt16LE(2) : undefined;
-
-    const data: typeof Packet0A.Data = { command_type, duration };
-    return data;
-  }
-}
-
 export class Packet10 {
   static Data = {
     evo_tasks: 0 as number,
@@ -701,7 +672,6 @@ export interface ParsedPacket {
   payload:
     | typeof Packet01.D2SWelcomeHeartBeat.Data
     | typeof Packet01.S2DGeofenceResponse.Data
-    | typeof Packet0A.Data
     | typeof Packet10.Data
     | typeof Packet15.Data
     | { error: string };
@@ -719,8 +689,6 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
         } else {
           return { type, payload: Packet01.D2SWelcomeHeartBeat.fromBuffer(payload), raw: payload };
         }
-      case PacketType.PACKET_0x0A:
-        return { type, payload: Packet0A.fromBuffer(payload), raw: payload };
       case PacketType.PACKET_0x10:
         return { type, payload: Packet10.fromBuffer(payload), raw: payload };
       case PacketType.PACKET_0x15:
