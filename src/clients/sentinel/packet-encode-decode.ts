@@ -694,8 +694,8 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
       case PacketType.PACKET_0x15:
         return { type, payload: Packet15.fromBuffer(payload), raw: payload };
       default:
-        const errorMessage = `Parser for packet not found.`;
-        logger.error(errorMessage);
+        const errorMessage = `Parser for packet ${type.toString(16)} not found.`;
+        logger.debug(errorMessage);
         return { type, payload: { error: errorMessage }, raw: payload };
     }
   } catch (e) {
