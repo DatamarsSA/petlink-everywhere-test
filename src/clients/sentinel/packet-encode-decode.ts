@@ -20,7 +20,6 @@
  */
 
 import { logger } from "../../config/logger.js";
-import { petlink } from "../petlink-infrastructure/client-petlink-infrastructure";
 
 // ================================ ENUMS ================================ //
 
@@ -169,14 +168,14 @@ export class Packet01 {
      * Combinabili con bitwise OR (es. NJustPowered | NFullCharge)
      */
     static readonly Notifications = {
-      NJustPowered: 0x01,      // Device appena acceso
-      NPoweringOFF: 0x02,      // Device in spegnimento
-      NSMSReceived: 0x04,      // SMS ricevuto
-      NNoGPS: 0x08,            // Nessun fix GPS
-      NJustUpgraded: 0x10,     // Firmware appena aggiornato
-      NInsideFence: 0x20,      // Dentro geofence
-      NOutsideFence: 0x40,     // Fuori geofence
-      NFullCharge: 0x80,       // Batteria completamente carica
+      NJustPowered: 0x01, // Device appena acceso
+      NPoweringOFF: 0x02, // Device in spegnimento
+      NSMSReceived: 0x04, // SMS ricevuto
+      NNoGPS: 0x08, // Nessun fix GPS
+      NJustUpgraded: 0x10, // Firmware appena aggiornato
+      NInsideFence: 0x20, // Dentro geofence
+      NOutsideFence: 0x40, // Fuori geofence
+      NFullCharge: 0x80, // Batteria completamente carica
     } as const;
 
     /**
@@ -186,14 +185,14 @@ export class Packet01 {
      * Combinabili con bitwise OR (es. NDetached | NJustBooted)
      */
     static readonly SpareC5 = {
-      NDetached: 0x01,         // "In home" - WiFi della zona ESZ rilevato → Device IN zona
-      NTempWarning: 0x02,      // Warning temperatura
-      NJustBooted: 0x04,       // Device appena avviato
-      NProductionTest: 0x08,   // Modalità test produzione
-      NTempAlarm: 0x10,        // Allarme temperatura
-      NContinousMode: 0x20,    // Modalità continua
-      NGeran: 0x40,            // GERAN (2G/EDGE)
-      NEutran: 0x80,           // E-UTRAN (LTE/4G)
+      NDetached: 0x01, // "In home" - WiFi della zona ESZ rilevato → Device IN zona
+      NTempWarning: 0x02, // Warning temperatura
+      NJustBooted: 0x04, // Device appena avviato
+      NProductionTest: 0x08, // Modalità test produzione
+      NTempAlarm: 0x10, // Allarme temperatura
+      NContinousMode: 0x20, // Modalità continua
+      NGeran: 0x40, // GERAN (2G/EDGE)
+      NEutran: 0x80, // E-UTRAN (LTE/4G)
     } as const;
 
     /**
@@ -201,14 +200,14 @@ export class Packet01 {
      * Combinabili con bitwise OR (es. InfoWifiCells | InfoGsmCellsFlag)
      */
     static readonly InfoFlags = {
-      InfoGsmCellsFlag: 0x01,  // Dati celle GSM inclusi nel pacchetto
-      InfoAgpsEnable: 0x02,    // AGPS abilitato
-      InfoAgps2: 0x04,         // AGPS flag 2
-      InfoAgps3: 0x08,         // AGPS flag 3
-      InfoActivity: 0x10,      // Dati attività inclusi
-      InfoFmwDisable: 0x20,    // Update firmware disabilitato
-      InfoUbloxEph: 0x40,      // Ephemeris Ublox
-      InfoWifiCells: 0x80,     // Dati WiFi cells inclusi nel pacchetto
+      InfoGsmCellsFlag: 0x01, // Dati celle GSM inclusi nel pacchetto
+      InfoAgpsEnable: 0x02, // AGPS abilitato
+      InfoAgps2: 0x04, // AGPS flag 2
+      InfoAgps3: 0x08, // AGPS flag 3
+      InfoActivity: 0x10, // Dati attività inclusi
+      InfoFmwDisable: 0x20, // Update firmware disabilitato
+      InfoUbloxEph: 0x40, // Ephemeris Ublox
+      InfoWifiCells: 0x80, // Dati WiFi cells inclusi nel pacchetto
     } as const;
 
     static Data = {
@@ -700,12 +699,12 @@ export class Packet15 {
 export interface ParsedPacket {
   type: number;
   payload:
-  | typeof Packet01.D2SWelcomeHeartBeat.Data
-  | typeof Packet01.S2DGeofenceResponse.Data
-  | typeof Packet0A.Data
-  | typeof Packet10.Data
-  | typeof Packet15.Data
-  | { error: string };
+    | typeof Packet01.D2SWelcomeHeartBeat.Data
+    | typeof Packet01.S2DGeofenceResponse.Data
+    | typeof Packet0A.Data
+    | typeof Packet10.Data
+    | typeof Packet15.Data
+    | { error: string };
   raw: Buffer;
 }
 

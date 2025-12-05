@@ -115,8 +115,9 @@ describe("Energy Saving Zone", () => {
     const eszEnterEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
+      fxt.socket.timeoutMs,
+      "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
-      { timeoutMs: fxt.socket.timeoutMs },
     );
 
     // Emula: Send 0x01 con WiFi detected (spare_c5 = NDetached)
@@ -146,8 +147,9 @@ describe("Energy Saving Zone", () => {
     const eszExitEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
+      fxt.socket.timeoutMs,
+      "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
-      { timeoutMs: fxt.socket.timeoutMs },
     );
 
     // Emula: WiFi lost (spare_c5 = 0 → nessun flag attivo)

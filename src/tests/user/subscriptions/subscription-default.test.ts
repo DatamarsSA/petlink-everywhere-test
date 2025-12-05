@@ -230,8 +230,9 @@ describe("DEFAULT subscription flow", () => {
       const activationPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
         subscriptions.onSubscriptionStatus,
         { id: setup.user!.id },
-        (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
-        { timeoutMs: fxt.socket.timeoutMs }
+        fxt.socket.timeoutMs,
+        "Subscription should become active after purchase",
+        (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true
       );
 
       // Wait for WebSocket to establish connection

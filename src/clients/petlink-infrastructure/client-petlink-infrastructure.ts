@@ -380,8 +380,9 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
     async subscribeUntil<T = any>(
       query: string,
       variables: Record<string, any>,
-      predicate: (data: any) => boolean,
-      options?: { timeoutMs?: number },
+      timeoutMs: number,
+      timeoutError: string,
+      filter?: (data: any) => boolean,
     ): Promise<T> {
       return new Promise<T>(async (resolve, reject) => {
         await this.ensureConnected();
@@ -413,26 +414,30 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
           logger.debug("Subscription auto-unsubscribed", { subId });
         };
 
-        // Setup timeout
-        if (options?.timeoutMs) {
-          timeout = setTimeout(() => {
-            logger.error("GraphQl Subscription socket timeout", { subId, timeoutMs: options.timeoutMs });
-            cleanup();
-            reject(new Error(`App not received notification throught GraphQL sub in ${options.timeoutMs}ms`));
-          }, options.timeoutMs);
-        }
+        // Setup timeout (mandatory)
+        timeout = setTimeout(() => {
+          logger.error("GraphQl Subscription socket timeout", { subId, timeoutMs, timeoutError });
+          cleanup();
+          reject(new Error(timeoutError));
+        }, timeoutMs);
 
         // Setup callbacks
         this.subscriptions.set(subId, {
           callbacks: {
             next: (event: any) => {
-              logger.debug("📩 GraphQL subscription event received:", event.data);
-              // Check if event matches predicate
-              if (predicate(event.data)) {
+              logger.info("📩 [GraphQL] Raw subscription event BEFORE filter:", JSON.stringify(event.data, null, 2));
+              // Resolve on first event if no filter, or if filter matches
+              if (!filter) {
+                logger.info("✓ [GraphQL] No filter provided, resolving immediately");
                 cleanup();
                 resolve(event.data);
+              } else if (filter(event.data)) {
+                logger.info("✓ [GraphQL] Filter matched, resolving");
+                cleanup();
+                resolve(event.data);
+              } else {
+                logger.info("- [GraphQL] Filter condition not met, ignoring event");
               }
-              // Events that don't match are ignored
             },
             error: (err: any) => {
               cleanup();
@@ -496,15 +501,15 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
 
   return {
     authJwt: {
-      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, predicate: (data: any) => boolean, options?: any) => {
+      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, timeoutMs: number, timeoutError: string, filter?: (data: any) => boolean) => {
         client.setAuthJwt();
-        return await client.subscribeUntil<T>(query, variables, predicate, options);
+        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter);
       },
     },
     authApiKey: {
-      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, predicate: (data: any) => boolean, options?: any) => {
+      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, timeoutMs: number, timeoutError: string, filter?: (data: any) => boolean) => {
         client.setAuthApiKey();
-        return await client.subscribeUntil<T>(query, variables, predicate, options);
+        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter);
       },
     },
     disconnect: () => client.disconnect(),

@@ -37,12 +37,13 @@ describe("Live Tracking", () => {
       .subscribeUntil(
         subscriptions.onGpsMessagePosition,
         { id: setup.devices.dogStandard!.id },
+        fxt.socket.timeoutMs,
+        "Device should send position matching our test coordinate",
         (data) => {
           const position = data?.onGpsMessagePosition;
           // Validate that this is the position we sent (ignore interim LBS/Status messages with lat=0)
           return position && position.position.lat === latutideSentoFromDevice;
-        },
-        { timeoutMs: fxt.socket.timeoutMs },
+        }
       )
       .then((event) => {
         logger.info("📡 GraphQlSocket event received -> onGpsMessagePosition", { event });
