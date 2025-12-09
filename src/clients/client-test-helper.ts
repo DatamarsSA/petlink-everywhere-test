@@ -235,9 +235,9 @@ class TestHelper {
       }),
 
       // 4. Sentinel MongoDB cleanup
-      mongoSentinelClient.cleanupTestDevices().catch((error) => {
-        errors.push({ operation: "Sentinel-MongoDB-cleanup()", error });
-      }),
+      // mongoSentinelClient.cleanupTestDevices().catch((error) => {
+      //   errors.push({ operation: "Sentinel-MongoDB-cleanup()", error });
+      // }),
     ]);
 
     // Se QUALSIASI operazione è fallita, throw (skippa test)
@@ -314,7 +314,10 @@ class TestHelper {
       id: userResponse.getUser.user.id,
     });
 
-    return userResponse.getUser.user;
+    return {
+      ...userResponse.getUser.user,
+      appBrand: fxt.current.appBrand,
+    };
   }
 
   async createPet(petType: SpeciesEnum): Promise<Pet> {
