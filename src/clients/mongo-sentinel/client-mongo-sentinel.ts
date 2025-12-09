@@ -61,4 +61,3 @@ class MongoSentinelClient {
 }
 
 export const mongoSentinelClient = new MongoSentinelClient();
-

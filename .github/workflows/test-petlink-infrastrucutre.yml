@@ -54,6 +54,11 @@ jobs:
       # Sentinel socket tcp
       SENTINEL_HOST: ${{ secrets.SENTINEL_HOST }}
       SENTINEL_PORT: ${{ secrets.SENTINEL_PORT }}
+      # Sentinel mongodb
+      SENTINEL_MONGO_HOST: ${{ secrets.SENTINEL_MONGO_HOST }}
+      SENTINEL_MONGO_USER: ${{ secrets.SENTINEL_MONGO_USER }}
+      SENTINEL_MONGO_PASSWORD: ${{ secrets.SENTINEL_MONGO_PASSWORD }}
+      SENTINEL_MONGO_DATABASE: ${{ secrets.SENTINEL_MONGO_DATABASE }}
 
     strategy:
       fail-fast: false
@@ -137,6 +142,10 @@ jobs:
             -e APP_BRAND \
             -e SENTINEL_HOST \
             -e SENTINEL_PORT \
+            -e SENTINEL_MONGO_HOST \
+            -e SENTINEL_MONGO_USER \
+            -e SENTINEL_MONGO_PASSWORD \
+            -e SENTINEL_MONGO_DATABASE \
             -e NODE_ENV \
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
             petlink-everywhere-test yarn pipeline:$NODE_ENV
