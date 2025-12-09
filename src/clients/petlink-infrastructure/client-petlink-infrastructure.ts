@@ -501,13 +501,25 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
 
   return {
     authJwt: {
-      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, timeoutMs: number, timeoutError: string, filter?: (data: any) => boolean) => {
+      subscribeUntil: async <T = any>(
+        query: string,
+        variables: Record<string, any>,
+        timeoutMs: number,
+        timeoutError: string,
+        filter?: (data: any) => boolean,
+      ) => {
         client.setAuthJwt();
         return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter);
       },
     },
     authApiKey: {
-      subscribeUntil: async <T = any>(query: string, variables: Record<string, any>, timeoutMs: number, timeoutError: string, filter?: (data: any) => boolean) => {
+      subscribeUntil: async <T = any>(
+        query: string,
+        variables: Record<string, any>,
+        timeoutMs: number,
+        timeoutError: string,
+        filter?: (data: any) => boolean,
+      ) => {
         client.setAuthApiKey();
         return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter);
       },
@@ -534,17 +546,21 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
             cache.set(authConfig.cacheKey, client);
           }
 
-          // 3. Execute operation with performance tracking
+          // 3. Execute operation with performance tracking and automatic logging
           const startTime = performance.now();
+
+          // Log request details
+          logger.info(`🚀 CALLING: ${String(prop)}`, args);
+
           try {
-            return await (client as any)[prop](...args);
+            const response = await (client as any)[prop](...args);
+
+            // Log successful response
+            logger.info(`✅ SUCCESS: ${String(prop)}`, response);
+
+            return response;
           } catch (error: any) {
-            logger.error(`[${config.serviceName}/graphql/${authType}] Error in ${String(prop)}`, {
-              operation: String(prop),
-              response: error.response?.errors,
-              statusCode: error.response?.status,
-              message: error.message,
-            });
+            logger.error(`❌ ERROR: ${String(prop)}`, error);
             throw error;
           } finally {
             const duration = Math.round(performance.now() - startTime);
