@@ -4,7 +4,11 @@ import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentin
 import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
-import { SettingOperationEnum, SettingTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  SettingOperationEnum,
+  SettingTypeEnum,
+  StatusState,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { logger } from "../../../config/logger.js";
 
@@ -63,7 +67,7 @@ describe("Energy Saving Zone", () => {
   });
 
   // IT 2: Activate ESZ - Wait Packets (0x15 zones + 0x10 enable)
-  it("User ACTIVATE ESZ (sendSetting ACTIVATE) - Packets Assert", async () => {
+  it("User ACTIVATE ESZ (sendSetting ACTIVATE) -> assert Packet arrives to Device", async () => {
     logger.info("📍 User activates ESZ");
 
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
@@ -100,15 +104,14 @@ describe("Energy Saving Zone", () => {
       radius: expect.closeTo(createZonePayload.radius, 1),
       bssid: createZonePayload.bssid.replace(/:/g, "").toUpperCase(),
     });
-
-    // Parse 0x10
+    // Assert 0x10 (enabled feature)
     expect(packet10.energy_saving_area_enabled).toBe(1); // Enable
 
     logger.info("✓ ESZ activated, packets with correct data");
   });
 
   // IT 3: Emula Enter - Send 0x01 + Assert Sub
-  it("Device DETECT wifi (emula enter) - Send 0x01 + notify app GraphQL Sub", async () => {
+  it("Device DETECT wifi (emula enter sending 0x01) -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device enters ESZ (WiFi detect)");
 
     // Start listening for ESZ enter event
@@ -135,12 +138,13 @@ describe("Energy Saving Zone", () => {
     // Wait for event and assert
     const eszEnterEvent = await eszEnterEventPromise;
     logger.info("onGpsMessageStatus:", eszEnterEvent);
+    expect(eszEnterEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszEnterEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
     logger.info("✓ Enter emulato, sub received true");
   });
 
   // IT 4: Emula Exit - Send 0x01 + Assert Sub
-  it("Device LEAVES wifi (emula exit) - Send 0x01 + notify app GraphQL Sub Assert", async () => {
+  it("Device LEAVES wifi (emula exit sending 0x01) -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device leaves ESZ (WiFi lost)");
 
     // Start listening for ESZ exit event
@@ -165,6 +169,7 @@ describe("Energy Saving Zone", () => {
     // Wait for event and assert
     const eszExitEvent = await eszExitEventPromise;
     logger.info("onGpsMessageStatus:", eszExitEvent);
+    expect(eszExitEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszExitEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
     logger.info("✓ Exit emulato, sub received false");
   });
@@ -190,8 +195,8 @@ describe("Energy Saving Zone", () => {
     // Wait 0x10 disable
     logger.info("⏳ Waiting for 0x10 (disable)...");
     const packet10 = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs);
+    logger.info("Packet 0x10", packet10);
     expect(packet10, "Should receive 0x10 (Disable ESZ)").toBeDefined();
-
     expect(packet10.energy_saving_area_enabled).toBe(0); // Disabled
 
     logger.info("✓ ESZ deactivated, packet disable received");
