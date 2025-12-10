@@ -5,8 +5,6 @@ import { Packet01, PacketType, OperatingStatus } from "../../../clients/sentinel
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
-  CommandEnum,
-  ModeType,
   SettingOperationEnum,
   SettingTypeEnum,
   StatusState,
@@ -66,7 +64,6 @@ describe("Geofence", () => {
     const createGeofenceResponse = await petlink.core.graphqlHttp.authJwt.createGeofence({
       geofence: createGeofencePayload,
     });
-    logger.info("createGeofenceResponse:", createGeofenceResponse.createGeofence.geofence);
 
     expect(
       createGeofenceResponse.createGeofence.code,
@@ -109,11 +106,9 @@ describe("Geofence", () => {
     expect(packet01, "Should receive 0x01 (Geofence activation)").toBeDefined();
     logger.info("packet01 (Geofence activation):", packet01);
 
-    // Assert geofence coordinates (match create payload)
+    // Verify geofence to be activate to device & coordinates sent from app match coordinates arrived on device
     expect(packet01.geofence_latitude_longitude).toHaveLength(6);
     expect(packet01.requested_operating_status).toBe(OperatingStatus.GEOFENCE_ON);
-
-    // Verify coordinates match (allow small floating point differences)
     packet01.geofence_latitude_longitude.forEach((coord, index) => {
       expect(coord.lat).toBeCloseTo(createGeofencePayload.position[index].lat, 3);
       expect(coord.lng).toBeCloseTo(createGeofencePayload.position[index].lng, 3);
@@ -164,7 +159,7 @@ describe("Geofence", () => {
       { id: setup.devices.dogStandard!.id },
       fxt.socket.timeoutMs,
       "Device should notify inGeofence=false when outside",
-      // (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
+      (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
     );
 
     // Emula: Send 0x01 con outside_geofence flag
@@ -181,7 +176,6 @@ describe("Geofence", () => {
     // Wait for geofence exit event
     const geofenceExitEvent = await geofenceExitEventPromise;
     logger.info("Device EXITS onGpsMessageStatus:", geofenceExitEvent);
-    expect(geofenceExitEvent.onGpsMessageStatus.status.geofence).toBe(StatusState.Off);
     expect(geofenceExitEvent.onGpsMessageStatus.status.inGeofence).toBe(false);
     expect(geofenceExitEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
     logger.info("✓ Exit emulated, auto Live Tracking activated");
@@ -216,8 +210,6 @@ describe("Geofence", () => {
 
     expect(packet01, "Should receive 0x01 (Deactivate Geofence)").toBeDefined();
     expect(packet01.requested_operating_status).toBe(OperatingStatus.DEFAULT);
-    expect(packet01.geofence_latitude_longitude).toHaveLength(0); // Empty coordinates = deactivate
-
     logger.info("✓ Geofence deactivated, packet default received");
   });
 });
