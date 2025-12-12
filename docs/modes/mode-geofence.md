@@ -1,34 +1,34 @@
-# GEOFENCE - Documentazione Completa
+# GEOFENCE - Complete Documentation
 
-## Cosa Fa
+## What It Does
 
-Geofence è una **modalità permanente** che crea una zona geografica (poligono con 6 coordinate) e rileva quando il device entra/esce da questa zona. 
+Geofence is a **permanent mode** that creates a geographic zone (polygon with 6 coordinates) and detects when the device enters/exits this zone. 
 
-**Comportamento critico**: Quando il device **ESCE dal geofence**, Sentinel **AUTO-ATTIVA Live Tracking** per tracciare il pet in tempo reale.
+**Critical behavior**: When the device **EXITS the geofence**, Sentinel **AUTO-ACTIVATES Live Tracking** to track the pet in real-time.
 
-## Differenze Chiave vs ESZ e Live Tracking
+## Key Differences vs ESZ and Live Tracking
 
-| Aspetto | ESZ | Geofence | Live Tracking |
+| Aspect | ESZ | Geofence | Live Tracking |
 |---------|-----|----------|---------------|
-| **Tipo** | Permanente | Permanente | Temporaneo |
-| **Attivazione** | User crea zona WiFi | User crea poligono GPS | User preme "Traccia" |
-| **Durata** | Finché attivo | Finché attivo | 15 minuti (default) |
-| **Frequenza** | 30-60 sec (ridotta) | 30 sec (normale) | 5 sec (alta) |
-| **GPS** | Spento | Acceso | Acceso |
-| **Batteria** | Risparmiata | Normale | Consumata velocemente |
-| **Trigger** | WiFi rilevato | Esce da poligono | User manual |
-| **Auto-Tracking** | No | **SÌ (auto-LT)** | No |
+| **Type** | Permanent | Permanent | Temporary |
+| **Activation** | User creates WiFi zone | User creates GPS polygon | User presses "Track" |
+| **Duration** | While active | While active | 15 minutes (default) |
+| **Frequency** | 30-60 sec (reduced) | 30 sec (normal) | 5 sec (high) |
+| **GPS** | Off | On | On |
+| **Battery** | Saved | Normal | Consumed quickly |
+| **Trigger** | WiFi detected | Exits polygon | User manual |
+| **Auto-Tracking** | No | **YES (auto-LT)** | No |
 
-## Flusso Completo
+## Complete Flow
 
-### STEP 1: USER SETUP (Una sola volta)
+### STEP 1: USER SETUP (Once only)
 
 ```
-User: "Voglio proteggere il mio pet con una zona sicura"
+User: "I want to protect my pet with a safe zone"
   ↓
-App chiama: createGeofence({
+App calls: createGeofence({
   geofence: {
-    name: "Casa",
+    name: "Home",
     position: [
       {lat: 44.5, lng: 11.3},      // Marker 1
       {lat: 44.5, lng: 11.35},     // Marker 2
@@ -40,160 +40,160 @@ App chiama: createGeofence({
   }
 })
   ↓
-Backend salva il geofence in DB (6 coordinate)
+Backend saves geofence in DB (6 coordinates)
   ↓
-✅ Geofence creato (ma NON ancora attivo!)
+✅ Geofence created (but NOT yet active!)
 ```
 
 ### STEP 2: USER ACTIVATION
 
 ```
-User: "Attiva protezione geofence per il mio device"
+User: "Activate geofence protection for my device"
   ↓
-App chiama: sendSetting({
+App calls: sendSetting({
   operationType: "ACTIVATE",
   settingType: "GEOFENCE",
   deviceId: "device123",
-  geofence: [ ...coordinates... ] // NOTA: Backend richiede coordinate esplicite
+  geofence: [ ...coordinates... ] // NOTE: Backend requires explicit coordinates
 })
   ↓
-Backend invia comando a SQS (commandsConsumer)
+Backend sends command to SQS (commandsConsumer)
   ↓
-commandsConsumer riceve il comando
-  ├─ Legge: serial_number, iccid, geofence_coordinates
-  ├─ Crea payload: { command: GEOFENCE, coordinates: [6 markers] }
-  └─ Invia REST call a Sentinel: POST /send_packet
+commandsConsumer receives command
+  ├─ Reads: serial_number, iccid, geofence_coordinates
+  ├─ Creates payload: { command: GEOFENCE, coordinates: [6 markers] }
+  └─ Sends REST call to Sentinel: POST /send_packet
     ↓
-Sentinel riceve il comando via REST
-  ├─ Controlla: device è connesso?
-  ├─ Controlla: device è pronto per nuovo comando?
-  ├─ Prepara Packet 0x01 (PacketGeofenceResponse)
+Sentinel receives command via REST
+  ├─ Checks: is device connected?
+  ├─ Checks: is device ready for new command?
+  ├─ Prepares Packet 0x01 (PacketGeofenceResponse)
   │  ├─ operating_status = OPERATING_STATUS_GEOFENCE_ON
   │  ├─ coordinates = [6 markers]
-  │  └─ upd_freq = 30 (secondi, normale)
-  └─ Invia il pacchetto al device via socket TCP
+  │  └─ upd_freq = 30 (seconds, normal)
+  └─ Sends packet to device via TCP socket
     ↓
-Device riceve il pacchetto
-  ├─ Legge: coordinates = [6 markers]
-  ├─ Memorizza le 6 coordinate del poligono
-  ├─ Attiva geofence detection
-  ├─ Ogni heartbeat: calcola se è dentro/fuori il poligono
-  │  └─ Usa algoritmo point-in-polygon (ray casting)
-  └─ Invia Packet 0x01 con flag:
-     ├─ Se dentro: notifications bit 0x0020 = 1 (inside_geofence)
-     └─ Se fuori: notifications bit 0x0040 = 1 (outside_geofence)
+Device receives packet
+  ├─ Reads: coordinates = [6 markers]
+  ├─ Stores 6 polygon coordinates
+  ├─ Activates geofence detection
+  ├─ Every heartbeat: calculates if inside/outside polygon
+  │  └─ Uses point-in-polygon algorithm (ray casting)
+  └─ Sends Packet 0x01 with flag:
+     ├─ If inside: notifications bit 0x0020 = 1 (inside_geofence)
+     └─ If outside: notifications bit 0x0040 = 1 (outside_geofence)
 ```
 
-### STEP 3: DEVICE INSIDE GEOFENCE (Normale)
+### STEP 3: DEVICE INSIDE GEOFENCE (Normal)
 
 ```
-Device è dentro il poligono
+Device is inside polygon
   ↓
-Ogni heartbeat (30 sec):
-  ├─ Device calcola: sono dentro il poligono?
-  ├─ Usa algoritmo point-in-polygon
-  ├─ Risultato: SÌ, sono dentro
-  ├─ Imposta: notifications bit 0x0020 = 1
-  └─ Invia Packet 0x01
+Every heartbeat (30 sec):
+  ├─ Device calculates: am I inside polygon?
+  ├─ Uses point-in-polygon algorithm
+  ├─ Result: YES, I'm inside
+  ├─ Sets: notifications bit 0x0020 = 1
+  └─ Sends Packet 0x01
     ↓
-Sentinel riceve il pacchetto
-  ├─ Legge: inside_geofence = true
-  ├─ Invia notifica: GEOFENCE_ACTIVE a SQS
-  └─ Aggiorna DB: device_operating_status = GEOFENCE_ON
+Sentinel receives packet
+  ├─ Reads: inside_geofence = true
+  ├─ Sends notification: GEOFENCE_ACTIVE to SQS
+  └─ Updates DB: device_operating_status = GEOFENCE_ON
     ↓
-App riceve notifica
+App receives notification
   └─ "Pet is safe at home"
 ```
 
-### STEP 4: DEVICE EXITS GEOFENCE (Critico!)
+### STEP 4: DEVICE EXITS GEOFENCE (Critical!)
 
 ```
-Device è dentro il poligono
+Device is inside polygon
   ↓
-Device si muove FUORI dal poligono
+Device moves OUTSIDE polygon
   ↓
-Ogni heartbeat (30 sec):
-  ├─ Device calcola: sono dentro il poligono?
-  ├─ Usa algoritmo point-in-polygon
-  ├─ Risultato: NO, sono fuori!
-  ├─ Imposta: notifications bit 0x0040 = 1
-  └─ Invia Packet 0x01
+Every heartbeat (30 sec):
+  ├─ Device calculates: am I inside polygon?
+  ├─ Uses point-in-polygon algorithm
+  ├─ Result: NO, I'm outside!
+  ├─ Sets: notifications bit 0x0040 = 1
+  └─ Sends Packet 0x01
     ↓
-Sentinel riceve il pacchetto
-  ├─ Legge: outside_geofence = true
-  ├─ Invia notifica: GEOFENCE_OUT a SQS
-  ├─ Imposta: geofence_triggered_lt = true
-  ├─ AUTO-ATTIVA Live Tracking
-  │  ├─ Prepara Packet 0x01 (FAST_TRACKING)
-  │  ├─ upd_freq = 5 (secondi)
-  │  └─ Invia comando al device
-  └─ Aggiorna DB: operating_status = FAST_TRACKING
+Sentinel receives packet
+  ├─ Reads: outside_geofence = true
+  ├─ Sends notification: GEOFENCE_OUT to SQS
+  ├─ Sets: geofence_triggered_lt = true
+  ├─ AUTO-ACTIVATES Live Tracking
+  │  ├─ Prepares Packet 0x01 (FAST_TRACKING)
+  │  ├─ upd_freq = 5 (seconds)
+  │  └─ Sends command to device
+  └─ Updates DB: operating_status = FAST_TRACKING
     ↓
-Device riceve comando Live Tracking
-  ├─ Legge: operating_status = FAST_TRACKING
-  ├─ Imposta: heartbeat frequency = 5 secondi
-  └─ Inizia tracciamento ad alta frequenza
+Device receives Live Tracking command
+  ├─ Reads: operating_status = FAST_TRACKING
+  ├─ Sets: heartbeat frequency = 5 seconds
+  └─ Starts high-frequency tracking
     ↓
-App riceve notifiche
+App receives notifications
   ├─ GEOFENCE_OUT notification
-  ├─ Live Tracking attivato automaticamente
-  └─ Posizioni ogni 5 secondi
+  ├─ Live Tracking activated automatically
+  └─ Positions every 5 seconds
 ```
 
-### STEP 5: DEVICE RE-ENTERS GEOFENCE (Ritorno)
+### STEP 5: DEVICE RE-ENTERS GEOFENCE (Return)
 
 ```
-Device è fuori dal poligono (in Live Tracking)
+Device is outside polygon (in Live Tracking)
   ↓
-Device si muove DENTRO il poligono
+Device moves INSIDE polygon
   ↓
-Ogni heartbeat (5 sec):
-  ├─ Device calcola: sono dentro il poligono?
-  ├─ Risultato: SÌ, sono dentro!
-  ├─ Imposta: notifications bit 0x0020 = 1
-  └─ Invia Packet 0x01
+Every heartbeat (5 sec):
+  ├─ Device calculates: am I inside polygon?
+  ├─ Result: YES, I'm inside!
+  ├─ Sets: notifications bit 0x0020 = 1
+  └─ Sends Packet 0x01
     ↓
-Sentinel riceve il pacchetto
-  ├─ Legge: inside_geofence = true
-  ├─ Invia notifica: GEOFENCE_ACTIVE a SQS
-  ├─ Disattiva Live Tracking (timeout scaduto o manuale)
-  └─ Aggiorna DB: operating_status = GEOFENCE_ON
+Sentinel receives packet
+  ├─ Reads: inside_geofence = true
+  ├─ Sends notification: GEOFENCE_ACTIVE to SQS
+  ├─ Disables Live Tracking (timeout expired or manual)
+  └─ Updates DB: operating_status = GEOFENCE_ON
     ↓
-App riceve notifiche
+App receives notifications
   ├─ GEOFENCE_ACTIVE notification
-  ├─ Live Tracking disattivato
+  ├─ Live Tracking disabled
   └─ "Pet is back home"
 ```
 
 ### STEP 6: USER DEACTIVATION
 
 ```
-User: "Disattiva protezione geofence"
+User: "Disable geofence protection"
   ↓
-App chiama: sendSetting({
+App calls: sendSetting({
   operationType: "DEACTIVATE",
   settingType: "GEOFENCE",
   deviceId: "device123"
 })
   ↓
-Backend invia comando a SQS
+Backend sends command to SQS
   ↓
-Sentinel riceve il comando
-  ├─ Legge: geofence_coordinates = [0,0,0,0,0,0] (tutti uguali = deactivate)
-  ├─ Prepara Packet 0x01 (PacketGeofenceResponse)
+Sentinel receives command
+  ├─ Reads: geofence_coordinates = [0,0,0,0,0,0] (all equal = deactivate)
+  ├─ Prepares Packet 0x01 (PacketGeofenceResponse)
   │  └─ operating_status = OPERATING_STATUS_DEFAULT
-  └─ Invia il pacchetto al device
+  └─ Sends packet to device
     ↓
-Device riceve il pacchetto
-  ├─ Legge: operating_status = DEFAULT
-  ├─ Disattiva geofence detection
-  └─ Torna a normale
+Device receives packet
+  ├─ Reads: operating_status = DEFAULT
+  ├─ Disables geofence detection
+  └─ Returns to normal
     ↓
-Sentinel aggiorna DB
+Sentinel updates DB
   └─ operating_status = DEFAULT
     ↓
-App riceve notifica
-  └─ Geofence disattivato
+App receives notification
+  └─ Geofence disabled
 ```
 
 ## Sequence Diagram

@@ -2,29 +2,29 @@
 
 ## Overview
 
-Normalmente il device invia la sua posizione ogni 4 minuti circa. Quando l'utente ha bisogno di tracciare il pet in tempo reale (ad esempio se il pet è scappato o perso), questa frequenza è troppo lenta. Il **Live Tracking** è una modalità che aumenta drasticamente la frequenza di aggiornamento della posizione da ~4 minuti a ~5 secondi, permettendo all'utente di vedere il movimento del pet in tempo reale sulla mappa.
+Normally the device sends its position every ~4 minutes. When the user needs to track the pet in real-time (for example if the pet has escaped or is lost), this frequency is too slow. **Live Tracking** is a mode that drastically increases the position update frequency from ~4 minutes to ~5 seconds, allowing the user to see the pet's movement in real-time on the map.
 
-**Come funziona il sistema?** L'utente attiva il Live Tracking dall'app specificando una durata (tipicamente 15 minuti, ma configurabile). Il backend invia un comando al device che aumenta immediatamente la frequenza del GPS heartbeat da ~4 minuti a ~5 secondi. L'app si sottoscrive a una subscription GraphQL real-time (`onGpsMessagePosition`) e riceve le posizioni ogni ~5 secondi direttamente via WebSocket. Quando la durata scade o l'utente disattiva manualmente, il device torna automaticamente alla frequenza normale.
+**How does the system work?** The user activates Live Tracking from the app specifying a duration (typically 15 minutes, but configurable). The backend sends a command to the device that immediately increases GPS heartbeat frequency from ~4 minutes to ~5 seconds. The app subscribes to a real-time GraphQL subscription (`onGpsMessagePosition`) and receives positions every ~5 seconds directly via WebSocket. When the duration expires or the user manually disables, the device automatically returns to normal frequency.
 
-Il Live Tracking è l'opposto dell'Energy Saving Zone: invece di risparmiare batteria, consuma di più per dare visibilità immediata. È pensato per situazioni di emergenza o quando serve precisione massima nel tracciamento.
+Live Tracking is the opposite of Energy Saving Zone: instead of saving battery, it consumes more to provide immediate visibility. It's designed for emergency situations or when maximum tracking precision is needed.
 
 ---
 
 ## Feature Description
 
-Il Live Tracking funziona in sei fasi:
+Live Tracking works in six phases:
 
-1. **Activation**: L'utente attiva il Live Tracking dall'app specificando una durata (es. 15 minuti = 900 secondi). Il backend invia il comando al device via Sentinel.
+1. **Activation**: User activates Live Tracking from the app specifying a duration (e.g. 15 minutes = 900 seconds). Backend sends command to device via Sentinel.
 
-2. **Device Response**: Il device riceve il comando e aumenta immediatamente la frequenza heartbeat da ~4 minuti a ~5 secondi. Il GPS rimane sempre attivo.
+2. **Device Response**: Device receives command and immediately increases heartbeat frequency from ~4 minutes to ~5 seconds. GPS stays always on.
 
-3. **Subscription**: L'app si sottoscrive alla subscription GraphQL `onGpsMessagePosition` per ricevere aggiornamenti real-time via WebSocket.
+3. **Subscription**: App subscribes to GraphQL `onGpsMessagePosition` subscription to receive real-time updates via WebSocket.
 
-4. **Position Updates**: Il device invia posizioni ogni ~5 secondi. Ogni posizione viene processata dal backend e pubblicata agli utenti sottoscritti.
+4. **Position Updates**: Device sends positions every ~5 seconds. Each position is processed by backend and published to subscribed users.
 
-5. **Real-time Display**: L'app riceve le posizioni via WebSocket e aggiorna la mappa in tempo reale, mostrando il movimento del pet.
+5. **Real-time Display**: App receives positions via WebSocket and updates map in real-time, showing pet's movement.
 
-6. **Deactivation**: Quando la durata scade o l'utente disattiva manualmente, il device torna a frequenza normale (~4 minuti) e l'app può disiscriversi dalla subscription.
+6. **Deactivation**: When duration expires or user manually disables, device returns to normal frequency (~4 minutes) and app can unsubscribe from subscription.
 
 ---
 
@@ -33,29 +33,29 @@ Il Live Tracking funziona in sei fasi:
 ### STEP 1: USER ACTIVATES LIVE TRACKING
 
 ```
-User: "Attiva tracciamento real-time per 15 minuti"
+User: "Activate real-time tracking for 15 minutes"
   ↓
-App chiama GraphQL mutation:
+App calls GraphQL mutation:
 
   sendCommand({
     commandType: "LIVE_TRACKING",
     id: "device123",
-    duration: 900,              // 15 minuti in secondi
+    duration: 900,              // 15 minutes in seconds
     modeType: "SENTINEL"
   })
 
   ↓
 Backend (Core API):
-  ├─ Valida il comando
-  ├─ Salva comando in MongoDB (commands collection)
-  ├─ Aggiorna device status: postLinkStatus = "Live tracking"
-  └─ Pubblica SQS message a queue "commands"
+  ├─ Validates command
+  ├─ Saves command in MongoDB (commands collection)
+  ├─ Updates device status: postLinkStatus = "Live tracking"
+  └─ Publishes SQS message to "commands" queue
   
   ↓
 Sentinel Lambda Consumer (commandsConsumer):
-  ├─ Consuma il messaggio SQS
-  ├─ Legge device info (serial_number, iccid)
-  ├─ Chiama HTTP POST a Sentinel Rust server: /send_packet
+  ├─ Consumes SQS message
+  ├─ Reads device info (serial_number, iccid)
+  ├─ Calls HTTP POST to Sentinel Rust server: /send_packet
   └─ Payload: {
        serial_number: "PETL123456",
        iccid: "iccid123",
@@ -66,13 +66,13 @@ Sentinel Lambda Consumer (commandsConsumer):
   
   ↓
 Sentinel Rust TCP Server:
-  ├─ Trova la connessione TCP del device
-  ├─ Converte comando in pacchetto binario (Packet 0x01 - PacketGeofenceResponse)
+  ├─ Finds device's TCP connection
+  ├─ Converts command to binary packet (Packet 0x01 - PacketGeofenceResponse)
   │  └─ operating_status = FAST_TRACKING
-  └─ Invia al device via TCP
+  └─ Sends to device via TCP
   
   ↓
-✅ Device riceve il comando e aumenta frequenza heartbeat a ~5 secondi
+✅ Device receives command and increases heartbeat frequency to ~5 seconds
 ```
 
 **Response**:
@@ -88,16 +88,16 @@ Sentinel Rust TCP Server:
 ### STEP 2: DEVICE INCREASES HEARTBEAT FREQUENCY
 
 ```
-Device riceve comando LIVE_TRACKING:
+Device receives LIVE_TRACKING command:
   
-  ├─ Legge: duration = 900 secondi (15 minuti)
-  ├─ Imposta timer interno: scadenza tra 15 minuti
-  ├─ Cambia frequenza heartbeat: da ~4 minuti a ~5 secondi
-  ├─ Mantiene GPS sempre attivo
-  └─ Inizia a inviare posizioni ogni ~5 secondi
+  ├─ Reads: duration = 900 seconds (15 minutes)
+  ├─ Sets internal timer: expires in 15 minutes
+  ├─ Changes heartbeat frequency: from ~4 minutes to ~5 seconds
+  ├─ Keeps GPS always on
+  └─ Starts sending positions every ~5 seconds
   
   ↓
-Device invia posizione 1 (Packet 0x01 - SiRF Welcome):
+Device sends position 1 (Packet 0x01 - SiRF Welcome):
   
   ├─ latitude: 44.5024
   ├─ longitude: 11.3463
@@ -106,10 +106,10 @@ Device invia posizione 1 (Packet 0x01 - SiRF Welcome):
   └─ positionType: "GPS"
   
   ↓
-Sentinel Rust Server riceve il pacchetto:
-  ├─ Parsa il binary packet 0x01
-  ├─ Estrae posizione GPS
-  └─ Pubblica SQS message a queue "gpsMessages"
+Sentinel Rust Server receives packet:
+  ├─ Parses binary packet 0x01
+  ├─ Extracts GPS position
+  └─ Publishes SQS message to "gpsMessages" queue
      └─ messageType: "LAST_POSITION"
      └─ position: { lat, lng, alt, radius, speed, positionType, date }
 ```
@@ -119,10 +119,10 @@ Sentinel Rust Server riceve il pacchetto:
 ### STEP 3: APP SUBSCRIBES TO POSITION UPDATES
 
 ```
-App (dopo aver inviato sendCommand):
+App (after sending sendCommand):
   
-  ├─ Si connette a AppSync via WebSocket
-  └─ Invia subscription GraphQL:
+  ├─ Connects to AppSync via WebSocket
+  └─ Sends GraphQL subscription:
 
   subscription onGpsMessagePosition($id: String!) {
     onGpsMessagePosition(id: $id) {
@@ -144,9 +144,9 @@ App (dopo aver inviato sendCommand):
   
   ↓
 AppSync:
-  ├─ Registra la subscription
-  ├─ Mantiene connessione WebSocket aperta
-  └─ Pronto a pubblicare aggiornamenti
+  ├─ Registers subscription
+  ├─ Keeps WebSocket connection open
+  └─ Ready to publish updates
 ```
 
 ---
@@ -154,39 +154,39 @@ AppSync:
 ### STEP 4: DEVICE SENDS FREQUENT POSITIONS
 
 ```
-Device continua a inviare posizioni ogni ~5 secondi:
+Device continues sending positions every ~5 seconds:
 
-  Posizione 1 (t=0s):
+  Position 1 (t=0s):
     ├─ latitude: 44.5024
     ├─ longitude: 11.3463
     └─ battery: 4200
   
-  ↓ (5 secondi dopo)
+  ↓ (5 seconds later)
   
-  Posizione 2 (t=5s):
-    ├─ latitude: 44.5025      // device si è mosso
+  Position 2 (t=5s):
+    ├─ latitude: 44.5025      // device has moved
     ├─ longitude: 11.3464
     └─ battery: 4190
   
-  ↓ (5 secondi dopo)
+  ↓ (5 seconds later)
   
-  Posizione 3 (t=10s):
+  Position 3 (t=10s):
     ├─ latitude: 44.5026
     ├─ longitude: 11.3465
     └─ battery: 4180
   
   ↓
-Ogni posizione segue questo flusso:
+Each position follows this flow:
   
   Device → Sentinel Rust (TCP packet 0x01)
     ↓
   Sentinel Rust → SQS queue "gpsMessages"
     ↓
   Backend Lambda Consumer (gpsMessagesConsumer):
-    ├─ Consuma il messaggio SQS
-    ├─ Aggiorna MongoDB: device.lastKnownPosition
-    ├─ Crea record in positionsHistory
-    └─ Chiama GraphQL mutation: publishOnGpsMessagePosition
+    ├─ Consumes SQS message
+    ├─ Updates MongoDB: device.lastKnownPosition
+    ├─ Creates record in positionsHistory
+    └─ Calls GraphQL mutation: publishOnGpsMessagePosition
        └─ payload: {
             id: "device123",
             messageType: "LAST_POSITION",
@@ -195,11 +195,11 @@ Ogni posizione segue questo flusso:
   
   ↓
 AppSync (GraphQL Subscriptions):
-  ├─ Riceve il mutation publishOnGpsMessagePosition
-  └─ Pubblica a tutti i client sottoscritti a onGpsMessagePosition
+  ├─ Receives publishOnGpsMessagePosition mutation
+  └─ Publishes to all clients subscribed to onGpsMessagePosition
   
   ↓
-App riceve posizione via WebSocket:
+App receives position via WebSocket:
   
   {
     "id": "device123",
@@ -216,86 +216,86 @@ App riceve posizione via WebSocket:
   }
   
   ↓
-App aggiorna mappa in tempo reale:
-  ├─ Mostra nuova posizione
-  ├─ Disegna percorso (polyline)
-  └─ Aggiorna UI con timestamp e batteria
+App updates map in real-time:
+  ├─ Shows new position
+  ├─ Draws path (polyline)
+  └─ Updates UI with timestamp and battery
   
   ↓
-✅ User vede il pet muoversi in tempo reale sulla mappa
+✅ User sees pet moving in real-time on the map
 ```
 
 ---
 
-### STEP 5: USER DEACTIVATES LIVE TRACKING (Manuale)
+### STEP 5: USER DEACTIVATES LIVE TRACKING (Manual)
 
 ```
-User: "Disattiva tracciamento real-time"
+User: "Disable real-time tracking"
   ↓
-App chiama GraphQL mutation:
+App calls GraphQL mutation:
 
   sendCommand({
     commandType: "LIVE_TRACKING",
     id: "device123",
-    duration: 0,                // 0 = disattiva
+    duration: 0,                // 0 = disable
     modeType: "SENTINEL"
   })
 
   ↓
 Backend (Core API):
-  ├─ Valida il comando
-  ├─ Salva comando in MongoDB
-  ├─ Aggiorna device status: postLinkStatus = "Default"
-  └─ Pubblica SQS message a queue "commands"
+  ├─ Validates command
+  ├─ Saves command in MongoDB
+  ├─ Updates device status: postLinkStatus = "Default"
+  └─ Publishes SQS message to "commands" queue
   
   ↓
 Sentinel Lambda Consumer:
-  ├─ Consuma e chiama Sentinel Rust server
-  ├─ Invia comando binario al device: LIVE_TRACKING, duration=0
-  └─ Device riceve comando di disattivazione
+  ├─ Consumes and calls Sentinel Rust server
+  ├─ Sends binary command to device: LIVE_TRACKING, duration=0
+  └─ Device receives deactivation command
   
   ↓
 Device:
-  ├─ Legge: duration = 0 (disattiva)
-  ├─ Resetta timer interno
-  ├─ Torna a frequenza normale: ~4 minuti
-  └─ Continua a inviare posizioni ogni ~4 minuti
+  ├─ Reads: duration = 0 (disable)
+  ├─ Resets internal timer
+  ├─ Returns to normal frequency: ~4 minutes
+  └─ Continues sending positions every ~4 minutes
   
   ↓
-✅ Live Tracking disattivato, frequenza normale ripresa
+✅ Live Tracking disabled, normal frequency resumed
 ```
 
 ---
 
-### STEP 6: LIVE TRACKING EXPIRES (Automatico)
+### STEP 6: LIVE TRACKING EXPIRES (Automatic)
 
 ```
-Device timer interno:
+Device internal timer:
   
-  ├─ Timer scade dopo 15 minuti (duration: 900)
-  ├─ Device rileva: "Tempo scaduto!"
-  ├─ Resetta frequenza heartbeat: da ~5 sec a ~4 minuti
-  └─ Continua a inviare posizioni ogni ~4 minuti
+  ├─ Timer expires after 15 minutes (duration: 900)
+  ├─ Device detects: "Time expired!"
+  ├─ Resets heartbeat frequency: from ~5 sec to ~4 minutes
+  └─ Continues sending positions every ~4 minutes
   
   ↓
-Device invia posizione normale (Packet 0x01):
+Device sends normal position (Packet 0x01):
   
-  ├─ Frequenza: ogni ~4 minuti (non più ogni 5 sec)
+  ├─ Frequency: every ~4 minutes (no longer every 5 sec)
   └─ positionType: "GPS"
   
   ↓
-Backend riceve posizione:
-  ├─ Processa normalmente (non più frequente)
-  └─ Pubblica a subscription (ma app riceve meno frequentemente)
+Backend receives position:
+  ├─ Processes normally (no longer frequent)
+  └─ Publishes to subscription (but app receives less frequently)
   
   ↓
 App:
-  ├─ Riceve posizioni ogni ~4 minuti (non più ogni 5 sec)
-  ├─ Può disiscriversi da onGpsMessagePosition
-  └─ Mostra messaggio: "Live Tracking scaduto"
+  ├─ Receives positions every ~4 minutes (no longer every 5 sec)
+  ├─ Can unsubscribe from onGpsMessagePosition
+  └─ Shows message: "Live Tracking expired"
   
   ↓
-✅ Live Tracking terminato automaticamente
+✅ Live Tracking terminated automatically
 ```
 
 ---
@@ -312,8 +312,8 @@ App:
   modeType: "SENTINEL" | "BLE"   // default: "SENTINEL"
 }
 
-// duration = 0 → disattiva Live Tracking
-// duration > 0 → attiva per N secondi
+// duration = 0 → disable Live Tracking
+// duration > 0 → activate for N seconds
 ```
 
 ### Device Status (postLinkStatus)
