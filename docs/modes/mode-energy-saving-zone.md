@@ -2,32 +2,36 @@
 
 ## Overview
 
+Energy Saving Zone is a mode that protects the device battery when the pet is in a safe zone (like home). The user creates a zone once by specifying the name, GPS coordinates, radius, and WiFi details. When the device enters that zone and detects the WiFi, GPS turns off and update frequency reduces from 5-10 seconds to 30-60 seconds, saving battery. When the pet leaves the zone, the device automatically reactivates GPS and returns to normal tracking.
 
-Normally the device sends its position every 5-10 seconds. When your pet is at home, this frequency is unnecessary and consumes a lot of battery. The **Energy Saving Zone** is a smart mode that understands when the pet is in a "safe" zone (like home) using WiFi as a marker, and automatically:
-
-- Turns off the GPS (which consumes 60% of the battery)
-- Reduces update frequency from 5-10 seconds to 30-60 seconds
-- Still keeps the device connected and ready to react
-
-Everything happens automatically, without the user doing anything. As soon as the pet leaves home and WiFi disappears, the device reactivates GPS and returns to normal tracking.
-
-**How does the system work?** The user creates a safe zone once, specifying the name (e.g. "Home"), GPS coordinates, radius, and WiFi details (SSID and BSSID of the home router). When the device enters that zone and detects the WiFi, the backend receives a signal from the device (a field called `collar_detached` that changes from 0 to 1), and immediately notifies the app. When the device leaves the zone, it receives the exit notification. It's all real-time via WebSocket subscription.
+**Chronological user flow:**
+1. **Create zone** - User specifies "Home" with WiFi info
+2. **Activate ESZ** - User enables mode on device
+3. **Device in zone** - Automatically GPS OFF, battery saved
+4. **Device leaves zone** - Automatically GPS ON, normal tracking
+5. **Disable ESZ** - User disables when not needed
 
 ---
 
-## Feature Description
+## Visual Flow Summary
 
-Energy Saving Zone works in five phases:
-
-1. **Setup (once)**: User creates a safe zone (e.g. "Home") with GPS coordinates, radius, and WiFi details (SSID + BSSID).
-
-2. **Activation**: User enables ESZ on the device. Backend sends zone data to device via binary command.
-
-3. **Detection**: Device scans WiFi every heartbeat. If it finds zone WiFi: sets `collar_detached=1`, turns off GPS, reduces heartbeat. If not found: returns to normal.
-
-4. **Notifications**: App receives real-time notifications when pet enters/leaves zone via GraphQL subscription.
-
-5. **Deactivation**: User disables ESZ and device returns to normal tracking.
+```
+┌────────────────────────────────────────────────────────┐
+│           ENERGY SAVING ZONE (ESZ) FLOW                │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  1. User Creates Zone (GPS + WiFi info)                │
+│     ↓                                                  │
+│  2. User Activates ESZ on Device                       │
+│     ↓                                                  │
+│  3. Device Detects WiFi → GPS OFF, Battery Saved       │
+│     ↓                                                  │
+│  4. Device Leaves Zone → GPS ON, Normal Mode           │
+│     ↓                                                  │
+│  5. User Disables ESZ                                  │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -358,7 +362,6 @@ HOME_WIFI = Energy saving mode (GPS off, ~30-60 sec heartbeat, reduced power)
 ```
 
 ---
-
 
 ## Sequence Diagram
 

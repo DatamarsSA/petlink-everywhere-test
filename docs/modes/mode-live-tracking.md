@@ -2,29 +2,39 @@
 
 ## Overview
 
-Normally the device sends its position every ~4 minutes. When the user needs to track the pet in real-time (for example if the pet has escaped or is lost), this frequency is too slow. **Live Tracking** is a mode that drastically increases the position update frequency from ~4 minutes to ~5 seconds, allowing the user to see the pet's movement in real-time on the map.
+Live Tracking is an on-demand mode that allows the user to track the pet in real-time when maximum precision is needed (e.g. the pet has escaped or is lost). Normally the device sends position every ~4 minutes, but by activating Live Tracking, the device increases frequency to ~5 seconds, allowing the app to show pet movement in real-time on the map. The user specifies a duration (default 15 minutes), after which the device automatically returns to normal frequency to save battery.
 
-**How does the system work?** The user activates Live Tracking from the app specifying a duration (typically 15 minutes, but configurable). The backend sends a command to the device that immediately increases GPS heartbeat frequency from ~4 minutes to ~5 seconds. The app subscribes to a real-time GraphQL subscription (`onGpsMessagePosition`) and receives positions every ~5 seconds directly via WebSocket. When the duration expires or the user manually disables, the device automatically returns to normal frequency.
-
-Live Tracking is the opposite of Energy Saving Zone: instead of saving battery, it consumes more to provide immediate visibility. It's designed for emergency situations or when maximum tracking precision is needed.
+**Chronological user flow:**
+1. **Activate Live Tracking** - User specifies duration (e.g. 15 minutes)
+2. **Device increases frequency** - From ~4 min to ~5 seconds
+3. **App subscribes to updates** - Receives positions via WebSocket
+4. **Sees pet in real-time** - Map updates every 5 seconds
+5. **Timer expires or disables** - Device returns to normal frequency (~4 min)
 
 ---
 
-## Feature Description
+## Visual Flow Summary
 
-Live Tracking works in six phases:
-
-1. **Activation**: User activates Live Tracking from the app specifying a duration (e.g. 15 minutes = 900 seconds). Backend sends command to device via Sentinel.
-
-2. **Device Response**: Device receives command and immediately increases heartbeat frequency from ~4 minutes to ~5 seconds. GPS stays always on.
-
-3. **Subscription**: App subscribes to GraphQL `onGpsMessagePosition` subscription to receive real-time updates via WebSocket.
-
-4. **Position Updates**: Device sends positions every ~5 seconds. Each position is processed by backend and published to subscribed users.
-
-5. **Real-time Display**: App receives positions via WebSocket and updates map in real-time, showing pet's movement.
-
-6. **Deactivation**: When duration expires or user manually disables, device returns to normal frequency (~4 minutes) and app can unsubscribe from subscription.
+```
+┌────────────────────────────────────────────────────────┐
+│       LIVE TRACKING REAL-TIME FLOW                     │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  1. User Activates Live Tracking (specify duration)    │
+│     ↓                                                  │
+│  2. Device Increases Frequency (~4 min → ~5 sec)       │
+│     ↓                                                  │
+│  3. App Subscribes to Position Updates (WebSocket)     │
+│     ↓                                                  │
+│  4. Device Sends Frequent Positions Every 5 sec        │
+│     ↓                                                  │
+│  5. App Updates Map in Real-Time                       │
+│     ↓                                                  │
+│  6. Duration Expires OR User Deactivates               │
+│     → Back to Normal Frequency (~4 min)                │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -401,4 +411,3 @@ sequenceDiagram
 ```
 
 ---
-

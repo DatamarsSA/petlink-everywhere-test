@@ -1,25 +1,45 @@
-# GEOFENCE - Complete Documentation
+# GEOFENCE
 
-## What It Does
+## Overview
 
-Geofence is a **permanent mode** that creates a geographic zone (polygon with 6 coordinates) and detects when the device enters/exits this zone. 
+Geofence is a permanent mode that protects the pet by creating a safe geographic zone (a polygon with 6 GPS coordinates). The user draws a zone on the map (e.g. the backyard at home), and the device constantly monitors whether it's inside or outside. As long as the pet stays inside the polygon, everything is fine with normal tracking. **But when the pet EXITS the geofence, Sentinel automatically activates Live Tracking to track the pet in real-time every 5 seconds**, guaranteeing you won't lose the pet.
 
-**Critical behavior**: When the device **EXITS the geofence**, Sentinel **AUTO-ACTIVATES Live Tracking** to track the pet in real-time.
+**Chronological user flow:**
+1. **Create geofence** - User draws polygon (6 points) on the map
+2. **Activate geofence** - User enables protection on device
+3. **Device inside geofence** - Everything ok, normal tracking
+4. **Device EXITS geofence** - 🚨 **Auto-activates Live Tracking** (update every 5 sec)
+5. **Device re-enters geofence** - Back to normal, Live Tracking disables
+6. **Disable geofence** - User disables when not needed
 
-## Key Differences vs ESZ and Live Tracking
+---
 
-| Aspect | ESZ | Geofence | Live Tracking |
-|---------|-----|----------|---------------|
-| **Type** | Permanent | Permanent | Temporary |
-| **Activation** | User creates WiFi zone | User creates GPS polygon | User presses "Track" |
-| **Duration** | While active | While active | 15 minutes (default) |
-| **Frequency** | 30-60 sec (reduced) | 30 sec (normal) | 5 sec (high) |
-| **GPS** | Off | On | On |
-| **Battery** | Saved | Normal | Consumed quickly |
-| **Trigger** | WiFi detected | Exits polygon | User manual |
-| **Auto-Tracking** | No | **YES (auto-LT)** | No |
+## Visual Flow Summary
 
-## Complete Flow
+```
+┌────────────────────────────────────────────────────────┐
+│        GEOFENCE AUTO-TRACKING FLOW                     │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  1. User Creates Geofence (6-coordinate polygon)       │
+│     ↓                                                  │
+│  2. User Activates Geofence on Device                  │
+│     ↓                                                  │
+│  3. Device Inside Geofence → Normal Tracking           │
+│     ↓                                                  │
+│  4. Device EXITS Geofence → 🚨 AUTO-ACTIVATE           │
+│                              Live Tracking (5 sec)     │
+│     ↓                                                  │
+│  5. Device Re-enters Geofence → Back to Geofence       │
+│     ↓                                                  │
+│  6. User Deactivates Geofence                          │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Full User Journey
 
 ### STEP 1: USER SETUP (Once only)
 
@@ -195,6 +215,43 @@ Sentinel updates DB
 App receives notification
   └─ Geofence disabled
 ```
+
+---
+
+## Key Data Structures
+
+### Geofence Polygon Schema
+
+```
+{
+  name: string,
+  position: [
+    { lat: number, lng: number },  // Marker 1
+    { lat: number, lng: number },  // Marker 2
+    { lat: number, lng: number },  // Marker 3
+    { lat: number, lng: number },  // Marker 4
+    { lat: number, lng: number },  // Marker 5
+    { lat: number, lng: number }   // Marker 6
+  ]
+}
+```
+
+### Device Geofence State
+
+```
+operating_status: GEOFENCE_ON | DEFAULT | FAST_TRACKING
+geofence_coordinates: [6 GPS coordinates]
+geofence_triggered_lt: boolean  // Was Live Tracking auto-triggered by geofence exit?
+```
+
+### Notification Bits (Packet 0x01)
+
+```
+inside_geofence:   notifications bit 0x0020 = 1
+outside_geofence:  notifications bit 0x0040 = 1
+```
+
+---
 
 ## Sequence Diagram
 
