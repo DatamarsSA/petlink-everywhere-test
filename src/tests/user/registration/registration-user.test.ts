@@ -94,7 +94,7 @@ describe("User Registration", () => {
   });
 
   it("Try login new user (with PHONE)", async () => {
-    await petlink.loginWithPhone(signUpPayload.phone, signUpPayload.password);
+    await petlink.core.loginWithPhone(signUpPayload.phone, signUpPayload.password);
     const userResponse = await petlink.core.graphqlHttp.authJwt.getUser();
 
     expect(userResponse.getUser.user?.phone, "Logged in user phone should match signup payload").toBe(signUpPayload.phone);
@@ -135,7 +135,7 @@ describe("User Registration", () => {
   });
 
   it("Try login new user (with EMAIL)", async () => {
-    await petlink.loginWithEmail(signUpPayload.email, signUpPayload.password);
+    await petlink.core.loginWithEmail(signUpPayload.email, signUpPayload.password);
     const user = await petlink.core.graphqlHttp.authJwt.getUser();
 
     expect(user.getUser.user, "User should be defined after login with email").toBeDefined();
@@ -190,7 +190,7 @@ describe("User Registration", () => {
   });
 
   it("Delete User", async () => {
-    await petlink.loginWithPhone(signUpPayload.phone, signUpPayload.password);
+    await petlink.core.loginWithPhone(signUpPayload.phone, signUpPayload.password);
     //associo Pet a user
     const catPayload = {
       name: fxt.current.pet.defaultCat.name,

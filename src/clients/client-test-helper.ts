@@ -301,7 +301,7 @@ class TestHelper {
       throw new Error(`Failed to create user: ${response.utilityIntegrationTest.message}`);
     }
 
-    await petlink.loginWithPhone(userPayload.phone, userPayload.password);
+    await petlink.core.loginWithPhone(userPayload.phone, userPayload.password);
     const userResponse = await petlink.core.graphqlHttp.authJwt.getUser();
 
     if (!userResponse.getUser.user) {

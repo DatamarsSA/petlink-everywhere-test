@@ -37,6 +37,8 @@ type AuthConfig = {
 type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
   serviceName: ServiceType;
   endpoint: string;
+  jwtProvider: JwtAuthProvider;
+  iamProvider: IamAuthProvider;
   createClient: (authConfig: AuthConfig) => Promise<TClient>;
   createSdk: (client: TClient) => TSdk;
 };
@@ -63,10 +65,12 @@ class EnvConfig {
     return process.env[`${service}_GRAPHQL_API_KEY`]!;
   }
 
-  static getCognitoConfig() {
+  static getCognitoConfig(service: ServiceType) {
+    const clientId = service === ServiceType.CCT ? process.env.CCT_COGNITO_CLIENT_ID! : process.env.COGNITO_CLIENT_ID!;
+
     return {
       region: process.env.COGNITO_REGION!,
-      clientId: process.env.COGNITO_CLIENT_ID!,
+      clientId,
     };
   }
 
@@ -80,12 +84,14 @@ class EnvConfig {
 class JwtAuthProvider {
   private token: { token: string; expiry: Date } | null = null;
 
+  constructor(private serviceType: ServiceType) {}
+
   /**
    * Authenticate via Cognito user pools and cache the ID token.
    */
   async authenticate(username: string, password: string, authMethod: "email" | "phone_number"): Promise<void> {
     try {
-      const config = EnvConfig.getCognitoConfig();
+      const config = EnvConfig.getCognitoConfig(this.serviceType);
       const client = new CognitoIdentityProviderClient({ region: config.region });
 
       const command = new InitiateAuthCommand({
@@ -105,12 +111,12 @@ class JwtAuthProvider {
       const idToken = response.AuthenticationResult?.IdToken;
 
       if (!idToken) {
-        throw new Error(`Failed to get ID token from Cognito for user: ${username}`);
+        throw new Error(`[${this.serviceType}] Failed to get ID token from Cognito for user: ${username}`);
       }
 
       this.token = this.createTokenCacheEntry(idToken);
     } catch (error: any) {
-      logger.error(`[AUTH/JWT] Failed to authenticate user ${username} via ${authMethod}`, {
+      logger.error(`[AUTH/JWT/${this.serviceType}] Failed to authenticate user ${username} via ${authMethod}`, {
         error: error.message,
         code: error.code || error.name,
         username,
@@ -126,7 +132,7 @@ class JwtAuthProvider {
 
   getToken(): string {
     if (!this.hasValidToken()) {
-      throw new Error("No valid JWT token available. Please login first.");
+      throw new Error(`[${this.serviceType}] No valid JWT token available. Please login first.`);
     }
     return this.token!.token;
   }
@@ -199,55 +205,9 @@ class IamAuthProvider {
   }
 }
 
-class AuthManager {
-  static readonly jwt = new JwtAuthProvider();
-  static readonly iam = new IamAuthProvider();
-}
-
 // === Clients/Protocols ===
-const buildAuthConfig = async (authType: AuthType, serviceName: ServiceType, endpoint?: string): Promise<AuthConfig> => {
-  switch (authType) {
-    case AuthType.JWT: {
-      if (!AuthManager.jwt.hasValidToken()) {
-        throw new Error("No valid JWT token available. Please login first with loginWithEmail or loginWithPhone.");
-      }
-      const token = AuthManager.jwt.getToken();
-      return {
-        cacheKey: `${serviceName}:jwt:${token}`,
-        headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
-      };
-    }
 
-    case AuthType.IAM: {
-      return {
-        cacheKey: `${serviceName}:iam:static`,
-        headers: {}, // Will be filled by middleware
-        middleware: async (request) => {
-          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-          const signedHeaders = await AuthManager.iam.signRequest(endpoint!, body);
-          return {
-            ...request,
-            headers: { ...request.headers, ...signedHeaders },
-          };
-        },
-      };
-    }
-
-    case AuthType.API_KEY: {
-      const apiKey = EnvConfig.getApiKey(serviceName);
-      if (!apiKey) throw new Error(`[${serviceName}] API Key not found`);
-      return {
-        cacheKey: `${serviceName}:apiKey:${apiKey}`,
-        headers: { [HTTP_HEADERS.API_KEY]: apiKey },
-      };
-    }
-
-    default:
-      throw new Error(`Unsupported auth type: ${authType}`);
-  }
-};
-
-const createGraphQLWSProtocol = (serviceType: ServiceType) => {
+const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthProvider) => {
   class WSClient {
     private token: string | null = null;
     private apiKey: string | null = null;
@@ -264,7 +224,7 @@ const createGraphQLWSProtocol = (serviceType: ServiceType) => {
     private subscriptionCounter = 0;
 
     setAuthJwt() {
-      this.token = AuthManager.jwt.getToken();
+      this.token = jwtProvider.getToken();
       this.authType = "jwt";
     }
 
@@ -536,7 +496,50 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
       get: (_target, prop: string | symbol) => {
         return async (...args: any[]) => {
           // 1. Build auth config for this auth type
-          const authConfig = await buildAuthConfig(authType, config.serviceName, config.endpoint);
+          let authConfig: AuthConfig;
+
+          switch (authType) {
+            case AuthType.JWT: {
+              if (!config.jwtProvider.hasValidToken()) {
+                throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first via ${config.serviceName}.loginWith...`);
+              }
+              const token = config.jwtProvider.getToken();
+              authConfig = {
+                cacheKey: `${config.serviceName}:jwt:${token}`,
+                headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+              };
+              break;
+            }
+
+            case AuthType.IAM: {
+              authConfig = {
+                cacheKey: `${config.serviceName}:iam:static`,
+                headers: {}, // Will be filled by middleware
+                middleware: async (request) => {
+                  const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+                  const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
+                  return {
+                    ...request,
+                    headers: { ...request.headers, ...signedHeaders },
+                  };
+                },
+              };
+              break;
+            }
+
+            case AuthType.API_KEY: {
+              const apiKey = EnvConfig.getApiKey(config.serviceName);
+              if (!apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
+              authConfig = {
+                cacheKey: `${config.serviceName}:apiKey:${apiKey}`,
+                headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+              };
+              break;
+            }
+
+            default:
+              throw new Error(`Unsupported auth type: ${authType}`);
+          }
 
           // 2. Get or create client from cache
           let client = cache.get(authConfig.cacheKey);
@@ -550,17 +553,17 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
           const startTime = performance.now();
 
           // Log request details
-          logger.info(`🚀 CALLING: ${String(prop)}`, args);
+          logger.info(`🚀 [${config.serviceName}] CALLING: ${String(prop)}`, args);
 
           try {
             const response = await (client as any)[prop](...args);
 
             // Log successful response
-            logger.info(`✅ SUCCESS: ${String(prop)}`, response);
+            logger.info(`✅ [${config.serviceName}] SUCCESS: ${String(prop)}`, response);
 
             return response;
           } catch (error: any) {
-            logger.error(`❌ ERROR: ${String(prop)}`, error);
+            logger.error(`❌ [${config.serviceName}] ERROR: ${String(prop)}`, error);
             throw error;
           } finally {
             const duration = Math.round(performance.now() - startTime);
@@ -590,11 +593,18 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
 class CoreService {
   readonly graphqlHttp: HttpProtocol<CoreSdk>;
   readonly graphqlWS: ReturnType<typeof createGraphQLWSProtocol>;
+  private readonly jwtProvider: JwtAuthProvider;
+  private readonly iamProvider: IamAuthProvider;
 
   constructor() {
+    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE);
+    this.iamProvider = new IamAuthProvider();
+
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
       serviceName: ServiceType.CORE,
       endpoint: EnvConfig.getEndpoint(ServiceType.CORE),
+      jwtProvider: this.jwtProvider,
+      iamProvider: this.iamProvider,
       createClient: async (authConfig) =>
         new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CORE), {
           headers: authConfig.headers,
@@ -602,21 +612,38 @@ class CoreService {
         }),
       createSdk: (client) => getCoreSdk(client),
     });
-    this.graphqlWS = createGraphQLWSProtocol(ServiceType.CORE);
+
+    this.graphqlWS = createGraphQLWSProtocol(ServiceType.CORE, this.jwtProvider);
+  }
+
+  async loginWithEmail(email: string, password: string): Promise<void> {
+    await this.jwtProvider.authenticate(email, password, "email");
+  }
+
+  async loginWithPhone(phone: string, password: string): Promise<void> {
+    await this.jwtProvider.authenticate(phone, password, "phone_number");
   }
 
   clearCache(): void {
+    this.jwtProvider.clear();
     this.graphqlHttp.clearCache();
   }
 }
 
 class CctService {
   readonly graphqlHttp: HttpProtocol<CctSdk>;
+  private readonly jwtProvider: JwtAuthProvider;
+  private readonly iamProvider: IamAuthProvider;
 
   constructor() {
+    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT);
+    this.iamProvider = new IamAuthProvider();
+
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CctSdk>({
       serviceName: ServiceType.CCT,
       endpoint: EnvConfig.getEndpoint(ServiceType.CCT),
+      jwtProvider: this.jwtProvider,
+      iamProvider: this.iamProvider,
       createClient: async (authConfig) =>
         new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CCT), {
           headers: authConfig.headers,
@@ -626,7 +653,12 @@ class CctService {
     });
   }
 
+  async loginWithEmail(email: string, password: string): Promise<void> {
+    await this.jwtProvider.authenticate(email, password, "email");
+  }
+
   clearCache(): void {
+    this.jwtProvider.clear();
     this.graphqlHttp.clearCache();
   }
 }
@@ -640,37 +672,13 @@ class PetLinkInfrastructure {
     this.cct = new CctService();
   }
 
-  // --- Auth ---
-  async loginWithEmail(email: string, password: string): Promise<void> {
-    await AuthManager.jwt.authenticate(email, password, "email");
-  }
-
-  async loginWithPhone(phone: string, password: string): Promise<void> {
-    await AuthManager.jwt.authenticate(phone, password, "phone_number");
-  }
-
   /**
-   * Clears user-specific authentication (JWT) and related clients,
-   * simulating a user logout.
+   * Clears user-specific authentication (JWT) and related clients
+   * for ALL services.
    */
   logoutUser(): void {
-    AuthManager.jwt.clear();
     this.core.clearCache();
     this.cct.clearCache();
-  }
-
-  /**
-   * [DEBUG] Returns the current authentication state of the client.
-   * Useful for debugging and advanced test assertions.
-   */
-  getCurrentAuthState(): {
-    isUserLoggedIn: boolean;
-    jwtToken?: string;
-  } {
-    return {
-      isUserLoggedIn: AuthManager.jwt.hasValidToken(),
-      jwtToken: AuthManager.jwt.hasValidToken() ? AuthManager.jwt.getToken() : undefined,
-    };
   }
 }
 

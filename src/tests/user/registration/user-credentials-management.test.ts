@@ -157,7 +157,7 @@ describe("User Profile Management", () => {
       expect(checkUserUpdated.getUser.user?.email, "User email should be updated").toBe(newEmail);
 
       // Verify login with old email doesn't works anymore
-      await expect(petlink.loginWithEmail(initialEmail, originalPassword)).rejects.toThrow();
+      await expect(petlink.core.loginWithEmail(initialEmail, originalPassword)).rejects.toThrow();
 
       // verify new email
       const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
@@ -174,7 +174,7 @@ describe("User Profile Management", () => {
 
       // Try login with new email
       petlink.logoutUser();
-      await petlink.loginWithEmail(newEmail, originalPassword);
+      await petlink.core.loginWithEmail(newEmail, originalPassword);
       const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
@@ -228,7 +228,7 @@ describe("User Profile Management", () => {
 
       // STEP 5: Verify login with new password works
       petlink.logoutUser();
-      await petlink.loginWithPhone(newPhone, fxt.current.user.password);
+      await petlink.core.loginWithPhone(newPhone, fxt.current.user.password);
       const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
@@ -256,10 +256,10 @@ describe("User Profile Management", () => {
       ).toBe("200");
 
       // Verify old password no longer works
-      await expect(petlink.loginWithEmail(testUser.email, originalPassword)).rejects.toThrow("Incorrect username or password.");
+      await expect(petlink.core.loginWithEmail(testUser.email, originalPassword)).rejects.toThrow("Incorrect username or password.");
 
       // Verify new password works
-      await petlink.loginWithEmail(testUser.email, newPassword);
+      await petlink.core.loginWithEmail(testUser.email, newPassword);
       const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,
@@ -321,7 +321,7 @@ describe("User Profile Management", () => {
 
       // STEP 5: Verify new password works
       petlink.logoutUser();
-      await petlink.loginWithPhone(setup.user!.phone, newPassword);
+      await petlink.core.loginWithPhone(setup.user!.phone, newPassword);
       const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
       expect(
         userCheck.getUser.code,

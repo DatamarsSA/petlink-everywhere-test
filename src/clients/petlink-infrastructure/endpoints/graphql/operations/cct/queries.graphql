@@ -1,0 +1,30 @@
+query getUser($userId: String!) {
+  getUser(userId: $userId) {
+    code
+    message
+    user {
+      id
+      email
+      name
+      surname
+      role
+      active
+    }
+  }
+}
+
+query getDevice($deviceId: String!) {
+  getDevice(deviceId: $deviceId) {
+    code
+    message
+    device {
+      serialId
+      deviceId
+      petId
+      customerId
+      imei
+      firmware
+      battery
+    }
+  }
+}

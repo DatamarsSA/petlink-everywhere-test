@@ -11,7 +11,7 @@ generates:
 
   src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts:
     schema: ./src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql
-    #    documents: ./src/clients/petlink-infrastructure/endpoints/graphql/operations/cct/*.graphql
+    documents: ./src/clients/petlink-infrastructure/endpoints/graphql/operations/cct/*.graphql
     plugins:
       - typescript
       - typescript-operations

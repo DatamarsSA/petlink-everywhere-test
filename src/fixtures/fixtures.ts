@@ -72,6 +72,11 @@ const commonCard = {
   },
 };
 
+const cctAdmin = {
+  email: "emanuel.epifani.m@gmail.com",
+  password: "f2y7}Ja0[_3O",
+};
+
 // ============================================
 // BASE FIXTURES (Internal use only)
 // ============================================
@@ -113,6 +118,7 @@ const baseFixtures = {
 
 export const fxt = {
   ...baseFixtures,
+  cctAdmin,
   isKippyRun: currentAppBrand === AppBrand.Kippy,
   isPetlinkRun: currentAppBrand === AppBrand.Petlink,
   current: baseFixtures[currentAppBrand],
