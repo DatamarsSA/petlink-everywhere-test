@@ -2,14 +2,9 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by a Lambda Authorizer.
+Tells the service this field/object has access authorized by an OIDC token.
 """
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by a Cognito User Pools token.
@@ -18,6 +13,35 @@ directive @aws_cognito_user_pools(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
+
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
 
 """
 Tells the service which subscriptions will be published to when this mutation is
@@ -29,30 +53,6 @@ directive @aws_publish(
   """
   subscriptions: [String]
 ) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by sigv4 signing.
-"""
-directive @aws_iam on OBJECT | FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -168,6 +168,11 @@ string**" will throw GraphQL validation errors.
 """
 scalar AWSJSON
 
+type BaseConfig {
+  sentinelUrl: String!
+  sentinelPort: String!
+}
+
 type BillingInfo {
   firstName: String
   lastName: String
@@ -187,6 +192,11 @@ input BillingInfoInput {
   state: String
   zip: String!
   country: String!
+}
+
+type BluetoothAddress {
+  macAddress: String
+  remoteUuid: String
 }
 
 type Breed {
@@ -510,6 +520,7 @@ type GpsSettings {
   updateFrequency: Int!
   enableGpsOnDefault: Boolean!
   optimizationDone: Boolean
+  sentinelMigrationDone: Boolean
 }
 
 input GpsSettingsIn {
@@ -698,7 +709,7 @@ type Mutation {
   updateEmailUser(email: String!, languageId: LanguageId, appBrand: AppBrand!): ResponseUser!
   updatePhoneNumberUser(phone: String!, languageId: LanguageId, verificationId: String!, otp: String!): ResponseUser!
   forgotEmail(productNumber: String!, entityType: ProductTypeEnum, languageId: LanguageId): Response
-  sendOtpForgotPassword(contact: String!, languageId: LanguageId, migrationFlow: Boolean): ResponseOtp!
+  sendOtpForgotPassword(contact: String!, languageId: LanguageId, migrationFlow: Boolean, appBrand: AppBrand!): ResponseOtp!
   changeForgotPassword(otp: String!, verificationId: String!, password: String!): Response!
   changePassword(oldPassword: String!, password: String!): Response!
 
@@ -723,11 +734,13 @@ type Mutation {
   replacement(productId: String!, newSerialNumber: String!, entityType: ProductTypeEnum!): ResponseReplacement!
   setPetIsLost(petId: String!, lostIn: LostIn!): ResponseSetPetIsLost!
   setOptimizationDone(productId: String!): Response!
+  setSentinelMigrationDone(productId: String!): Response!
   setSafetyTermsCat: Response!
   setArcaPlanetTerms: Response!
   qrTagHasBeenScanned(petlinkQrTag: String!): Response!
   sendMessageFoundPet(message: MessageFoundPetIn!): Response!
   setPetIsFound(petId: String!): ResponseSetPetIsFound!
+  setMacAddress(macAddresses: [SetMacAddressInput!]!): Response!
   pushGpsMessagePositionBLE(productId: String!, position: GpsPositionIn!): Response!
   sendCommand(command: Command!): Response!
   sendSetting(setting: Setting!): ResponseSendSetting!
@@ -1198,6 +1211,7 @@ type Product {
   endOfLifeDevice: Boolean
   appBrand: AppBrand
   deviceType: DeviceTypeEnum
+  bluetoothAddress: BluetoothAddress
 }
 
 enum ProductTypeEnum {
@@ -1280,7 +1294,7 @@ type Query {
   getDictionary(languageId: LanguageId, appBrand: AppBrand!): ResponseGetDictionary!
   getS3UploadUrl(fileName: String!): ResponseS3Upload!
   getLogUploadUrl(fileName: String!, deviceId: String!): ResponseGetLogUploadUrl!
-  checkContact(contact: String!, contactType: ContactType!): Response!
+  checkContact(contact: String!, contactType: ContactType!, appBrand: AppBrand!): Response!
   checkMigration(contact: String!, password: String!, appBrand: AppBrand!): Response!
   getCountryState(languageId: LanguageId, countryId: String): ResponseGetCountryState!
   getBreed(species: SpeciesEnum!, languageId: LanguageId): ResponseGetBreed!
@@ -1307,6 +1321,7 @@ type Query {
 
   """ sso"""
   getSsoToken(id: String!): ResponseSsoToken!
+  getBaseConfig(appBrand: String!): ResponseGetBaseConfig!
 }
 
 type Response {
@@ -1454,6 +1469,13 @@ type ResponseGeofences {
   message: String!
   translationCode: String
   geofences: [Geofence!]
+}
+
+type ResponseGetBaseConfig {
+  code: String!
+  message: String!
+  translationCode: String
+  baseConfig: BaseConfig
 }
 
 type ResponseGetBreed {
@@ -1804,6 +1826,12 @@ type RetentionDiscountItem {
   couponName: String!
   discountPercentage: Float
   discountType: String!
+}
+
+input SetMacAddressInput {
+  serialNumber: String!
+  macAddress: String
+  remoteUuid: String
 }
 
 input Setting {

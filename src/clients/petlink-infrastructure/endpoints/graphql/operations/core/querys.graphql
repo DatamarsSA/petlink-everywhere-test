@@ -54,8 +54,8 @@ query getUser {
   }
 }
 
-query checkContact($contact: String!, $contactType: ContactType!) {
-  checkContact(contact: $contact, contactType: $contactType) {
+query checkContact($contact: String!, $contactType: ContactType!, $appBrand: AppBrand!) {
+  checkContact(contact: $contact, contactType: $contactType, appBrand: $appBrand) {
     code
     translationCode
     message
@@ -518,8 +518,8 @@ mutation updatePhoneNumberUser($phone: String!, $languageId: LanguageId, $verifi
 
 #FORGOT/RECOVERY flows (public - NO auth)
 
-mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId) {
-  sendOtpForgotPassword(contact: $contact, languageId: $languageId) {
+mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId, $appBrand: AppBrand!) {
+  sendOtpForgotPassword(contact: $contact, languageId: $languageId, appBrand: $appBrand) {
     code
     translationCode
     message

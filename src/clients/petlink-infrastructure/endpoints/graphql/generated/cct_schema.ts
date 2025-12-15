@@ -743,6 +743,72 @@ export interface LogActivityUser {
   userName: Scalars["String"]["output"];
 }
 
+export interface MigrationItem {
+  __typename?: "MigrationItem";
+  /**   ACTIVITIES */
+  activitiesMigrated?: Maybe<Scalars["Int"]["output"]>;
+  activitiesTotal?: Maybe<Scalars["Int"]["output"]>;
+  /**   ENERGY_SAVING_AREAS */
+  areasMigrated?: Maybe<Scalars["Int"]["output"]>;
+  areasTotal?: Maybe<Scalars["Int"]["output"]>;
+  /**   SUBSCRIPTIONS */
+  chargebeeSubscriptionsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  chargebeeSubscriptionsTotal?: Maybe<Scalars["Int"]["output"]>;
+  creditNotesMigrated?: Maybe<Scalars["Int"]["output"]>;
+  creditNotesTotal?: Maybe<Scalars["Int"]["output"]>;
+  email?: Maybe<Scalars["String"]["output"]>;
+  endedAt?: Maybe<Scalars["String"]["output"]>;
+  /**   GEOFENCES */
+  geofencesMigrated?: Maybe<Scalars["Int"]["output"]>;
+  geofencesTotal?: Maybe<Scalars["Int"]["output"]>;
+  includedSubscriptionsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  includedSubscriptionsTotal?: Maybe<Scalars["Int"]["output"]>;
+  invoicesMigrated?: Maybe<Scalars["Int"]["output"]>;
+  invoicesTotal?: Maybe<Scalars["Int"]["output"]>;
+  migrationTarget: MigrationTargets;
+  /**   PET_NOTIFICATIONS */
+  notificationsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  notificationsTotal?: Maybe<Scalars["Int"]["output"]>;
+  petProtectionsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  petProtectionsTotal?: Maybe<Scalars["Int"]["output"]>;
+  /**   PETS_AND_PRODUCTS */
+  petsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  petsTotal?: Maybe<Scalars["Int"]["output"]>;
+  /**   POSITION_HISTORY */
+  positionHistoriesMigrated?: Maybe<Scalars["Int"]["output"]>;
+  positionHistoriesTotal?: Maybe<Scalars["Int"]["output"]>;
+  productsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  productsTotal?: Maybe<Scalars["Int"]["output"]>;
+  replacementsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  replacementsTotal?: Maybe<Scalars["Int"]["output"]>;
+  /**   RESETS_AND_REPLACEMENTS */
+  resetsMigrated?: Maybe<Scalars["Int"]["output"]>;
+  resetsTotal?: Maybe<Scalars["Int"]["output"]>;
+  sessionId: Scalars["String"]["output"];
+  startedAt?: Maybe<Scalars["String"]["output"]>;
+  userId: Scalars["String"]["output"];
+  /**   USER */
+  usersMigrated?: Maybe<Scalars["Int"]["output"]>;
+}
+
+export interface MigrationItemShortInfo {
+  __typename?: "MigrationItemShortInfo";
+  sessionId: Scalars["String"]["output"];
+  startedAt?: Maybe<Scalars["String"]["output"]>;
+}
+
+export enum MigrationTargets {
+  Activities = "ACTIVITIES",
+  EnergySavingAreas = "ENERGY_SAVING_AREAS",
+  Geofences = "GEOFENCES",
+  PetsAndProducts = "PETS_AND_PRODUCTS",
+  PetNotifications = "PET_NOTIFICATIONS",
+  PositionHistory = "POSITION_HISTORY",
+  ResetsAndReplacements = "RESETS_AND_REPLACEMENTS",
+  Subscriptions = "SUBSCRIPTIONS",
+  User = "USER",
+}
+
 export interface Mutation {
   __typename?: "Mutation";
   addFreePeriod: BaseResponse;
@@ -1165,6 +1231,8 @@ export interface Query {
   getInsuranceDevicesInfo: GetInsuranceDevicesInfoResponse;
   getIssues: GetIssuesResponse;
   getLogActivityUser: GetLogActivityUserResponse;
+  getMigrationSession: ResponseGetMigrationSession;
+  getMigrationSessions: ResponseGetMigrationSessions;
   getMyInfo: GetMyInfoResponse;
   getOrder: GetOrderResponse;
   getOrders: GetOrdersResponse;
@@ -1258,6 +1326,14 @@ export type QueryGetLogActivityUserArgs = {
   filter?: InputMaybe<GetLogActivityUserInput>;
   order?: InputMaybe<OrderInput>;
   pagination?: InputMaybe<PaginationInput>;
+};
+
+export type QueryGetMigrationSessionArgs = {
+  sessionId: Scalars["String"]["input"];
+};
+
+export type QueryGetMigrationSessionsArgs = {
+  email: Scalars["String"]["input"];
 };
 
 export type QueryGetOrderArgs = {
@@ -1389,6 +1465,22 @@ export interface ResponseGetDeviceProtectionReplacements {
   message: Scalars["String"]["output"];
   replacementsDone?: Maybe<Scalars["Int"]["output"]>;
   replacementsLeft?: Maybe<Scalars["Int"]["output"]>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetMigrationSession {
+  __typename?: "ResponseGetMigrationSession";
+  code: Scalars["String"]["output"];
+  items?: Maybe<Array<MigrationItem>>;
+  message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetMigrationSessions {
+  __typename?: "ResponseGetMigrationSessions";
+  code: Scalars["String"]["output"];
+  items?: Maybe<Array<MigrationItemShortInfo>>;
+  message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 

@@ -134,6 +134,12 @@ export enum AppBrand {
   Petlink = "PETLINK",
 }
 
+export interface BaseConfig {
+  __typename?: "BaseConfig";
+  sentinelPort: Scalars["String"]["output"];
+  sentinelUrl: Scalars["String"]["output"];
+}
+
 export interface BillingInfo {
   __typename?: "BillingInfo";
   address?: Maybe<Scalars["String"]["output"]>;
@@ -154,6 +160,12 @@ export interface BillingInfoInput {
   country: Scalars["String"]["input"];
   state?: InputMaybe<Scalars["String"]["input"]>;
   zip: Scalars["String"]["input"];
+}
+
+export interface BluetoothAddress {
+  __typename?: "BluetoothAddress";
+  macAddress?: Maybe<Scalars["String"]["output"]>;
+  remoteUuid?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface Breed {
@@ -501,6 +513,7 @@ export interface GpsSettings {
   activityProfile?: Maybe<ActivityProfileEnum>;
   enableGpsOnDefault: Scalars["Boolean"]["output"];
   optimizationDone?: Maybe<Scalars["Boolean"]["output"]>;
+  sentinelMigrationDone?: Maybe<Scalars["Boolean"]["output"]>;
   updateFrequency: Scalars["Int"]["output"];
 }
 
@@ -742,11 +755,13 @@ export interface Mutation {
   /**   add sub w/uuid from verifyEmail */
   sendTokenEmail: Response;
   setArcaPlanetTerms: Response;
+  setMacAddress: Response;
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
   setReadPopupMigratedUser: Response;
   setSafetyTermsCat: Response;
+  setSentinelMigrationDone: Response;
   /**   sso */
   setSsoToken: ResponseSsoUrl;
   signUpUser: Response;
@@ -921,6 +936,7 @@ export type MutationSendOtpArgs = {
 };
 
 export type MutationSendOtpForgotPasswordArgs = {
+  appBrand: AppBrand;
   contact: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
   migrationFlow?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -936,6 +952,10 @@ export type MutationSendTokenEmailArgs = {
   languageId?: InputMaybe<LanguageId>;
 };
 
+export type MutationSetMacAddressArgs = {
+  macAddresses: Array<SetMacAddressInput>;
+};
+
 export type MutationSetOptimizationDoneArgs = {
   productId: Scalars["String"]["input"];
 };
@@ -947,6 +967,10 @@ export type MutationSetPetIsFoundArgs = {
 export type MutationSetPetIsLostArgs = {
   lostIn: LostIn;
   petId: Scalars["String"]["input"];
+};
+
+export type MutationSetSentinelMigrationDoneArgs = {
+  productId: Scalars["String"]["input"];
 };
 
 export type MutationSetSsoTokenArgs = {
@@ -1465,6 +1489,7 @@ export interface Pricing {
 export interface Product {
   __typename?: "Product";
   appBrand?: Maybe<AppBrand>;
+  bluetoothAddress?: Maybe<BluetoothAddress>;
   creationDate: Scalars["String"]["output"];
   deviceType?: Maybe<DeviceTypeEnum>;
   endOfLifeDevice?: Maybe<Scalars["Boolean"]["output"]>;
@@ -1542,6 +1567,7 @@ export interface Query {
   getActivitiesByHour: ResponseActivitiesByHour;
   /**   TODO: rename in dog */
   getActivitiesCat: ResponseActivitiesCat;
+  getBaseConfig: ResponseGetBaseConfig;
   getBillingInfo: ResponseBillingInfo;
   getBreed: ResponseGetBreed;
   getColors: ResponseGetColors;
@@ -1593,6 +1619,7 @@ export type QueryChangeSubscriptionPlanArgs = {
 };
 
 export type QueryCheckContactArgs = {
+  appBrand: AppBrand;
   contact: Scalars["String"]["input"];
   contactType: ContactType;
 };
@@ -1685,6 +1712,10 @@ export type QueryGetActivitiesCatArgs = {
   petId: Scalars["String"]["input"];
   to: Scalars["Int"]["input"];
   weekIndex: Scalars["Int"]["input"];
+};
+
+export type QueryGetBaseConfigArgs = {
+  appBrand: Scalars["String"]["input"];
 };
 
 export type QueryGetBreedArgs = {
@@ -1998,6 +2029,14 @@ export interface ResponseGeofences {
   __typename?: "ResponseGeofences";
   code: Scalars["String"]["output"];
   geofences?: Maybe<Array<Geofence>>;
+  message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetBaseConfig {
+  __typename?: "ResponseGetBaseConfig";
+  baseConfig?: Maybe<BaseConfig>;
+  code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
@@ -2398,6 +2437,12 @@ export interface RetentionDiscountItem {
   couponName: Scalars["String"]["output"];
   discountPercentage?: Maybe<Scalars["Float"]["output"]>;
   discountType: Scalars["String"]["output"];
+}
+
+export interface SetMacAddressInput {
+  macAddress?: InputMaybe<Scalars["String"]["input"]>;
+  remoteUuid?: InputMaybe<Scalars["String"]["input"]>;
+  serialNumber: Scalars["String"]["input"];
 }
 
 export interface Setting {
@@ -3287,6 +3332,7 @@ export type GetUserQuery = {
 export type CheckContactQueryVariables = Exact<{
   contact: Scalars["String"]["input"];
   contactType: ContactType;
+  appBrand: AppBrand;
 }>;
 
 export type CheckContactQuery = {
@@ -3839,6 +3885,7 @@ export type UpdatePhoneNumberUserMutation = {
 export type SendOtpForgotPasswordMutationVariables = Exact<{
   contact: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
+  appBrand: AppBrand;
 }>;
 
 export type SendOtpForgotPasswordMutation = {
@@ -5357,6 +5404,11 @@ export const CheckContactDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "contactType" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "ContactType" } } },
         },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -5371,6 +5423,7 @@ export const CheckContactDocument = {
                 name: { kind: "Name", value: "contactType" },
                 value: { kind: "Variable", name: { kind: "Name", value: "contactType" } },
               },
+              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -6626,6 +6679,11 @@ export const SendOtpForgotPasswordDocument = {
           variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
           type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
         },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -6640,6 +6698,7 @@ export const SendOtpForgotPasswordDocument = {
                 name: { kind: "Name", value: "languageId" },
                 value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
               },
+              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
             ],
             selectionSet: {
               kind: "SelectionSet",

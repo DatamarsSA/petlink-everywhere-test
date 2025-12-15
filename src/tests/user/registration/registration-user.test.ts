@@ -32,6 +32,7 @@ describe("User Registration", () => {
     const response = await petlink.core.graphqlHttp.public.checkContact({
       contact: signUpPayload.phone,
       contactType: ContactType.Phone,
+      appBrand: fxt.current.appBrand,
     });
 
     expect(
@@ -169,10 +170,12 @@ describe("User Registration", () => {
       petlink.core.graphqlHttp.public.checkContact({
         contact: signUpPayload.phone,
         contactType: ContactType.Phone,
+        appBrand: fxt.current.appBrand,
       }),
       petlink.core.graphqlHttp.public.checkContact({
         contact: signUpPayload.email,
         contactType: ContactType.Email,
+        appBrand: fxt.current.appBrand,
       }),
     ]);
 

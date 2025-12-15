@@ -280,6 +280,7 @@ describe("User Profile Management", () => {
       const otpResponse = await petlink.core.graphqlHttp.public.sendOtpForgotPassword({
         contact: setup.user!.phone,
         languageId: fxt.current.user.languageId,
+        appBrand: fxt.current.appBrand,
       });
       logger.debug("changeForgotPassword() response", { otpResponse });
 
