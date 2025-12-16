@@ -66,7 +66,7 @@ class EnvConfig {
   }
 
   static getCognitoConfig(service: ServiceType) {
-    const clientId = service === ServiceType.CCT ? process.env.CCT_COGNITO_CLIENT_ID! : process.env.COGNITO_CLIENT_ID!;
+    const clientId = service === ServiceType.CCT ? process.env.CCT_COGNITO_CLIENT_ID! : process.env.COGNITO_CLIENT_ID_APP_USER!;
 
     return {
       region: process.env.COGNITO_REGION!,
