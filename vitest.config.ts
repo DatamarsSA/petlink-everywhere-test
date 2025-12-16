@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
     // AWS Cognito (for LOGIN)
     COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
     COGNITO_CLIENT_ID_APP_USER: z.string().min(1, "COGNITO_CLIENT_ID_APP_USER è richiesto"),
-    COGNITO_CLIENT_ID_FE_CCT: z.string().min(1, "COGNITO_CLIENT_ID è richiesto"),
+    COGNITO_CLIENT_ID_FE_CCT: z.string().min(1, "COGNITO_CLIENT_ID_FE_CCT è richiesto"),
     // CORE API
     CORE_GRAPHQL_API_URL: z.url("CORE_GRAPHQL_API_URL deve essere un URL valido"),
     CORE_GRAPHQL_API_KEY: z.string().min(1, "CORE_GRAPHQL_API_KEY è richiesta"),

@@ -38,6 +38,7 @@ jobs:
       # AWS Cognito
       COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
       COGNITO_CLIENT_ID_APP_USER: ${{ secrets.COGNITO_CLIENT_ID_APP_USER }}
+      COGNITO_CLIENT_ID_FE_CCT: ${{ secrets.COGNITO_CLIENT_ID_FE_CCT }}
       # AWS IAM
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -131,6 +132,7 @@ jobs:
             -e CCT_GRAPHQL_API_KEY \
             -e COGNITO_REGION \
             -e COGNITO_CLIENT_ID_APP_USER \
+            -e COGNITO_CLIENT_ID_FE_CCT \
             -e AWS_REGION \
             -e AWS_ACCESS_KEY_ID \
             -e AWS_SECRET_ACCESS_KEY \
