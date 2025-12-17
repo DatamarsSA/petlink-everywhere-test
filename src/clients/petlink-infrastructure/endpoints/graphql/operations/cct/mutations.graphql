@@ -1,6 +1,1 @@
-mutation resetPetlinkGps($id: String!) {
-  resetPetlinkGps(id: $id) {
-    code
-    message
-  }
-}
+# No mutations currently used

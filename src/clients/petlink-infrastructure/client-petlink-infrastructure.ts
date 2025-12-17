@@ -541,7 +541,7 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
               throw new Error(`Unsupported auth type: ${authType}`);
           }
 
-          // 2. Get or create client from cache
+          // 2. Create or get client from cache
           let client = cache.get(authConfig.cacheKey);
           if (!client) {
             const httpClient = await config.createClient(authConfig);
@@ -553,17 +553,17 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
           const startTime = performance.now();
 
           // Log request details
-          logger.info(`🚀 [${config.serviceName}] CALLING: ${String(prop)}`, args);
+          logger.info(`🚀 [${config.serviceName}] CALLING ->: ${String(prop)}`, args);
 
           try {
             const response = await (client as any)[prop](...args);
 
             // Log successful response
-            logger.info(`✅ [${config.serviceName}] SUCCESS: ${String(prop)}`, response);
+            logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)}`, response);
 
             return response;
           } catch (error: any) {
-            logger.error(`❌ [${config.serviceName}] ERROR: ${String(prop)}`, error);
+            logger.error(`❌ [${config.serviceName}] ERROR <-: ${String(prop)}`, error);
             throw error;
           } finally {
             const duration = Math.round(performance.now() - startTime);

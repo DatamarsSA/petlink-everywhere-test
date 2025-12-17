@@ -1801,23 +1801,119 @@ export interface SetPlanProfilesResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type ResetPetlinkGpsMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
+export type GetCustomerQueryVariables = Exact<{
+  customerId: Scalars["String"]["input"];
 }>;
 
-export type ResetPetlinkGpsMutation = { __typename?: "Mutation"; resetPetlinkGps: { __typename?: "BaseResponse"; code: string; message: string } };
-
-export type GetUserQueryVariables = Exact<{
-  userId: Scalars["String"]["input"];
-}>;
-
-export type GetUserQuery = {
+export type GetCustomerQuery = {
   __typename?: "Query";
-  getUser: {
-    __typename?: "GetUserResponse";
+  getCustomer: {
+    __typename?: "GetCustomerResponse";
     code: string;
     message: string;
-    user?: { __typename?: "User"; id: string; email: string; name: string; surname: string; role: Array<RoleEnum>; active: boolean } | null;
+    customer?: {
+      __typename?: "Customer";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      emailConfirmed: boolean;
+      phone: string;
+      phoneConfirmed: boolean;
+      language: LanguageId;
+      countryCode: string;
+      appBrand?: string | null;
+    } | null;
+  };
+};
+
+export type GetCustomersQueryVariables = Exact<{
+  filter?: InputMaybe<GetCustomersInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetCustomersQuery = {
+  __typename?: "Query";
+  getCustomers: {
+    __typename?: "GetCustomersResponse";
+    code: string;
+    message: string;
+    items: Array<{
+      __typename?: "Customer";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      emailConfirmed: boolean;
+      phone: string;
+      phoneConfirmed: boolean;
+      language: LanguageId;
+      registrationDate: string;
+      countryCode: string;
+      chargebeeId?: string | null;
+      appBrand?: string | null;
+    }>;
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
+  };
+};
+
+export type GetDevicesQueryVariables = Exact<{
+  filter?: InputMaybe<GetDevicesInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetDevicesQuery = {
+  __typename?: "Query";
+  getDevices: {
+    __typename?: "GetDevicesResponse";
+    code: string;
+    message: string;
+    items: Array<{
+      __typename?: "Device";
+      serialId: string;
+      deviceId: string;
+      petId: string;
+      customerId: string;
+      customerName?: string | null;
+      customerSurname?: string | null;
+      customerEmail?: string | null;
+      customerBrand?: string | null;
+      customerCountry?: string | null;
+      customerLanguage?: LanguageId | null;
+      imei: string;
+      iccid: string;
+      registrationDate: string;
+      lastPurchasedSubscriptionId?: string | null;
+      lastPurchasedSubscriptionExpiringDate?: string | null;
+      lastActivatedSubscriptionId?: string | null;
+      lastActivatedSubscriptionExpiringDate?: string | null;
+      hasSubscriptionActive?: boolean | null;
+      hasEverSubscriptionActive?: boolean | null;
+      planProfileId?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      planProfileType?: string | null;
+      vodafoneCountry?: string | null;
+      simStatus: SimStatusEnum;
+      lastOperationInAppDate?: string | null;
+      lastConnectionDate?: string | null;
+      firmware: string;
+      battery?: number | null;
+      factory?: string | null;
+      hardwareType?: string | null;
+      simManufacturer?: string | null;
+      testingDate?: string | null;
+      group?: string | null;
+      lat?: number | null;
+      lng?: number | null;
+      timezone?: string | null;
+      updateFrequency?: number | null;
+      country: string;
+      logEnabled?: boolean | null;
+    }>;
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
   };
 };
 
@@ -1837,58 +1933,172 @@ export type GetDeviceQuery = {
       deviceId: string;
       petId: string;
       customerId: string;
+      customerName?: string | null;
+      customerSurname?: string | null;
+      customerEmail?: string | null;
+      customerBrand?: string | null;
+      customerCountry?: string | null;
+      customerLanguage?: LanguageId | null;
       imei: string;
+      iccid: string;
+      registrationDate: string;
+      lastPurchasedSubscriptionId?: string | null;
+      lastPurchasedSubscriptionExpiringDate?: string | null;
+      lastActivatedSubscriptionId?: string | null;
+      lastActivatedSubscriptionExpiringDate?: string | null;
+      hasSubscriptionActive?: boolean | null;
+      hasEverSubscriptionActive?: boolean | null;
+      planProfileId?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      planProfileType?: string | null;
+      vodafoneCountry?: string | null;
+      simStatus: SimStatusEnum;
+      lastOperationInAppDate?: string | null;
+      lastConnectionDate?: string | null;
       firmware: string;
       battery?: number | null;
+      factory?: string | null;
+      hardwareType?: string | null;
+      simManufacturer?: string | null;
+      testingDate?: string | null;
+      group?: string | null;
+      lat?: number | null;
+      lng?: number | null;
+      timezone?: string | null;
+      updateFrequency?: number | null;
+      country: string;
+      logEnabled?: boolean | null;
     } | null;
   };
 };
 
-export const ResetPetlinkGpsDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "resetPetlinkGps" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "resetPetlinkGps" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const GetUserDocument = {
+export type GetPetQueryVariables = Exact<{
+  petId: Scalars["String"]["input"];
+}>;
+
+export type GetPetQuery = {
+  __typename?: "Query";
+  getPet: {
+    __typename?: "GetPetResponse";
+    code: string;
+    message: string;
+    pet?: {
+      __typename?: "Pet";
+      id: string;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+      activityProfile: ActivityProfileEnum;
+      hidden?: boolean | null;
+      petProtection?: {
+        __typename?: "PetProtectionShortInfo";
+        id: string;
+        currentTermStart: string;
+        currentTermEnd: string;
+        status: PetProtectionStatus;
+        name: string;
+      } | null;
+    } | null;
+  };
+};
+
+export type CustomGetCustomerDevicesQueryVariables = Exact<{
+  customerId: Scalars["String"]["input"];
+}>;
+
+export type CustomGetCustomerDevicesQuery = {
+  __typename?: "Query";
+  getDevices: {
+    __typename?: "GetDevicesResponse";
+    code: string;
+    message: string;
+    items: Array<{
+      __typename?: "Device";
+      serialId: string;
+      deviceId: string;
+      petId: string;
+      customerId: string;
+      hasSubscriptionActive?: boolean | null;
+    }>;
+  };
+};
+
+export type GetCustomDeviceSubscriptionsQueryVariables = Exact<{
+  deviceId: Scalars["String"]["input"];
+}>;
+
+export type GetCustomDeviceSubscriptionsQuery = {
+  __typename?: "Query";
+  getSubscriptions: {
+    __typename?: "GetSubscriptionsResponse";
+    code: string;
+    message: string;
+    items?: Array<{
+      __typename?: "PetlinkSubscription";
+      id: string;
+      chargebeeSubscriptionId?: string | null;
+      entityType: string;
+      status?: SubscriptionStatusEnum | null;
+      paymentStatus?: PaymentStatusTypeEnum | null;
+      currencyCode: string;
+      currentTermStart?: string | null;
+      currentTermEnd?: string | null;
+      createdAt: string;
+      startedAt?: string | null;
+      activatedAt?: string | null;
+      updatedAt: string;
+      cancelledAt?: string | null;
+      note?: string | null;
+      moved?: string | null;
+      creationDate: string;
+      updateDate: string;
+      subscriptionItems: Array<{
+        __typename?: "SubscriptionItem";
+        amount: number;
+        billingCycles?: number | null;
+        name?: string | null;
+        itemPriceId: string;
+        itemId: string;
+        itemType: string;
+        quantity: number;
+        unitPrice: number;
+      }>;
+      invoice?: {
+        __typename?: "Invoice";
+        status: InvoiceStatusEnum;
+        businessEntityId: string;
+        currencyCode: string;
+        creationDate: string;
+        updateDate: string;
+        notes?: string | null;
+      } | null;
+    }> | null;
+  };
+};
+
+export const GetCustomerDocument = {
   kind: "Document",
   definitions: [
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "getUser" },
+      name: { kind: "Name", value: "getCustomer" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "userId" } },
+          variable: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
       ],
@@ -1897,9 +2107,13 @@ export const GetUserDocument = {
         selections: [
           {
             kind: "Field",
-            name: { kind: "Name", value: "getUser" },
+            name: { kind: "Name", value: "getCustomer" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "userId" }, value: { kind: "Variable", name: { kind: "Name", value: "userId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "customerId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -1908,16 +2122,220 @@ export const GetUserDocument = {
                 { kind: "Field", name: { kind: "Name", value: "message" } },
                 {
                   kind: "Field",
-                  name: { kind: "Name", value: "user" },
+                  name: { kind: "Name", value: "customer" },
                   selectionSet: {
                     kind: "SelectionSet",
                     selections: [
                       { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "email" } },
                       { kind: "Field", name: { kind: "Name", value: "name" } },
                       { kind: "Field", name: { kind: "Name", value: "surname" } },
-                      { kind: "Field", name: { kind: "Name", value: "role" } },
-                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "emailConfirmed" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "phoneConfirmed" } },
+                      { kind: "Field", name: { kind: "Name", value: "language" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "appBrand" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetCustomersDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "GetCustomers" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetCustomersInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getCustomers" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "emailConfirmed" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "phoneConfirmed" } },
+                      { kind: "Field", name: { kind: "Name", value: "language" } },
+                      { kind: "Field", name: { kind: "Name", value: "registrationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeId" } },
+                      { kind: "Field", name: { kind: "Name", value: "appBrand" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetDevicesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "GetDevices" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetDevicesInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getDevices" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerName" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerSurname" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerEmail" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerBrand" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerCountry" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerLanguage" } },
+                      { kind: "Field", name: { kind: "Name", value: "imei" } },
+                      { kind: "Field", name: { kind: "Name", value: "iccid" } },
+                      { kind: "Field", name: { kind: "Name", value: "registrationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastPurchasedSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastPurchasedSubscriptionExpiringDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastActivatedSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastActivatedSubscriptionExpiringDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "hasSubscriptionActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "hasEverSubscriptionActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "planProfileId" } },
+                      { kind: "Field", name: { kind: "Name", value: "brand" } },
+                      { kind: "Field", name: { kind: "Name", value: "model" } },
+                      { kind: "Field", name: { kind: "Name", value: "planProfileType" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountry" } },
+                      { kind: "Field", name: { kind: "Name", value: "simStatus" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastOperationInAppDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastConnectionDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "firmware" } },
+                      { kind: "Field", name: { kind: "Name", value: "battery" } },
+                      { kind: "Field", name: { kind: "Name", value: "factory" } },
+                      { kind: "Field", name: { kind: "Name", value: "hardwareType" } },
+                      { kind: "Field", name: { kind: "Name", value: "simManufacturer" } },
+                      { kind: "Field", name: { kind: "Name", value: "testingDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "group" } },
+                      { kind: "Field", name: { kind: "Name", value: "lat" } },
+                      { kind: "Field", name: { kind: "Name", value: "lng" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
+                      { kind: "Field", name: { kind: "Name", value: "country" } },
+                      { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
                     ],
                   },
                 },
@@ -1935,7 +2353,7 @@ export const GetDeviceDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "getDevice" },
+      name: { kind: "Name", value: "GetDevice" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -1967,9 +2385,324 @@ export const GetDeviceDocument = {
                       { kind: "Field", name: { kind: "Name", value: "deviceId" } },
                       { kind: "Field", name: { kind: "Name", value: "petId" } },
                       { kind: "Field", name: { kind: "Name", value: "customerId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerName" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerSurname" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerEmail" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerBrand" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerCountry" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerLanguage" } },
                       { kind: "Field", name: { kind: "Name", value: "imei" } },
+                      { kind: "Field", name: { kind: "Name", value: "iccid" } },
+                      { kind: "Field", name: { kind: "Name", value: "registrationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastPurchasedSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastPurchasedSubscriptionExpiringDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastActivatedSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastActivatedSubscriptionExpiringDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "hasSubscriptionActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "hasEverSubscriptionActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "planProfileId" } },
+                      { kind: "Field", name: { kind: "Name", value: "brand" } },
+                      { kind: "Field", name: { kind: "Name", value: "model" } },
+                      { kind: "Field", name: { kind: "Name", value: "planProfileType" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountry" } },
+                      { kind: "Field", name: { kind: "Name", value: "simStatus" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastOperationInAppDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastConnectionDate" } },
                       { kind: "Field", name: { kind: "Name", value: "firmware" } },
                       { kind: "Field", name: { kind: "Name", value: "battery" } },
+                      { kind: "Field", name: { kind: "Name", value: "factory" } },
+                      { kind: "Field", name: { kind: "Name", value: "hardwareType" } },
+                      { kind: "Field", name: { kind: "Name", value: "simManufacturer" } },
+                      { kind: "Field", name: { kind: "Name", value: "testingDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "group" } },
+                      { kind: "Field", name: { kind: "Name", value: "lat" } },
+                      { kind: "Field", name: { kind: "Name", value: "lng" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
+                      { kind: "Field", name: { kind: "Name", value: "country" } },
+                      { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetPetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "GetPet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPet" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "petId" }, value: { kind: "Variable", name: { kind: "Name", value: "petId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pet" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "species" } },
+                      { kind: "Field", name: { kind: "Name", value: "breedType" } },
+                      { kind: "Field", name: { kind: "Name", value: "breeds" } },
+                      { kind: "Field", name: { kind: "Name", value: "gender" } },
+                      { kind: "Field", name: { kind: "Name", value: "primaryColor" } },
+                      { kind: "Field", name: { kind: "Name", value: "weight" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "neutered" } },
+                      { kind: "Field", name: { kind: "Name", value: "length" } },
+                      { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
+                      { kind: "Field", name: { kind: "Name", value: "activityProfile" } },
+                      { kind: "Field", name: { kind: "Name", value: "hidden" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petProtection" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                            { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CustomGetCustomerDevicesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "CustomGetCustomerDevices" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getDevices" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "filter" },
+                value: {
+                  kind: "ObjectValue",
+                  fields: [
+                    {
+                      kind: "ObjectField",
+                      name: { kind: "Name", value: "customerId" },
+                      value: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+                    },
+                    { kind: "ObjectField", name: { kind: "Name", value: "filterType" }, value: { kind: "EnumValue", value: "OR" } },
+                  ],
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: {
+                  kind: "ObjectValue",
+                  fields: [
+                    { kind: "ObjectField", name: { kind: "Name", value: "pageNumber" }, value: { kind: "IntValue", value: "0" } },
+                    { kind: "ObjectField", name: { kind: "Name", value: "pageSize" }, value: { kind: "IntValue", value: "1000" } },
+                  ],
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "order" },
+                value: {
+                  kind: "ObjectValue",
+                  fields: [
+                    { kind: "ObjectField", name: { kind: "Name", value: "field" }, value: { kind: "StringValue", value: "serialId", block: false } },
+                    { kind: "ObjectField", name: { kind: "Name", value: "order" }, value: { kind: "EnumValue", value: "asc" } },
+                  ],
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerId" } },
+                      { kind: "Field", name: { kind: "Name", value: "hasSubscriptionActive" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetCustomDeviceSubscriptionsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "GetCustomDeviceSubscriptions" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getSubscriptions" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: {
+                  kind: "ObjectValue",
+                  fields: [
+                    { kind: "ObjectField", name: { kind: "Name", value: "pageNumber" }, value: { kind: "IntValue", value: "0" } },
+                    { kind: "ObjectField", name: { kind: "Name", value: "pageSize" }, value: { kind: "IntValue", value: "1000000" } },
+                  ],
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "order" },
+                value: {
+                  kind: "ObjectValue",
+                  fields: [
+                    {
+                      kind: "ObjectField",
+                      name: { kind: "Name", value: "field" },
+                      value: { kind: "StringValue", value: "creationDate", block: false },
+                    },
+                    { kind: "ObjectField", name: { kind: "Name", value: "order" }, value: { kind: "EnumValue", value: "desc" } },
+                  ],
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      { kind: "Field", name: { kind: "Name", value: "paymentStatus" } },
+                      { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "createdAt" } },
+                      { kind: "Field", name: { kind: "Name", value: "startedAt" } },
+                      { kind: "Field", name: { kind: "Name", value: "activatedAt" } },
+                      { kind: "Field", name: { kind: "Name", value: "updatedAt" } },
+                      { kind: "Field", name: { kind: "Name", value: "cancelledAt" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "subscriptionItems" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "amount" } },
+                            { kind: "Field", name: { kind: "Name", value: "billingCycles" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemPriceId" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                            { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                            { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "invoice" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "businessEntityId" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "notes" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "note" } },
+                      { kind: "Field", name: { kind: "Name", value: "moved" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
                     ],
                   },
                 },
@@ -1993,39 +2726,61 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
-    resetPetlinkGps(
-      variables: ResetPetlinkGpsMutationVariables,
+    getCustomer(
+      variables: GetCustomerQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<ResetPetlinkGpsMutation> {
+    ): Promise<GetCustomerQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<ResetPetlinkGpsMutation>({
-            document: ResetPetlinkGpsDocument,
+          client.request<GetCustomerQuery>({
+            document: GetCustomerDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "resetPetlinkGps",
-        "mutation",
-        variables,
-      );
-    },
-    getUser(variables: GetUserQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetUserQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetUserQuery>({
-            document: GetUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "getUser",
+        "getCustomer",
         "query",
         variables,
       );
     },
-    getDevice(
+    GetCustomers(
+      variables?: GetCustomersQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCustomersQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCustomersQuery>({
+            document: GetCustomersDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetCustomers",
+        "query",
+        variables,
+      );
+    },
+    GetDevices(
+      variables?: GetDevicesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDevicesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDevicesQuery>({
+            document: GetDevicesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDevices",
+        "query",
+        variables,
+      );
+    },
+    GetDevice(
       variables: GetDeviceQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
@@ -2038,7 +2793,57 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "getDevice",
+        "GetDevice",
+        "query",
+        variables,
+      );
+    },
+    GetPet(variables: GetPetQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPetQuery>({
+            document: GetPetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetPet",
+        "query",
+        variables,
+      );
+    },
+    CustomGetCustomerDevices(
+      variables: CustomGetCustomerDevicesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CustomGetCustomerDevicesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CustomGetCustomerDevicesQuery>({
+            document: CustomGetCustomerDevicesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "CustomGetCustomerDevices",
+        "query",
+        variables,
+      );
+    },
+    GetCustomDeviceSubscriptions(
+      variables: GetCustomDeviceSubscriptionsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCustomDeviceSubscriptionsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCustomDeviceSubscriptionsQuery>({
+            document: GetCustomDeviceSubscriptionsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetCustomDeviceSubscriptions",
         "query",
         variables,
       );

@@ -42,7 +42,19 @@ Validates the critical cross-service flows that power the application: from user
 yarn install
 ```
 
-### 2. Configure environment
+
+### 2. Generate SDK from GraphQL schemas
+
+This suite uses **auto-generated TypeScript clients**. Generate them before running tests:
+
+```bash
+- yarn fetch-schema   # Downloads schemas from Core/CCT APIs
+- #add manual query/mutations inside src/clients/.../operations/*.graphql
+- yarn generate-sdk   # Generates typed methods
+```
+
+
+### 3. Configure environment
 
 Create `.env.develop` or `.env.test` with required variables (see `vitest.config.ts` for full list):
 
@@ -64,7 +76,7 @@ GMAIL_CLIENT_ID=...
 APP_BRAND=KIPPY  # or PETLINK
 ```
 
-### 3. Run tests
+### 4. Run tests
 
 ```bash
 # Run all tests on develop environment
@@ -153,14 +165,42 @@ petlink.core.graphql.authJwt.createPet(...)
   └─ Tracks performance metrics
 ```
 
-### SDK Generation
+### SDK Generation Workflow
 
-```bash
-yarn fetch-schema  # Downloads GraphQL schemas from CORE and CCT APIs
-yarn generate-sdk  # Generates typed TypeScript SDK via codegen
+The test client uses auto-generated TypeScript from GraphQL schemas:
+
+```
+1. fetch-schema    → Downloads GraphQL schemas from Core/CCT APIs
+2. write operation → Add query/mutation in operations/*.graphql (manual)
+3. generate-sdk    → Codegen creates typed TypeScript methods
+4. use in tests    → petlink.core.graphql.authJwt.createPet(...)
 ```
 
-Generated SDKs live in `src/clients/petlink-infrastructure/endpoints/graphql/generated/`.
+**Example - Adding a new mutation**:
+
+```graphql
+// Add to: src/clients/.../operations/core/mutations.graphql
+mutation CreatePet($pet: PetIn!) {
+  createPet(pet: $pet) {
+    code
+    message
+    pet { id name species }
+  }
+}
+```
+
+```bash
+yarn generate-sdk  # Regenerate typed SDK
+```
+
+```typescript
+// Now fully typed in tests
+const response = await petlink.core.graphql.authJwt.createPet({ 
+  pet: petPayload 
+});
+```
+
+**Generated SDK location**: `src/clients/petlink-infrastructure/endpoints/graphql/generated/`
 
 ### Cleanup Strategy
 

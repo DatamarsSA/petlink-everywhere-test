@@ -138,6 +138,7 @@ export interface BaseConfig {
   __typename?: "BaseConfig";
   sentinelPort: Scalars["String"]["output"];
   sentinelUrl: Scalars["String"]["output"];
+  webappUrl: Scalars["String"]["output"];
 }
 
 export interface BillingInfo {
@@ -331,6 +332,8 @@ export enum DeviceTypeEnum {
   Cat = "CAT",
   Dog = "DOG",
   Evo = "EVO",
+  Finder = "FINDER",
+  Vita = "VITA",
 }
 
 export interface DiscoutItem {
@@ -2564,6 +2567,7 @@ export interface SubscriptionShortInfo {
   currentTermStart?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
   invoice?: Maybe<InvoiceShortInfo>;
+  nextBillingAt?: Maybe<Scalars["String"]["output"]>;
   paymentStatus?: Maybe<PaymentStatusTypeEnum>;
   planChangeNotAllowed: Scalars["Boolean"]["output"];
   retentionCoupon?: Maybe<RetentionDiscountItem>;

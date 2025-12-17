@@ -1,19 +1,105 @@
-query getUser($userId: String!) {
-  getUser(userId: $userId) {
+query getCustomer($customerId: String!) {
+  getCustomer(customerId: $customerId) {
     code
     message
-    user {
+    customer {
       id
-      email
       name
       surname
-      role
-      active
+      email
+      emailConfirmed
+      phone
+      phoneConfirmed
+      language
+      countryCode
+      appBrand
     }
   }
 }
 
-query getDevice($deviceId: String!) {
+query GetCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $order: OrderInput) {
+  getCustomers(filter: $filter, pagination: $pagination, order: $order) {
+    code
+    message
+    items {
+      id
+      name
+      surname
+      email
+      emailConfirmed
+      phone
+      phoneConfirmed
+      language
+      registrationDate
+      countryCode
+      chargebeeId
+      appBrand
+    }
+    pagination {
+      pageSize
+      totalPage
+      totalItems
+      currentPage
+    }
+  }
+}
+
+query GetDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order: OrderInput) {
+  getDevices(filter: $filter, pagination: $pagination, order: $order) {
+    code
+    message
+    items {
+      serialId
+      deviceId
+      petId
+      customerId
+      customerName
+      customerSurname
+      customerEmail
+      customerBrand
+      customerCountry
+      customerLanguage
+      imei
+      iccid
+      registrationDate
+      lastPurchasedSubscriptionId
+      lastPurchasedSubscriptionExpiringDate
+      lastActivatedSubscriptionId
+      lastActivatedSubscriptionExpiringDate
+      hasSubscriptionActive
+      hasEverSubscriptionActive
+      planProfileId
+      brand
+      model
+      planProfileType
+      vodafoneCountry
+      simStatus
+      lastOperationInAppDate
+      lastConnectionDate
+      firmware
+      battery
+      factory
+      hardwareType
+      simManufacturer
+      testingDate
+      group
+      lat
+      lng
+      timezone
+      updateFrequency
+      country
+      logEnabled
+    }
+    pagination {
+      pageSize
+      totalPage
+      totalItems
+      currentPage
+    }
+  }
+}
+
+query GetDevice($deviceId: String!) {
   getDevice(deviceId: $deviceId) {
     code
     message
@@ -22,9 +108,141 @@ query getDevice($deviceId: String!) {
       deviceId
       petId
       customerId
+      customerName
+      customerSurname
+      customerEmail
+      customerBrand
+      customerCountry
+      customerLanguage
       imei
+      iccid
+      registrationDate
+      lastPurchasedSubscriptionId
+      lastPurchasedSubscriptionExpiringDate
+      lastActivatedSubscriptionId
+      lastActivatedSubscriptionExpiringDate
+      hasSubscriptionActive
+      hasEverSubscriptionActive
+      planProfileId
+      brand
+      model
+      planProfileType
+      vodafoneCountry
+      simStatus
+      lastOperationInAppDate
+      lastConnectionDate
       firmware
       battery
+      factory
+      hardwareType
+      simManufacturer
+      testingDate
+      group
+      lat
+      lng
+      timezone
+      updateFrequency
+      country
+      logEnabled
+    }
+  }
+}
+
+query GetPet($petId: String!) {
+  getPet(petId: $petId) {
+    code
+    message
+    pet {
+      id
+      name
+      birthDate
+      species
+      breedType
+      breeds
+      gender
+      primaryColor
+      weight
+      userId
+      creationDate
+      updateDate
+      neutered
+      length
+      dateMarkedAsLost
+      activityProfile
+      hidden
+      petProtection {
+        id
+        currentTermStart
+        currentTermEnd
+        status
+        name
+      }
+    }
+  }
+}
+
+query CustomGetCustomerDevices($customerId: String!) {
+  getDevices(
+    filter: { customerId: $customerId, filterType: OR }
+    pagination: { pageNumber: 0, pageSize: 1000 }
+    order: { field: "serialId", order: asc }
+  ) {
+    code
+    message
+    items {
+      serialId
+      deviceId
+      petId
+      customerId
+      hasSubscriptionActive
+    }
+  }
+}
+
+query GetCustomDeviceSubscriptions($deviceId: String!) {
+  getSubscriptions(
+    deviceId: $deviceId
+    pagination: { pageNumber: 0, pageSize: 1000000 }
+    order: { field: "creationDate", order: desc }
+  ) {
+    code
+    message
+    items {
+      id
+      chargebeeSubscriptionId
+      entityType
+      status
+      paymentStatus
+      currencyCode
+      currentTermStart
+      currentTermEnd
+      createdAt
+      startedAt
+      activatedAt
+      updatedAt
+      cancelledAt
+      subscriptionItems {
+        amount
+        billingCycles
+        name
+        itemPriceId
+        itemId
+        itemType
+        quantity
+        unitPrice
+      }
+      invoice {
+        status
+        businessEntityId
+        currencyCode
+        creationDate
+        updateDate
+        notes
+      }
+      note
+      moved
+      creationDate
+      updateDate
     }
   }
 }
