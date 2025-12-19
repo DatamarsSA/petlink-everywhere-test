@@ -6,15 +6,20 @@ import { fxt } from "../../fixtures/fixtures.js";
 import { FilterEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { before } from "node:test";
 
-describe("CCT Tool Tests", () => {
+describe("CCT Tool", () => {
   describe("Customers", () => {
     let user: any;
+    let pet: any;
+    let device: any;
 
     beforeAll(async () => {
-      // 1. Setup: Create User via Core
-      const setup = await testHelper.setupBuilder().withUser().build();
+      // 1. Setup: Create User + Pet + Device via Core
+      const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
       user = setup.user!;
-      logger.info("Setup Customer complete", { userId: user.id, email: user.email });
+      pet = setup.pets.dog!;
+      device = setup.devices.dogStandard!;
+
+      logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: device.id });
 
       // 2. Login as CCT Admin
       logger.info("Logging in as CCT Admin...");
@@ -24,7 +29,7 @@ describe("CCT Tool Tests", () => {
     it("should allow CCT Admin to find a Customer in the list", async () => {
       // 3. Test List: GetCustomers filter by email
       logger.info("Searching Customer in list...");
-      const listResponse = await petlink.cct.graphqlHttp.authJwt.GetCustomers({
+      const listResponse = await petlink.cct.graphqlHttp.authJwt.getCustomers({
         filter: {
           filterType: FilterEnum.And,
           email: user.email,
@@ -50,17 +55,30 @@ describe("CCT Tool Tests", () => {
       expect(detailResponse.getCustomer.customer?.id).toBe(user.id);
       expect(detailResponse.getCustomer.customer?.email).toBe(user.email);
       expect(detailResponse.getCustomer.customer?.name).toBe(user.name);
+      expect(detailResponse.getCustomer.customer?.surname).toBe(user.surname);
+      expect(detailResponse.getCustomer.customer?.appBrand).toBe(user.appBrand);
+      expect(detailResponse.getCustomer.customer?.countryCode).toBe(user.countryCode);
+      expect(detailResponse.getCustomer.customer?.language).toBe(user.language);
+      expect(detailResponse.getCustomer.customer?.phone).toBe(user.phone);
     });
 
-    it("should allow CCT Admin to view Customer Devices", async () => {
+    it("should allow CCT Admin to view Customer Devices and verify associations", async () => {
       // CustomGetCustomerDevices
       logger.info("Fetching Customer Devices...");
-      const devicesResponse = await petlink.cct.graphqlHttp.authJwt.CustomGetCustomerDevices({
+      const devicesResponse = await petlink.cct.graphqlHttp.authJwt.customGetCustomerDevices({
         customerId: user.id,
       });
 
       expect(devicesResponse.getDevices.code).toBe("200");
       expect(devicesResponse.getDevices.items).toBeDefined();
+      expect(devicesResponse.getDevices.items?.length).toBeGreaterThan(0);
+
+      const targetDevice = devicesResponse.getDevices.items?.find((d) => d?.deviceId === device.id);
+      expect(targetDevice).toBeDefined();
+      expect(targetDevice?.deviceId).toBe(device.id);
+      expect(targetDevice?.petId).toBe(pet.id);
+      expect(targetDevice?.customerId).toBe(user.id);
+      expect(targetDevice?.serialId).toBe(device.serialNumber);
     });
   });
 
@@ -94,7 +112,7 @@ describe("CCT Tool Tests", () => {
     it("should allow CCT Admin to find a Device in the list", async () => {
       // 3. Test List: GetDevices filter by Serial Number
       logger.info("Searching Device in list...");
-      const listResponse = await petlink.cct.graphqlHttp.authJwt.GetDevices({
+      const listResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
         filter: {
           filterType: FilterEnum.And,
           serialId: device.serialNumber,
@@ -111,7 +129,7 @@ describe("CCT Tool Tests", () => {
     it("should allow CCT Admin to view Device details", async () => {
       // 4. Test Detail: GetDevice
       logger.info("Fetching Device Detail...");
-      const deviceDetailResponse = await petlink.cct.graphqlHttp.authJwt.GetDevice({
+      const deviceDetailResponse = await petlink.cct.graphqlHttp.authJwt.getDevice({
         deviceId: device.id,
       });
       expect(deviceDetailResponse.getDevice.code).toBe("200");
@@ -122,7 +140,7 @@ describe("CCT Tool Tests", () => {
 
     it("should allow CCT Admin to view Device Pet info", async () => {
       // GetPet
-      const petResponse = await petlink.cct.graphqlHttp.authJwt.GetPet({
+      const petResponse = await petlink.cct.graphqlHttp.authJwt.getPet({
         petId: pet.id,
       });
       expect(petResponse.getPet.code).toBe("200");
@@ -141,7 +159,7 @@ describe("CCT Tool Tests", () => {
 
     it("should allow CCT Admin to view Device Subscriptions", async () => {
       // GetCustomDeviceSubscriptions
-      const subResponse = await petlink.cct.graphqlHttp.authJwt.GetCustomDeviceSubscriptions({
+      const subResponse = await petlink.cct.graphqlHttp.authJwt.getCustomDeviceSubscriptions({
         deviceId: device.id,
       });
       expect(subResponse.getSubscriptions.code).toBe("200");

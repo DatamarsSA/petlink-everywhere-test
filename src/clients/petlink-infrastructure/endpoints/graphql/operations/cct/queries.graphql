@@ -17,7 +17,7 @@ query getCustomer($customerId: String!) {
   }
 }
 
-query GetCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $order: OrderInput) {
+query getCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $order: OrderInput) {
   getCustomers(filter: $filter, pagination: $pagination, order: $order) {
     code
     message
@@ -44,7 +44,7 @@ query GetCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $or
   }
 }
 
-query GetDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order: OrderInput) {
+query getDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order: OrderInput) {
   getDevices(filter: $filter, pagination: $pagination, order: $order) {
     code
     message
@@ -99,7 +99,7 @@ query GetDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order:
   }
 }
 
-query GetDevice($deviceId: String!) {
+query getDevice($deviceId: String!) {
   getDevice(deviceId: $deviceId) {
     code
     message
@@ -148,7 +148,7 @@ query GetDevice($deviceId: String!) {
   }
 }
 
-query GetPet($petId: String!) {
+query getPet($petId: String!) {
   getPet(petId: $petId) {
     code
     message
@@ -181,7 +181,7 @@ query GetPet($petId: String!) {
   }
 }
 
-query CustomGetCustomerDevices($customerId: String!) {
+query customGetCustomerDevices($customerId: String!) {
   getDevices(
     filter: { customerId: $customerId, filterType: OR }
     pagination: { pageNumber: 0, pageSize: 1000 }
@@ -199,7 +199,7 @@ query CustomGetCustomerDevices($customerId: String!) {
   }
 }
 
-query GetCustomDeviceSubscriptions($deviceId: String!) {
+query getCustomDeviceSubscriptions($deviceId: String!) {
   getSubscriptions(
     deviceId: $deviceId
     pagination: { pageNumber: 0, pageSize: 1000000 }

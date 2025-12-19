@@ -2153,7 +2153,7 @@ export const GetCustomersDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "GetCustomers" },
+      name: { kind: "Name", value: "getCustomers" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -2239,7 +2239,7 @@ export const GetDevicesDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "GetDevices" },
+      name: { kind: "Name", value: "getDevices" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -2353,7 +2353,7 @@ export const GetDeviceDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "GetDevice" },
+      name: { kind: "Name", value: "getDevice" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -2438,7 +2438,7 @@ export const GetPetDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "GetPet" },
+      name: { kind: "Name", value: "getPet" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -2514,7 +2514,7 @@ export const CustomGetCustomerDevicesDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "CustomGetCustomerDevices" },
+      name: { kind: "Name", value: "customGetCustomerDevices" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -2600,7 +2600,7 @@ export const GetCustomDeviceSubscriptionsDocument = {
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "GetCustomDeviceSubscriptions" },
+      name: { kind: "Name", value: "getCustomDeviceSubscriptions" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
@@ -2744,7 +2744,7 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
-    GetCustomers(
+    getCustomers(
       variables?: GetCustomersQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
@@ -2757,12 +2757,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetCustomers",
+        "getCustomers",
         "query",
         variables,
       );
     },
-    GetDevices(
+    getDevices(
       variables?: GetDevicesQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
@@ -2775,12 +2775,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetDevices",
+        "getDevices",
         "query",
         variables,
       );
     },
-    GetDevice(
+    getDevice(
       variables: GetDeviceQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
@@ -2793,12 +2793,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetDevice",
+        "getDevice",
         "query",
         variables,
       );
     },
-    GetPet(variables: GetPetQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetQuery> {
+    getPet(variables: GetPetQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetPetQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
           client.request<GetPetQuery>({
@@ -2807,12 +2807,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetPet",
+        "getPet",
         "query",
         variables,
       );
     },
-    CustomGetCustomerDevices(
+    customGetCustomerDevices(
       variables: CustomGetCustomerDevicesQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
@@ -2825,12 +2825,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "CustomGetCustomerDevices",
+        "customGetCustomerDevices",
         "query",
         variables,
       );
     },
-    GetCustomDeviceSubscriptions(
+    getCustomDeviceSubscriptions(
       variables: GetCustomDeviceSubscriptionsQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
@@ -2843,7 +2843,7 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "GetCustomDeviceSubscriptions",
+        "getCustomDeviceSubscriptions",
         "query",
         variables,
       );
