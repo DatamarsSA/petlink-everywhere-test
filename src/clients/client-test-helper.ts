@@ -206,12 +206,19 @@ class TestHelper {
 
     const errors: Array<{ operation: string; error: any }> = [];
 
+    // Raccogli tutti i serial numbers da fixtures
+    const testSerialNumbers = [
+      ...Object.values(fxt.KIPPY.devices).map((d) => d.serialNumber),
+      ...Object.values(fxt.PETLINK.devices).map((d) => d.serialNumber),
+    ];
+
     await Promise.all([
       // 1. Petlink user & related entity cleanup
       petlink.core.graphqlHttp.authIam
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
+            serialNumbers: testSerialNumbers,
             utilityType: UtilityTestTypeEnum.CleanUpUser,
           },
         })
@@ -232,11 +239,6 @@ class TestHelper {
       // 3. Twilio cleanup
       twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone).catch((error) => {
         errors.push({ operation: "Twilio-deleteAllMessages()", error });
-      }),
-
-      // 4. Sentinel MongoDB cleanup
-      mongoSentinelClient.cleanupTestDevices().catch((error) => {
-        errors.push({ operation: "Sentinel-MongoDB-cleanup()", error });
       }),
     ]);
 

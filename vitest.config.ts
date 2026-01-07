@@ -3,10 +3,6 @@ import { loadEnv } from "vite";
 import { z } from "zod";
 
 export default defineConfig(() => {
-  // 1. Rimosso il parametro { mode }
-  // 2. Usiamo NODE_ENV come unica fonte di verità.
-  //    Nota: Vitest imposta di default NODE_ENV="test".
-  //    Se vuoi usare "develop" in locale, lancia lo script con: "NODE_ENV=develop vitest run"
   const environment = process.env.NODE_ENV || "develop";
 
   console.log("Vitest Config initialized", {
@@ -50,11 +46,6 @@ export default defineConfig(() => {
     // Sentinel socket tcp
     SENTINEL_HOST: z.ipv4().min(1, "SENTINEL_HOST è richiesto"),
     SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
-    // Sentinel MongoDB
-    SENTINEL_MONGO_HOST: z.string().min(1, "SENTINEL_MONGO_HOST è richiesto"),
-    SENTINEL_MONGO_USER: z.string().min(1, "SENTINEL_MONGO_USER è richiesto"),
-    SENTINEL_MONGO_PASSWORD: z.string().min(1, "SENTINEL_MONGO_PASSWORD è richiesta"),
-    SENTINEL_MONGO_DATABASE: z.string().min(1, "SENTINEL_MONGO_DATABASE è richiesto"),
   });
 
   const result = envSchema.safeParse(process.env);
@@ -74,7 +65,7 @@ export default defineConfig(() => {
     test: {
       globals: true,
       environment: "node",
-      env: rawEnv,
+      env: result.data,
       // timeouts più larghi per integrazione/E2E
       testTimeout: 60000, // singolo test (it) - 1 minute
       hookTimeout: 60000, // beforeAll/afterAll/beforeEach/afterEach - 1 minute

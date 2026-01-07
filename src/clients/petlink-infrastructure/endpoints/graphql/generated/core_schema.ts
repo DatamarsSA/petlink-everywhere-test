@@ -750,6 +750,8 @@ export interface Mutation {
   replacement: ResponseReplacement;
   resetPetlinkGps: Response;
   sendCommand: Response;
+  /**   support api */
+  sendCustomerFeedback: Response;
   sendCustomerSuggestions: Response;
   sendMessageFoundPet: Response;
   sendOtp: ResponseOtp;
@@ -922,6 +924,10 @@ export type MutationResetPetlinkGpsArgs = {
 
 export type MutationSendCommandArgs = {
   command: Command;
+};
+
+export type MutationSendCustomerFeedbackArgs = {
+  input: SendCustomerFeedbackIn;
 };
 
 export type MutationSendCustomerSuggestionsArgs = {
@@ -2442,6 +2448,16 @@ export interface RetentionDiscountItem {
   discountType: Scalars["String"]["output"];
 }
 
+export interface SendCustomerFeedbackIn {
+  appBrand: Scalars["String"]["input"];
+  email: Scalars["String"]["input"];
+  feedback: Scalars["String"]["input"];
+  name: Scalars["String"]["input"];
+  phone: Scalars["String"]["input"];
+  serialNumbers: Array<Scalars["String"]["input"]>;
+  surname: Scalars["String"]["input"];
+}
+
 export interface SetMacAddressInput {
   macAddress?: InputMaybe<Scalars["String"]["input"]>;
   remoteUuid?: InputMaybe<Scalars["String"]["input"]>;
@@ -2574,6 +2590,7 @@ export interface SubscriptionShortInfo {
   status: SubscriptionStatusEnum;
   subscriptionItems: Array<SubscriptionShortInfoItem>;
   totalAmount: Scalars["Float"]["output"];
+  trialDuration?: Maybe<Scalars["Int"]["output"]>;
 }
 
 export interface SubscriptionShortInfoItem {
