@@ -2,13 +2,15 @@ import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 import { z } from "zod";
 
-export default defineConfig(({ mode }) => {
-  const environment = process.env.TEST_ENV || "develop";
+export default defineConfig(() => {
+  // 1. Rimosso il parametro { mode }
+  // 2. Usiamo NODE_ENV come unica fonte di verità.
+  //    Nota: Vitest imposta di default NODE_ENV="test".
+  //    Se vuoi usare "develop" in locale, lancia lo script con: "NODE_ENV=develop vitest run"
+  const environment = process.env.NODE_ENV || "develop";
 
   console.log("Vitest Config initialized", {
-    mode,
     NODE_ENV: process.env.NODE_ENV,
-    TEST_ENV: process.env.TEST_ENV,
     environment,
   });
 
