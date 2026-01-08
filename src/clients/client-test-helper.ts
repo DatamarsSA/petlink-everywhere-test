@@ -9,10 +9,10 @@ import {
   UtilityTestTypeEnum,
   DeviceTypeEnum,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { Device, FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
-import { mongoSentinelClient } from "./mongo-sentinel/client-mongo-sentinel.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { existsSync, mkdirSync } from "fs";
@@ -138,10 +138,14 @@ class TestSetupBuilder {
 
     //create DEVICES
     const devicePromises: Promise<void>[] = [];
+    let coreDogStandard: PetlinkGps | undefined;
+    let coreDogEvo: PetlinkGps | undefined;
+    let coreCatStandard: PetlinkGps | undefined;
+
     if (this.includeDogDevice && this.setup.pets.dog) {
       devicePromises.push(
         this.helper.createDeviceForPet(this.setup.pets.dog, DeviceTypeEnum.Dog).then((device) => {
-          this.setup.devices.dogStandard = device;
+          coreDogStandard = device;
         }),
       );
     }
@@ -149,7 +153,7 @@ class TestSetupBuilder {
     if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
       devicePromises.push(
         this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceTypeEnum.Evo).then((device) => {
-          this.setup.devices.dogEvo = device;
+          coreDogEvo = device;
         }),
       );
     }
@@ -157,12 +161,48 @@ class TestSetupBuilder {
     if (this.includeCatDevice && this.setup.pets.cat) {
       devicePromises.push(
         this.helper.createDeviceForPet(this.setup.pets.cat, DeviceTypeEnum.Cat).then((device) => {
-          this.setup.devices.catStandard = device;
+          coreCatStandard = device;
         }),
       );
     }
 
     await Promise.all(devicePromises);
+
+    // --- ENRICHMENT: Fetch full technical data from CCT in a single call ---
+    if (this.setup.user && (coreDogStandard || coreDogEvo || coreCatStandard)) {
+      logger.debug(`→ Starting strict enrichment for user ${this.setup.user.id}`);
+
+      // Login CCT to access its API
+      await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password);
+
+      // Single query to get all devices for this customer
+      const cctResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
+        filter: {
+          filterType: FilterEnum.And,
+          customerId: this.setup.user.id,
+        },
+      });
+
+      const items = cctResponse.getDevices.items || [];
+
+      // Enrich Core devices with hardware data from CCT
+      // We map CCT 'iccid' to Core 'idccd'
+      if (coreDogStandard) {
+        const enriched = items.find((i) => i?.deviceId === coreDogStandard?.id);
+        if (!enriched) throw new Error(`Critical: Device ${coreDogStandard.id} not found in CCT after creation`);
+        this.setup.devices.dogStandard = { ...coreDogStandard, imei: enriched.imei, idccd: enriched.iccid };
+      }
+      if (coreDogEvo) {
+        const enriched = items.find((i) => i?.deviceId === coreDogEvo?.id);
+        if (!enriched) throw new Error(`Critical: Device ${coreDogEvo.id} not found in CCT after creation`);
+        this.setup.devices.dogEvo = { ...coreDogEvo, imei: enriched.imei, idccd: enriched.iccid };
+      }
+      if (coreCatStandard) {
+        const enriched = items.find((i) => i?.deviceId === coreCatStandard?.id);
+        if (!enriched) throw new Error(`Critical: Device ${coreCatStandard.id} not found in CCT after creation`);
+        this.setup.devices.catStandard = { ...coreCatStandard, imei: enriched.imei, idccd: enriched.iccid };
+      }
+    }
 
     // Acquista subscription se richiesto
     if (this.includeSubscription && this.setup.user && this.setup.devices.dogStandard) {
@@ -218,7 +258,7 @@ class TestHelper {
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
-            serialNumbers: testSerialNumbers,
+            // serialNumbers: testSerialNumbers, TODO: add field to remove all sentinel db from backend
             utilityType: UtilityTestTypeEnum.CleanUpUser,
           },
         })
@@ -434,7 +474,7 @@ class TestHelper {
    *   3. Acquista il primo piano disponibile
    */
   async purchaseSubscription(user: User, device: PetlinkGps): Promise<void> {
-    logger.debug("→ Purchasing subscription");
+    logger.debug("→ Purchasing subscription for device", { deviceId: device.id });
 
     // STEP 1 & 2: Aggiorna billing info + ottieni piani
     const [_, plansResponse] = await Promise.all([
@@ -457,7 +497,7 @@ class TestHelper {
       // Ottieni i piani disponibili
       petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
         productId: device.id,
-        countryCode: device.countryCode,
+        countryCode: user.countryCode!,
         serialNumber: device.serialNumber,
       }),
     ]);

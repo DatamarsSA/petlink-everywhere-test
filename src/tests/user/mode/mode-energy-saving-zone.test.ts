@@ -34,7 +34,7 @@ describe("Energy Saving Zone", () => {
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
     // STEP 3: Start aggressive keep-alive to prevent socket disconnection
-    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
+    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialId);
   });
 
   afterAll(() => {
@@ -75,7 +75,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Activate,
         settingType: SettingTypeEnum.EnergySavingZone,
         id: eszId,
-        deviceId: setup.devices.dogStandard!.id, // Esplicito per matching
+        deviceId: setup.devices.dogStandard!.deviceId, // Esplicito per matching
       },
     });
 
@@ -117,18 +117,20 @@ describe("Energy Saving Zone", () => {
     // Start listening for ESZ enter event
     const eszEnterEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.devices.dogStandard!.deviceId },
       fxt.socket.timeoutMs,
       "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
     );
 
     // Emula: Send 0x01 con WiFi detected (spare_c5 = NDetached)
-    // Sentinel calcola: extended_notifications = notifications + (spare_c5 << 8)
-    // Se extended_notifications & 0x0100 != 0 → collar_detached = 1 → IN zona ESZ
+    const device = setup.devices.dogStandard!;
     const enterData = {
       ...Packet01.D2SWelcomeHeartBeat.Data,
-      serial_number: setup.devices.dogStandard!.serialNumber,
+      serial_number: device.serialId,
+      imei: device.imei,
+      iccid: device.iccid,
+      fw_version: device.firmware,
       latitude: 44.5024, // GPS coords dentro la zona ESZ
       longitude: 11.3463,
       spare_c5: Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached, // "In home" - WiFi rilevato → Device IN zona
@@ -150,16 +152,20 @@ describe("Energy Saving Zone", () => {
     // Start listening for ESZ exit event
     const eszExitEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.devices.dogStandard!.deviceId },
       fxt.socket.timeoutMs,
       "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
     );
 
     // Emula: WiFi lost (spare_c5 = 0 → nessun flag attivo)
+    const device = setup.devices.dogStandard!;
     const exitData = {
       ...Packet01.D2SWelcomeHeartBeat.Data,
-      serial_number: setup.devices.dogStandard!.serialNumber,
+      serial_number: device.serialId,
+      imei: device.imei,
+      iccid: device.iccid,
+      fw_version: device.firmware,
       latitude: 44.5024, // GPS coords (ma senza WiFi)
       longitude: 11.3463,
       spare_c5: 0x00, // Nessun flag → WiFi NOT detected → Device OUT zona
@@ -183,7 +189,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Deactivate,
         settingType: SettingTypeEnum.EnergySavingZone,
         id: eszId,
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.devices.dogStandard!.deviceId,
       },
     });
 

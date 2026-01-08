@@ -215,7 +215,7 @@ export class Packet01 {
       iccid: "89390200000000000001" as string, // ICCID (19-20 cifre): ID della SIM card - ⚠️ NON deve iniziare con IMEI!
 
       // === Versioni firmware ===
-      fw_version: "10.1.80" as string, // Firmware version - ⚠️ Deve essere >= 10.1.73 per socket TCP (altrimenti SMS fallback)
+      fw_version: "10.4.88" as string, // Firmware version - ⚠️ Deve essere >= 10.1.73 per socket TCP (altrimenti SMS fallback)
       bl_version: "2.0.1" as string, // Bootloader version
 
       // === Posizione GPS ===

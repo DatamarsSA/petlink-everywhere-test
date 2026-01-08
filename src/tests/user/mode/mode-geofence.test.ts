@@ -48,7 +48,7 @@ describe("Geofence", () => {
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
     // STEP 3: Start aggressive keep-alive to prevent socket disconnection
-    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialNumber);
+    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialId);
   });
 
   afterAll(() => {
@@ -85,7 +85,7 @@ describe("Geofence", () => {
         operationType: SettingOperationEnum.Activate,
         settingType: SettingTypeEnum.Geofence,
         id: geofenceId,
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.devices.dogStandard!.deviceId,
         geofence: createGeofencePayload.position, // REQUIRED: Backend does not fetch from DB, must pass explicitly
       },
     });
@@ -124,16 +124,20 @@ describe("Geofence", () => {
     // Start listening for geofence active event
     const geofenceActiveEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.devices.dogStandard!.deviceId },
       fxt.socket.timeoutMs,
       `Notification inGeofence=true not arrived to app after ${fxt.socket.timeoutMs}ms`,
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
     );
 
     // Emula: Send 0x01 con inside_geofence flag
+    const device = setup.devices.dogStandard!;
     const insideData = {
       ...Packet01.D2SWelcomeHeartBeat.Data,
-      serial_number: setup.devices.dogStandard!.serialNumber,
+      serial_number: device.serialId,
+      imei: device.imei,
+      iccid: device.iccid,
+      fw_version: device.firmware,
       latitude: GEOFENCE_COORDINATES.inside.lat,
       longitude: GEOFENCE_COORDINATES.inside.lng,
       notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NInsideFence, // 0x20 = inside geofence
@@ -156,16 +160,20 @@ describe("Geofence", () => {
     // Start listening for geofence exit event
     const geofenceExitEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.devices.dogStandard!.deviceId },
       fxt.socket.timeoutMs,
       "Device should notify inGeofence=false when outside",
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
     );
 
     // Emula: Send 0x01 con outside_geofence flag
+    const device = setup.devices.dogStandard!;
     const exitData = {
       ...Packet01.D2SWelcomeHeartBeat.Data,
-      serial_number: setup.devices.dogStandard!.serialNumber,
+      serial_number: device.serialId,
+      imei: device.imei,
+      iccid: device.iccid,
+      fw_version: device.firmware,
       latitude: GEOFENCE_COORDINATES.outside.lat,
       longitude: GEOFENCE_COORDINATES.outside.lng,
       notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NOutsideFence, // 0x40 = outside geofence
@@ -190,7 +198,7 @@ describe("Geofence", () => {
         operationType: SettingOperationEnum.Deactivate,
         settingType: SettingTypeEnum.Geofence,
         id: geofenceId,
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.devices.dogStandard!.deviceId,
       },
     });
 
