@@ -2,7 +2,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01, PacketType, OperatingStatus } from "../../../clients/sentinel/packet-encode-decode.js";
+import { PacketType, OperatingStatus } from "../../../clients/sentinel/packet-encode-decode.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import {
@@ -19,11 +19,10 @@ describe("Live Tracking", () => {
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await sentinelTcpSocketClient.connect();
-    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!);
+    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
-    sentinelTcpSocketClient.stopKeepAlive();
     sentinelTcpSocketClient.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
@@ -87,14 +86,13 @@ describe("Live Tracking", () => {
 
     // Send heartbeat packet
     const device = setup.devices.dogStandard!;
-    const buffer = Packet01.D2SWelcomeHeartBeat.toBuffer(device, {
+    await sentinelTcpSocketClient.simulator.heartbeat(device, {
       latitude: testLat,
       longitude: testLng,
       battery: 4200,
       temperature: 22,
       last_gps_time: Math.floor(Date.now() / 1000),
     });
-    await sentinelTcpSocketClient.send(buffer, "LIVE_TRACKING_HEARTBEAT");
 
     // Wait and assert
     const positionEvent = await positionEventPromise;

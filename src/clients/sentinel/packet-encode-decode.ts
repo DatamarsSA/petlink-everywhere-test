@@ -289,12 +289,11 @@ export class Packet01 {
     static toBuffer(device: DeviceIdentity, overrides: Partial<typeof Packet01.D2SWelcomeHeartBeat.Data> = {}): Buffer {
       // Merge: Default template + Overrides + Mandatory Identity
       const data = {
-        ...this.Data,
+        ...Packet01.D2SWelcomeHeartBeat.Data,
         ...overrides,
         serial_number: device.serialNumber,
         imei: device.imei,
         iccid: device.iccid,
-        fw_version: device.firmware,
       };
 
       // --- GUARDIAN: Fail fast if identity is missing ---

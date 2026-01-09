@@ -4,7 +4,6 @@ import { petlink } from "../../clients/petlink-infrastructure/client-petlink-inf
 import { logger } from "../../config/logger.js";
 import { Device, FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
-import { Packet01 } from "../../clients/sentinel/packet-encode-decode.js";
 import { PetlinkGps } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe("CCT Tool", () => {
@@ -190,14 +189,11 @@ describe("CCT Tool", () => {
       const testLat = 45.04862;
       const testLng = 7.641921;
 
-      const buffer = Packet01.D2SWelcomeHeartBeat.toBuffer(device, {
+      await sentinelTcpSocketClient.simulator.heartbeat(device, {
         latitude: testLat,
         longitude: testLng,
         battery: 5800, // 5.8V (che il CCT trasforma in %)
       });
-
-      logger.info(`📡 Send heartbeat to Sentinel to device ${device.serialNumber}...`);
-      await sentinelTcpSocketClient.send(buffer, "HEARTBEAT_FOR_CCT");
 
       // Attendiamo che il dato attraversi SQS e arrivi al DB (async)
       await new Promise((r) => setTimeout(r, 3000));

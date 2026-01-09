@@ -33,12 +33,11 @@ describe("Energy Saving Zone", () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
-    // STEP 3: Start aggressive keep-alive to prevent socket disconnection
-    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!);
+    // STEP 3: Send first hb to add device on socket map
+    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
-    sentinelTcpSocketClient.stopKeepAlive();
     sentinelTcpSocketClient.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
@@ -114,26 +113,26 @@ describe("Energy Saving Zone", () => {
   it("Device DETECT wifi (emula enter sending 0x01) -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device enters ESZ (WiFi detect)");
 
-    // Start listening for ESZ enter event
-    const eszEnterEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+    const device = setup.devices.dogStandard!;
+    const eszEnterPayload = {
+      latitude: 44.5024,
+      longitude: 11.3463,
+      spare_c5: Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached,
+    };
+
+    // Start listening for ESZ enter event with onReady callback
+    const eszEnterEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
       fxt.socket.timeoutMs,
       "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
+      async () => {
+        logger.info("⚡ Subscription ready -> Sending heartbeat ENTER ESZ...");
+        await sentinelTcpSocketClient.simulator.heartbeat(device, eszEnterPayload);
+      },
     );
 
-    // Emula: Send 0x01 con WiFi detected (spare_c5 = NDetached)
-    const device = setup.devices.dogStandard!;
-    const bufferEnter = Packet01.D2SWelcomeHeartBeat.toBuffer(device, {
-      latitude: 44.5024, // GPS coords dentro la zona ESZ
-      longitude: 11.3463,
-      spare_c5: Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached, // "In home" - WiFi rilevato → Device IN zona
-    });
-    await sentinelTcpSocketClient.send(bufferEnter, "ESZ_ENTER");
-
-    // Wait for event and assert
-    const eszEnterEvent = await eszEnterEventPromise;
     logger.info("onGpsMessageStatus:", eszEnterEvent);
     expect(eszEnterEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszEnterEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
@@ -144,26 +143,26 @@ describe("Energy Saving Zone", () => {
   it("Device LEAVES wifi (emula exit sending 0x01) -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device leaves ESZ (WiFi lost)");
 
-    // Start listening for ESZ exit event
-    const eszExitEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+    const device = setup.devices.dogStandard!;
+    const eszExitPayload = {
+      latitude: 44.5024,
+      longitude: 11.3463,
+      spare_c5: 0x00,
+    };
+
+    // Start listening for ESZ exit event with onReady callback
+    const eszExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
       fxt.socket.timeoutMs,
       "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
+      async () => {
+        logger.info("⚡ Subscription ready -> Sending heartbeat EXIT ESZ...");
+        await sentinelTcpSocketClient.simulator.heartbeat(device, eszExitPayload);
+      },
     );
 
-    // Emula: WiFi lost (spare_c5 = 0 → nessun flag attivo)
-    const device = setup.devices.dogStandard!;
-    const bufferExit = Packet01.D2SWelcomeHeartBeat.toBuffer(device, {
-      latitude: 44.5024, // GPS coords (ma senza WiFi)
-      longitude: 11.3463,
-      spare_c5: 0x00, // Nessun flag → WiFi NOT detected → Device OUT zona
-    });
-    await sentinelTcpSocketClient.send(bufferExit, "ESZ_EXIT");
-
-    // Wait for event and assert
-    const eszExitEvent = await eszExitEventPromise;
     logger.info("onGpsMessageStatus:", eszExitEvent);
     expect(eszExitEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszExitEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);

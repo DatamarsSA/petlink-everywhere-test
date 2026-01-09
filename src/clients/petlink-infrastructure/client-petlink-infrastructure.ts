@@ -217,7 +217,7 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
     private subscriptions = new Map<
       string,
       {
-        callbacks: { next: (data: any) => void; error: (err: any) => void };
+        callbacks: { next: (data: any) => void; ready: () => Promise<void>; error: (err: any) => void };
         timeout: NodeJS.Timeout | null;
       }
     >();
@@ -309,9 +309,15 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
               reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
               break;
 
-            case "start_ack":
-              logger.debug("Subscription start acknowledged", { id: message.id });
+            case "start_ack": {
+              const subId = message.id;
+              const sub = this.subscriptions.get(subId);
+              logger.debug("Subscription start acknowledged", { id: subId });
+              if (sub) {
+                sub.callbacks.ready();
+              }
               break;
+            }
 
             case "ka":
               logger.debug("Keep-alive received");
@@ -343,6 +349,7 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
       timeoutMs: number,
       timeoutError: string,
       filter?: (data: any) => boolean,
+      onReady?: () => Promise<void>,
     ): Promise<T> {
       return new Promise<T>(async (resolve, reject) => {
         await this.ensureConnected();
@@ -397,6 +404,17 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
                 resolve(event.data);
               } else {
                 logger.info("- [GraphQL] Filter condition not met, ignoring event");
+              }
+            },
+            ready: async () => {
+              if (onReady) {
+                try {
+                  await onReady();
+                } catch (err: any) {
+                  logger.error("Error in onReady callback", { error: err.message });
+                  cleanup();
+                  reject(err);
+                }
               }
             },
             error: (err: any) => {
@@ -467,9 +485,10 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
         timeoutMs: number,
         timeoutError: string,
         filter?: (data: any) => boolean,
+        onReady?: () => Promise<void>,
       ) => {
         client.setAuthJwt();
-        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter);
+        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter, onReady);
       },
     },
     authApiKey: {
@@ -479,9 +498,10 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
         timeoutMs: number,
         timeoutError: string,
         filter?: (data: any) => boolean,
+        onReady?: () => Promise<void>,
       ) => {
         client.setAuthApiKey();
-        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter);
+        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter, onReady);
       },
     },
     disconnect: () => client.disconnect(),

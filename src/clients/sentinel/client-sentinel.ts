@@ -11,58 +11,89 @@ export class SentinelTcpClient {
 
   constructor(private config: { host: string; port: number }) {}
 
+  /**
+   * Connects to the Sentinel TCP server.
+   */
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       logger.debug(`→ Connecting to Sentinel at ${this.config.host}:${this.config.port}`);
       this.socket = createConnection(this.config);
+
       this.socket.on("connect", () => {
         logger.debug("✓ Connected to Sentinel TCP server");
         resolve();
       });
+
       this.socket.on("data", (data) => this.handleData(data));
+
       this.socket.on("error", (err) => {
         logger.error(`✗ Socket error: ${err.message}`);
         reject(err);
       });
+
       this.socket.on("close", () => {
         logger.debug("✓ Connection closed");
       });
-      // Timeout di 10 secondi per la connessione iniziale
+
+      // Timeout for initial connection
       this.socket.setTimeout(10000);
       this.socket.on("timeout", () => {
-        // Don't reject here as it might trigger on idle, just handle if needed
+        // Idle timeout handled if needed
       });
     });
   }
 
   /**
-   * Invia pacchetto a Sentinel.
-   * @param kippyPayload - Il payload del pacchetto già serializzato in Buffer
-   * @param originalPacketData - L'oggetto dati originale, usato per il logging
+   * Disconnects from the server and stops keep-alive.
    */
-  async send(kippyPayload: Buffer, originalPacketData: object): Promise<void> {
-    if (!this.socket) throw new Error("Not connected");
-
-    const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
-    SirfProtocol.logPacket("OUTGOING", sirfPacket, originalPacketData);
-    this.socket.write(sirfPacket);
-  }
-
   disconnect() {
     this.stopKeepAlive();
-    this.socket?.destroy();
-    this.socket = null;
-  }
-
-  clearBuffer() {
-    this.buffer = Buffer.alloc(0);
+    if (this.socket) {
+      this.socket.destroy();
+      this.socket = null;
+    }
   }
 
   /**
-   * Waits for a single packet of a specific type.
-   * @param type The packet type (use SentinelPacketType enum)
-   * @param timeoutMs Timeout in milliseconds
-   * @param validator Optional function to filter the packet
+   * Private raw sender. Handles SIRF encapsulation and final socket write.
+   * Internal logging is handled by the simulator Proxy.
+   */
+  private async sendRaw(kippyPayload: Buffer): Promise<void> {
+    if (!this.socket) throw new Error("Not connected");
+    const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
+    this.socket.write(sirfPacket);
+  }
+
+  /**
+   * Simulator facet: provides a high-level API to simulate device behavior.
+   * Uses a Proxy to automatically log intent and encode data before sending raw bytes.
+   */
+  public readonly simulator = new Proxy({} as any, {
+    get: (_target, prop: string) => {
+      // Mapping of human names to encoder functions
+      const commands: Record<string, Function> = {
+        heartbeat: Packet01.D2SWelcomeHeartBeat.toBuffer,
+        geofenceResponse: Packet01.S2DGeofenceResponse.toBuffer,
+      };
+
+      const encoder = commands[prop];
+      if (!encoder) return undefined;
+
+      return async (...args: any[]) => {
+        // 1. Generate the binary payload using the encoder
+        const buffer = encoder(...args);
+
+        // 2. Automatic Logging (similar to GraphQL infrastructure)
+        logger.info(`🚀 [SENTINEL] SIMULATING ->: ${prop}`, args);
+
+        // 3. Send the raw bytes through the socket
+        return this.sendRaw(buffer);
+      };
+    },
+  });
+
+  /**
+   * Waits for a specific packet type to arrive from the socket.
    */
   async waitForPacket<T extends keyof PacketTypeMap>(
     type: T,
@@ -71,7 +102,6 @@ export class SentinelTcpClient {
   ): Promise<PacketTypeMap[T]> {
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16)}`;
-
       const timer = setTimeout(() => {
         cleanup();
         reject(new Error(`Device not received packet ${typeHex} from socket in ${timeoutMs}ms`));
@@ -84,8 +114,6 @@ export class SentinelTcpClient {
             logger.debug(`✓ Received expected packet ${typeHex}`);
             cleanup();
             resolve(typedPacket);
-          } else {
-            logger.debug(`- Skipped packet ${typeHex} (validator failed)`);
           }
         }
       };
@@ -99,72 +127,66 @@ export class SentinelTcpClient {
     });
   }
 
+  /**
+   * Clears the internal buffer and removes all packet listeners.
+   */
+  public clearBuffer(): void {
+    this.buffer = Buffer.alloc(0);
+    this.events.removeAllListeners("packet");
+  }
+
+  /**
+   * Internal data handler. Handles SIRF framing and emits parsed packets.
+   */
   private handleData(chunk: Buffer) {
-    // 1. Accumulo: Aggiunge i nuovi dati arrivati (chunk) al buffer esistente.
-    //    TCP non garantisce che un chunk = un pacchetto. Potrebbe essere mezzo pacchetto o dieci pacchetti.
     this.buffer = Buffer.concat([this.buffer, chunk]);
 
-    // 2. Loop infinito: Continua a processare finché ci sono pacchetti completi nel buffer.
-    while (true) {
-      // 3. Ricerca Header: Cerca la sequenza di byte 0xA0, 0xA2 che indica l'inizio di un pacchetto SIRF.
-      const start = this.buffer.indexOf(SIRF.HEADER);
-      if (start === -1) {
-        // Nessun header, scarta tutto tranne l'ultimo byte se è 0xA0 (caso bordo)
-        // Perché se l'ultimo byte è 0xA0, potrebbe essere la prima metà dell'header (0xA0 0xA2)
-        // e il resto arriverà nel prossimo chunk.
-        if (this.buffer.length > 0 && this.buffer[this.buffer.length - 1] === SIRF.HEADER[0]) {
-          this.buffer = this.buffer.subarray(this.buffer.length - 1);
-        } else {
-          this.buffer = Buffer.alloc(0);
-        }
-        return;
+    while (this.buffer.length >= 8) {
+      const headerIndex = this.buffer.indexOf(SIRF.HEADER);
+      if (headerIndex === -1) {
+        this.buffer = Buffer.alloc(0);
+        break;
       }
 
-      // 4. Verifica se abbiamo abbastanza dati per leggere la lunghezza (HEADER + LENGTH_FIELD)
-      const headerAndLengthSize = SIRF.HEADER.length + SIRF.LENGTH_FIELD;
-      if (this.buffer.length < start + headerAndLengthSize) return;
-
-      const len = this.buffer.readUInt16BE(start + SIRF.HEADER.length);
-      // 5. Calcolo Lunghezza Totale Pacchetto:
-      //    Header + LENGTH_FIELD + Payload (len) + CRC + Footer
-      const totalLen = SIRF.HEADER.length + SIRF.LENGTH_FIELD + len + SIRF.CRC + SIRF.FOOTER.length;
-
-      // 6. Verifica se abbiamo ricevuto l'intero pacchetto
-      if (this.buffer.length < start + totalLen) return;
-
-      // 7. Estrazione Pacchetto Completo
-      const rawPacket = this.buffer.subarray(start, start + totalLen);
-      this.buffer = this.buffer.subarray(start + totalLen); // Avanza buffer
-
-      // 8. Parsing Payload (DECAPSULATE manuale)
-      //    Il payload inizia dopo l'header e il length field, finisce prima del CRC
-      const payloadStart = SIRF.HEADER.length + SIRF.LENGTH_FIELD;
-      const payload: Buffer = rawPacket.subarray(payloadStart, payloadStart + len);
-
-      try {
-        // Parse with factory (manual parsing)
-        const parsed = parsePacketByType(payload);
-
-        // LOG AFTER PARSING (INCOMING) - symmetric logging with parsed payload
-        SirfProtocol.logPacket("INCOMING", rawPacket, parsed.payload);
-
-        this.events.emit("packet", parsed);
-      } catch (e) {
-        logger.error(`Error processing packet: ${e}`);
+      if (headerIndex > 0) {
+        this.buffer = this.buffer.subarray(headerIndex);
       }
+
+      if (this.buffer.length < 4) break;
+
+      const length = this.buffer.readUInt16BE(2);
+      const totalPacketLength = length + 8;
+
+      if (this.buffer.length < totalPacketLength) break;
+
+      const rawPacket = this.buffer.subarray(0, totalPacketLength);
+      const payload = rawPacket.subarray(4, 4 + length);
+
+      // Verify Footer
+      const footer = rawPacket.subarray(totalPacketLength - 2);
+      if (!footer.equals(SIRF.FOOTER)) {
+        this.buffer = this.buffer.subarray(2); // Skip bad header
+        continue;
+      }
+
+      // Parse and emit
+      const parsed = parsePacketByType(payload);
+
+      // LOG INCOMING (Symmetric with simulator OUTGOING)
+      SirfProtocol.logPacket("INCOMING", rawPacket, parsed.payload);
+
+      this.events.emit("packet", parsed);
+
+      this.buffer = this.buffer.subarray(totalPacketLength);
     }
   }
 
   /**
-   * Sends a lightweight heartbeat packet to keep the TCP connection alive
-   * and ensure Sentinel considers the device "socket capable".
+   * Sends a lightweight heartbeat packet to keep the TCP connection alive.
    * @param device The device's identity from test setup.
    */
   public async keepAlive(device: DeviceIdentity): Promise<void> {
-    const buffer = Packet01.D2SWelcomeHeartBeat.toBuffer(device);
-
-    // Invia il pacchetto (il logger auto-estrarrà i dati dal buffer)
-    await this.send(buffer, "KEEP_ALIVE");
+    await this.simulator.heartbeat(device);
     logger.debug(`✓ Sent keep-alive packet for ${device.serialNumber}`);
   }
 
@@ -174,7 +196,7 @@ export class SentinelTcpClient {
    * @param intervalMs The interval in milliseconds (default: 3000).
    */
   public async startKeepAlive(device: DeviceIdentity, intervalMs = 3000): Promise<void> {
-    this.stopKeepAlive(); // Stop any existing loop
+    this.stopKeepAlive();
     logger.debug(`Starting keep-alive loop for ${device.serialNumber} every ${intervalMs}ms`);
     await this.keepAlive(device);
     this.keepAliveInterval = setInterval(() => {
