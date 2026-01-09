@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
+import { testHelper, TestSetup, EnrichedDevice } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../config/logger.js";
 import { Device, FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
 import { Packet01 } from "../../clients/sentinel/packet-encode-decode.js";
+import { PetlinkGps } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe("CCT Tool", () => {
   describe("Customers", () => {
     let user: any;
     let pet: any;
-    let device: Device;
+    let device: EnrichedDevice;
 
     beforeAll(async () => {
       // 1. Setup: Create User + Pet + Device via Core
@@ -19,7 +20,7 @@ describe("CCT Tool", () => {
       pet = setup.pets.dog!;
       device = setup.devices.dogStandard!;
 
-      logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: device.deviceId });
+      logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: device.id });
     });
 
     it("should allow CCT Admin to find a Customer in the list", async () => {
@@ -69,19 +70,19 @@ describe("CCT Tool", () => {
       expect(devicesResponse.getDevices.items).toBeDefined();
       expect(devicesResponse.getDevices.items?.length).toBeGreaterThan(0);
 
-      const targetDevice = devicesResponse.getDevices.items?.find((d) => d?.deviceId === device.deviceId);
+      const targetDevice = devicesResponse.getDevices.items?.find((d) => d?.deviceId === device.id);
       expect(targetDevice).toBeDefined();
-      expect(targetDevice?.deviceId).toBe(device.deviceId);
+      expect(targetDevice?.deviceId).toBe(device.id);
       expect(targetDevice?.petId).toBe(pet.id);
       expect(targetDevice?.customerId).toBe(user.id);
-      expect(targetDevice?.serialId).toBe(device.serialId);
+      expect(targetDevice?.serialId).toBe(device.serialNumber);
     });
   });
 
   describe("Devices", () => {
     let user: any;
     let pet: any;
-    let device: Device;
+    let device: EnrichedDevice;
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
@@ -95,8 +96,8 @@ describe("CCT Tool", () => {
       logger.info("Setup Device complete", {
         userId: user.id,
         petId: pet.id,
-        deviceId: device.deviceId,
-        serial: device.serialId,
+        deviceId: device.id,
+        serial: device.serialNumber,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -108,26 +109,26 @@ describe("CCT Tool", () => {
       const listResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
         filter: {
           filterType: FilterEnum.And,
-          serialId: device.serialId,
+          serialId: device.serialNumber,
         },
         pagination: { pageNumber: 0, pageSize: 10 },
       });
 
       expect(listResponse.getDevices.code).toBe("200");
-      const deviceInList = listResponse.getDevices.items?.find((d) => d?.serialId === device.serialId);
+      const deviceInList = listResponse.getDevices.items?.find((d) => d?.serialId === device.serialNumber);
       expect(deviceInList).toBeDefined();
-      expect(deviceInList?.deviceId).toBe(device.deviceId);
+      expect(deviceInList?.deviceId).toBe(device.id);
     });
 
     it("should allow CCT Admin to view Device details", async () => {
       // 4. Test Detail: GetDevice
       logger.info("Fetching Device Detail...");
       const deviceDetailResponse = await petlink.cct.graphqlHttp.authJwt.getDevice({
-        deviceId: device.deviceId,
+        deviceId: device.id,
       });
       expect(deviceDetailResponse.getDevice.code).toBe("200");
-      expect(deviceDetailResponse.getDevice.device?.deviceId).toBe(device.deviceId);
-      expect(deviceDetailResponse.getDevice.device?.serialId).toBe(device.serialId);
+      expect(deviceDetailResponse.getDevice.device?.deviceId).toBe(device.id);
+      expect(deviceDetailResponse.getDevice.device?.serialId).toBe(device.serialNumber);
       expect(deviceDetailResponse.getDevice.device?.customerId).toBe(user.id);
       expect(deviceDetailResponse.getDevice.device?.petId).toBe(pet.id);
     });
@@ -154,7 +155,7 @@ describe("CCT Tool", () => {
     it("should allow CCT Admin to view Device Subscriptions", async () => {
       // GetCustomDeviceSubscriptions
       const subResponse = await petlink.cct.graphqlHttp.authJwt.getCustomDeviceSubscriptions({
-        deviceId: device.deviceId,
+        deviceId: device.id,
       });
       expect(subResponse.getSubscriptions.code).toBe("200");
       expect(subResponse.getSubscriptions.items).toBeDefined();
@@ -180,7 +181,7 @@ describe("CCT Tool", () => {
       // --- FASE 1: STATO INIZIALE ---
       // Recuperiamo la data di connessione attuale (se esiste) per confrontarla dopo
       const preResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
-        filter: { filterType: FilterEnum.And, serialId: device.serialId },
+        filter: { filterType: FilterEnum.And, serialId: device.serialNumber },
       });
       const preDevice = preResponse.getDevices.items?.[0];
       const oldLastConnectionDate = preDevice?.lastConnectionDate ? new Date(preDevice.lastConnectionDate).getTime() : 0;
@@ -189,19 +190,14 @@ describe("CCT Tool", () => {
       const testLat = 45.04862;
       const testLng = 7.641921;
 
-      const heartbeatData = {
-        ...Packet01.D2SWelcomeHeartBeat.Data,
-        serial_number: device.serialId,
-        imei: device.imei,
-        fw_version: device.firmware,
-        iccid: device.iccid,
+      const buffer = Packet01.D2SWelcomeHeartBeat.toBuffer(device, {
         latitude: testLat,
         longitude: testLng,
         battery: 5800, // 5.8V (che il CCT trasforma in %)
-      };
+      });
 
-      logger.info(`📡 Send heartbeat to Sentinel to device ${device.serialId}...`);
-      await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
+      logger.info(`📡 Send heartbeat to Sentinel to device ${device.serialNumber}...`);
+      await sentinelTcpSocketClient.send(buffer, "HEARTBEAT_FOR_CCT");
 
       // Attendiamo che il dato attraversi SQS e arrivi al DB (async)
       await new Promise((r) => setTimeout(r, 3000));
@@ -216,7 +212,7 @@ describe("CCT Tool", () => {
         },
       });
 
-      const latest = postResponse.getDevices.items?.find((i) => i?.serialId === device.serialId);
+      const latest = postResponse.getDevices.items?.find((i) => i?.serialId === device.serialNumber);
 
       expect(latest, "Device should appear on CCT list of devices.").toBeDefined();
 

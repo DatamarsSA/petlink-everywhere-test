@@ -24,6 +24,12 @@ type UserOptions = {
   password?: string;
 };
 
+export type EnrichedDevice = PetlinkGps & {
+  imei: string;
+  iccid: string;
+  firmware: string;
+};
+
 export interface TestSetup {
   user?: User;
   pets: {
@@ -32,9 +38,9 @@ export interface TestSetup {
     cat?: Pet;
   };
   devices: {
-    dogStandard?: PetlinkGps;
-    dogEvo?: PetlinkGps;
-    catStandard?: PetlinkGps;
+    dogStandard?: EnrichedDevice;
+    dogEvo?: EnrichedDevice;
+    catStandard?: EnrichedDevice;
   };
 }
 
@@ -186,22 +192,24 @@ class TestSetupBuilder {
       const items = cctResponse.getDevices.items || [];
 
       // Enrich Core devices with hardware data from CCT
-      // We map CCT 'iccid' to Core 'idccd'
-      if (coreDogStandard) {
-        const enriched = items.find((i) => i?.deviceId === coreDogStandard?.id);
-        if (!enriched) throw new Error(`Critical: Device ${coreDogStandard.id} not found in CCT after creation`);
-        this.setup.devices.dogStandard = { ...coreDogStandard, imei: enriched.imei, idccd: enriched.iccid };
-      }
-      if (coreDogEvo) {
-        const enriched = items.find((i) => i?.deviceId === coreDogEvo?.id);
-        if (!enriched) throw new Error(`Critical: Device ${coreDogEvo.id} not found in CCT after creation`);
-        this.setup.devices.dogEvo = { ...coreDogEvo, imei: enriched.imei, idccd: enriched.iccid };
-      }
-      if (coreCatStandard) {
-        const enriched = items.find((i) => i?.deviceId === coreCatStandard?.id);
-        if (!enriched) throw new Error(`Critical: Device ${coreCatStandard.id} not found in CCT after creation`);
-        this.setup.devices.catStandard = { ...coreCatStandard, imei: enriched.imei, idccd: enriched.iccid };
-      }
+      const enrich = (coreDevice: PetlinkGps): EnrichedDevice => {
+        const cctData = items.find((i) => i?.deviceId === coreDevice.id);
+
+        if (!cctData || !cctData.imei || !cctData.iccid || !cctData.firmware) {
+          throw new Error(`[Setup] CRITICAL: Device ${coreDevice.serialNumber} missing technical data in CCT`);
+        }
+
+        return {
+          ...coreDevice,
+          imei: cctData.imei,
+          iccid: cctData.iccid,
+          firmware: cctData.firmware,
+        };
+      };
+
+      if (coreDogStandard) this.setup.devices.dogStandard = enrich(coreDogStandard);
+      if (coreDogEvo) this.setup.devices.dogEvo = enrich(coreDogEvo);
+      if (coreCatStandard) this.setup.devices.catStandard = enrich(coreCatStandard);
     }
 
     // Acquista subscription se richiesto
@@ -407,7 +415,7 @@ class TestHelper {
   }
 
   async createDeviceForPet(pet: Pet, deviceType: DeviceTypeEnum): Promise<PetlinkGps> {
-    const deviceFixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : fxt.current.devices[deviceType];
+    const deviceFixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : (fxt.current.devices as any)[deviceType];
 
     if (!deviceFixture) {
       throw new Error(`Device fixture not found for brand ${fxt.current.appBrand} and type ${deviceType}`);

@@ -1,7 +1,7 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap } from "./packet-encode-decode.js";
+import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap, DeviceIdentity } from "./packet-encode-decode.js";
 
 export class SentinelTcpClient {
   private socket: Socket | null = null;
@@ -158,31 +158,28 @@ export class SentinelTcpClient {
   /**
    * Sends a lightweight heartbeat packet to keep the TCP connection alive
    * and ensure Sentinel considers the device "socket capable".
-   * @param serialNumber The device's serial number.
+   * @param device The device's identity from test setup.
    */
-  public async keepAlive(serialNumber: string): Promise<void> {
-    // 1. Crea l'oggetto dati usando il template
-    const keepAliveData = {
-      ...Packet01.D2SWelcomeHeartBeat.Data,
-      serial_number: serialNumber, // 2. Inserisce il serial number specifico
-    };
-    // 3. Invia il pacchetto
-    await this.send(Packet01.D2SWelcomeHeartBeat.toBuffer(keepAliveData), keepAliveData);
-    logger.debug(`✓ Sent keep-alive packet for ${serialNumber}`);
+  public async keepAlive(device: DeviceIdentity): Promise<void> {
+    const buffer = Packet01.D2SWelcomeHeartBeat.toBuffer(device);
+
+    // Invia il pacchetto (il logger auto-estrarrà i dati dal buffer)
+    await this.send(buffer, "KEEP_ALIVE");
+    logger.debug(`✓ Sent keep-alive packet for ${device.serialNumber}`);
   }
 
   /**
    * Starts a keep-alive loop to prevent socket disconnection from Sentinel.
-   * @param serialNumber The device's serial number.
+   * @param device The device's identity from test setup.
    * @param intervalMs The interval in milliseconds (default: 3000).
    */
-  public async startKeepAlive(serialNumber: string, intervalMs = 3000): Promise<void> {
+  public async startKeepAlive(device: DeviceIdentity, intervalMs = 3000): Promise<void> {
     this.stopKeepAlive(); // Stop any existing loop
-    logger.debug(`Starting keep-alive loop for ${serialNumber} every ${intervalMs}ms`);
-    await this.keepAlive(serialNumber);
+    logger.debug(`Starting keep-alive loop for ${device.serialNumber} every ${intervalMs}ms`);
+    await this.keepAlive(device);
     this.keepAliveInterval = setInterval(() => {
       if (this.socket?.writable) {
-        this.keepAlive(serialNumber).catch((err) => {
+        this.keepAlive(device).catch((err) => {
           logger.error(`Keep-alive interval failed: ${err.message}`);
         });
       }

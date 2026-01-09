@@ -48,6 +48,17 @@ export enum PacketType {
 // ================================ DIZIONARIO DEI TIPI ================================ //
 
 /**
+ * Interface for device identity data from CCT/Inventory.
+ * Used to populate mandatory hardware fields in D2S packets.
+ */
+export interface DeviceIdentity {
+  serialNumber: string;
+  imei: string;
+  iccid: string;
+  firmware: string;
+}
+
+/**
  * Map for types of pacekt received on sokcet by Sentinel
  */
 export interface PacketTypeMap {
@@ -209,12 +220,12 @@ export class Packet01 {
     } as const;
 
     static Data = {
-      // === Identificativi dispositivo ===
+      // === Hardware info ===
       serial_number: "" as string, // Serial number del device (es. "UTEST02")
-      imei: "359999999999999" as string, // IMEI (15 cifre): ID univoco del modem GSM (hardware) - NON cambia mai
-      iccid: "89390200000000000001" as string, // ICCID (19-20 cifre): ID della SIM card - ⚠️ NON deve iniziare con IMEI!
+      imei: "" as string, // IMEI (15 cifre): ID univoco del modem GSM (hardware)
+      iccid: "" as string, // ICCID (19-20 cifre): ID della SIM card
 
-      // === Versioni firmware ===
+      // === Software info ===
       fw_version: "10.4.88" as string, // Firmware version - ⚠️ Deve essere >= 10.1.73 per socket TCP (altrimenti SMS fallback)
       bl_version: "2.0.1" as string, // Bootloader version
 
@@ -270,7 +281,30 @@ export class Packet01 {
       gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined, // Celle GSM rilevate
     };
 
-    static toBuffer(data: typeof Packet01.D2SWelcomeHeartBeat.Data): Buffer {
+    /**
+     * Serializes heartbeat data into a Buffer.
+     * @param device Mandatory device identity from CCT/Inventory.
+     * @param overrides Optional technical data overrides (GPS, battery, etc).
+     */
+    static toBuffer(device: DeviceIdentity, overrides: Partial<typeof Packet01.D2SWelcomeHeartBeat.Data> = {}): Buffer {
+      // Merge: Default template + Overrides + Mandatory Identity
+      const data = {
+        ...this.Data,
+        ...overrides,
+        serial_number: device.serialNumber,
+        imei: device.imei,
+        iccid: device.iccid,
+        fw_version: device.firmware,
+      };
+
+      // --- GUARDIAN: Fail fast if identity is missing ---
+      if (!data.serial_number || !data.imei || !data.iccid || !data.fw_version) {
+        throw new Error(
+          `[Sentinel Protocol] CRITICAL: Attempting to encode Packet 0x01 without Device Hardware Identity! ` +
+            `You must pass a valid Device object from the test setup.`,
+        );
+      }
+
       const MAX_SIZE = 600;
       const buffer = Buffer.alloc(MAX_SIZE);
       let offset = 0;

@@ -19,7 +19,7 @@ describe("Live Tracking", () => {
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await sentinelTcpSocketClient.connect();
-    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!.serialId);
+    await sentinelTcpSocketClient.startKeepAlive(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
@@ -34,7 +34,7 @@ describe("Live Tracking", () => {
     // 1. Start listening (Prepare the trap)
     const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
-      { id: setup.devices.dogStandard!.deviceId },
+      { id: setup.devices.dogStandard!.id },
       fxt.socket.timeoutMs,
       "Should receive status update with liveTracking=ON",
       (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.On,
@@ -44,7 +44,7 @@ describe("Live Tracking", () => {
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: CommandEnum.LiveTracking,
-        id: setup.devices.dogStandard!.deviceId,
+        id: setup.devices.dogStandard!.id,
         duration: 900,
         modeType: ModeType.Sentinel,
       },
@@ -79,7 +79,7 @@ describe("Live Tracking", () => {
     // Subscribe BEFORE sending packet
     const positionEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessagePosition,
-      { id: setup.devices.dogStandard!.deviceId },
+      { id: setup.devices.dogStandard!.id },
       fxt.socket.timeoutMs,
       "Position update should arrive via WebSocket",
       (data) => data?.onGpsMessagePosition?.position.lat === testLat,
@@ -87,19 +87,14 @@ describe("Live Tracking", () => {
 
     // Send heartbeat packet
     const device = setup.devices.dogStandard!;
-    const heartbeatData = {
-      ...Packet01.D2SWelcomeHeartBeat.Data,
-      serial_number: device.serialId,
-      imei: device.imei,
-      iccid: device.iccid,
-      fw_version: device.firmware,
+    const buffer = Packet01.D2SWelcomeHeartBeat.toBuffer(device, {
       latitude: testLat,
       longitude: testLng,
       battery: 4200,
       temperature: 22,
       last_gps_time: Math.floor(Date.now() / 1000),
-    };
-    await sentinelTcpSocketClient.send(Packet01.D2SWelcomeHeartBeat.toBuffer(heartbeatData), heartbeatData);
+    });
+    await sentinelTcpSocketClient.send(buffer, "LIVE_TRACKING_HEARTBEAT");
 
     // Wait and assert
     const positionEvent = await positionEventPromise;
@@ -116,7 +111,7 @@ describe("Live Tracking", () => {
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: CommandEnum.LiveTracking,
-        id: setup.devices.dogStandard!.deviceId,
+        id: setup.devices.dogStandard!.id,
         duration: 0,
         modeType: ModeType.Sentinel,
       },
