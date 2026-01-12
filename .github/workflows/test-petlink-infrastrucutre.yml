@@ -3,66 +3,56 @@ name: test-petlink-infrastrucutre
 on:
   push:
     branches: [develop]
-  repository_dispatch:
-    types: [backend-updated]
+
+  # CASO 2: Trigger Esterno (Da Core/Sentinel/ecc)
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Environment to test against"
-        required: true
-        default: "develop"
-        type: choice
-        options:
-          - develop
-          - test
+      repo: { description: "Source Repo", required: true }
+      branch: { description: "Source Branch", required: true }
+      sha: { description: "Source SHA", required: true }
+      actor: { description: "Source Actor", required: true }
 
 jobs:
   info-job:
     runs-on: ubuntu-latest
     steps:
+      - name: 🔍 Debug - Dump Event Payload
+        run: echo '${{ toJSON(github.event) }}'
+
       - name: Add Trigger Info to Summary
         run: |
           echo "## 🔔 Info TRIGGER pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            echo "**Triggered by:** \`repository_dispatch\` (Push on External Repo)" >> $GITHUB_STEP_SUMMARY
-            echo "**Repository:** [\`${{ github.event.client_payload.repo }}\`](https://github.com/${{ github.event.client_payload.repo }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Source Branch:** \`${{ github.event.client_payload.branch }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Target Environment:** \`${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.event.client_payload.repo }}/commit/${{ github.event.client_payload.sha }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit Author:** [@${{ github.event.client_payload.actor }}](https://github.com/${{ github.event.client_payload.actor }})" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "**Triggered by:** \`workflow_dispatch\` (Manual Trigger)" >> $GITHUB_STEP_SUMMARY
-            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
-            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Target Environment:** \`${{ github.event.inputs.environment || 'develop' }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+             # --- LOGICA ESTERNA (push su altri repo) ---
+             echo "**Trigger:** 🚀 External Dispatch" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Repo:** \`${{ github.event.inputs.repo }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Branch:** \`${{ github.event.inputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Target Env Tests:** \`${{ github.event.inputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Commit:** \`${{ github.event.inputs.sha }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Author:** @${{ github.event.inputs.actor }}" >> $GITHUB_STEP_SUMMARY  
+          
           elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "**Triggered by:** \`push\` (Push on Test Suite)" >> $GITHUB_STEP_SUMMARY
-            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
-            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Target Environment:** \`develop\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
+             # --- LOGICA INTERNA (push mio per sviluppo) ---
+             echo "**Trigger:** 📝 Internal Push" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Repo:** \`${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Target Env Tests:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Author:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "" >> $GITHUB_STEP_SUMMARY
 
 
   run-tests:
     runs-on: ubuntu-latest
-    # 1. If repository_dispatch: use branch where other repos has pushed
-    # 2. If workflow_dispatch: use value chosen manually
-    # 3. Default 'develop'
-    #environment: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
-    environment: 'develop'
+    # ENVIRONMENT DETERMINISTICO:
+    # Se workflow_dispatch -> Usa ESATTAMENTE inputs.branch (se non esiste env -> crash)
+    # Se push -> Usa ESATTAMENTE ref_name (il branch su cui hai pushato)
+    environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
 
     env:
-      # 1. If repository_dispatch: use branch where other repos has pushed
-      # 2. If workflow_dispatch: use value chosen manually
-      # 3. Default 'develop'
-      NODE_ENV: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
+      NODE_ENV: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
