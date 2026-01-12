@@ -17,6 +17,39 @@ on:
           - test
 
 jobs:
+  info-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add Trigger Info to Summary
+        run: |
+          echo "## 🔔 Info TRIGGER pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "**Triggered by:** \`repository_dispatch\` (Push on External Repo)" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** [\`${{ github.event.client_payload.repo }}\`](https://github.com/${{ github.event.client_payload.repo }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Source Branch:** \`${{ github.event.client_payload.branch }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Environment:** \`${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.event.client_payload.repo }}/commit/${{ github.event.client_payload.sha }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit Author:** [@${{ github.event.client_payload.actor }}](https://github.com/${{ github.event.client_payload.actor }})" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "**Triggered by:** \`workflow_dispatch\` (Manual Trigger)" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
+            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Environment:** \`${{ github.event.inputs.environment || 'develop' }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "**Triggered by:** \`push\` (Push on Test Suite)" >> $GITHUB_STEP_SUMMARY
+            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
+            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Environment:** \`develop\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+
   run-tests:
     runs-on: ubuntu-latest
     # 1. If repository_dispatch: use branch where other repos has pushed
@@ -75,46 +108,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Add Trigger Info to Summary
-        run: |
-          echo "## 🔔 Trigger pipeline info" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            echo "**Triggered by:** \`repository_dispatch\` (push on external repos)" >> $GITHUB_STEP_SUMMARY
-            echo "**Repository:** [\`${{ github.event.client_payload.repo }}\`](https://github.com/${{ github.event.client_payload.repo }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Source Branch:** \`${{ github.event.client_payload.branch }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.event.client_payload.repo }}/commit/${{ github.event.client_payload.sha }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit Author:** [@${{ github.event.client_payload.actor }}](https://github.com/${{ github.event.client_payload.actor }})" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "**Triggered by:** \`workflow_dispatch\` (manual trigger)" >> $GITHUB_STEP_SUMMARY
-            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
-            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "**Triggered by:** \`push\` (push on this repo)" >> $GITHUB_STEP_SUMMARY
-            echo "**Repository:** \`${{ github.repository }}\` (this repo)" >> $GITHUB_STEP_SUMMARY
-            echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Target Environment:** \`${{ env.NODE_ENV }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit:** [\`${GITHUB_SHA:0:7}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
-            echo "**Commit Author:** [@${{ github.actor }}](https://github.com/${{ github.actor }})" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Log trigger info
-        run: |
-          echo "Triggered by: ${{ github.event_name }}"
-          echo "Repository: ${{ github.event.client_payload.repo || 'self' }}"
-          echo "Branch: ${{ github.event.client_payload.ref || github.ref }}"
-          echo "Commit: ${{ github.event.client_payload.sha || github.sha }}"
-          echo "Actor: ${{ github.event.client_payload.actor || github.actor }}"
-          echo "Brand: ${{ matrix.app_brand }}"
-          echo "Environment: ${{ env.NODE_ENV }}"
 
       - name: Build Docker image
         run: docker build -t petlink-everywhere-test .
