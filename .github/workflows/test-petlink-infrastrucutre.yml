@@ -19,28 +19,39 @@ jobs:
       - name: 🔍 Debug - Dump Event Payload
         run: echo '${{ toJSON(github.event) }}'
 
+
       - name: Add Trigger Info to Summary
         run: |
-          echo "## 🔔 Info TRIGGER pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔔 Pipeline Context" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             # --- LOGICA ESTERNA (push su altri repo) ---
+             # --- LOGICA ESTERNA (da Core) ---
+             REPO="${{ github.event.inputs.repo }}"
+             BRANCH="${{ github.event.inputs.branch }}"
+             SHA="${{ github.event.inputs.sha }}"
+             ACTOR="${{ github.event.inputs.actor }}"
+
              echo "**Trigger:** 🚀 External Dispatch" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Repo:** \`${{ github.event.inputs.repo }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Branch:** \`${{ github.event.inputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Target Env Tests:** \`${{ github.event.inputs.branch }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Commit:** \`${{ github.event.inputs.sha }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Author:** @${{ github.event.inputs.actor }}" >> $GITHUB_STEP_SUMMARY  
+             echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
+             echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
           
           elif [ "${{ github.event_name }}" = "push" ]; then
-             # --- LOGICA INTERNA (push mio per sviluppo) ---
+             # --- LOGICA INTERNA (da Test) ---
+             REPO="${{ github.repository }}"
+             BRANCH="${{ github.ref_name }}"
+             SHA="${{ github.sha }}"
+             ACTOR="${{ github.actor }}"
+
              echo "**Trigger:** 📝 Internal Push" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Repo:** \`${{ github.repository }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Target Env Tests:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Author:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
+             echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
+             echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
+             echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
           fi
 
 
