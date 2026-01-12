@@ -27,7 +27,7 @@ describe("Live Tracking", () => {
     petlink.core.graphqlWS.disconnect();
   });
 
-  it("User ACTIVATE Live Tracking -> assert Packet arrives AND app receives LiveTracking Status ON", async () => {
+  it("User ACTIVATE Live Tracking (sendCommand duration=900) -> packet should arrives to device AND app receives LiveTracking Status ON", async () => {
     logger.info("📍 User activates Live Tracking");
 
     // 1. Start listening (Prepare the trap)
@@ -52,13 +52,25 @@ describe("Live Tracking", () => {
 
     // 3. Assert Packet (Device side) - Prima verifica il device...
     logger.info("⏳ Waiting for 0x01 (FAST_TRACKING)...");
-    const commandPacket = await sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
-      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
-    );
+    const [commandPacket] = await Promise.all([
+      sentinelTcpSocketClient.waitForPacket(
+        PacketType.PACKET_0x01,
+        fxt.socket.timeoutMs,
+        (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+      ),
+      // Polling heartbeat to trigger pending commands
+      new Promise((resolve) => setTimeout(resolve, 1000)).then(() =>
+        sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+          curr_status: OperatingStatus.DEFAULT,
+        }),
+      ),
+    ]);
+
     expect(commandPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
     logger.info("✓ Device received command");
+    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+      curr_status: OperatingStatus.FAST_TRACKING,
+    });
 
     // 4. Assert App Notification (User side) - ...poi verifica l'app
     logger.info("⏳ Waiting for GraphQL Status Update...");
@@ -72,38 +84,36 @@ describe("Live Tracking", () => {
   it("Device SENDS position -> notify app GraphQL Sub", async () => {
     logger.info("📍 Device sends position, app receives via WebSocket");
 
-    const testLat = 44.5024;
-    const testLng = 11.3463;
+    const device = setup.devices.dogStandard!;
+    const positionPayload = {
+      latitude: 44.5024,
+      longitude: 11.3463,
+      battery: 4200,
+      temperature: 22,
+      last_gps_time: Math.floor(Date.now() / 1000),
+    };
 
-    // Subscribe BEFORE sending packet
-    const positionEventPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+    // Subscribe with onReady callback to ensure sequential execution
+    const positionEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessagePosition,
       { id: setup.devices.dogStandard!.id },
       fxt.socket.timeoutMs,
       "Position update should arrive via WebSocket",
-      (data) => data?.onGpsMessagePosition?.position.lat === testLat,
+      (data) => data?.onGpsMessagePosition?.position.lat === positionPayload.latitude,
+      async () => {
+        logger.info("⚡ Subscription ready -> Sending heartbeat POSITION...");
+        await sentinelTcpSocketClient.simulator.heartbeat(device, positionPayload);
+      },
     );
 
-    // Send heartbeat packet
-    const device = setup.devices.dogStandard!;
-    await sentinelTcpSocketClient.simulator.heartbeat(device, {
-      latitude: testLat,
-      longitude: testLng,
-      battery: 4200,
-      temperature: 22,
-      last_gps_time: Math.floor(Date.now() / 1000),
-    });
-
-    // Wait and assert
-    const positionEvent = await positionEventPromise;
     logger.info("Position received:", positionEvent);
-    expect(positionEvent.onGpsMessagePosition.position.lat).toBe(testLat);
-    expect(positionEvent.onGpsMessagePosition.position.lng).toBe(testLng);
+    expect(positionEvent.onGpsMessagePosition.position.lat).toBe(positionPayload.latitude);
+    expect(positionEvent.onGpsMessagePosition.position.lng).toBe(positionPayload.longitude);
     logger.info("✓ Position streaming working");
   });
 
   // IT 3: Deactivation
-  it("User DEACTIVATE Live Tracking (sendCommand duration=0) -> assert Packet arrives to Device", async () => {
+  it("User DEACTIVATE Live Tracking (sendCommand duration=0) -> packet should arrives to Device", async () => {
     logger.info("📍 User deactivates Live Tracking");
 
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
@@ -121,13 +131,26 @@ describe("Live Tracking", () => {
     ).toBe("200");
 
     logger.info("⏳ Waiting for 0x01 (DEFAULT)...");
-    const deactivationPacket = await sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
-      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-    );
+    const [deactivationPacket] = await Promise.all([
+      sentinelTcpSocketClient.waitForPacket(
+        PacketType.PACKET_0x01,
+        fxt.socket.timeoutMs,
+        (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+      ),
+      // Polling heartbeat to trigger pending commands
+      new Promise((resolve) => setTimeout(resolve, 1000)).then(() =>
+        sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+          curr_status: OperatingStatus.FAST_TRACKING,
+        }),
+      ),
+    ]);
 
     expect(deactivationPacket.requested_operating_status).toBe(OperatingStatus.DEFAULT);
     logger.info("✓ Live Tracking deactivated");
+
+    // ACK finale
+    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+      curr_status: OperatingStatus.DEFAULT,
+    });
   });
 });

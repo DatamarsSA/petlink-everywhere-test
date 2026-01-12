@@ -114,6 +114,10 @@ export class SentinelTcpClient {
             logger.debug(`✓ Received expected packet ${typeHex}`);
             cleanup();
             resolve(typedPacket);
+          } else {
+            logger.warn(`⚠ Received packet ${typeHex} but validator failed`, {
+              payload: typedPacket,
+            });
           }
         }
       };
