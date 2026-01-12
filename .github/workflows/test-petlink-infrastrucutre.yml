@@ -55,7 +55,8 @@ jobs:
     # 1. If repository_dispatch: use branch where other repos has pushed
     # 2. If workflow_dispatch: use value chosen manually
     # 3. Default 'develop'
-    environment: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
+    #environment: ${{ github.event.client_payload.branch || github.event.inputs.environment || 'develop' }}
+    environment: 'develop'
 
     env:
       # 1. If repository_dispatch: use branch where other repos has pushed
