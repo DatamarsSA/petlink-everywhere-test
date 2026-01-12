@@ -16,23 +16,21 @@ jobs:
   info-job:
     runs-on: ubuntu-latest
     steps:
-      - name: 🔍 Debug - Dump Event Payload
-        run: echo '${{ toJSON(github.event) }}'
-
 
       - name: Add Trigger Info to Summary
         run: |
-          echo "## 🔔 Pipeline Context" >> $GITHUB_STEP_SUMMARY
+          run: echo '${{ toJSON(github.event) }}' 
+          echo "## 🔔 Info Trigger Pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             # --- LOGICA ESTERNA (da Core) ---
+             # --- EXTERNAL (by push on repos of architecture) ---
              REPO="${{ github.event.inputs.repo }}"
              BRANCH="${{ github.event.inputs.branch }}"
              SHA="${{ github.event.inputs.sha }}"
              ACTOR="${{ github.event.inputs.actor }}"
 
-             echo "**Trigger:** 🚀 External Dispatch" >> $GITHUB_STEP_SUMMARY
+             echo "**Triggered by:** 🚀 Push on External Repo" >> $GITHUB_STEP_SUMMARY
              echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
              echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
              echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
@@ -40,13 +38,13 @@ jobs:
              echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
           
           elif [ "${{ github.event_name }}" = "push" ]; then
-             # --- LOGICA INTERNA (da Test) ---
+             # --- INTERNAL (by push on test suite) ---
              REPO="${{ github.repository }}"
              BRANCH="${{ github.ref_name }}"
              SHA="${{ github.sha }}"
              ACTOR="${{ github.actor }}"
 
-             echo "**Trigger:** 📝 Internal Push" >> $GITHUB_STEP_SUMMARY
+             echo "**Trigger:** 📝 Push on Test Suite" >> $GITHUB_STEP_SUMMARY
              echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
              echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
              echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
