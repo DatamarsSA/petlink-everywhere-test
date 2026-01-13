@@ -221,15 +221,15 @@ export interface Device {
   __typename?: "Device";
   battery?: Maybe<Scalars["Float"]["output"]>;
   brand?: Maybe<Scalars["String"]["output"]>;
-  country: Scalars["String"]["output"];
+  country?: Maybe<Scalars["String"]["output"]>;
   customerBrand?: Maybe<Scalars["String"]["output"]>;
   customerCountry?: Maybe<Scalars["String"]["output"]>;
   customerEmail?: Maybe<Scalars["String"]["output"]>;
-  customerId: Scalars["String"]["output"];
+  customerId?: Maybe<Scalars["String"]["output"]>;
   customerLanguage?: Maybe<LanguageId>;
   customerName?: Maybe<Scalars["String"]["output"]>;
   customerSurname?: Maybe<Scalars["String"]["output"]>;
-  deviceId: Scalars["String"]["output"];
+  deviceId?: Maybe<Scalars["String"]["output"]>;
   factory?: Maybe<Scalars["String"]["output"]>;
   firmware: Scalars["String"]["output"];
   group?: Maybe<Scalars["String"]["output"]>;
@@ -249,10 +249,10 @@ export interface Device {
   lng?: Maybe<Scalars["Float"]["output"]>;
   logEnabled?: Maybe<Scalars["Boolean"]["output"]>;
   model?: Maybe<Scalars["String"]["output"]>;
-  petId: Scalars["String"]["output"];
+  petId?: Maybe<Scalars["String"]["output"]>;
   planProfileId?: Maybe<Scalars["String"]["output"]>;
   planProfileType?: Maybe<Scalars["String"]["output"]>;
-  registrationDate: Scalars["String"]["output"];
+  registrationDate?: Maybe<Scalars["String"]["output"]>;
   serialId: Scalars["String"]["output"];
   simManufacturer?: Maybe<Scalars["String"]["output"]>;
   simStatus: SimStatusEnum;
@@ -288,6 +288,18 @@ export interface DeviceInsuranceInfo {
   registered?: Maybe<Scalars["String"]["output"]>;
   serialNumber: Scalars["String"]["output"];
   subscriptionEnd?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface DeviceLastConnection {
+  __typename?: "DeviceLastConnection";
+  brand?: Maybe<Scalars["String"]["output"]>;
+  deviceId?: Maybe<Scalars["String"]["output"]>;
+  firmware: Scalars["String"]["output"];
+  iccid: Scalars["String"]["output"];
+  imei: Scalars["String"]["output"];
+  lastConnectionDate?: Maybe<Scalars["String"]["output"]>;
+  model?: Maybe<Scalars["String"]["output"]>;
+  serialId: Scalars["String"]["output"];
 }
 
 export interface DeviceMap {
@@ -483,6 +495,24 @@ export interface GetIssuesResponse {
   __typename?: "GetIssuesResponse";
   code: Scalars["String"]["output"];
   items: Array<Issue>;
+  message: Scalars["String"]["output"];
+  pagination: Pagination;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface GetLastConnectionsInput {
+  filterType: FilterEnum;
+  firmware?: InputMaybe<Scalars["String"]["input"]>;
+  iccid?: InputMaybe<Scalars["String"]["input"]>;
+  imei?: InputMaybe<Scalars["String"]["input"]>;
+  lastConnectionDate?: InputMaybe<DateFilterInput>;
+  serialId?: InputMaybe<Scalars["String"]["input"]>;
+}
+
+export interface GetLastConnectionsResponse {
+  __typename?: "GetLastConnectionsResponse";
+  code: Scalars["String"]["output"];
+  items: Array<DeviceLastConnection>;
   message: Scalars["String"]["output"];
   pagination: Pagination;
   translationCode?: Maybe<Scalars["String"]["output"]>;
@@ -1230,6 +1260,7 @@ export interface Query {
   getDevicesWithCoupon: GetDevicesWithCouponResponse;
   getInsuranceDevicesInfo: GetInsuranceDevicesInfoResponse;
   getIssues: GetIssuesResponse;
+  getLastConnections: GetLastConnectionsResponse;
   getLogActivityUser: GetLogActivityUserResponse;
   getMigrationSession: ResponseGetMigrationSession;
   getMigrationSessions: ResponseGetMigrationSessions;
@@ -1270,10 +1301,10 @@ export type QueryGetColorsArgs = {
 };
 
 export type QueryGetConnectionsHistoryArgs = {
-  deviceId: Scalars["String"]["input"];
   filter?: InputMaybe<GetConnectionsHistoryInput>;
   order?: InputMaybe<OrderInput>;
   pagination?: InputMaybe<PaginationInput>;
+  serialId: Scalars["String"]["input"];
 };
 
 export type QueryGetCustomerArgs = {
@@ -1287,7 +1318,7 @@ export type QueryGetCustomersArgs = {
 };
 
 export type QueryGetDeviceArgs = {
-  deviceId: Scalars["String"]["input"];
+  serialId: Scalars["String"]["input"];
 };
 
 export type QueryGetDeviceProtectionReplacementsArgs = {
@@ -1318,6 +1349,12 @@ export type QueryGetInsuranceDevicesInfoArgs = {
 
 export type QueryGetIssuesArgs = {
   deviceId: Scalars["String"]["input"];
+  order?: InputMaybe<OrderInput>;
+  pagination?: InputMaybe<PaginationInput>;
+};
+
+export type QueryGetLastConnectionsArgs = {
+  filter?: InputMaybe<GetLastConnectionsInput>;
   order?: InputMaybe<OrderInput>;
   pagination?: InputMaybe<PaginationInput>;
 };
@@ -1873,9 +1910,9 @@ export type GetDevicesQuery = {
     items: Array<{
       __typename?: "Device";
       serialId: string;
-      deviceId: string;
-      petId: string;
-      customerId: string;
+      deviceId?: string | null;
+      petId?: string | null;
+      customerId?: string | null;
       customerName?: string | null;
       customerSurname?: string | null;
       customerEmail?: string | null;
@@ -1884,7 +1921,7 @@ export type GetDevicesQuery = {
       customerLanguage?: LanguageId | null;
       imei: string;
       iccid: string;
-      registrationDate: string;
+      registrationDate?: string | null;
       lastPurchasedSubscriptionId?: string | null;
       lastPurchasedSubscriptionExpiringDate?: string | null;
       lastActivatedSubscriptionId?: string | null;
@@ -1910,7 +1947,7 @@ export type GetDevicesQuery = {
       lng?: number | null;
       timezone?: string | null;
       updateFrequency?: number | null;
-      country: string;
+      country?: string | null;
       logEnabled?: boolean | null;
     }>;
     pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
@@ -1918,7 +1955,7 @@ export type GetDevicesQuery = {
 };
 
 export type GetDeviceQueryVariables = Exact<{
-  deviceId: Scalars["String"]["input"];
+  serialId: Scalars["String"]["input"];
 }>;
 
 export type GetDeviceQuery = {
@@ -1930,9 +1967,9 @@ export type GetDeviceQuery = {
     device?: {
       __typename?: "Device";
       serialId: string;
-      deviceId: string;
-      petId: string;
-      customerId: string;
+      deviceId?: string | null;
+      petId?: string | null;
+      customerId?: string | null;
       customerName?: string | null;
       customerSurname?: string | null;
       customerEmail?: string | null;
@@ -1941,7 +1978,7 @@ export type GetDeviceQuery = {
       customerLanguage?: LanguageId | null;
       imei: string;
       iccid: string;
-      registrationDate: string;
+      registrationDate?: string | null;
       lastPurchasedSubscriptionId?: string | null;
       lastPurchasedSubscriptionExpiringDate?: string | null;
       lastActivatedSubscriptionId?: string | null;
@@ -1967,7 +2004,7 @@ export type GetDeviceQuery = {
       lng?: number | null;
       timezone?: string | null;
       updateFrequency?: number | null;
-      country: string;
+      country?: string | null;
       logEnabled?: boolean | null;
     } | null;
   };
@@ -2027,9 +2064,9 @@ export type CustomGetCustomerDevicesQuery = {
     items: Array<{
       __typename?: "Device";
       serialId: string;
-      deviceId: string;
-      petId: string;
-      customerId: string;
+      deviceId?: string | null;
+      petId?: string | null;
+      customerId?: string | null;
       hasSubscriptionActive?: boolean | null;
     }>;
   };
@@ -2357,7 +2394,7 @@ export const GetDeviceDocument = {
       variableDefinitions: [
         {
           kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialId" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
         },
       ],
@@ -2368,7 +2405,7 @@ export const GetDeviceDocument = {
             kind: "Field",
             name: { kind: "Name", value: "getDevice" },
             arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "serialId" }, value: { kind: "Variable", name: { kind: "Name", value: "serialId" } } },
             ],
             selectionSet: {
               kind: "SelectionSet",

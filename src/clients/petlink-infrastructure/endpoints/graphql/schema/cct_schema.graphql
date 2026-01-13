@@ -1,15 +1,21 @@
 """This directive allows results to be deferred during execution"""
 directive @defer on FIELD
 
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
 """Directs the schema to enforce authorization on a field"""
 directive @aws_auth(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service which subscriptions will be published to when this mutation is
+called. This directive is deprecated use @aws_susbscribe directive instead.
+"""
+directive @aws_publish(
+  """
+  List of subscriptions which will be published to when this mutation is called.
+  """
+  subscriptions: [String]
 ) on FIELD_DEFINITION
 
 """
@@ -23,17 +29,14 @@ Tells the service this field/object has access authorized by a Lambda Authorizer
 directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
 """
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
 Tells the service this field/object has access authorized by an API key.
 """
 directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
 
 """Tells the service which mutation triggers this subscription."""
 directive @aws_subscribe(
@@ -44,15 +47,12 @@ directive @aws_subscribe(
 ) on FIELD_DEFINITION
 
 """
-Tells the service which subscriptions will be published to when this mutation is
-called. This directive is deprecated use @aws_susbscribe directive instead.
+Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
-directive @aws_publish(
-  """
-  List of subscriptions which will be published to when this mutation is called.
-  """
-  subscriptions: [String]
-) on FIELD_DEFINITION
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
 
 type Activity {
   date: String!
@@ -244,9 +244,9 @@ input DateFilterInput {
 
 type Device {
   serialId: String!
-  deviceId: String!
-  petId: String!
-  customerId: String!
+  deviceId: String
+  petId: String
+  customerId: String
   customerName: String
   customerSurname: String
   customerEmail: String
@@ -255,7 +255,7 @@ type Device {
   customerLanguage: LanguageId
   imei: String!
   iccid: String!
-  registrationDate: String!
+  registrationDate: String
   lastPurchasedSubscriptionId: String
   lastPurchasedSubscriptionExpiringDate: String
   lastActivatedSubscriptionId: String
@@ -285,7 +285,7 @@ type Device {
   """  check which object is this"""
   timezone: String
   updateFrequency: Float
-  country: String!
+  country: String
   logEnabled: Boolean
 }
 
@@ -311,6 +311,17 @@ type DeviceInsuranceInfo {
   subscriptionEnd: String
   newDeviceId: String
   action: DeviceAction
+}
+
+type DeviceLastConnection {
+  serialId: String!
+  deviceId: String
+  imei: String!
+  iccid: String!
+  brand: String
+  model: String
+  lastConnectionDate: String
+  firmware: String!
 }
 
 type DeviceMap {
@@ -494,6 +505,23 @@ type GetIssuesResponse {
   message: String!
   translationCode: String
   items: [Issue!]!
+  pagination: Pagination!
+}
+
+input GetLastConnectionsInput {
+  serialId: String
+  imei: String
+  iccid: String
+  firmware: String
+  lastConnectionDate: DateFilterInput
+  filterType: FilterEnum!
+}
+
+type GetLastConnectionsResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [DeviceLastConnection!]!
   pagination: Pagination!
 }
 
@@ -1109,10 +1137,11 @@ type Query {
   getUser(userId: String!): GetUserResponse!
   getUsers(filter: GetUsersInput, pagination: PaginationInput, order: OrderInput): GetUsersResponse!
   getMyInfo: GetMyInfoResponse!
+  getLastConnections(filter: GetLastConnectionsInput, pagination: PaginationInput, order: OrderInput): GetLastConnectionsResponse!
   getDevices(filter: GetDevicesInput, pagination: PaginationInput, order: OrderInput): GetDevicesResponse!
   getDevicesMap(filter: GetDevicesMapInput, pagination: PaginationInput): GetDevicesMapResponse!
-  getDevice(deviceId: String!): GetDeviceResponse!
-  getConnectionsHistory(deviceId: String!, filter: GetConnectionsHistoryInput, pagination: PaginationInput, order: OrderInput): GetConnectionsHistoryResponse!
+  getDevice(serialId: String!): GetDeviceResponse!
+  getConnectionsHistory(serialId: String!, filter: GetConnectionsHistoryInput, pagination: PaginationInput, order: OrderInput): GetConnectionsHistoryResponse!
   getInsuranceDevicesInfo(deviceList: [String!]!, pagination: PaginationInput): GetInsuranceDevicesInfoResponse!
   getCustomers(filter: GetCustomersInput, pagination: PaginationInput, order: OrderInput): GetCustomersResponse!
   getCustomer(customerId: String!): GetCustomerResponse!

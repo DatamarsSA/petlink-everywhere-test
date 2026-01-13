@@ -99,8 +99,8 @@ query getDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order:
   }
 }
 
-query getDevice($deviceId: String!) {
-  getDevice(deviceId: $deviceId) {
+query getDevice($serialId: String!) {
+  getDevice(serialId: $serialId) {
     code
     message
     device {

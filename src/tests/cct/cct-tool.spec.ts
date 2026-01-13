@@ -123,7 +123,7 @@ describe("CCT Tool", () => {
       // 4. Test Detail: GetDevice
       logger.info("Fetching Device Detail...");
       const deviceDetailResponse = await petlink.cct.graphqlHttp.authJwt.getDevice({
-        deviceId: device.id,
+        serialId: device.serialNumber,
       });
       expect(deviceDetailResponse.getDevice.code).toBe("200");
       expect(deviceDetailResponse.getDevice.device?.deviceId).toBe(device.id);
