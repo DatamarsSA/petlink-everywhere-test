@@ -161,7 +161,7 @@ jobs:
           verbose_summary: true
           group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
-          annotations_limit: 0
+          check_annotations: 'false'
 
       # Add Performance Report to Summary
       - name: Add Performance Report to Summary
@@ -179,46 +179,36 @@ jobs:
 
 
       # -------------------------------------------------
-      # 1. Prepare Stats for Notification (JSON clean extraction)
+      # 1. Prepare Artifact for Discord Notification
       # -------------------------------------------------
-      - name: Export Test Stats
+      - name: Prepare XML Artifact
         if: always()
         run: |
-          # Calculate duration specific to this Brand
-          END_TS=$(date +%s)
-          START_TS="${JOB_START_TS:-$END_TS}"
-          DURATION=$((END_TS - START_TS))
-          DURATION_FMT="$(($DURATION / 60))m $(($DURATION % 60))s"
+          # Create a folder for the artifact
+          mkdir -p discord-artifact
           
-          REPORT_FILE="test-reports-${{ matrix.app_brand }}/results.json"
-          
-          # If the report exists, extract clean data. Otherwise report build error.
-          if [ -f "$REPORT_FILE" ]; then
-            jq -n \
-              --arg brand "${{ matrix.app_brand }}" \
-              --arg duration "$DURATION_FMT" \
-              --slurpfile results "$REPORT_FILE" \
-              '{
-                brand: $brand,
-                duration: $duration,
-                total: $results[0].numTotalTests,
-                passed: $results[0].numPassedTests,
-                failed: $results[0].numFailedTests,
-                skipped: $results[0].numPendingTests
-              }' > stats-${{ matrix.app_brand }}.json
+          # Copy JUnit XML if exists
+          if [ -f "test-reports-${{ matrix.app_brand }}/junit.xml" ]; then
+            cp "test-reports-${{ matrix.app_brand }}/junit.xml" "discord-artifact/junit-${{ matrix.app_brand }}.xml"
+            
+            # Save duration to a separate file (since XML duration is suite-based)
+            END_TS=$(date +%s)
+            START_TS="${JOB_START_TS:-$END_TS}"
+            DURATION=$((END_TS - START_TS))
+            echo "$(($DURATION / 60))m $(($DURATION % 60))s" > "discord-artifact/duration-${{ matrix.app_brand }}.txt"
           else
-            echo '{ "brand": "${{ matrix.app_brand }}", "error": "Build/Test Crash" }' > stats-${{ matrix.app_brand }}.json
+            echo "BUILD_FAILED" > "discord-artifact/error-${{ matrix.app_brand }}.txt"
           fi
 
       # -------------------------------------------------
-      # 2. Upload Artifact (Pass stats to the notify job)
+      # 2. Upload Artifact (Pass XML to the notify job)
       # -------------------------------------------------
-      - name: Upload Stats
+      - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: stats-${{ matrix.app_brand }}
-          path: stats-${{ matrix.app_brand }}.json
+          name: test-results-${{ matrix.app_brand }}
+          path: discord-artifact/
           retention-days: 1
 
 
@@ -229,78 +219,49 @@ jobs:
     needs: [run-tests]
     if: always()
     runs-on: ubuntu-latest
+    # Environment is required to access Secrets
+    environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+    
     steps:
-      - name: Download all stats
-        uses: actions/download-artifact@v4
-        with:
-          pattern: stats-*
-          merge-multiple: true
-          
       - name: Send Discord Notification
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
           WORKFLOW_STATUS: ${{ needs.run-tests.result }}
         run: |
-          STATS_TEXT=""
-          HAS_FAILURE=false
-          
-          # Loop through all downloaded stats files
-          for file in stats-*.json; do
-            BRAND=$(jq -r '.brand' $file)
-            ERROR=$(jq -r '.error // empty' $file)
-            
-            if [ ! -z "$ERROR" ]; then
-              STATS_TEXT+="${BRAND}: ⚠️ CRASH/BUILD FAILED\n"
-              HAS_FAILURE=true
-            else
-              TOTAL=$(jq -r '.total' $file)
-              PASSED=$(jq -r '.passed' $file)
-              FAILED=$(jq -r '.failed' $file)
-              SKIPPED=$(jq -r '.skipped' $file)
-              DURATION=$(jq -r '.duration' $file)
-              
-              if [ "$FAILED" -gt 0 ]; then
-                ICON="❌"
-                HAS_FAILURE=true
-              else
-                ICON="✅"
-              fi
-              
-              STATS_TEXT+="${ICON} **${BRAND}** (${DURATION})\n"
-              STATS_TEXT+="   Total: ${TOTAL} | Passed: ${PASSED} | Skipped: ${SKIPPED} | Failed: **${FAILED}**\n\n"
-            fi
-          done
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BRANCH="${{ github.ref_name }}"
 
-          if [ "$HAS_FAILURE" = true ] || [ "$WORKFLOW_STATUS" == "failure" ]; then
-             TITLE="🚨 Pipeline Tests FAILED"
-             COLOR=15158332 # Red
-             MENTION="${DISCORD_MENTION}"
-          else
+          if [ "$WORKFLOW_STATUS" == "success" ]; then
              TITLE="✅ Pipeline Tests PASSED"
              COLOR=3066993 # Green
+             DESCRIPTION="All integration tests (PETLINK & KIPPY) passed successfully."
              MENTION=""
+          else
+             TITLE="🚨 Pipeline Tests FAILED"
+             COLOR=15158332 # Red
+             DESCRIPTION="Some tests failed. Check the full report for details."
+             MENTION="${DISCORD_MENTION}"
           fi
           
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
+          # Build simple JSON payload
           jq -n \
             --arg content "$MENTION" \
             --arg title "$TITLE" \
+            --arg desc "$DESCRIPTION" \
             --arg color "$COLOR" \
-            --arg stats "$(echo -e "$STATS_TEXT")" \
-            --arg runUrl "$RUN_URL" \
-            --arg branch "${{ github.ref_name }}" \
+            --arg url "$RUN_URL" \
+            --arg branch "$BRANCH" \
             '{
               content: $content,
               username: "Integration Test",
               embeds: [{
                 title: $title,
+                description: $desc,
                 color: ($color | tonumber),
-                description: $stats,
                 fields: [
                   { name: "Branch", value: $branch, inline: true },
-                  { name: "Full Report", value: ("[🔗 Open Summary](" + $runUrl + ")"), inline: true }
+                  { name: "Report", value: ("[🔗 Open Summary](" + $url + ")"), inline: true }
                 ]
               }]
             }' > discord_payload.json
