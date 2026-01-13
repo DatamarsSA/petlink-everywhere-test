@@ -5,7 +5,6 @@ import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/cli
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
-import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 import { logger } from "../../config/logger.js";
 import WebSocket from "ws";
 
@@ -585,15 +584,6 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
           } catch (error: any) {
             logger.error(`❌ [${config.serviceName}] ERROR <-: ${String(prop)}`, error);
             throw error;
-          } finally {
-            const duration = Math.round(performance.now() - startTime);
-            performanceTracker.recordPerformance({
-              service: config.serviceName,
-              protocol: "graphql",
-              authType,
-              operation: String(prop),
-              duration,
-            });
           }
         };
       },

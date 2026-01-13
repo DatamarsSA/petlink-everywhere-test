@@ -8,7 +8,7 @@ import { extractParamsFromUrl, waitFor } from "../../../helpers/helpers.js";
 import { logger } from "../../../config/logger.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 
-describe.skip("User Profile Management", () => {
+describe("User Profile Management", () => {
   describe("CHANGE profile info (intentional -> authenticated)", () => {
     let testUser: User;
     const initialEmail = `initial-email@example.com`;

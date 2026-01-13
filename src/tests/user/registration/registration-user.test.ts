@@ -6,7 +6,7 @@ import { extractParamsFromUrl, waitFor } from "../../../helpers/helpers.js";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 
-describe.skip("User Registration", () => {
+describe("User Registration", () => {
   // Payload per la registrazione utente
   const signUpPayload = {
     email: fxt.current.user.email,

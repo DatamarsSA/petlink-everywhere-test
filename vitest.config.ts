@@ -79,13 +79,11 @@ export default defineConfig(() => {
       reporters: [
         "default", // Console output (per sviluppo locale)
         "junit", // Per GitHub Actions annotations
-        "json", // Per skipped tests details in GitHub Actions summary
         "html", // Per UI web statica e visualizzazione locale
       ],
 
       outputFile: {
         junit: "./test-reports/junit.xml", // GitHub Actions legge questo
-        json: "./test-reports/results.json", // Per post-processing
         html: "./test-reports/index.html", // Report HTML interattivo
       },
       // 1. Disabilita parallelismo TRA file

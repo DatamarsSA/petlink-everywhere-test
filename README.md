@@ -232,8 +232,6 @@ After running tests, check `test-reports/`:
 
 - `index.html` - Interactive HTML report (open in browser)
 - `junit.xml` - CI/CD integration (GitHub Actions annotations)
-- `results.json` - Detailed test results
-- `performance-report.txt` - API endpoint performance analysis
 
 ---
 

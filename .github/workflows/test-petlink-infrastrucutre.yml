@@ -159,26 +159,12 @@ jobs:
           group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
 
-      # Add Performance Report to Summary
-      - name: Add Performance Report to Summary
-        if: always()
-        run: |
-          if [ -f "test-reports-${{ matrix.app_brand }}/performance-report.txt" ]; then
-            echo "## 🚀 Performance Report (${{ matrix.app_brand }})" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat test-reports-${{ matrix.app_brand }}/performance-report.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Performance report not found" >> $GITHUB_STEP_SUMMARY
-          fi
-
   # -------------------------------------------------
   # JOB: Notify Discord (Fan-In)
   # -------------------------------------------------
   notify-discord:
     needs: [run-tests]
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Environment is required to access Secrets
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
