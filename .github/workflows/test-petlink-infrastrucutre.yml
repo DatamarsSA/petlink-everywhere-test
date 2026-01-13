@@ -180,102 +180,130 @@ jobs:
 
 
       # -------------------------------------------------
-      # Discord notification
+      # 1. Prepare Stats for Notification (JSON clean extraction)
       # -------------------------------------------------
-      - name: Discord notification
+      - name: Export Test Stats
         if: always()
-        shell: bash
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
-          JOB_STATUS: ${{ job.status }}
-          APP_BRAND: ${{ matrix.app_brand }}
-          NODE_ENV: ${{ env.NODE_ENV }}
-          JUNIT_PATH: "test-reports-${{ matrix.app_brand }}/junit.xml"
         run: |
-          # 1. Calculation of duration
+          # Calculate duration specific to this Brand
           END_TS=$(date +%s)
           START_TS="${JOB_START_TS:-$END_TS}"
           DURATION=$((END_TS - START_TS))
           DURATION_FMT="$(($DURATION / 60))m $(($DURATION % 60))s"
+          
+          REPORT_FILE="test-reports-${{ matrix.app_brand }}/results.json"
+          
+          # If the report exists, extract clean data. Otherwise report build error.
+          if [ -f "$REPORT_FILE" ]; then
+            jq -n \
+              --arg brand "${{ matrix.app_brand }}" \
+              --arg duration "$DURATION_FMT" \
+              --slurpfile results "$REPORT_FILE" \
+              '{
+                brand: $brand,
+                duration: $duration,
+                total: $results[0].numTotalTests,
+                passed: $results[0].numPassedTests,
+                failed: $results[0].numFailedTests,
+                skipped: $results[0].numPendingTests
+              }' > stats-${{ matrix.app_brand }}.json
+          else
+            echo '{ "brand": "${{ matrix.app_brand }}", "error": "Build/Test Crash" }' > stats-${{ matrix.app_brand }}.json
+          fi
 
+      # -------------------------------------------------
+      # 2. Upload Artifact (Pass stats to the notify job)
+      # -------------------------------------------------
+      - name: Upload Stats
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stats-${{ matrix.app_brand }}
+          path: stats-${{ matrix.app_brand }}.json
+          retention-days: 1
+
+
+  # -------------------------------------------------
+  # JOB: Notify Discord (Fan-In)
+  # -------------------------------------------------
+  notify-discord:
+    needs: [run-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all stats
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stats-*
+          merge-multiple: true
+          
+      - name: Send Discord Notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+          WORKFLOW_STATUS: ${{ needs.run-tests.result }}
+        run: |
+          STATS_TEXT=""
+          HAS_FAILURE=false
+          
+          # Loop through all downloaded stats files
+          for file in stats-*.json; do
+            BRAND=$(jq -r '.brand' $file)
+            ERROR=$(jq -r '.error // empty' $file)
+            
+            if [ ! -z "$ERROR" ]; then
+              STATS_TEXT+="${BRAND}: ⚠️ CRASH/BUILD FAILED\n"
+              HAS_FAILURE=true
+            else
+              TOTAL=$(jq -r '.total' $file)
+              PASSED=$(jq -r '.passed' $file)
+              FAILED=$(jq -r '.failed' $file)
+              SKIPPED=$(jq -r '.skipped' $file)
+              DURATION=$(jq -r '.duration' $file)
+              
+              if [ "$FAILED" -gt 0 ]; then
+                ICON="❌"
+                HAS_FAILURE=true
+              else
+                ICON="✅"
+              fi
+              
+              STATS_TEXT+="${ICON} **${BRAND}** (${DURATION})\n"
+              STATS_TEXT+="   Total: ${TOTAL} | Passed: ${PASSED} | Skipped: ${SKIPPED} | Failed: **${FAILED}**\n\n"
+            fi
+          done
+
+          if [ "$HAS_FAILURE" = true ] || [ "$WORKFLOW_STATUS" == "failure" ]; then
+             TITLE="🚨 Pipeline Tests FAILED"
+             COLOR=15158332 # Red
+             MENTION="${DISCORD_MENTION}"
+          else
+             TITLE="✅ Pipeline Tests PASSED"
+             COLOR=3066993 # Green
+             MENTION=""
+          fi
+          
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          # 2. Extract stats from JUnit XML
-          # We extract the attributes from the first <testsuites> or <testsuite> tag
-          if [ -f "$JUNIT_PATH" ]; then
-             TOTAL=$(grep -o 'tests="[0-9]*"' "$JUNIT_PATH" | head -1 | cut -d'"' -f2)
-             FAILURES=$(grep -o 'failures="[0-9]*"' "$JUNIT_PATH" | head -1 | cut -d'"' -f2)
-             # JUnit sometimes uses 'skipped' or 'disabled' depending on the generator, usually 'skipped'
-             SKIPPED=$(grep -o 'skipped="[0-9]*"' "$JUNIT_PATH" | head -1 | cut -d'"' -f2)
-             # If skipped is empty, default to 0
-             SKIPPED="${SKIPPED:-0}"
-
-             # Calculate passed (Total - Failures - Skipped)
-             PASSED=$((TOTAL - FAILURES - SKIPPED))
-          else
-             TOTAL="N/A"
-             FAILURES="N/A"
-             PASSED="N/A"
-             SKIPPED="N/A"
-          fi
-
-          # 3. Determine Status, Color and Title
-          if [ "$JOB_STATUS" == "success" ]; then
-            TITLE="✅ ${APP_BRAND} Tests Passed"
-            COLOR=3066993 # Green
-          else
-            TITLE="❌ ${APP_BRAND} Tests FAILED"
-            COLOR=15158332 # Red
-          fi
-
-          # 4. Construct the Stats Block (Code Block for alignment)
-          # We use printf to align numbers neatly
-          STATS_BLOCK=$(cat <<EOF
-          \`\`\`text
-          Total:    ${TOTAL}
-          Passed:   ${PASSED}
-          Skipped:  ${SKIPPED}
-          Failed:   ${FAILURES}
-          \`\`\`
-          EOF
-          )
-
-          # 5. Mention Logic (Only on failure)
-          MENTION=""
-          if [ "$JOB_STATUS" != "success" ] && [ -n "$DISCORD_MENTION" ]; then
-            MENTION="$DISCORD_MENTION"
-          fi
-
-          # 6. Build JSON Payload using jq
+          
           jq -n \
             --arg content "$MENTION" \
             --arg title "$TITLE" \
             --arg color "$COLOR" \
-            --arg repo "${{ github.repository }}" \
-            --arg branch "${{ github.ref_name }}" \
-            --arg env "$NODE_ENV" \
-            --arg duration "$DURATION_FMT" \
-            --arg stats "$STATS_BLOCK" \
+            --arg stats "$(echo -e "$STATS_TEXT")" \
             --arg runUrl "$RUN_URL" \
+            --arg branch "${{ github.ref_name }}" \
             '{
               content: $content,
-              username: "GitHub Actions",
+              username: "Integration Test",
               embeds: [{
                 title: $title,
                 color: ($color | tonumber),
                 description: $stats,
                 fields: [
-                  { name: "Repository", value: $repo, inline: true },
-                  { name: "Branch/Env", value: $branch, inline: true },
-                  { name: "Duration", value: $duration, inline: true },
-                  { name: "Full Report", value: ("[🔗 View Details](" + $runUrl + ")"), inline: false }
+                  { name: "Branch", value: $branch, inline: true },
+                  { name: "Full Report", value: ("[🔗 Open Summary](" + $runUrl + ")"), inline: true }
                 ]
               }]
             }' > discord_payload.json
-
-          # 7. Send
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d @discord_payload.json \
-               "$DISCORD_WEBHOOK_URL"
+            
+          curl -H "Content-Type: application/json" -X POST -d @discord_payload.json "$DISCORD_WEBHOOK_URL"
