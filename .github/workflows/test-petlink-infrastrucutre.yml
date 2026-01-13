@@ -158,7 +158,6 @@ jobs:
           verbose_summary: true
           group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
-          skip_annotations: true
 
   # -------------------------------------------------
   # JOB: Notify Discord (Fan-In)
