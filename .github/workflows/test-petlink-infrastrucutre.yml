@@ -16,13 +16,12 @@ jobs:
   info-job:
     runs-on: ubuntu-latest
     steps:
-
       - name: Add Trigger Info to Summary
         run: |
           echo '${{ toJSON(github.event) }}' 
           echo "## 🔔 Info Trigger Pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
              # --- EXTERNAL (by push on repos of architecture) ---
              REPO="${{ github.event.inputs.repo }}"
@@ -36,7 +35,7 @@ jobs:
              echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
              echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
              echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
-          
+
           elif [ "${{ github.event_name }}" = "push" ]; then
              # --- INTERNAL (by push on test suite) ---
              REPO="${{ github.repository }}"
@@ -51,7 +50,6 @@ jobs:
              echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
              echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
           fi
-
 
   run-tests:
     runs-on: ubuntu-latest
@@ -145,7 +143,6 @@ jobs:
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
             petlink-everywhere-test yarn pipeline:$NODE_ENV
 
-
       # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v5
@@ -161,7 +158,6 @@ jobs:
           verbose_summary: true
           group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
-          check_annotations: 'false'
 
       # Add Performance Report to Summary
       - name: Add Performance Report to Summary
@@ -177,41 +173,6 @@ jobs:
             echo "⚠️ Performance report not found" >> $GITHUB_STEP_SUMMARY
           fi
 
-
-      # -------------------------------------------------
-      # 1. Prepare Artifact for Discord Notification
-      # -------------------------------------------------
-      - name: Prepare XML Artifact
-        if: always()
-        run: |
-          # Create a folder for the artifact
-          mkdir -p discord-artifact
-          
-          # Copy JUnit XML if exists
-          if [ -f "test-reports-${{ matrix.app_brand }}/junit.xml" ]; then
-            cp "test-reports-${{ matrix.app_brand }}/junit.xml" "discord-artifact/junit-${{ matrix.app_brand }}.xml"
-            
-            # Save duration to a separate file (since XML duration is suite-based)
-            END_TS=$(date +%s)
-            START_TS="${JOB_START_TS:-$END_TS}"
-            DURATION=$((END_TS - START_TS))
-            echo "$(($DURATION / 60))m $(($DURATION % 60))s" > "discord-artifact/duration-${{ matrix.app_brand }}.txt"
-          else
-            echo "BUILD_FAILED" > "discord-artifact/error-${{ matrix.app_brand }}.txt"
-          fi
-
-      # -------------------------------------------------
-      # 2. Upload Artifact (Pass XML to the notify job)
-      # -------------------------------------------------
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.app_brand }}
-          path: discord-artifact/
-          retention-days: 1
-
-
   # -------------------------------------------------
   # JOB: Notify Discord (Fan-In)
   # -------------------------------------------------
@@ -221,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     # Environment is required to access Secrets
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
-    
+
     steps:
       - name: Send Discord Notification
         env:
@@ -243,7 +204,7 @@ jobs:
              DESCRIPTION="Some tests failed. Check the full report for details."
              MENTION="${DISCORD_MENTION}"
           fi
-          
+
           # Build simple JSON payload
           jq -n \
             --arg content "$MENTION" \

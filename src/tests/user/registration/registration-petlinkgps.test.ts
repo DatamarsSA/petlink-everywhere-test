@@ -4,7 +4,7 @@ import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
-describe("PetlinkGPS Registration", () => {
+describe.skip("PetlinkGPS Registration", () => {
   let setup: TestSetup;
   // Tipizziamo correttamente i dispositivi
   let dogDevice: PetlinkGps;

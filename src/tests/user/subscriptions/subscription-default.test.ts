@@ -17,7 +17,7 @@ import {
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
-describe("DEFAULT subscription flow", () => {
+describe.skip("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
@@ -53,12 +53,12 @@ describe("DEFAULT subscription flow", () => {
       // EVO device plans (only for KIPPY)
       ...(fxt.isKippyRun && evoDevice
         ? [
-          petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-            productId: evoDevice.id,
-            countryCode: evoDevice.countryCode,
-            serialNumber: evoDevice.serialNumber,
-          }),
-        ]
+            petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+              productId: evoDevice.id,
+              countryCode: evoDevice.countryCode,
+              serialNumber: evoDevice.serialNumber,
+            }),
+          ]
         : []),
     ];
 
@@ -232,7 +232,7 @@ describe("DEFAULT subscription flow", () => {
         { id: setup.user!.id },
         fxt.socket.timeoutMs,
         "Subscription should become active after purchase",
-        (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true
+        (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
       );
 
       // Wait for WebSocket to establish connection

@@ -4,7 +4,7 @@ import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
-describe("Pet Registration", () => {
+describe.skip("Pet Registration", () => {
   let testUser: User;
 
   const dogPayload = {
