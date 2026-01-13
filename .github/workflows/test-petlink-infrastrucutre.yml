@@ -177,3 +177,105 @@ jobs:
           else
             echo "⚠️ Performance report not found" >> $GITHUB_STEP_SUMMARY
           fi
+
+
+      # -------------------------------------------------
+      # Discord notification
+      # -------------------------------------------------
+      - name: Discord notification
+        if: always()
+        shell: bash
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+          JOB_STATUS: ${{ job.status }}
+          APP_BRAND: ${{ matrix.app_brand }}
+          NODE_ENV: ${{ env.NODE_ENV }}
+          JUNIT_PATH: "test-reports-${{ matrix.app_brand }}/junit.xml"
+        run: |
+          # 1. Calculation of duration
+          END_TS=$(date +%s)
+          START_TS="${JOB_START_TS:-$END_TS}"
+          DURATION=$((END_TS - START_TS))
+          DURATION_FMT="$(($DURATION / 60))m $(($DURATION % 60))s"
+
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # 2. Extract stats from JUnit XML
+          # We extract the attributes from the first <testsuites> or <testsuite> tag
+          if [ -f "$JUNIT_PATH" ]; then
+             TOTAL=$(grep -o 'tests="[0-9]*"' "$JUNIT_PATH" | head -1 | cut -d'"' -f2)
+             FAILURES=$(grep -o 'failures="[0-9]*"' "$JUNIT_PATH" | head -1 | cut -d'"' -f2)
+             # JUnit sometimes uses 'skipped' or 'disabled' depending on the generator, usually 'skipped'
+             SKIPPED=$(grep -o 'skipped="[0-9]*"' "$JUNIT_PATH" | head -1 | cut -d'"' -f2)
+             # If skipped is empty, default to 0
+             SKIPPED="${SKIPPED:-0}"
+
+             # Calculate passed (Total - Failures - Skipped)
+             PASSED=$((TOTAL - FAILURES - SKIPPED))
+          else
+             TOTAL="N/A"
+             FAILURES="N/A"
+             PASSED="N/A"
+             SKIPPED="N/A"
+          fi
+
+          # 3. Determine Status, Color and Title
+          if [ "$JOB_STATUS" == "success" ]; then
+            TITLE="✅ ${APP_BRAND} Tests Passed"
+            COLOR=3066993 # Green
+          else
+            TITLE="❌ ${APP_BRAND} Tests FAILED"
+            COLOR=15158332 # Red
+          fi
+
+          # 4. Construct the Stats Block (Code Block for alignment)
+          # We use printf to align numbers neatly
+          STATS_BLOCK=$(cat <<EOF
+          \`\`\`text
+          Total:    ${TOTAL}
+          Passed:   ${PASSED}
+          Skipped:  ${SKIPPED}
+          Failed:   ${FAILURES}
+          \`\`\`
+          EOF
+          )
+
+          # 5. Mention Logic (Only on failure)
+          MENTION=""
+          if [ "$JOB_STATUS" != "success" ] && [ -n "$DISCORD_MENTION" ]; then
+            MENTION="$DISCORD_MENTION"
+          fi
+
+          # 6. Build JSON Payload using jq
+          jq -n \
+            --arg content "$MENTION" \
+            --arg title "$TITLE" \
+            --arg color "$COLOR" \
+            --arg repo "${{ github.repository }}" \
+            --arg branch "${{ github.ref_name }}" \
+            --arg env "$NODE_ENV" \
+            --arg duration "$DURATION_FMT" \
+            --arg stats "$STATS_BLOCK" \
+            --arg runUrl "$RUN_URL" \
+            '{
+              content: $content,
+              username: "GitHub Actions",
+              embeds: [{
+                title: $title,
+                color: ($color | tonumber),
+                description: $stats,
+                fields: [
+                  { name: "Repository", value: $repo, inline: true },
+                  { name: "Branch/Env", value: $branch, inline: true },
+                  { name: "Duration", value: $duration, inline: true },
+                  { name: "Full Report", value: ("[🔗 View Details](" + $runUrl + ")"), inline: false }
+                ]
+              }]
+            }' > discord_payload.json
+
+          # 7. Send
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d @discord_payload.json \
+               "$DISCORD_WEBHOOK_URL"

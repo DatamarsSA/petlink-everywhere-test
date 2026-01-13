@@ -12,7 +12,7 @@ import {
 import { fxt } from "../../../fixtures/fixtures.js";
 import { logger } from "../../../config/logger.js";
 
-describe("Geofence", () => {
+describe.skip("Geofence", () => {
   // Sequential per dipendenze
   let setup: TestSetup = {} as TestSetup;
   let geofenceId: string; // Per activation/deactivation

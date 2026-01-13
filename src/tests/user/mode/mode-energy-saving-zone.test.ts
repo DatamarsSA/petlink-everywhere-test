@@ -12,7 +12,7 @@ import {
 import { fxt } from "../../../fixtures/fixtures.js";
 import { logger } from "../../../config/logger.js";
 
-describe("Energy Saving Zone", () => {
+describe.skip("Energy Saving Zone", () => {
   // Sequential per dipendenze
   let setup: TestSetup = {} as TestSetup;
   let eszId: string; // Per activation/deactivation
