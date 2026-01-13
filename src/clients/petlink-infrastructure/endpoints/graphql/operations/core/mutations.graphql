@@ -339,7 +339,7 @@ mutation updateUser($user: UpdateUserIn!) {
   }
 }
 
-mutation deleteUser($id: String!) {
+mutation deleteUser($id: String) {
   deleteUser(id: $id) {
     code
     translationCode

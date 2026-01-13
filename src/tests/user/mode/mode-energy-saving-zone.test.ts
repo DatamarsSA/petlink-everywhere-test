@@ -51,6 +51,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Create,
         settingType: SettingTypeEnum.EnergySavingZone,
         createObject: JSON.stringify(createZonePayload),
+        deviceId: setup.devices.dogStandard!.id,
       },
     });
 

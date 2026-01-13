@@ -248,6 +248,7 @@ export enum CommandEnum {
   LiveTrackingTest = "LIVE_TRACKING_TEST",
   Shutdown = "SHUTDOWN",
   Sound = "SOUND",
+  Wakeup = "WAKEUP",
 }
 
 export enum ContactType {
@@ -760,6 +761,7 @@ export interface Mutation {
   /**   add sub w/uuid from verifyEmail */
   sendTokenEmail: Response;
   setArcaPlanetTerms: Response;
+  setDeviceOffline: Response;
   setMacAddress: Response;
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
@@ -959,6 +961,10 @@ export type MutationSendTokenEmailArgs = {
   appBrand: AppBrand;
   email?: InputMaybe<Scalars["String"]["input"]>;
   languageId?: InputMaybe<LanguageId>;
+};
+
+export type MutationSetDeviceOfflineArgs = {
+  productId: Scalars["String"]["input"];
 };
 
 export type MutationSetMacAddressArgs = {
@@ -1219,6 +1225,7 @@ export enum PetHistoryEventTypeEnum {
   GeofenceActive = "GEOFENCE_ACTIVE",
   GeofenceNoPet = "GEOFENCE_NO_PET",
   GeofenceOut = "GEOFENCE_OUT",
+  GeofenceTimeout = "GEOFENCE_TIMEOUT",
   HighTemperature = "HIGH_TEMPERATURE",
   LowTemperature = "LOW_TEMPERATURE",
   NoGpsSignal = "NO_GPS_SIGNAL",
@@ -1235,6 +1242,7 @@ export enum PetHistoryEventTypeEnum {
   SetPetLost = "SET_PET_LOST",
   SignalInterrupted = "SIGNAL_INTERRUPTED",
   SignalTimeout = "SIGNAL_TIMEOUT",
+  UpdatedPosition = "UPDATED_POSITION",
   WeeklyGoalAchieved = "WEEKLY_GOAL_ACHIEVED",
   WeeklyGoalAlmostReached = "WEEKLY_GOAL_ALMOST_REACHED",
 }
@@ -2719,6 +2727,7 @@ export interface User {
   email: Scalars["String"]["output"];
   entityType: EntityTypeEnum;
   forceSetPhoneNumber?: Maybe<Scalars["Boolean"]["output"]>;
+  forceSetUserData?: Maybe<Scalars["Boolean"]["output"]>;
   gender?: Maybe<Gender>;
   haveMicrochip?: Maybe<Scalars["Boolean"]["output"]>;
   id: Scalars["String"]["output"];
@@ -3194,7 +3203,7 @@ export type UpdateUserMutation = {
 };
 
 export type DeleteUserMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
+  id?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type DeleteUserMutation = {
@@ -5018,7 +5027,7 @@ export const DeleteUserDocument = {
         {
           kind: "VariableDefinition",
           variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
         },
       ],
       selectionSet: {
@@ -7133,7 +7142,7 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
       );
     },
     deleteUser(
-      variables: DeleteUserMutationVariables,
+      variables?: DeleteUserMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
     ): Promise<DeleteUserMutation> {
