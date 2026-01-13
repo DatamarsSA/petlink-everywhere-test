@@ -161,8 +161,7 @@ jobs:
           verbose_summary: true
           group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
-          annotations_limit: 200
-          include_passed: false
+          annotations_limit: 0
 
       # Add Performance Report to Summary
       - name: Add Performance Report to Summary
