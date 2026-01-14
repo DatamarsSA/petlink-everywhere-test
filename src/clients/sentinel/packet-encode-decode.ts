@@ -38,7 +38,8 @@ export enum OperatingStatus {
 }
 
 export enum PacketType {
-  PACKET_0x01 = 0x01,
+  PACKET_0x01 = 0x01, //PacketWelcomeHeartBeat -> managed by manage_packet01
+  PACKET_0x02 = 0x02, //PacketWelcomeAck -> managed by manage_packet02
   PACKET_0x08 = 0x08,
   PACKET_0x10 = 0x10,
   PACKET_0x14 = 0x14,
@@ -63,6 +64,7 @@ export interface DeviceIdentity {
  */
 export interface PacketTypeMap {
   [PacketType.PACKET_0x01]: typeof Packet01.S2DGeofenceResponse.Data;
+  [PacketType.PACKET_0x02]: number;
   [PacketType.PACKET_0x10]: typeof Packet10.Data;
   [PacketType.PACKET_0x15]: typeof Packet15.Data;
 }
@@ -610,6 +612,36 @@ export class Packet01 {
   };
 }
 
+/**
+ * Packet 0x02 - ACK (Device → Sentinel)
+ * Conferma la ricezione dei comandi dal server.
+ */
+export class Packet02 {
+  /**
+   * TODO: Se cambiano questi valori in Rust (packet_welcome_ack.rs), aggiornare anche qui.
+   * WelcomeAckType in Rust:
+   * - PacketWelcomeAckCommandsOk = 0x01
+   * - PacketWelcomeAckGeofenceOk = 0x02
+   * - PacketWelcomeAckFlashOk = 0x04
+   */
+  static readonly AckFlags = {
+    COMMANDS_OK: 0x01,
+    GEOFENCE_OK: 0x02,
+    FLASH_OK: 0x04,
+  } as const;
+
+  /**
+   * Serializza l'ACK in Buffer.
+   * @param flags Bitmask di conferma (default 0x07 = tutto OK)
+   */
+  static toBuffer(flags: number = 0x01 | 0x02 | 0x04): Buffer {
+    const buffer = Buffer.alloc(2);
+    buffer[0] = PacketType.PACKET_0x02;
+    buffer[1] = flags;
+    return buffer;
+  }
+}
+
 export class Packet10 {
   static Data = {
     evo_tasks: 0 as number,
@@ -722,6 +754,8 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
         } else {
           return { type, payload: Packet01.D2SWelcomeHeartBeat.fromBuffer(payload), raw: payload };
         }
+      case PacketType.PACKET_0x02:
+        return { type, payload: payload[1], raw: payload };
       case PacketType.PACKET_0x10:
         return { type, payload: Packet10.fromBuffer(payload), raw: payload };
       case PacketType.PACKET_0x15:

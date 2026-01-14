@@ -1,7 +1,17 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import { Packet01, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap, DeviceIdentity } from "./packet-encode-decode.js";
+import {
+  Packet01,
+  Packet02,
+  SirfProtocol,
+  parsePacketByType,
+  ParsedPacket,
+  SIRF,
+  PacketTypeMap,
+  DeviceIdentity,
+  PacketType,
+} from "./packet-encode-decode.js";
 
 export class SentinelTcpClient {
   private socket: Socket | null = null;
@@ -175,6 +185,16 @@ export class SentinelTcpClient {
 
       // Parse and emit
       const parsed = parsePacketByType(payload);
+
+      // --- AUTO-ACK LOGIC ---
+      // Se ricevo un comando dal server (0x01=Config, 0x10=ExtraData, 0x15=SafePlaces), rispondo subito con ACK (0x02)
+      if ([PacketType.PACKET_0x01, PacketType.PACKET_0x10, PacketType.PACKET_0x15].includes(parsed.type)) {
+        logger.debug(`[SENTINEL-CLIENT] Auto-ACKing packet 0x${parsed.type.toString(16).toUpperCase()}`);
+        const ackBuffer = Packet02.toBuffer(0x01 | 0x02 | 0x04); // 0x07 = All OK
+        this.sendRaw(ackBuffer).catch((err) => {
+          logger.error(`[SENTINEL-CLIENT] Failed to send auto-ACK: ${err.message}`);
+        });
+      }
 
       // LOG INCOMING (Symmetric with simulator OUTGOING)
       SirfProtocol.logPacket("INCOMING", rawPacket, parsed.payload);
