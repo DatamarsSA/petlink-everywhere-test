@@ -82,7 +82,10 @@ export class SentinelTcpClient {
     get: (_target, prop: string) => {
       // Mapping of human names to encoder functions
       const commands: Record<string, Function> = {
-        heartbeat: Packet01.D2SWelcomeHeartBeat.toBuffer,
+        welcome: (device: DeviceIdentity, data: any) =>
+          Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01),
+        heartbeat: (device: DeviceIdentity, data: any) =>
+          Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06),
         geofenceResponse: Packet01.S2DGeofenceResponse.toBuffer,
       };
 

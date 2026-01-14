@@ -40,6 +40,7 @@ export enum OperatingStatus {
 export enum PacketType {
   PACKET_0x01 = 0x01, //PacketWelcomeHeartBeat -> managed by manage_packet01
   PACKET_0x02 = 0x02, //PacketWelcomeAck -> managed by manage_packet02
+  PACKET_0x06 = 0x06, //Heartbeat -> managed by manage_packet06
   PACKET_0x08 = 0x08,
   PACKET_0x10 = 0x10,
   PACKET_0x14 = 0x14,
@@ -287,8 +288,13 @@ export class Packet01 {
      * Serializes heartbeat data into a Buffer.
      * @param device Mandatory device identity from CCT/Inventory.
      * @param overrides Optional technical data overrides (GPS, battery, etc).
+     * @param type Packet type (0x01 for Welcome, 0x06 for Heartbeat). Default 0x01.
      */
-    static toBuffer(device: DeviceIdentity, overrides: Partial<typeof Packet01.D2SWelcomeHeartBeat.Data> = {}): Buffer {
+    static toBuffer(
+      device: DeviceIdentity,
+      overrides: Partial<typeof Packet01.D2SWelcomeHeartBeat.Data> = {},
+      type: PacketType = PacketType.PACKET_0x01,
+    ): Buffer {
       // Merge: Default template + Overrides + Mandatory Identity
       const data = {
         ...Packet01.D2SWelcomeHeartBeat.Data,
@@ -301,7 +307,7 @@ export class Packet01 {
       // --- GUARDIAN: Fail fast if identity is missing ---
       if (!data.serial_number || !data.imei || !data.iccid || !data.fw_version) {
         throw new Error(
-          `[Sentinel Protocol] CRITICAL: Attempting to encode Packet 0x01 without Device Hardware Identity! ` +
+          `[Sentinel Protocol] CRITICAL: Attempting to encode Packet 0x01/0x06 without Device Hardware Identity! ` +
             `You must pass a valid Device object from the test setup.`,
         );
       }
@@ -310,7 +316,7 @@ export class Packet01 {
       const buffer = Buffer.alloc(MAX_SIZE);
       let offset = 0;
 
-      buffer[offset++] = PacketType.PACKET_0x01;
+      buffer[offset++] = type;
 
       // DEVICE_ID_LENGTH = 10
       stringToBytes(data.serial_number, 10).copy(buffer, offset);
@@ -749,6 +755,7 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
   try {
     switch (type) {
       case PacketType.PACKET_0x01:
+      case PacketType.PACKET_0x06:
         if (payload.length === 71) {
           return { type, payload: Packet01.S2DGeofenceResponse.fromBuffer(payload), raw: payload };
         } else {
