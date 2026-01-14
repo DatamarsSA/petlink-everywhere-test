@@ -34,7 +34,7 @@ describe("Energy Saving Zone", () => {
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
     // STEP 3: Send first hb to add device on socket map
-    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!);
+    await sentinelTcpSocketClient.simulator.welcome(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
@@ -85,7 +85,7 @@ describe("Energy Saving Zone", () => {
     ).toBe("200");
 
     // Wait packets
-    logger.info("⏳ Waiting for 0x15 (zones) and 0x10 (enable)...");
+    logger.info("⏳ Device waiting for 0x15 (zones) and 0x10 (enable)...");
     const [packet15, packet10] = await Promise.all([
       sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15, fxt.socket.timeoutMs),
       sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs),
@@ -189,7 +189,7 @@ describe("Energy Saving Zone", () => {
     ).toBe("200");
 
     // Wait 0x10 disable
-    logger.info("⏳ Waiting for 0x10 (disable)...");
+    logger.info("⏳ Device waiting for 0x10 (disable)...");
     const packet10 = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs);
     logger.info("Packet 0x10", packet10);
     expect(packet10, "Should receive 0x10 (Disable ESZ)").toBeDefined();
