@@ -48,7 +48,7 @@ describe("Geofence", () => {
     // STEP 2: Connect to Sentinel TCP server
     await sentinelTcpSocketClient.connect();
     // STEP 3: Send first hb to add device on socket map
-    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!);
+    await sentinelTcpSocketClient.simulator.welcome(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
@@ -117,7 +117,7 @@ describe("Geofence", () => {
   });
 
   // IT 3: Device Inside Geofence - Send 0x01 + Assert Sub
-  it("Device INSIDE geofence -> notify app GraphQL Sub", async () => {
+  it("Device send INSIDE geofence -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device inside geofence");
 
     const device = setup.devices.dogStandard!;
@@ -148,7 +148,7 @@ describe("Geofence", () => {
   });
 
   // IT 4: Device Exits Geofence - Send 0x01 + Assert Auto Live Tracking
-  it("Device EXITS geofence -> notify app GraphQL Sub + auto-activate Live Tracking", async () => {
+  it("Device send EXITS geofence -> notify app GraphQL Sub + auto-activate Live Tracking", async () => {
     logger.info("📍 Emula device exits geofence (critical!)");
 
     const device = setup.devices.dogStandard!;
