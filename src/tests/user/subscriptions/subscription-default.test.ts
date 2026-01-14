@@ -175,14 +175,7 @@ describe("DEFAULT subscription flow", () => {
       await testHelper.cleanupAll(); // ~2s
 
       // Già parallelizzato internamente!
-      setup = await testHelper
-        .setupBuilder()
-        .withUser() // User: ~5s
-        .withDog() // Dog + Cat in parallelo
-        .withCat()
-        .withDogDevice() // Devices in parallelo
-        .withCatDevice()
-        .build(); // Total: ~5-7s (user) + ~2s (pets parallel) + ~2s (devices parallel) = ~9-11s
+      setup = await testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice().build();
 
       // Billing + Plans in parallelo: ~0.5s
       const [_, plansResponse] = await Promise.all([

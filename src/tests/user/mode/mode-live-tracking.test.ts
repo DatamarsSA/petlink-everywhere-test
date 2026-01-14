@@ -13,7 +13,7 @@ import {
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
-describe.skip("Live Tracking", () => {
+describe("Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
