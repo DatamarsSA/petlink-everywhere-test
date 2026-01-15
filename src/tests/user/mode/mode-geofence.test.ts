@@ -43,12 +43,8 @@ describe("Geofence", () => {
   };
 
   beforeAll(async () => {
-    // STEP 1: Create user, pet, device, and purchase subscription
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    // STEP 2: Connect to Sentinel TCP server
-    await sentinelTcpSocketClient.connect();
-    // STEP 3: Send first hb to add device on socket map
-    await sentinelTcpSocketClient.simulator.welcome(setup.devices.dogStandard!);
+    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
@@ -79,6 +75,15 @@ describe("Geofence", () => {
   it("User ACTIVATE Geofence (sendSetting ACTIVATE) -> assert Packet arrives to Device", async () => {
     logger.info("📍 User activates geofence");
 
+    // 1. Prepare listener
+    logger.info("⏳ Waiting for 0x01 (geofence activation) on device...");
+    const packet01Promise = sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      fxt.socket.timeoutMs,
+      (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
+    );
+
+    // 2. Perform action
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Activate,
@@ -94,13 +99,8 @@ describe("Geofence", () => {
       `sendSetting ACTIVATE should succeed - Error: ${activateResponse.sendSetting.message}${activateResponse.sendSetting.translationCode ? ` (${activateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // Wait packet 0x01 with geofence data
-    logger.info("⏳ Waiting for 0x01 (geofence activation) on device...");
-    const packet01 = await sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
-      (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
-    );
+    // 3. Wait packet
+    const packet01 = await packet01Promise;
 
     expect(packet01, "Should receive 0x01 (Geofence activation)").toBeDefined();
     logger.info("packet01 (Geofence activation):", packet01);
@@ -182,6 +182,15 @@ describe("Geofence", () => {
   it("User DEACTIVATE Geofence (sendSetting DEACTIVATE) -> assert Packet arrives to Device", async () => {
     logger.info("📍 User deactivates geofence");
 
+    // 1. Prepare listener
+    logger.info("⏳ Waiting for 0x01 (deactivate)...");
+    const packet01Promise = sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      fxt.socket.timeoutMs,
+      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+    );
+
+    // 2. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
@@ -196,13 +205,8 @@ describe("Geofence", () => {
       `sendSetting DEACTIVATE should succeed - Error: ${deactivateResponse.sendSetting.message}${deactivateResponse.sendSetting.translationCode ? ` (${deactivateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // Wait 0x01 deactivate
-    logger.info("⏳ Waiting for 0x01 (deactivate)...");
-    const packet01 = await sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
-      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-    );
+    // 3. Wait packet
+    const packet01 = await packet01Promise;
     logger.info("0x01 received:", packet01);
 
     expect(packet01, "Should receive 0x01 (Deactivate Geofence)").toBeDefined();

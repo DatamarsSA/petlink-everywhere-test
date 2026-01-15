@@ -29,12 +29,8 @@ describe("Energy Saving Zone", () => {
   };
 
   beforeAll(async () => {
-    // STEP 1: Create user, pet, device, and purchase subscription
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    // STEP 2: Connect to Sentinel TCP server
-    await sentinelTcpSocketClient.connect();
-    // STEP 3: Send first hb to add device on socket map
-    await sentinelTcpSocketClient.simulator.welcome(setup.devices.dogStandard!);
+    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
@@ -70,6 +66,14 @@ describe("Energy Saving Zone", () => {
   it("User ACTIVATE ESZ (sendSetting ACTIVATE) -> assert Packet arrives to Device", async () => {
     logger.info("📍 User activates ESZ");
 
+    // 1. Prepare listeners BEFORE action
+    logger.info("⏳ Device waiting for 0x15 (zones) and 0x10 (enable)...");
+    const packetsPromise = Promise.all([
+      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15, fxt.socket.timeoutMs),
+      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs),
+    ]);
+
+    // 2. Perform action
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Activate,
@@ -84,12 +88,8 @@ describe("Energy Saving Zone", () => {
       `sendSetting ACTIVATE should succeed - Error: ${activateResponse.sendSetting.message}${activateResponse.sendSetting.translationCode ? ` (${activateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // Wait packets
-    logger.info("⏳ Device waiting for 0x15 (zones) and 0x10 (enable)...");
-    const [packet15, packet10] = await Promise.all([
-      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15, fxt.socket.timeoutMs),
-      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs),
-    ]);
+    // 3. Wait for packets
+    const [packet15, packet10] = await packetsPromise;
 
     expect(packet15, "Should receive 0x15 (Safe Places with zones)").toBeDefined();
     expect(packet10, "Should receive 0x10 (Evo Extra Data enable)").toBeDefined();
@@ -174,6 +174,11 @@ describe("Energy Saving Zone", () => {
   it("User DEACTIVATE ESZ (sendSetting DEACTIVATE) - API + Packet Assert", async () => {
     logger.info("📍 User deactivates ESZ");
 
+    // 1. Prepare listener
+    logger.info("⏳ Device waiting for 0x10 (disable)...");
+    const packet10Promise = sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs);
+
+    // 2. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
@@ -188,9 +193,8 @@ describe("Energy Saving Zone", () => {
       `sendSetting DEACTIVATE should succeed - Error: ${deactivateResponse.sendSetting.message}${deactivateResponse.sendSetting.translationCode ? ` (${deactivateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // Wait 0x10 disable
-    logger.info("⏳ Device waiting for 0x10 (disable)...");
-    const packet10 = await sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs);
+    // 3. Wait for packet
+    const packet10 = await packet10Promise;
     logger.info("Packet 0x10", packet10);
     expect(packet10, "Should receive 0x10 (Disable ESZ)").toBeDefined();
     expect(packet10.energy_saving_area_enabled).toBe(0); // Disabled
