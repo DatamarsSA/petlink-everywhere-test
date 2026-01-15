@@ -12,6 +12,14 @@ on:
       sha: { description: "Source SHA", required: true }
       actor: { description: "Source Actor", required: true }
 
+concurrency:
+  # Create a unique concurrency group based on workflow name and target branch (environment)
+  # 1. If two runs start on 'develop', the second one is queued until the first completes.
+  # 2. If runs start on different branches (e.g., 'develop' vs 'feature-x'), they run in parallel.
+  group: ${{ github.workflow }}-${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+  # false = Do not cancel the in-progress run, but queue the new one instead
+  cancel-in-progress: false
+
 jobs:
   info-job:
     runs-on: ubuntu-latest
