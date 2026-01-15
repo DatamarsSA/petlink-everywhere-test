@@ -101,7 +101,9 @@ export class SentinelTcpClient {
     timeoutMs: number = fxt.socket.timeoutMs,
   ): Promise<PacketTypeMap[T]> {
     return new Promise((resolve, reject) => {
-      const typeHex = `0x${type.toString(16)}`;
+      const typeHex = `0x${type.toString(16).toUpperCase()}`;
+      logger.debug(`⏳ [SENTINEL-WAIT] Started waiting for ${typeHex} (timeout: ${timeoutMs}ms)`);
+
       const timer = setTimeout(() => {
         cleanup();
         reject(new Error(`Device not received packet ${typeHex} from socket in ${timeoutMs}ms`));
@@ -111,13 +113,15 @@ export class SentinelTcpClient {
         if (packet.type === type) {
           const typedPacket = packet.payload as PacketTypeMap[T];
           if (!validator || validator(typedPacket)) {
-            logger.debug(`✓ Received expected packet ${typeHex}`);
+            logger.info(`✅ [SENTINEL-WAIT] Match found for ${typeHex}`);
             cleanup();
             resolve(typedPacket);
           } else {
-            logger.warn(`⚠ Received packet ${typeHex} but validator failed`, {
-              payload: typedPacket,
-            });
+            logger.warn(
+              `⚠️ [SENTINEL-WAIT] Received ${typeHex} but VALIDATOR FAILED\n` +
+                `  ├─ Received: ${JSON.stringify(typedPacket)}\n` +
+                `  └─ Status: Still waiting...`,
+            );
           }
         }
       };

@@ -113,43 +113,24 @@ export class SirfProtocol {
   static logPacket(direction: "INCOMING" | "OUTGOING", rawSirfPacket: Buffer, parsedPayload?: any): void {
     const type = rawSirfPacket[4];
     const length = rawSirfPacket.readUInt16BE(2);
-    const payload = rawSirfPacket.subarray(4, 4 + length);
-    const crc = rawSirfPacket.readUInt16BE(4 + length);
+    const typeHex = `0x${type.toString(16).padStart(2, "0").toUpperCase()}`;
+    const emoji = direction === "INCOMING" ? "📥" : "📤";
 
-    // Legenda del protocollo SIRF (statica)
-    const protocolLegend =
-      `[SIRF-PROTOCOL]: [HEADER: (${SIRF.HEADER.length}bytes) ${SIRF.HEADER.toString("hex").toUpperCase()}] ` +
-      `[LEN: (${SIRF.LENGTH_FIELD}bytes)] ` +
-      `[PAYLOAD: [PACKET_TYPE: (1byte)] [PAYLOAD: (variable bytes)]] ` +
-      `[CRC: (${SIRF.CRC}bytes) CHECKSUM] ` +
-      `[FOOTER: (${SIRF.FOOTER.length}bytes) ${SIRF.FOOTER.toString("hex").toUpperCase()}]`;
+    // Identifichiamo se è un pacchetto di sistema (rumore) o un comando/dato rilevante
+    const isSystem = [PacketType.PACKET_0x01, PacketType.PACKET_0x06, PacketType.PACKET_0x08, PacketType.PACKET_0x14].includes(type);
 
-    // Visualizzazione completa del pacchetto
-    const packetVisualization =
-      `\n\n[${direction}] SIRF Packet: 0x${type.toString(16).padStart(2, "0").toUpperCase()}\n` +
-      `${protocolLegend}\n` +
-      `[ORIGINAL-HEX]: ${rawSirfPacket.toString("hex").toUpperCase()}\n` +
-      `[SPLITTED-HEX]: HEADER:${rawSirfPacket.subarray(0, SIRF.HEADER.length).toString("hex").toUpperCase()} - ` +
-      `LEN:${rawSirfPacket
-        .subarray(SIRF.HEADER.length, SIRF.HEADER.length + SIRF.LENGTH_FIELD)
-        .toString("hex")
-        .toUpperCase()} - ` +
-      `PAYLOAD:${payload.toString("hex").toUpperCase()} - ` +
-      `CRC:${rawSirfPacket
-        .subarray(SIRF.HEADER.length + SIRF.LENGTH_FIELD + length, SIRF.HEADER.length + SIRF.LENGTH_FIELD + length + SIRF.CRC)
-        .toString("hex")
-        .toUpperCase()} - ` +
-      `FOOTER:${rawSirfPacket
-        .subarray(SIRF.HEADER.length + SIRF.LENGTH_FIELD + length + SIRF.CRC)
-        .toString("hex")
-        .toUpperCase()}\n` +
-      `[PAYLOAD-DECIMAL]: [${Array.from(payload).join(", ")}] payload_size: ${payload.length}\n` +
-      (parsedPayload ? `[PAYLOAD-PARSED]: ${JSON.stringify(parsedPayload)}` : "");
-
-    // LOG UNICO E LEGGIBILE
-    if (type != PacketType.PACKET_0x01 && type != PacketType.PACKET_0x08 && type != PacketType.PACKET_0x14) {
-      // not log 01 packet to hide rumors from heartbeat keepalive
-      logger.debug(packetVisualization);
+    if (isSystem) {
+      // Log sintetico per Heartbeat/System per non intasare i log
+      const status = parsedPayload?.curr_status !== undefined ? ` | Status: ${parsedPayload.curr_status}` : "";
+      const gps = parsedPayload?.latitude !== undefined ? ` | GPS: ${parsedPayload.latitude},${parsedPayload.longitude}` : "";
+      logger.debug(`${emoji} [SENTINEL-RAW] ${direction} ${typeHex}${status}${gps}`);
+    } else {
+      // Log dettagliato per pacchetti di comando/configurazione
+      logger.info(
+        `${emoji} [SENTINEL-MSG] ${direction} ${typeHex}\n` +
+          `  ├─ HEX: ${rawSirfPacket.toString("hex").toUpperCase()}\n` +
+          `  └─ DATA: ${JSON.stringify(parsedPayload)}`,
+      );
     }
   }
 }

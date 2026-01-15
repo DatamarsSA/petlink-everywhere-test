@@ -392,18 +392,20 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
         this.subscriptions.set(subId, {
           callbacks: {
             next: (event: any) => {
-              logger.info("📩 [GraphQL] Raw subscription event BEFORE filter:", JSON.stringify(event.data, null, 2));
-              // Resolve on first event if no filter, or if filter matches
-              if (!filter) {
-                logger.info("✓ [GraphQL] No filter provided, resolving immediately");
+              const data = event.data;
+              const isMatch = filter ? filter(data) : true;
+              const opName = operationName || "Subscription";
+
+              if (isMatch) {
+                logger.info(`✅ [GRAPHQL-SUB] ${opName} MATCHED!`);
                 cleanup();
-                resolve(event.data);
-              } else if (filter(event.data)) {
-                logger.info("✓ [GraphQL] Filter matched, resolving");
-                cleanup();
-                resolve(event.data);
+                resolve(data);
               } else {
-                logger.info("- [GraphQL] Filter condition not met, ignoring event");
+                logger.debug(
+                  `ℹ️ [GRAPHQL-SUB] ${opName} received event but FILTER MISMATCH\n` +
+                    `  ├─ Received: ${JSON.stringify(data)}\n` +
+                    `  └─ Action: Still waiting...`,
+                );
               }
             },
             ready: async () => {

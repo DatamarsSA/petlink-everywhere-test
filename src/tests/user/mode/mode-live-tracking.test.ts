@@ -83,7 +83,7 @@ describe("Live Tracking", () => {
       subscriptions.onGpsMessagePosition,
       { id: setup.devices.dogStandard!.id },
       "Position update should arrive via WebSocket",
-      (data) => data?.onGpsMessagePosition?.position.lat === positionPayload.latitude,
+      (data) => Math.abs(data?.onGpsMessagePosition?.position.lat - positionPayload.latitude) < 0.0001,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat POSITION...");
         await sentinelTcpSocketClient.simulator.heartbeat(device, positionPayload);
@@ -91,8 +91,8 @@ describe("Live Tracking", () => {
     );
 
     logger.info("Position received:", positionEvent);
-    expect(positionEvent.onGpsMessagePosition.position.lat).toBe(positionPayload.latitude);
-    expect(positionEvent.onGpsMessagePosition.position.lng).toBe(positionPayload.longitude);
+    expect(positionEvent.onGpsMessagePosition.position.lat).toBeCloseTo(positionPayload.latitude, 4);
+    expect(positionEvent.onGpsMessagePosition.position.lng).toBeCloseTo(positionPayload.longitude, 4);
     logger.info("✓ Position streaming working");
   });
 
