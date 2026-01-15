@@ -28,7 +28,6 @@ describe("Live Tracking", () => {
     const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
-      fxt.socket.timeoutMs,
       "Should receive status update with liveTracking=ON",
       (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.On,
     );
@@ -83,7 +82,6 @@ describe("Live Tracking", () => {
     const positionEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessagePosition,
       { id: setup.devices.dogStandard!.id },
-      fxt.socket.timeoutMs,
       "Position update should arrive via WebSocket",
       (data) => data?.onGpsMessagePosition?.position.lat === positionPayload.latitude,
       async () => {

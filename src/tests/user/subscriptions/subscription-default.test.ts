@@ -223,7 +223,6 @@ describe.skip("DEFAULT subscription flow", () => {
       const activationPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
         subscriptions.onSubscriptionStatus,
         { id: setup.user!.id },
-        fxt.socket.timeoutMs,
         "Subscription should become active after purchase",
         (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
       );

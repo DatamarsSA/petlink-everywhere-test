@@ -125,7 +125,6 @@ describe("Energy Saving Zone", () => {
     const eszEnterEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
-      fxt.socket.timeoutMs,
       "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
       async () => {
@@ -155,7 +154,6 @@ describe("Energy Saving Zone", () => {
     const eszExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
-      fxt.socket.timeoutMs,
       "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
       async () => {

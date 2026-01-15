@@ -6,6 +6,7 @@ import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { logger } from "../../config/logger.js";
+import { fxt } from "../../fixtures/fixtures.js";
 import WebSocket from "ws";
 
 // === Types ===
@@ -345,10 +346,10 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
     async subscribeUntil<T = any>(
       query: string,
       variables: Record<string, any>,
-      timeoutMs: number,
       timeoutError: string,
       filter?: (data: any) => boolean,
       onReady?: () => Promise<void>,
+      timeoutMs: number = fxt.socket.timeoutMs,
     ): Promise<T> {
       return new Promise<T>(async (resolve, reject) => {
         await this.ensureConnected();
@@ -481,26 +482,26 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
       subscribeUntil: async <T = any>(
         query: string,
         variables: Record<string, any>,
-        timeoutMs: number,
         timeoutError: string,
         filter?: (data: any) => boolean,
         onReady?: () => Promise<void>,
+        timeoutMs: number = fxt.socket.timeoutMs,
       ) => {
         client.setAuthJwt();
-        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter, onReady);
+        return await client.subscribeUntil<T>(query, variables, timeoutError, filter, onReady, timeoutMs);
       },
     },
     authApiKey: {
       subscribeUntil: async <T = any>(
         query: string,
         variables: Record<string, any>,
-        timeoutMs: number,
         timeoutError: string,
         filter?: (data: any) => boolean,
         onReady?: () => Promise<void>,
+        timeoutMs: number = fxt.socket.timeoutMs,
       ) => {
         client.setAuthApiKey();
-        return await client.subscribeUntil<T>(query, variables, timeoutMs, timeoutError, filter, onReady);
+        return await client.subscribeUntil<T>(query, variables, timeoutError, filter, onReady, timeoutMs);
       },
     },
     disconnect: () => client.disconnect(),

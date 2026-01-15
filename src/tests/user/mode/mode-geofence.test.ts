@@ -131,7 +131,6 @@ describe("Geofence", () => {
     const geofenceActiveEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
-      fxt.socket.timeoutMs,
       `Notification inGeofence=true not arrived to app after ${fxt.socket.timeoutMs}ms`,
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
       async () => {
@@ -162,7 +161,6 @@ describe("Geofence", () => {
     const geofenceExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       subscriptions.onGpsMessageStatus,
       { id: setup.devices.dogStandard!.id },
-      fxt.socket.timeoutMs,
       "Device should notify inGeofence=false when outside",
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
       async () => {
