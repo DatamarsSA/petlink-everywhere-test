@@ -13,8 +13,7 @@ describe("Live Tracking", () => {
 
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await sentinelTcpSocketClient.connect();
-    await sentinelTcpSocketClient.simulator.welcome(setup.devices.dogStandard!);
+    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
@@ -34,7 +33,15 @@ describe("Live Tracking", () => {
       (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.On,
     );
 
-    // 2. Send ACTIVATE LT from app
+    // 2. Setup listener for device packet
+    logger.info("⏳ Device waiting for 0x01 (FAST_TRACKING)...");
+    const commandPacketPromise = sentinelTcpSocketClient.waitForPacket(
+      PacketType.PACKET_0x01,
+      fxt.socket.timeoutMs,
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
+
+    // 3. Send ACTIVATE LT from app
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: CommandEnum.LiveTracking,
@@ -45,13 +52,8 @@ describe("Live Tracking", () => {
     });
     expect(activateResponse.sendCommand.code).toBe("200");
 
-    // 3. ACTIVATE LT should arrive to device
-    logger.info("⏳ Device waiting for 0x01 (FAST_TRACKING)...");
-    const commandPacket = await sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
-      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
-    );
+    // 4. Device wait for packet
+    const commandPacket = await commandPacketPromise;
     expect(commandPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
     logger.info("✓ Device received command");
 

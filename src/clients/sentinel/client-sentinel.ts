@@ -23,7 +23,7 @@ export class SentinelTcpClient {
   /**
    * Connects to the Sentinel TCP server.
    */
-  async connect(): Promise<void> {
+  private async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       logger.debug(`→ Connecting to Sentinel at ${this.config.host}:${this.config.port}`);
       this.socket = createConnection(this.config);
@@ -202,6 +202,21 @@ export class SentinelTcpClient {
 
       this.buffer = this.buffer.subarray(totalPacketLength);
     }
+  }
+
+  /**
+   * Connects to Sentinel, sends a Welcome packet (0x01), and waits for the server's response (0x01).
+   * This ensures the device is fully registered in Sentinel's connection map before tests proceed.
+   */
+  async connectAndHandshake(device: DeviceIdentity, timeoutMs: number = 10000): Promise<void> {
+    await this.connect();
+
+    // Start waiting for response BEFORE sending welcome to avoid race conditions (fast networks)
+    const handshakePromise = this.waitForPacket(PacketType.PACKET_0x01, timeoutMs, (p) => p.requested_operating_status !== undefined);
+
+    await this.simulator.welcome(device);
+    await handshakePromise;
+    logger.debug("✓ Handshake completed: Device registered in Sentinel");
   }
 }
 
