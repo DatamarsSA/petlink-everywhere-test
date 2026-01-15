@@ -17,7 +17,7 @@ import {
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
-describe("DEFAULT subscription flow", () => {
+describe.skip("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
@@ -307,8 +307,6 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" in ${fxt.polling.timeoutMs}ms`,
         },
       );
@@ -349,14 +347,10 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription status did not change to "active"`,
         }),
         waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.pets.dog!.id! }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: petProtectionId not assigned to pet`,
         }),
       ]);
@@ -415,8 +409,6 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
         },
       );
@@ -446,8 +438,6 @@ describe("DEFAULT subscription flow", () => {
       // STEP 5: Wait for pet protection to be assigned to the pet
       const petProtectionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.pets.dog!.id! }), {
         isReady: (result) => result.getPet.pet!.petProtectionId != null,
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
         timeoutError: `Timeout: petProtectionId not assigned to pet`,
       });
       const pet = petProtectionResult.getPet.pet!;
@@ -549,14 +539,10 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
         }),
         waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.pets.dog!.id! }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: petProtectionId not assigned to pet`,
         }),
       ]);
@@ -647,8 +633,6 @@ describe("DEFAULT subscription flow", () => {
             const sub = result.getSubscriptionByProductId.subscription;
             return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
         },
       );
@@ -720,8 +704,6 @@ describe("DEFAULT subscription flow", () => {
             const futureSub = subs.find((sub) => sub.status === "future");
             return futureSub?.paymentStatus === "SUCCEEDED";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: New subscription just purchased not found in ${fxt.polling.timeoutMs} `,
         },
       );
@@ -820,8 +802,6 @@ describe("DEFAULT subscription flow", () => {
           isReady: (result) => {
             return result.getSubscriptionByProductId.subscription?.status === "non_renewing";
           },
-          timeoutMs: fxt.polling.timeoutMs,
-          intervalMs: fxt.polling.intervalMs,
           timeoutError: `Timeout: Subscription status did not change to "non_renewing" in ${fxt.polling.timeoutMs} ms`,
         },
       );

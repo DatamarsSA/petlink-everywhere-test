@@ -55,8 +55,6 @@ describe("User Registration", () => {
 
   it("Wait to receive OTP via SMS", async () => {
     const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(signUpPayload.phone), {
-      timeoutMs: fxt.polling.timeoutMs,
-      intervalMs: fxt.polling.intervalMs,
       timeoutError: `OTP not received for ${signUpPayload.phone}`,
     });
 
@@ -105,8 +103,6 @@ describe("User Registration", () => {
 
   it("Wait to receive CONFIRMATION EMAIL", async () => {
     const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
-      timeoutMs: fxt.polling.timeoutMs,
-      intervalMs: fxt.polling.intervalMs,
       timeoutError: "Verification email not received",
     });
 

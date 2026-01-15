@@ -17,6 +17,7 @@ import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { existsSync, mkdirSync } from "fs";
 import { unlinkSync } from "node:fs";
+import { waitFor } from "../helpers/helpers.js";
 
 type UserOptions = {
   email?: string;
@@ -181,15 +182,31 @@ class TestSetupBuilder {
       // Login CCT to access its API
       await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password);
 
-      // Single query to get all devices for this customer
-      const cctResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
-        filter: {
-          filterType: FilterEnum.And,
-          customerId: this.setup.user.id,
+      // We wait until Sentinel (async) has populated the firmware version
+      const items = await waitFor(
+        async () => {
+          const res = await petlink.cct.graphqlHttp.authJwt.getDevices({
+            filter: {
+              filterType: FilterEnum.And,
+              customerId: this.setup.user!.id,
+            },
+          });
+          return res.getDevices.items || [];
         },
-      });
+        {
+          timeoutError: "[Setup - getDevices()] CCT enrichment Hardware Data (imei,iccid,firmware) failed: firmware data not ready (Sentinel lag?)",
+          isReady: (currentItems) => {
+            const devicesToEnrich = [coreDogStandard, coreDogEvo, coreCatStandard].filter((d): d is PetlinkGps => !!d);
 
-      const items = cctResponse.getDevices.items || [];
+            // Check if ALL devices have valid firmware (not "N/A")
+            return devicesToEnrich.every((coreDevice) => {
+              const cctData = currentItems.find((i) => i?.deviceId === coreDevice.id);
+              // Firmware is "N/A" initially until Sentinel updates lastKnownStatus
+              return cctData && cctData.imei && cctData.iccid && cctData.firmware && cctData.firmware !== "N/A";
+            });
+          },
+        },
+      );
 
       // Enrich Core devices with hardware data from CCT
       const enrich = (coreDevice: PetlinkGps): EnrichedDevice => {
@@ -264,6 +281,7 @@ class TestHelper {
         errors.push({ operation: "Twilio-deleteAllMessages()", error });
       }),
     ]);
+    petlink.logoutUser();
 
     // Se QUALSIASI operazione è fallita, throw (skippa test)
     if (errors.length > 0) {

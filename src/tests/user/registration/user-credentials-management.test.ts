@@ -161,8 +161,6 @@ describe("User Profile Management", () => {
 
       // verify new email
       const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
         timeoutError: "Verification email not received",
       });
       const params = extractParamsFromUrl(linkUrlToOpen!);
@@ -201,8 +199,6 @@ describe("User Profile Management", () => {
 
       // STEP 2: Get OTP from SMS (using Twilio client)
       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(newPhone), {
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
         timeoutError: `OTP not received for ${newPhone}`,
       });
 
@@ -292,8 +288,6 @@ describe("User Profile Management", () => {
 
       // STEP 2: Get OTP from PHONE
       const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(setup.user!.phone), {
-        timeoutMs: fxt.polling.timeoutMs,
-        intervalMs: fxt.polling.intervalMs,
         timeoutError: `OTP not received for ${setup.user!.phone}`,
       });
       logger.debug("Received OTP", { otp });

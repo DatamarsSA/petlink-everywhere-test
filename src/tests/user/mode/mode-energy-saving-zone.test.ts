@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { Packet01, PacketType } from "../../../clients/sentinel/packet-encode-decode.js";
+import { Packet01, PacketType } from "../../../clients/sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -69,8 +69,8 @@ describe("Energy Saving Zone", () => {
     // 1. Prepare listeners BEFORE action
     logger.info("⏳ Device waiting for 0x15 (zones) and 0x10 (enable)...");
     const packetsPromise = Promise.all([
-      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15, fxt.socket.timeoutMs),
-      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs),
+      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15),
+      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10),
     ]);
 
     // 2. Perform action
@@ -176,7 +176,7 @@ describe("Energy Saving Zone", () => {
 
     // 1. Prepare listener
     logger.info("⏳ Device waiting for 0x10 (disable)...");
-    const packet10Promise = sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10, fxt.socket.timeoutMs);
+    const packet10Promise = sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10);
 
     // 2. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({

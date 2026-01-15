@@ -1,5 +1,6 @@
 import { expect } from "vitest";
 import type { Pricing, AddonPricing, PetProtection } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { fxt } from "../fixtures/fixtures.js";
 
 /**
  * Poll a function until a condition is met or timeout occurs.
@@ -10,8 +11,8 @@ import type { Pricing, AddonPricing, PetProtection } from "../clients/petlink-in
  * @param options.isReady - Predicate function to check if the result is valid.
  *                          Receives the result and must return `true` when the condition is satisfied.
  *                          Default: checks for truthy value (!!result)
- * @param options.timeoutMs - Maximum time to wait in milliseconds (default: 30000)
- * @param options.intervalMs - Delay between polling attempts in milliseconds (default: 1000)
+ * @param options.timeoutMs - Maximum time to wait in milliseconds (default: fxt.polling.timeoutMs)
+ * @param options.intervalMs - Delay between polling attempts in milliseconds (default: fxt.polling.intervalMs)
  * @param options.timeoutError - Custom error message when timeout occurs
  *
  * @example
@@ -68,8 +69,8 @@ export async function waitFor<T>(
 ): Promise<T> {
   const {
     isReady = (result) => !!result,
-    timeoutMs = 30000,
-    intervalMs = 1000,
+    timeoutMs = fxt.polling.timeoutMs,
+    intervalMs = fxt.polling.intervalMs,
     timeoutError = `Timeout: Payment succeeded not return within ${timeoutMs}ms`,
   } = options;
 

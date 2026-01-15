@@ -167,7 +167,7 @@ describe("CCT Tool", () => {
     beforeAll(async () => {
       await testHelper.cleanupAll();
       setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
-      await sentinelTcpSocketClient.connect();
+      await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
     });
 
     afterAll(async () => {

@@ -2,7 +2,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketType, OperatingStatus } from "../../../clients/sentinel/packet-encode-decode.js";
+import { PacketType, OperatingStatus } from "../../../clients/sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -37,7 +37,6 @@ describe("Live Tracking", () => {
     logger.info("⏳ Device waiting for 0x01 (FAST_TRACKING)...");
     const commandPacketPromise = sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
       (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
     );
 
@@ -105,7 +104,6 @@ describe("Live Tracking", () => {
 
     const deactivationPacketPromise = sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
       (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
     );
 

@@ -105,6 +105,7 @@ export interface Connection {
   csq: Scalars["Int"]["output"];
   device: Scalars["String"]["output"];
   deviceId: Scalars["String"]["output"];
+  diffFromPrevious?: Maybe<Scalars["Int"]["output"]>;
   ephemeridi?: Maybe<Scalars["String"]["output"]>;
   firmware: Scalars["String"]["output"];
   fix: Scalars["String"]["output"];
@@ -294,9 +295,9 @@ export interface DeviceLastConnection {
   __typename?: "DeviceLastConnection";
   brand?: Maybe<Scalars["String"]["output"]>;
   deviceId?: Maybe<Scalars["String"]["output"]>;
-  firmware: Scalars["String"]["output"];
-  iccid: Scalars["String"]["output"];
-  imei: Scalars["String"]["output"];
+  firmware?: Maybe<Scalars["String"]["output"]>;
+  iccid?: Maybe<Scalars["String"]["output"]>;
+  imei?: Maybe<Scalars["String"]["output"]>;
   lastConnectionDate?: Maybe<Scalars["String"]["output"]>;
   model?: Maybe<Scalars["String"]["output"]>;
   serialId: Scalars["String"]["output"];

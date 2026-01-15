@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketType, OperatingStatus, Packet01 } from "../../../clients/sentinel/packet-encode-decode.js";
+import { PacketType, OperatingStatus, Packet01 } from "../../../clients/sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -79,7 +79,6 @@ describe("Geofence", () => {
     logger.info("⏳ Waiting for 0x01 (geofence activation) on device...");
     const packet01Promise = sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
       (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
     );
 
@@ -186,7 +185,6 @@ describe("Geofence", () => {
     logger.info("⏳ Waiting for 0x01 (deactivate)...");
     const packet01Promise = sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
-      fxt.socket.timeoutMs,
       (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
     );
 
