@@ -17,7 +17,6 @@ export class SentinelTcpClient {
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
-  private keepAliveInterval: NodeJS.Timeout | null = null;
 
   constructor(private config: { host: string; port: number }) {}
 
@@ -57,7 +56,6 @@ export class SentinelTcpClient {
    * Disconnects from the server and stops keep-alive.
    */
   disconnect() {
-    this.stopKeepAlive();
     if (this.socket) {
       this.socket.destroy();
       this.socket = null;
@@ -82,10 +80,8 @@ export class SentinelTcpClient {
     get: (_target, prop: string) => {
       // Mapping of human names to encoder functions
       const commands: Record<string, Function> = {
-        welcome: (device: DeviceIdentity, data: any) =>
-          Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01),
-        heartbeat: (device: DeviceIdentity, data: any) =>
-          Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06),
+        welcome: (device: DeviceIdentity, data: any) => Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01),
+        heartbeat: (device: DeviceIdentity, data: any) => Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06),
         geofenceResponse: Packet01.S2DGeofenceResponse.toBuffer,
       };
 
@@ -205,44 +201,6 @@ export class SentinelTcpClient {
       this.events.emit("packet", parsed);
 
       this.buffer = this.buffer.subarray(totalPacketLength);
-    }
-  }
-
-  /**
-   * Sends a lightweight heartbeat packet to keep the TCP connection alive.
-   * @param device The device's identity from test setup.
-   */
-  public async keepAlive(device: DeviceIdentity): Promise<void> {
-    await this.simulator.heartbeat(device);
-    logger.debug(`✓ Sent keep-alive packet for ${device.serialNumber}`);
-  }
-
-  /**
-   * Starts a keep-alive loop to prevent socket disconnection from Sentinel.
-   * @param device The device's identity from test setup.
-   * @param intervalMs The interval in milliseconds (default: 3000).
-   */
-  public async startKeepAlive(device: DeviceIdentity, intervalMs = 3000): Promise<void> {
-    this.stopKeepAlive();
-    logger.debug(`Starting keep-alive loop for ${device.serialNumber} every ${intervalMs}ms`);
-    await this.keepAlive(device);
-    this.keepAliveInterval = setInterval(() => {
-      if (this.socket?.writable) {
-        this.keepAlive(device).catch((err) => {
-          logger.error(`Keep-alive interval failed: ${err.message}`);
-        });
-      }
-    }, intervalMs);
-  }
-
-  /**
-   * Stops the keep-alive loop.
-   */
-  public stopKeepAlive(): void {
-    if (this.keepAliveInterval) {
-      logger.debug("Stopping keep-alive loop");
-      clearInterval(this.keepAliveInterval);
-      this.keepAliveInterval = null;
     }
   }
 }
