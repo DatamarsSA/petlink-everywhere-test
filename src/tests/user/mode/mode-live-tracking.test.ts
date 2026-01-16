@@ -75,6 +75,7 @@ describe("Live Tracking", () => {
       latitude: 44.5024,
       longitude: 11.3463,
       last_gps_time: Math.floor(Date.now() / 1000),
+      curr_status: OperatingStatus.FAST_TRACKING,
     };
 
     // Subscribe with onReady callback to ensure sequential execution
@@ -82,13 +83,15 @@ describe("Live Tracking", () => {
       subscriptions.onGpsMessagePosition,
       { id: setup.devices.dogStandard!.id },
       "Position update should arrive via WebSocket",
-      (data) => Math.abs(data?.onGpsMessagePosition?.position.lat - positionPayload.latitude) < 0.0001,
+      (data) => {
+        const pos = data?.onGpsMessagePosition?.position;
+        if (!pos) return false;
+        // Use toFixed(3) to avoid floating point precision issues in filter
+        return pos.lat.toFixed(3) === positionPayload.latitude.toFixed(3) && pos.lng.toFixed(3) === positionPayload.longitude.toFixed(3);
+      },
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat POSITION...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, {
-          ...positionPayload,
-          curr_status: OperatingStatus.FAST_TRACKING,
-        });
+        await sentinelTcpSocketClient.simulator.heartbeat(device, positionPayload);
       },
     );
 
