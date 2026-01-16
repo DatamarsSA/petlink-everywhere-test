@@ -124,6 +124,7 @@ describe("Geofence", () => {
       latitude: GEOFENCE_COORDINATES.inside.lat,
       longitude: GEOFENCE_COORDINATES.inside.lng,
       notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NInsideFence, // 0x20 = inside geofence
+      curr_status: OperatingStatus.GEOFENCE_ON,
       last_gps_time: Math.floor(Date.now() / 1000),
     };
 
@@ -154,6 +155,7 @@ describe("Geofence", () => {
       latitude: GEOFENCE_COORDINATES.outside.lat,
       longitude: GEOFENCE_COORDINATES.outside.lng,
       notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NOutsideFence, // 0x40 = outside geofence
+      curr_status: OperatingStatus.GEOFENCE_ON, // Still in geofence mode until Sentinel deactivates it
       last_gps_time: Math.floor(Date.now() / 1000),
     };
 
