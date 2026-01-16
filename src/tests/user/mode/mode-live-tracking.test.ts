@@ -4,7 +4,6 @@ import { logger } from "../../../config/logger.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
 import { PacketType, OperatingStatus } from "../../../clients/sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { fxt } from "../../../fixtures/fixtures.js";
 import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 
@@ -86,7 +85,10 @@ describe("Live Tracking", () => {
       (data) => Math.abs(data?.onGpsMessagePosition?.position.lat - positionPayload.latitude) < 0.0001,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat POSITION...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, positionPayload);
+        await sentinelTcpSocketClient.simulator.heartbeat(device, {
+          ...positionPayload,
+          curr_status: OperatingStatus.FAST_TRACKING,
+        });
       },
     );
 
