@@ -5,6 +5,7 @@ import { logger } from "../../config/logger.js";
 import { Device, FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
 import { PetlinkGps } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { OperatingStatus } from "../../clients/sentinel/packets.js";
 
 describe("CCT Tool", () => {
   describe("Customers", () => {
@@ -194,6 +195,7 @@ describe("CCT Tool", () => {
         latitude: testLat,
         longitude: testLng,
         battery: 5800, // 5.8V (che il CCT trasforma in %)
+        curr_status: OperatingStatus.DEFAULT,
       });
 
       // Attendiamo che il dato attraversi SQS e arrivi al DB (async)
