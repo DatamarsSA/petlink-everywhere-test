@@ -601,7 +601,7 @@ export class Packet01 {
 
 /**
  * Packet 0x02 - ACK (Device → Sentinel)
- * Conferma la ricezione dei comandi dal server.
+ * Conferma la ricezione dei comandi (0x01, 0x10, 0x15) dal server.
  */
 export class Packet02 {
   /**
@@ -629,6 +629,13 @@ export class Packet02 {
   }
 }
 
+/**
+ * Packet 0x10 - Evo Extra Settings (Server → Device)
+ * Configura funzionalità hardware e logiche avanzate "Evo":
+ * - Controllo Torcia (durata)
+ * - Controllo Suoni (tipo e durata)
+ * - Abilitazione/Disabilitazione ESZ (Energy Saving Zone)
+ */
 export class Packet10 {
   static Data = {
     evo_tasks: 0 as number,
@@ -686,6 +693,11 @@ export class Packet10 {
   }
 }
 
+/**
+ * Packet 0x15 - Safe Places / WiFi Zones (Server → Device)
+ * Trasmette al dispositivo la lista delle zone ESZ (Energy Saving Zone).
+ * Ogni zona contiene: Latitudine, Longitudine, Raggio e BSSID (MAC address WiFi).
+ */
 export class Packet15 {
   static Data = {
     zones: [] as { lat: number; lng: number; radius: number; bssid: string }[],
