@@ -23,6 +23,8 @@ concurrency:
 jobs:
   info-job:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
+
     steps:
       - name: Add Trigger Info to Summary
         run: |
@@ -61,6 +63,7 @@ jobs:
 
   run-tests:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
     # ENVIRONMENT DETERMINISTICO:
     # Se workflow_dispatch -> Usa ESATTAMENTE inputs.branch (se non esiste env -> crash)
     # Se push -> Usa ESATTAMENTE ref_name (il branch su cui hai pushato)
