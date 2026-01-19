@@ -19,19 +19,6 @@ Validates the critical cross-service flows that power the application: from user
 
 **Why integration tests?** The system involves backend services communicating via GraphQL/SQS, GPS devices connecting via TCP, payment webhooks from Chargebee, and real-time updates through WebSocket. Unit tests can't catch failures at service boundaries. These tests validate that all components work together for complete user scenarios.
 
-**Multi-brand**: Tests run against both PETLINK (US market) and KIPPY (EU market) with brand-specific fixtures and features.
-
----
-
-## 🏗️ Architecture Overview
-
-**Quick summary**: This suite tests a distributed system with:
-- **Mobile apps** (Flutter) → **AppSync GraphQL** → **Lambda services** → **MongoDB**
-- **GPS devices** → **Sentinel (Rust TCP)** → **SQS queues** → **Lambda consumers**
-- **Payment processing** via Chargebee webhooks
-
-**Full system architecture**: See [📘 Architecture Docs](docs/petlink-infrastructure.md) for complete diagrams, data flows, and component details.
-
 ---
 
 ## 🚀 Quick Start
@@ -48,9 +35,12 @@ yarn install
 This suite uses **auto-generated TypeScript clients**. Generate them before running tests:
 
 ```bash
-- yarn fetch-schema   # Downloads schemas from Core/CCT APIs
-- #add manual query/mutations inside src/clients/.../operations/*.graphql
-- yarn generate-sdk   # Generates typed methods
+#1. fetch-schema    → Downloads GraphQL schemas from Core/CCT APIs
+yarn fetch-schema 
+#2. write operation → Add manually query/mutation in inside src/clients/.../operations/*.graphql
+#3. generate-sdk    → Codegen creates typed TypeScript methods
+yarn generate-sdk 
+#4. use in tests    → petlink.core.graphql.authJwt.createPet(...)
 ```
 
 
@@ -86,7 +76,7 @@ yarn test
 TEST_ENV=develop yarn test
 TEST_ENV=test yarn test
 
-# Full pipeline (fetch schemas + generate SDK + test)
+# Full pipeline (fetch schemas + generate SDK + test) - all of them from/versus choosen environment (default=develop)
 yarn pipeline:develop
 ```
 
@@ -153,54 +143,16 @@ Comprehensive documentation for the entire Petlink/Kippy system:
 ### Test Architecture
 
 ```
-testHelper.setupBuilder()
+await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
   ├─ Creates entities in correct order (User → Pet → Device → Subscription)
-  ├─ Uses parallel operations where possible (pets, devices)
   └─ Returns TestSetup with all created entities
 
 petlink.core.graphql.authJwt.createPet(...)
   ├─ Authenticates via Cognito (cached JWT)
   ├─ Calls AppSync GraphQL endpoint
   ├─ Logs request/response automatically
-  └─ Tracks performance metrics
 ```
 
-### SDK Generation Workflow
-
-The test client uses auto-generated TypeScript from GraphQL schemas:
-
-```
-1. fetch-schema    → Downloads GraphQL schemas from Core/CCT APIs
-2. write operation → Add query/mutation in operations/*.graphql (manual)
-3. generate-sdk    → Codegen creates typed TypeScript methods
-4. use in tests    → petlink.core.graphql.authJwt.createPet(...)
-```
-
-**Example - Adding a new mutation**:
-
-```graphql
-// Add to: src/clients/.../operations/core/mutations.graphql
-mutation CreatePet($pet: PetIn!) {
-  createPet(pet: $pet) {
-    code
-    message
-    pet { id name species }
-  }
-}
-```
-
-```bash
-yarn generate-sdk  # Regenerate typed SDK
-```
-
-```typescript
-// Now fully typed in tests
-const response = await petlink.core.graphql.authJwt.createPet({ 
-  pet: petPayload 
-});
-```
-
-**Generated SDK location**: `src/clients/petlink-infrastructure/endpoints/graphql/generated/`
 
 ### Cleanup Strategy
 
@@ -222,8 +174,6 @@ The system supports two brands with different markets:
 
 **Brand selection**: Set `APP_BRAND=KIPPY` or `APP_BRAND=PETLINK` in env.
 
-**Fixtures adapt automatically**: `fxt.current` provides brand-specific data (countryCode, languageId, device serials).
-
 ---
 
 ## 📊 Test Reports
@@ -232,40 +182,6 @@ After running tests, check `test-reports/`:
 
 - `index.html` - Interactive HTML report (open in browser)
 - `junit.xml` - CI/CD integration (GitHub Actions annotations)
-
----
-
-## 🐛 Troubleshooting
-
-**Tests fail with auth errors**:
-- Check Cognito credentials in env
-- Verify JWT token hasn't expired
-- Run `petlink.logoutUser()` to clear cached tokens
-
-**OTP/SMS not received**:
-- Verify Twilio credentials
-- Check phone number is whitelisted for test environment
-- Twilio delays can reach 30-60 seconds
-
-**Subscription webhook timeout**:
-- Chargebee webhooks are async (can take 10-20 seconds)
-- Tests use polling with 30s timeout
-- Check Chargebee dashboard for webhook delivery status
-
-**Schema generation fails**:
-- Verify API keys and endpoints in env
-- Check network access to GraphQL endpoints
-- Run with `DEBUG=* yarn fetch-schema` for detailed logs
-
----
-
-## 🤝 Contributing
-
-See `.cursorrules` for:
-- Test writing philosophy (user-centric flows)
-- Coding standards (TypeScript best practices)
-- Logging strategy (info for tests, debug for clients)
-- Anti-patterns to avoid
 
 ---
 
