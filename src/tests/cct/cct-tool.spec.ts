@@ -162,7 +162,7 @@ describe("CCT Tool", () => {
     });
   });
 
-  describe("CCT - Last Connections Integration", () => {
+  describe("Last Connections", () => {
     let setup: TestSetup;
 
     beforeAll(async () => {
