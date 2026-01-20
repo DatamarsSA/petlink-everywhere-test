@@ -15,9 +15,7 @@ import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
-import { existsSync, mkdirSync } from "fs";
-import { unlinkSync } from "node:fs";
-import { waitFor } from "../helpers/helpers.js";
+import { waitFor } from "../helpers/utils.js";
 
 type UserOptions = {
   email?: string;

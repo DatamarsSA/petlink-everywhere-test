@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { ContactType, PetIn, UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { extractParamsFromUrl, waitFor } from "../../../helpers/helpers.js";
+import { extractParamsFromUrl, waitFor } from "../../../helpers/vitest.js";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
 

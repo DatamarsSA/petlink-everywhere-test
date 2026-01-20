@@ -2,12 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { fxt } from "../../../fixtures/fixtures.js";
-import {
-  assertDatesWithinTolerance,
-  expectSubBoughtMatchSubToBuy,
-  expectPetProtBoughtMatchesPetProtToBuy,
-  waitFor,
-} from "../../../helpers/helpers.js";
+import { assertDatesWithinTolerance, expectPetProtBoughtMatchesPetProtToBuy, expectSubBoughtMatchSubToBuy } from "../../../helpers/vitest.js";
 import { logger } from "../../../config/logger.js";
 import {
   UtilityTestTypeEnum,
@@ -16,6 +11,7 @@ import {
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
+import { waitFor } from "../../../helpers/utils.js";
 
 describe.skip("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;

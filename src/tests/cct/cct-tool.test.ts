@@ -12,7 +12,7 @@ import {
   VodafoneCountryVisibilityEnum,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { fxt } from "../../fixtures/fixtures.js";
-import { waitFor } from "../../helpers/helpers.js";
+import { waitFor } from "../../helpers/vitest.js";
 
 describe("CCT Tool", () => {
   describe("Customers", () => {
