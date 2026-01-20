@@ -479,33 +479,23 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
 
   const client = new WSClient();
 
+  const withAuth = (setAuth: () => void) => ({
+    subscribeUntil: async <T = any>(
+      query: string,
+      variables: Record<string, any>,
+      timeoutError: string,
+      filter?: (data: any) => boolean,
+      onReady?: () => Promise<void>,
+      timeoutMs: number = fxt.socket.timeoutMs,
+    ) => {
+      setAuth();
+      return await client.subscribeUntil<T>(query, variables, timeoutError, filter, onReady, timeoutMs);
+    },
+  });
+
   return {
-    authJwt: {
-      subscribeUntil: async <T = any>(
-        query: string,
-        variables: Record<string, any>,
-        timeoutError: string,
-        filter?: (data: any) => boolean,
-        onReady?: () => Promise<void>,
-        timeoutMs: number = fxt.socket.timeoutMs,
-      ) => {
-        client.setAuthJwt();
-        return await client.subscribeUntil<T>(query, variables, timeoutError, filter, onReady, timeoutMs);
-      },
-    },
-    authApiKey: {
-      subscribeUntil: async <T = any>(
-        query: string,
-        variables: Record<string, any>,
-        timeoutError: string,
-        filter?: (data: any) => boolean,
-        onReady?: () => Promise<void>,
-        timeoutMs: number = fxt.socket.timeoutMs,
-      ) => {
-        client.setAuthApiKey();
-        return await client.subscribeUntil<T>(query, variables, timeoutError, filter, onReady, timeoutMs);
-      },
-    },
+    authJwt: withAuth(() => client.setAuthJwt()),
+    authApiKey: withAuth(() => client.setAuthApiKey()),
     disconnect: () => client.disconnect(),
   };
 };
