@@ -596,96 +596,63 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
 
 // === Services ===
 
-class CoreService {
-  readonly graphqlHttp: HttpProtocol<CoreSdk>;
-  readonly graphqlWS: ReturnType<typeof createGraphQLWSProtocol>;
-  private readonly jwtProvider: JwtAuthProvider;
-  private readonly iamProvider: IamAuthProvider;
+const createService = <TSdk extends object>(serviceType: ServiceType, getSdk: (client: GraphQLClient) => TSdk) => {
+  const jwtProvider = new JwtAuthProvider(serviceType);
+  const iamProvider = new IamAuthProvider();
 
-  constructor() {
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE);
-    this.iamProvider = new IamAuthProvider();
+  const graphqlHttp = createHttpProtocol<GraphQLClient, TSdk>({
+    serviceName: serviceType,
+    endpoint: EnvConfig.getEndpoint(serviceType),
+    jwtProvider,
+    iamProvider,
+    createClient: async (authConfig) =>
+      new GraphQLClient(EnvConfig.getEndpoint(serviceType), {
+        headers: authConfig.headers,
+        requestMiddleware: authConfig.middleware,
+      }),
+    createSdk: getSdk,
+  });
 
-    this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
-      serviceName: ServiceType.CORE,
-      endpoint: EnvConfig.getEndpoint(ServiceType.CORE),
-      jwtProvider: this.jwtProvider,
-      iamProvider: this.iamProvider,
-      createClient: async (authConfig) =>
-        new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CORE), {
-          headers: authConfig.headers,
-          requestMiddleware: authConfig.middleware,
-        }),
-      createSdk: (client) => getCoreSdk(client),
-    });
+  return {
+    graphqlHttp,
+    jwtProvider,
+    loginWithEmail: (email: string, password: string) => jwtProvider.authenticate(email, password, "email"),
+    clearCache: () => {
+      jwtProvider.clear();
+      graphqlHttp.clearCache();
+    },
+  };
+};
 
-    this.graphqlWS = createGraphQLWSProtocol(ServiceType.CORE, this.jwtProvider);
-  }
+const createCoreService = () => {
+  const base = createService(ServiceType.CORE, getCoreSdk);
+  return {
+    ...base,
+    graphqlWS: createGraphQLWSProtocol(ServiceType.CORE, base.jwtProvider),
+    loginWithPhone: (phone: string, password: string) => base.jwtProvider.authenticate(phone, password, "phone_number"),
+  };
+};
 
-  async loginWithEmail(email: string, password: string): Promise<void> {
-    await this.jwtProvider.authenticate(email, password, "email");
-  }
+const createCctService = () => {
+  return createService(ServiceType.CCT, getCctSdk);
+};
 
-  async loginWithPhone(phone: string, password: string): Promise<void> {
-    await this.jwtProvider.authenticate(phone, password, "phone_number");
-  }
+const createPetLinkInfrastructure = () => {
+  const core = createCoreService();
+  const cct = createCctService();
 
-  clearCache(): void {
-    this.jwtProvider.clear();
-    this.graphqlHttp.clearCache();
-  }
-}
+  return {
+    core,
+    cct,
+    /**
+     * Clears user-specific authentication (JWT) and related clients
+     * for ALL services.
+     */
+    logoutUser: () => {
+      core.clearCache();
+      cct.clearCache();
+    },
+  };
+};
 
-class CctService {
-  readonly graphqlHttp: HttpProtocol<CctSdk>;
-  private readonly jwtProvider: JwtAuthProvider;
-  private readonly iamProvider: IamAuthProvider;
-
-  constructor() {
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT);
-    this.iamProvider = new IamAuthProvider();
-
-    this.graphqlHttp = createHttpProtocol<GraphQLClient, CctSdk>({
-      serviceName: ServiceType.CCT,
-      endpoint: EnvConfig.getEndpoint(ServiceType.CCT),
-      jwtProvider: this.jwtProvider,
-      iamProvider: this.iamProvider,
-      createClient: async (authConfig) =>
-        new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CCT), {
-          headers: authConfig.headers,
-          requestMiddleware: authConfig.middleware,
-        }),
-      createSdk: (client) => getCctSdk(client),
-    });
-  }
-
-  async loginWithEmail(email: string, password: string): Promise<void> {
-    await this.jwtProvider.authenticate(email, password, "email");
-  }
-
-  clearCache(): void {
-    this.jwtProvider.clear();
-    this.graphqlHttp.clearCache();
-  }
-}
-
-class PetLinkInfrastructure {
-  readonly core: CoreService;
-  readonly cct: CctService;
-
-  constructor() {
-    this.core = new CoreService();
-    this.cct = new CctService();
-  }
-
-  /**
-   * Clears user-specific authentication (JWT) and related clients
-   * for ALL services.
-   */
-  logoutUser(): void {
-    this.core.clearCache();
-    this.cct.clearCache();
-  }
-}
-
-export const petlink = new PetLinkInfrastructure();
+export const petlink = createPetLinkInfrastructure();
