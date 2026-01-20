@@ -581,7 +581,8 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
             const response = await (client as any)[prop](...args);
 
             // Log successful response
-            logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)}`, response);
+            const duration = (performance.now() - startTime).toFixed(0);
+            logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)} (${duration}ms)`, response);
 
             return response;
           } catch (error: any) {
