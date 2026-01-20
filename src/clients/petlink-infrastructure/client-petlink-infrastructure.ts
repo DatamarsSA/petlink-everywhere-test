@@ -8,6 +8,7 @@ import { HttpRequest } from "@aws-sdk/protocol-http";
 import { logger } from "../../config/logger.js";
 import { fxt } from "../../fixtures/fixtures.js";
 import WebSocket from "ws";
+import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 
 // === Types ===
 const HTTP_HEADERS = {
@@ -564,12 +565,21 @@ const createHttpProtocol = <TClient extends object, TSdk extends object>(config:
 
             // Log successful response
             const duration = (performance.now() - startTime).toFixed(0);
-            logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)} (${duration}ms)`, response);
+            logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)} (duration ${duration}ms)`, response);
 
             return response;
           } catch (error: any) {
             logger.error(`❌ [${config.serviceName}] ERROR <-: ${String(prop)}`, error);
             throw error;
+          } finally {
+            const duration = Math.round(performance.now() - startTime);
+            performanceTracker.recordPerformance({
+              service: config.serviceName,
+              protocol: "graphql",
+              authType,
+              operation: String(prop),
+              duration,
+            });
           }
         };
       },

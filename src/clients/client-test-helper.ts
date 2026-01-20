@@ -9,13 +9,15 @@ import {
   UtilityTestTypeEnum,
   DeviceTypeEnum,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { Device, FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import { FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { waitFor } from "../helpers/utils.js";
+import { existsSync, mkdirSync } from "fs";
+import { unlinkSync } from "node:fs";
 
 type UserOptions = {
   email?: string;
@@ -238,6 +240,31 @@ class TestSetupBuilder {
 
 class TestHelper {
   constructor() {}
+
+  cleanTestReports(): void {
+    const reportsDir = "./test-reports";
+
+    // Assicurati che la directory esista
+    if (!existsSync(reportsDir)) {
+      mkdirSync(reportsDir, { recursive: true });
+      logger.debug("📁 Created test-reports/ directory");
+      return;
+    }
+
+    // Pulisci solo i file di performance (NON junit.xml/results.json)
+    const filesToClean = [`${reportsDir}/performance-records.jsonl`, `${reportsDir}/performance-report.txt`];
+
+    filesToClean.forEach((file) => {
+      if (existsSync(file)) {
+        try {
+          unlinkSync(file);
+          logger.debug(`🧹 Cleaned ${file}`);
+        } catch (error) {
+          logger.debug(`⚠️ Could not clean ${file}: ${error}`);
+        }
+      }
+    });
+  }
 
   async cleanupAll(): Promise<void> {
     logger.debug("→ Starting cleanup operations");
