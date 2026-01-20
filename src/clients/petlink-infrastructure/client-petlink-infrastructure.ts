@@ -510,58 +510,50 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
   };
 };
 
+type AuthStrategyFn<TClient extends object, TSdk extends object> = (config: HttpProtocolConfig<TClient, TSdk>) => AuthConfig;
+
+const createAuthStrategies = <TClient extends object, TSdk extends object>(): Record<AuthType, AuthStrategyFn<TClient, TSdk>> => ({
+  [AuthType.JWT]: (config) => {
+    if (!config.jwtProvider.hasValidToken()) {
+      throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first via ${config.serviceName}.loginWith...`);
+    }
+    const token = config.jwtProvider.getToken();
+    return {
+      cacheKey: `${config.serviceName}:jwt:${token}`,
+      headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+    };
+  },
+  [AuthType.IAM]: (config) => ({
+    cacheKey: `${config.serviceName}:iam:static`,
+    headers: {},
+    middleware: async (request) => {
+      const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+      const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
+      return {
+        ...request,
+        headers: { ...request.headers, ...signedHeaders },
+      };
+    },
+  }),
+  [AuthType.API_KEY]: (config) => {
+    const apiKey = EnvConfig.getApiKey(config.serviceName);
+    if (!apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
+    return {
+      cacheKey: `${config.serviceName}:apiKey:${apiKey}`,
+      headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+    };
+  },
+});
+
 const createHttpProtocol = <TClient extends object, TSdk extends object>(config: HttpProtocolConfig<TClient, TSdk>): HttpProtocol<TSdk> => {
   const cache = new Map<string, TSdk>();
+  const authStrategies = createAuthStrategies<TClient, TSdk>();
 
   const createAuthFacet = (authType: AuthType): TSdk => {
     return new Proxy({} as TSdk, {
       get: (_target, prop: string | symbol) => {
         return async (...args: any[]) => {
-          // 1. Build auth config for this auth type
-          let authConfig: AuthConfig;
-
-          switch (authType) {
-            case AuthType.JWT: {
-              if (!config.jwtProvider.hasValidToken()) {
-                throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first via ${config.serviceName}.loginWith...`);
-              }
-              const token = config.jwtProvider.getToken();
-              authConfig = {
-                cacheKey: `${config.serviceName}:jwt:${token}`,
-                headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
-              };
-              break;
-            }
-
-            case AuthType.IAM: {
-              authConfig = {
-                cacheKey: `${config.serviceName}:iam:static`,
-                headers: {}, // Will be filled by middleware
-                middleware: async (request) => {
-                  const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-                  const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
-                  return {
-                    ...request,
-                    headers: { ...request.headers, ...signedHeaders },
-                  };
-                },
-              };
-              break;
-            }
-
-            case AuthType.API_KEY: {
-              const apiKey = EnvConfig.getApiKey(config.serviceName);
-              if (!apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
-              authConfig = {
-                cacheKey: `${config.serviceName}:apiKey:${apiKey}`,
-                headers: { [HTTP_HEADERS.API_KEY]: apiKey },
-              };
-              break;
-            }
-
-            default:
-              throw new Error(`Unsupported auth type: ${authType}`);
-          }
+          const authConfig = authStrategies[authType](config);
 
           // 2. Create or get client from cache
           let client = cache.get(authConfig.cacheKey);
