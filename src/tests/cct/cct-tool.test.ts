@@ -4,8 +4,15 @@ import { petlink } from "../../clients/petlink-infrastructure/client-petlink-inf
 import { logger } from "../../config/logger.js";
 import { Device, FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
-import { PetlinkGps } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { OperatingStatus } from "../../clients/sentinel/packets.js";
+import { faker } from "@faker-js/faker";
+import {
+  RoleEnum,
+  DeviceVisibilityEnum,
+  VodafoneCountryVisibilityEnum,
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import { fxt } from "../../fixtures/fixtures.js";
+import { waitFor } from "../../helpers/helpers.js";
 
 describe("CCT Tool", () => {
   describe("Customers", () => {
@@ -230,6 +237,199 @@ describe("CCT Tool", () => {
       expect(latest?.customerName).toBe(user.name);
 
       logger.info("✅ Test Last Connections completed: heartbeat from device to Sentil arrived to CCT!");
+    });
+
+    it("should allow CCT Admin to retrieve Connections History", async () => {
+      const device = setup.devices.dogStandard!;
+      const response = await petlink.cct.graphqlHttp.authJwt.getConnectionsHistory({
+        serialId: device.serialNumber,
+        filter: { filterType: FilterEnum.And },
+        pagination: { pageNumber: 0, pageSize: 10 },
+      });
+
+      expect(response.getConnectionsHistory.code).toBe("200");
+      expect(response.getConnectionsHistory.items).toBeDefined();
+      // Should have at least one connection from the previous test
+      expect(response.getConnectionsHistory.items.length).toBeGreaterThan(0);
+    });
+
+    it("should allow CCT Admin to retrieve Last Connections via specific query", async () => {
+      const device = setup.devices.dogStandard!;
+      const response = await petlink.cct.graphqlHttp.authJwt.getLastConnections({
+        filter: {
+          filterType: FilterEnum.And,
+          serialId: device.serialNumber,
+        },
+        pagination: { pageNumber: 0, pageSize: 10 },
+      });
+
+      expect(response.getLastConnections.code).toBe("200");
+      expect(response.getLastConnections.items).toBeDefined();
+      expect(response.getLastConnections.items.length).toBeGreaterThan(0);
+      expect(response.getLastConnections.items[0].serialId).toBe(device.serialNumber);
+    });
+  });
+
+  describe("Users (CCT Operators)", () => {
+    let createdUser: any;
+    let adminUser: any;
+
+    const newUserPayload = {
+      name: "Mario".toLowerCase(),
+      surname: "Rossi".toLowerCase(),
+      email: `mario.rossi.${Date.now()}@gmail.com`,
+      phone: "+19617707727",
+      role: [RoleEnum.Superadmin],
+      active: true,
+      deviceVisibility: [DeviceVisibilityEnum.Kippy, DeviceVisibilityEnum.Petlink, DeviceVisibilityEnum.Vodafone],
+      vodafoneCountryVisibility: [VodafoneCountryVisibilityEnum.Eu, VodafoneCountryVisibilityEnum.Gb],
+    };
+
+    beforeAll(async () => {
+      await testHelper.cleanupAll();
+      await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password);
+    });
+
+    it("should allow CCT Admin to CREATE a new Operator User", async () => {
+      logger.info("Creating new CCT User...", { email: newUserPayload.email });
+
+      const response = await petlink.cct.graphqlHttp.authJwt.createUser({
+        user: newUserPayload,
+      });
+
+      expect(response.createUser.code).toBe("200");
+      expect(response.createUser.user).toBeDefined();
+      createdUser = response.createUser.user;
+    });
+
+    it("should allow CCT Admin to GET the details of the created User", async () => {
+      expect(createdUser).toBeDefined();
+
+      const response = await petlink.cct.graphqlHttp.authJwt.getUser({
+        userId: createdUser.id,
+      });
+
+      expect(response.getUser.code).toBe("200");
+      expect(response.getUser.user, "Created CCT user payload should match input payload").toMatchObject({
+        id: createdUser.id,
+        name: newUserPayload.name,
+        surname: newUserPayload.surname,
+        email: newUserPayload.email,
+        phone: newUserPayload.phone,
+        role: newUserPayload.role,
+        active: newUserPayload.active,
+        deviceVisibility: newUserPayload.deviceVisibility,
+        vodafoneCountryVisibility: newUserPayload.vodafoneCountryVisibility,
+      });
+    });
+
+    it("should allow CCT Admin to FIND the created User in the list", async () => {
+      expect(createdUser).toBeDefined();
+
+      const response = await petlink.cct.graphqlHttp.authJwt.getUsers({
+        filter: {
+          filterType: FilterEnum.And,
+          email: newUserPayload.email,
+        },
+        pagination: { pageNumber: 0, pageSize: 10 },
+      });
+
+      expect(response.getUsers.code).toBe("200");
+
+      const found = response.getUsers.items.find((u) => u.id === createdUser.id);
+      expect(found).toBeDefined();
+      expect(found?.email).toBe(newUserPayload.email);
+    });
+
+    it("should retrieve current Admin info via GetMyInfo", async () => {
+      const response = await petlink.cct.graphqlHttp.authJwt.getMyInfo();
+
+      expect(response.getMyInfo.code).toBe("200");
+      expect(response.getMyInfo.user).toBeDefined();
+      expect(response.getMyInfo.user, "GetMyInfo should return the currently logged-in Admin").toMatchObject({
+        email: fxt.cctAdmin.email,
+        phone: fxt.cctAdmin.phone,
+        role: fxt.cctAdmin.role,
+        deviceVisibility: fxt.cctAdmin.deviceVisibility,
+        vodafoneCountryVisibility: fxt.cctAdmin.vodafoneCountryVisibility,
+      });
+      adminUser = response.getMyInfo.user;
+    });
+
+    it("should allow CCT Admin to UPDATE the created User", async () => {
+      expect(createdUser).toBeDefined();
+
+      const updatePayload = {
+        id: createdUser.id,
+        name: "SuperMario".toLowerCase(),
+        surname: "Bros".toLowerCase(),
+        phone: createdUser.phone,
+        role: createdUser.role,
+        active: createdUser.active,
+        deviceVisibility: createdUser.deviceVisibility,
+        vodafoneCountryVisibility: createdUser.vodafoneCountryVisibility,
+      };
+
+      const response = await petlink.cct.graphqlHttp.authJwt.updateUser({
+        userInfo: updatePayload,
+      });
+
+      expect(response.updateUser.code).toBe("200");
+      expect(response.updateUser.user?.name).toBe("supermario");
+      expect(response.updateUser.user?.surname).toBe("bros");
+    });
+
+    it("should allow CCT Admin to DELETE the created User", async () => {
+      expect(createdUser).toBeDefined();
+
+      const response = await petlink.cct.graphqlHttp.authJwt.deleteUser({
+        id: createdUser.id,
+      });
+      expect(response.deleteUser.code).toBe("200");
+      const getResponse = await petlink.cct.graphqlHttp.authJwt.getUser({
+        userId: createdUser.id,
+      });
+      expect(getResponse.getUser.code).toBe("404"); //The resource cannot be found
+    });
+
+    it("should allow CCT Admin to retrieve User Log Activity containing CREATE, UPDATE and DELETE actions", async () => {
+      expect(createdUser).toBeDefined();
+      expect(adminUser).toBeDefined();
+
+      await waitFor(
+        async () => {
+          const response = await petlink.cct.graphqlHttp.authJwt.getLogActivityUser({
+            filter: {
+              filterType: FilterEnum.And,
+              userId: adminUser.id,
+            },
+            pagination: { pageNumber: 0, pageSize: 50 },
+            order: { field: "creationDate", order: OrderEnum.Desc },
+          });
+
+          expect(response.getLogActivityUser.code).toBe("200");
+          const logs = response.getLogActivityUser.items || [];
+
+          // Verifica CREATE
+          const createLog = logs.find((l) => l.activityType === "CREATE_allo stUSER" && l.request.includes(newUserPayload.email));
+          expect(createLog, "Missing CREATE_USER log").toBeDefined();
+
+          // Verifica UPDATE
+          const updateLog = logs.find(
+            (l) => l.activityType === "UPDATE_USER" && l.request.includes(createdUser.id) && l.request.includes("supermario"),
+          );
+          expect(updateLog, "Missing UPDATE_USER log").toBeDefined();
+
+          // Verifica DELETE
+          const deleteLog = logs.find((l) => l.activityType === "DELETE_USER" && l.request.includes(createdUser.id));
+          expect(deleteLog, "Missing DELETE_USER log").toBeDefined();
+
+          return true; // Se arriviamo qui, tutti gli expect sono passati
+        },
+        {
+          timeoutError: "Could not find all expected logs (CREATE, UPDATE, DELETE) for the test user",
+        },
+      );
     });
   });
 });

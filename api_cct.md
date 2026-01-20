@@ -2,68 +2,76 @@
 
 ## 📊 Summary
 - **Total Operations:** 55
-- **Covered:** 5
-- **Missing:** 50
-- **Coverage Rate:** ~9%
+- **Covered:** 14
+- **Missing:** 41
+
+> Based on tests in `src/tests/cct/cct-tool.test.ts`
 
 ---
 
 ## 📋 API Coverage Details
 
-| Type | Operation | Status |
-| :--- | :--- | :---: |
-| Mutation | createUser | ❌ Missing |
-| Mutation | deleteCustomer | ❌ Missing |
-| Mutation | deleteUser | ❌ Missing |
-| Mutation | updateRoleUser | ❌ Missing |
-| Mutation | updateUser | ❌ Missing |
-| Mutation | createSubscription | ❌ Missing |
-| Mutation | refundInvoice | ❌ Missing |
-| Mutation | updateCurrentTermEnd | ❌ Missing |
-| Mutation | resetPetlinkGps | ❌ Missing |
-| Mutation | addFreePeriod | ❌ Missing |
-| Mutation | updateCustomer | ❌ Missing |
-| Mutation | createIssue | ❌ Missing |
-| Mutation | addTicketToIssue | ❌ Missing |
-| Mutation | stopRenewingSubscription | ❌ Missing |
-| Mutation | stopRenewingAddon | ❌ Missing |
-| Mutation | renewInsuranceSubscription | ❌ Missing |
-| Mutation | hidePet | ❌ Missing |
-| Mutation | logEnabled | ❌ Missing |
-| Mutation | setPlanProfiles | ❌ Missing |
-| Mutation | setCoupon | ❌ Missing |
-| Query | getUser | ❌ Missing |
-| Query | getUsers | ❌ Missing |
-| Query | getMyInfo | ❌ Missing |
-| Query | getLastConnections | ❌ Missing |
-| Query | getDevices | ✅ Covered |
-| Query | getDevicesMap | ❌ Missing |
-| Query | getDevice | ✅ Covered |
-| Query | getConnectionsHistory | ❌ Missing |
-| Query | getInsuranceDevicesInfo | ❌ Missing |
-| Query | getCustomers | ✅ Covered |
-| Query | getCustomer | ✅ Covered |
-| Query | getPet | ✅ Covered |
-| Query | getActivities | ❌ Missing |
-| Query | getBreed | ❌ Missing |
-| Query | getColors | ❌ Missing |
-| Query | getIssues | ❌ Missing |
-| Query | getPetProtections | ❌ Missing |
-| Query | getPetProtection | ❌ Missing |
-| Query | getSubscriptions | ❌ Missing |
-| Query | getSubscription | ❌ Missing |
-| Query | getSubscriptionsCancelled | ❌ Missing |
-| Query | getSubscriptionsPrepaid | ❌ Missing |
-| Query | getSubscriptionsPreregistration | ❌ Missing |
-| Query | getOrders | ❌ Missing |
-| Query | getOrder | ❌ Missing |
-| Query | getPlanProfiles | ❌ Missing |
-| Query | getCoupons | ❌ Missing |
-| Query | getDevicesWithCoupon | ❌ Missing |
-| Query | getReplacementPetlinkGpsHistory | ❌ Missing |
-| Query | getDeviceProtectionReplacements | ❌ Missing |
-| Query | getShelterOrder | ❌ Missing |
-| Query | getShelterOrders | ❌ Missing |
-| Query | getLogActivityUser | ❌ Missing |
-| Query | getMigrationSessions | ❌ Missing |
-| Query | getMigrationSession | ❌ Missing |
+### Mutations (20 Total)
+
+| Operation | Status | Notes |
+| :--- | :---: | :--- |
+| `createUser` | ✅ Covered | |
+| `deleteUser` | ✅ Covered | |
+| `updateUser` | ✅ Covered | |
+| `deleteCustomer` | ❌ Missing | |
+| `updateRoleUser` | ❌ Missing | |
+| `createSubscription` | ❌ Missing | |
+| `refundInvoice` | ❌ Missing | |
+| `updateCurrentTermEnd` | ❌ Missing | |
+| `resetPetlinkGps` | ❌ Missing | (Present in `cct-standalone.spec.ts`) |
+| `addFreePeriod` | ❌ Missing | |
+| `updateCustomer` | ❌ Missing | |
+| `createIssue` | ❌ Missing | |
+| `addTicketToIssue` | ❌ Missing | |
+| `stopRenewingSubscription` | ❌ Missing | |
+| `stopRenewingAddon` | ❌ Missing | |
+| `renewInsuranceSubscription` | ❌ Missing | |
+| `hidePet` | ❌ Missing | |
+| `logEnabled` | ❌ Missing | |
+| `setPlanProfiles` | ❌ Missing | |
+| `setCoupon` | ❌ Missing | |
+
+### Queries (35 Total)
+
+| Operation | Status | Notes |
+| :--- | :---: | :--- |
+| `getUser` | ✅ Covered | |
+| `getUsers` | ✅ Covered | |
+| `getMyInfo` | ✅ Covered | |
+| `getLastConnections` | ✅ Covered | |
+| `getDevices` | ✅ Covered | |
+| `getDevice` | ✅ Covered | |
+| `getConnectionsHistory` | ✅ Covered | |
+| `getCustomers` | ✅ Covered | |
+| `getCustomer` | ✅ Covered | |
+| `getPet` | ✅ Covered | |
+| `getLogActivityUser` | ✅ Covered | |
+| `getDevicesMap` | ❌ Missing | |
+| `getInsuranceDevicesInfo` | ❌ Missing | |
+| `getActivities` | ❌ Missing | |
+| `getBreed` | ❌ Missing | |
+| `getColors` | ❌ Missing | |
+| `getIssues` | ❌ Missing | |
+| `getPetProtections` | ❌ Missing | |
+| `getPetProtection` | ❌ Missing | |
+| `getSubscriptions` | ❌ Missing | (Covered via custom op `getCustomDeviceSubscriptions`) |
+| `getSubscription` | ❌ Missing | |
+| `getSubscriptionsCancelled` | ❌ Missing | |
+| `getSubscriptionsPrepaid` | ❌ Missing | |
+| `getSubscriptionsPreregistration` | ❌ Missing | |
+| `getOrders` | ❌ Missing | |
+| `getOrder` | ❌ Missing | |
+| `getPlanProfiles` | ❌ Missing | |
+| `getCoupons` | ❌ Missing | |
+| `getDevicesWithCoupon` | ❌ Missing | |
+| `getReplacementPetlinkGpsHistory` | ❌ Missing | |
+| `getDeviceProtectionReplacements` | ❌ Missing | |
+| `getShelterOrder` | ❌ Missing | |
+| `getShelterOrders` | ❌ Missing | |
+| `getMigrationSessions` | ❌ Missing | |
+| `getMigrationSession` | ❌ Missing | |

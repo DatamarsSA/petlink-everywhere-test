@@ -8,6 +8,11 @@ import {
   AppBrand,
   UserIn,
 } from "../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  DeviceVisibilityEnum,
+  RoleEnum,
+  VodafoneCountryVisibilityEnum,
+} from "../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 
 // Determine the current brand from environment variables
 const currentAppBrand = process.env.APP_BRAND as "PETLINK" | "KIPPY";
@@ -73,8 +78,12 @@ const commonCard = {
 };
 
 const cctAdmin = {
-  email: "emanuel.epifani.m@gmail.com",
+  email: "emanuel.epifani@overtechconsulting.com",
   password: "f2y7}Ja0[_3O",
+  phone: "+393803810255",
+  role: [RoleEnum.Superadmin],
+  deviceVisibility: [DeviceVisibilityEnum.Kippy, DeviceVisibilityEnum.Petlink, DeviceVisibilityEnum.Vodafone],
+  vodafoneCountryVisibility: [VodafoneCountryVisibilityEnum.Eu, VodafoneCountryVisibilityEnum.Gb],
 };
 
 // ============================================

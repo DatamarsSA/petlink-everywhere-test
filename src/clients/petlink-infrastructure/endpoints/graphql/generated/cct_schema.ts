@@ -1839,6 +1839,73 @@ export interface SetPlanProfilesResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export type CreateUserMutationVariables = Exact<{
+  user: CreateUserInput;
+}>;
+
+export type CreateUserMutation = {
+  __typename?: "Mutation";
+  createUser: {
+    __typename?: "CreateUserResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    user?: {
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    } | null;
+  };
+};
+
+export type UpdateUserMutationVariables = Exact<{
+  userInfo: UpdateUserInput;
+}>;
+
+export type UpdateUserMutation = {
+  __typename?: "Mutation";
+  updateUser: {
+    __typename?: "UpdateUserResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    user?: {
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    } | null;
+  };
+};
+
+export type DeleteUserMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteUserMutation = {
+  __typename?: "Mutation";
+  deleteUser: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
 export type GetCustomerQueryVariables = Exact<{
   customerId: Scalars["String"]["input"];
 }>;
@@ -2126,6 +2193,322 @@ export type GetCustomDeviceSubscriptionsQuery = {
   };
 };
 
+export type GetUsersQueryVariables = Exact<{
+  filter?: InputMaybe<GetUsersInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetUsersQuery = {
+  __typename?: "Query";
+  getUsers: {
+    __typename?: "GetUsersResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items: Array<{
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    }>;
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
+  };
+};
+
+export type GetUserQueryVariables = Exact<{
+  userId: Scalars["String"]["input"];
+}>;
+
+export type GetUserQuery = {
+  __typename?: "Query";
+  getUser: {
+    __typename?: "GetUserResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    user?: {
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    } | null;
+  };
+};
+
+export type GetMyInfoQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetMyInfoQuery = {
+  __typename?: "Query";
+  getMyInfo: {
+    __typename?: "GetMyInfoResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    user?: {
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    } | null;
+  };
+};
+
+export type GetLastConnectionsQueryVariables = Exact<{
+  filter?: InputMaybe<GetLastConnectionsInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetLastConnectionsQuery = {
+  __typename?: "Query";
+  getLastConnections: {
+    __typename?: "GetLastConnectionsResponse";
+    code: string;
+    message: string;
+    items: Array<{
+      __typename?: "DeviceLastConnection";
+      serialId: string;
+      deviceId?: string | null;
+      lastConnectionDate?: string | null;
+      firmware?: string | null;
+      imei?: string | null;
+      iccid?: string | null;
+    }>;
+    pagination: { __typename?: "Pagination"; totalItems: number };
+  };
+};
+
+export type GetConnectionsHistoryQueryVariables = Exact<{
+  serialId: Scalars["String"]["input"];
+  filter?: InputMaybe<GetConnectionsHistoryInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetConnectionsHistoryQuery = {
+  __typename?: "Query";
+  getConnectionsHistory: {
+    __typename?: "GetConnectionsHistoryResponse";
+    code: string;
+    message: string;
+    items: Array<{
+      __typename?: "Connection";
+      serialId: string;
+      deviceId: string;
+      connectionDate: string;
+      lat: number;
+      lng: number;
+      battery: number;
+    }>;
+    pagination: { __typename?: "Pagination"; totalItems: number };
+  };
+};
+
+export type GetLogActivityUserQueryVariables = Exact<{
+  filter?: InputMaybe<GetLogActivityUserInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetLogActivityUserQuery = {
+  __typename?: "Query";
+  getLogActivityUser: {
+    __typename?: "GetLogActivityUserResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items: Array<{
+      __typename?: "LogActivityUser";
+      id: string;
+      userId: string;
+      userName: string;
+      activityType: string;
+      request: string;
+      creationDate: string;
+    }>;
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
+  };
+};
+
+export const CreateUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "CreateUserInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "userInfo" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateUserInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "userInfo" }, value: { kind: "Variable", name: { kind: "Name", value: "userInfo" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteUser" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetCustomerDocument = {
   kind: "Document",
   definitions: [
@@ -2752,6 +3135,430 @@ export const GetCustomDeviceSubscriptionsDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetUsersDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getUsers" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetUsersInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getUsers" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "userId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "userId" }, value: { kind: "Variable", name: { kind: "Name", value: "userId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetMyInfoDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getMyInfo" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getMyInfo" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetLastConnectionsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getLastConnections" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetLastConnectionsInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getLastConnections" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastConnectionDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "firmware" } },
+                      { kind: "Field", name: { kind: "Name", value: "imei" } },
+                      { kind: "Field", name: { kind: "Name", value: "iccid" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: { kind: "SelectionSet", selections: [{ kind: "Field", name: { kind: "Name", value: "totalItems" } }] },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetConnectionsHistoryDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getConnectionsHistory" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetConnectionsHistoryInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getConnectionsHistory" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "serialId" }, value: { kind: "Variable", name: { kind: "Name", value: "serialId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "connectionDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "lat" } },
+                      { kind: "Field", name: { kind: "Name", value: "lng" } },
+                      { kind: "Field", name: { kind: "Name", value: "battery" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: { kind: "SelectionSet", selections: [{ kind: "Field", name: { kind: "Name", value: "totalItems" } }] },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetLogActivityUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getLogActivityUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetLogActivityUserInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getLogActivityUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userName" } },
+                      { kind: "Field", name: { kind: "Name", value: "activityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "request" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -2764,6 +3571,60 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
+    createUser(
+      variables: CreateUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreateUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateUserMutation>({
+            document: CreateUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createUser",
+        "mutation",
+        variables,
+      );
+    },
+    updateUser(
+      variables: UpdateUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateUserMutation>({
+            document: UpdateUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateUser",
+        "mutation",
+        variables,
+      );
+    },
+    deleteUser(
+      variables: DeleteUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteUserMutation>({
+            document: DeleteUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteUser",
+        "mutation",
+        variables,
+      );
+    },
     getCustomer(
       variables: GetCustomerQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -2882,6 +3743,110 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "getCustomDeviceSubscriptions",
+        "query",
+        variables,
+      );
+    },
+    getUsers(
+      variables?: GetUsersQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetUsersQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetUsersQuery>({
+            document: GetUsersDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getUsers",
+        "query",
+        variables,
+      );
+    },
+    getUser(variables: GetUserQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetUserQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetUserQuery>({
+            document: GetUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getUser",
+        "query",
+        variables,
+      );
+    },
+    getMyInfo(
+      variables?: GetMyInfoQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetMyInfoQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetMyInfoQuery>({
+            document: GetMyInfoDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getMyInfo",
+        "query",
+        variables,
+      );
+    },
+    getLastConnections(
+      variables?: GetLastConnectionsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetLastConnectionsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetLastConnectionsQuery>({
+            document: GetLastConnectionsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getLastConnections",
+        "query",
+        variables,
+      );
+    },
+    getConnectionsHistory(
+      variables: GetConnectionsHistoryQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetConnectionsHistoryQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetConnectionsHistoryQuery>({
+            document: GetConnectionsHistoryDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getConnectionsHistory",
+        "query",
+        variables,
+      );
+    },
+    getLogActivityUser(
+      variables?: GetLogActivityUserQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetLogActivityUserQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetLogActivityUserQuery>({
+            document: GetLogActivityUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getLogActivityUser",
         "query",
         variables,
       );

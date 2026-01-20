@@ -1,6 +1,12 @@
 """This directive allows results to be deferred during execution"""
 directive @defer on FIELD
 
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
 """
 Tells the service this field/object has access authorized by sigv4 signing.
 """
@@ -31,17 +37,6 @@ Tells the service this field/object has access authorized by an API key.
 directive @aws_api_key on OBJECT | FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""
 Tells the service this field/object has access authorized by a Lambda Authorizer.
 """
 directive @aws_lambda on OBJECT | FIELD_DEFINITION
@@ -53,6 +48,11 @@ directive @aws_subscribe(
   """
   mutations: [String]
 ) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 type Activity {
   date: String!
@@ -130,7 +130,7 @@ type Color {
 }
 
 type Connection {
-  deviceId: String!
+  deviceId: String
   serialId: String!
   connectionDate: String!
   fix: String!

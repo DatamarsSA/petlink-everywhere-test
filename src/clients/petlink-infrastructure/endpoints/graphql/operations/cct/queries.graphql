@@ -246,3 +246,135 @@ query getCustomDeviceSubscriptions($deviceId: String!) {
     }
   }
 }
+
+query getUsers($filter: GetUsersInput, $pagination: PaginationInput, $order: OrderInput) {
+  getUsers(filter: $filter, pagination: $pagination, order: $order) {
+    code
+    message
+    translationCode
+    items {
+      id
+      name
+      surname
+      email
+      phone
+      role
+      username
+      active
+      deviceVisibility
+      vodafoneCountryVisibility
+      creationDate
+      updateDate
+    }
+    pagination {
+      pageSize
+      totalPage
+      totalItems
+      currentPage
+    }
+  }
+}
+
+query getUser($userId: String!) {
+  getUser(userId: $userId) {
+    code
+    message
+    translationCode
+    user {
+      id
+      name
+      surname
+      email
+      phone
+      role
+      username
+      active
+      deviceVisibility
+      vodafoneCountryVisibility
+      creationDate
+      updateDate
+    }
+  }
+}
+
+query getMyInfo {
+  getMyInfo {
+    code
+    message
+    translationCode
+    user {
+      id
+      name
+      surname
+      email
+      phone
+      role
+      username
+      active
+      deviceVisibility
+      vodafoneCountryVisibility
+      creationDate
+      updateDate
+    }
+  }
+}
+
+query getLastConnections($filter: GetLastConnectionsInput, $pagination: PaginationInput, $order: OrderInput) {
+  getLastConnections(filter: $filter, pagination: $pagination, order: $order) {
+    code
+    message
+    items {
+      serialId
+      deviceId
+      lastConnectionDate
+      firmware
+      imei
+      iccid
+    }
+    pagination {
+      totalItems
+    }
+  }
+}
+
+query getConnectionsHistory($serialId: String!, $filter: GetConnectionsHistoryInput, $pagination: PaginationInput, $order: OrderInput) {
+  getConnectionsHistory(serialId: $serialId, filter: $filter, pagination: $pagination, order: $order) {
+    code
+    message
+    items {
+      serialId
+      deviceId
+      connectionDate
+      lat
+      lng
+      battery
+    }
+    pagination {
+      totalItems
+    }
+  }
+}
+
+query getLogActivityUser($filter: GetLogActivityUserInput, $pagination: PaginationInput, $order: OrderInput) {
+  getLogActivityUser(filter: $filter, pagination: $pagination, order: $order) {
+    code
+    message
+    translationCode
+    items {
+      id
+      userId
+      userName
+      activityType
+      request
+      creationDate
+    }
+    pagination {
+      pageSize
+      totalPage
+      totalItems
+      currentPage
+    }
+  }
+}
+
+
