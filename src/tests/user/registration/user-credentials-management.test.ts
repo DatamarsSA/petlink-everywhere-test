@@ -4,9 +4,9 @@ import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { twilioClient } from "../../../clients/twilio/client-twillio.js";
-import { extractParamsFromUrl, waitFor } from "../../../helpers/vitest.js";
 import { logger } from "../../../config/logger.js";
 import { gmailClient } from "../../../clients/gmail/client-gmail.js";
+import { extractParamsFromUrl, waitFor } from "../../../helpers/utils.js";
 
 describe("User Profile Management", () => {
   describe("CHANGE profile info (intentional -> authenticated)", () => {

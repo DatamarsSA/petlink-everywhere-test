@@ -2,17 +2,16 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { testHelper, TestSetup, EnrichedDevice } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../config/logger.js";
-import { Device, FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import { FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
 import { OperatingStatus } from "../../clients/sentinel/packets.js";
-import { faker } from "@faker-js/faker";
 import {
   RoleEnum,
   DeviceVisibilityEnum,
   VodafoneCountryVisibilityEnum,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { fxt } from "../../fixtures/fixtures.js";
-import { waitFor } from "../../helpers/vitest.js";
+import { waitFor } from "../../helpers/utils.js";
 
 describe("CCT Tool", () => {
   describe("Customers", () => {
@@ -411,7 +410,7 @@ describe("CCT Tool", () => {
           const logs = response.getLogActivityUser.items || [];
 
           // Verifica CREATE
-          const createLog = logs.find((l) => l.activityType === "CREATE_allo stUSER" && l.request.includes(newUserPayload.email));
+          const createLog = logs.find((l) => l.activityType === "CREATE_USER" && l.request.includes(newUserPayload.email));
           expect(createLog, "Missing CREATE_USER log").toBeDefined();
 
           // Verifica UPDATE
