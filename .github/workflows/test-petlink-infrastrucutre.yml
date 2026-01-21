@@ -187,7 +187,7 @@ jobs:
 
   notify-discord:
     needs: [run-tests]
-    if: always() && github.event_name == 'workflow_dispatch'
+    if: always() && github.event_name == 'workflow_dispatch' && github.event.inputs.branch == 'test' && needs.run-tests.result != 'skipped'
     runs-on: ubuntu-latest
     # Environment is required to access Secrets
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
