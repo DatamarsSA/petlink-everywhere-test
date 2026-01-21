@@ -412,6 +412,8 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
             ready: async () => {
               if (onReady) {
                 try {
+                  // Delay for AppSync in pipeline (stabilization Realtime Gateway & GraphQL Runner)
+                  await new Promise((resolve) => setTimeout(resolve, 2000));
                   await onReady();
                 } catch (err: any) {
                   logger.error("Error in onReady callback", { error: err.message });
