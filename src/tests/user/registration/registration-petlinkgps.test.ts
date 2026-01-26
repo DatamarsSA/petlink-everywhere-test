@@ -3,6 +3,7 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { logger } from "../../../config/logger.js";
 
 describe("PetlinkGPS Registration", () => {
   let setup: TestSetup;
@@ -19,6 +20,32 @@ describe("PetlinkGPS Registration", () => {
     }
 
     setup = await builder.build();
+  });
+
+  it("Verify device is available before registration", async () => {
+    logger.debug("→ Testing checkGps flow (emulates app behavior)");
+
+    // STEP 1: Fetch checkGps for both devices in parallel
+    const [dogCheckResponse, catCheckResponse] = await Promise.all([
+      petlink.core.graphqlHttp.public.checkGps({
+        serialNumber: fxt.current.devices.DOG.serialNumber,
+      }),
+      petlink.core.graphqlHttp.public.checkGps({
+        serialNumber: fxt.current.devices.CAT.serialNumber,
+      }),
+    ]);
+
+    // STEP 2: Verify DOG device sequentially
+    expect(dogCheckResponse.checkGps.code, `checkGps should succeed for available device - Error: ${dogCheckResponse.checkGps.message}`).toBe("200");
+    expect(dogCheckResponse.checkGps.imei, "Device should have imei").toBeDefined();
+    expect(dogCheckResponse.checkGps.idccd, "Device should have idccd").toBeDefined();
+    expect(dogCheckResponse.checkGps.firmwareVersion, "Device should have firmwareVersion").toBeDefined();
+
+    // STEP 3: Verify CAT device sequentially
+    expect(catCheckResponse.checkGps.code, `checkGps should succeed for available device - Error: ${catCheckResponse.checkGps.message}`).toBe("200");
+    expect(catCheckResponse.checkGps.imei, "Device should have imei").toBeDefined();
+    expect(catCheckResponse.checkGps.idccd, "Device should have idccd").toBeDefined();
+    expect(catCheckResponse.checkGps.firmwareVersion, "Device should have firmwareVersion").toBeDefined();
   });
 
   it("Associate PetlinkGPS to both DOG and CAT", async () => {

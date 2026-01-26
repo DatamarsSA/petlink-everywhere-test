@@ -104,8 +104,8 @@ export interface Connection {
   connectionDate: Scalars["String"]["output"];
   csq: Scalars["Int"]["output"];
   device: Scalars["String"]["output"];
-  deviceId: Scalars["String"]["output"];
-  diffFromPrevious?: Maybe<Scalars["Int"]["output"]>;
+  deviceId?: Maybe<Scalars["String"]["output"]>;
+  diffFromPrevious?: Maybe<Scalars["Float"]["output"]>;
   ephemeridi?: Maybe<Scalars["String"]["output"]>;
   firmware: Scalars["String"]["output"];
   fix: Scalars["String"]["output"];
@@ -2322,7 +2322,7 @@ export type GetConnectionsHistoryQuery = {
     items: Array<{
       __typename?: "Connection";
       serialId: string;
-      deviceId: string;
+      deviceId?: string | null;
       connectionDate: string;
       lat: number;
       lng: number;

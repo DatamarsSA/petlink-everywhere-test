@@ -488,6 +488,22 @@ query getPetProtection($petProtectionId: String!) {
   }
 }
 
+query checkGps($serialNumber: String!) {
+  checkGps(serialNumber: $serialNumber) {
+    code
+    translationCode
+    message
+    imei
+    idccd
+    planProfileId
+    brand
+    model
+    firmwareVersion
+    simStatus
+    simRequestedStatus
+  }
+}
+
 # mange User credentials #
 
 #CHANGE flows (authenticated - JWT required)

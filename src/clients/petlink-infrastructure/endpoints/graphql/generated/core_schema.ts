@@ -3879,6 +3879,28 @@ export type GetPetProtectionQuery = {
   };
 };
 
+export type CheckGpsQueryVariables = Exact<{
+  serialNumber: Scalars["String"]["input"];
+}>;
+
+export type CheckGpsQuery = {
+  __typename?: "Query";
+  checkGps: {
+    __typename?: "ResponseCheckGps";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    imei?: string | null;
+    idccd?: string | null;
+    planProfileId?: string | null;
+    brand?: string | null;
+    model?: string | null;
+    firmwareVersion?: string | null;
+    simStatus?: string | null;
+    simRequestedStatus?: string | null;
+  };
+};
+
 export type ChangePasswordMutationVariables = Exact<{
   oldPassword: Scalars["String"]["input"];
   password: Scalars["String"]["input"];
@@ -6528,6 +6550,55 @@ export const GetPetProtectionDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const CheckGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "checkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "checkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "serialNumber" },
+                value: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "imei" } },
+                { kind: "Field", name: { kind: "Name", value: "idccd" } },
+                { kind: "Field", name: { kind: "Name", value: "planProfileId" } },
+                { kind: "Field", name: { kind: "Name", value: "brand" } },
+                { kind: "Field", name: { kind: "Name", value: "model" } },
+                { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                { kind: "Field", name: { kind: "Name", value: "simStatus" } },
+                { kind: "Field", name: { kind: "Name", value: "simRequestedStatus" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const ChangePasswordDocument = {
   kind: "Document",
   definitions: [
@@ -7431,6 +7502,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "getPetProtection",
+        "query",
+        variables,
+      );
+    },
+    checkGps(
+      variables: CheckGpsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CheckGpsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CheckGpsQuery>({
+            document: CheckGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "checkGps",
         "query",
         variables,
       );
