@@ -9,13 +9,11 @@ import {
   UtilityTestTypeEnum,
   DeviceTypeEnum,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
-import { waitFor } from "../helpers/utils.js";
 import { existsSync, mkdirSync } from "fs";
 import { unlinkSync } from "node:fs";
 
@@ -109,6 +107,32 @@ class TestSetupBuilder {
     return this;
   }
 
+  private async enrichDeviceWithCheckGps(serialNumber: string, key: "dogStandard" | "dogEvo" | "catStandard"): Promise<void> {
+    try {
+      const response = await petlink.core.graphqlHttp.public.checkGps({
+        serialNumber,
+      });
+
+      const checkGpsData = response.checkGps;
+      logger.debug(`Response checkGps `, checkGpsData);
+
+      if (!checkGpsData || !checkGpsData.imei || !checkGpsData.idccd || !checkGpsData.firmwareVersion) {
+        throw new Error(`[Setup] CRITICAL: Device ${serialNumber} missing technical data in checkGps response`);
+      }
+
+      this.setup.devices[key] = {
+        ...this.setup.devices[key],
+        imei: checkGpsData.imei,
+        iccid: checkGpsData.idccd,
+        firmware: checkGpsData.firmwareVersion,
+      } as EnrichedDevice;
+
+      logger.debug(`✓ Enriched device ${key} with checkGps data`);
+    } catch (error) {
+      throw new Error(`[Setup] checkGps enrichment failed for device ${serialNumber}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   async build(): Promise<TestSetup> {
     //create USER
     if (this.includeUser) {
@@ -143,97 +167,47 @@ class TestSetupBuilder {
 
     await Promise.all(petPromises);
 
-    //create DEVICES
-    const devicePromises: Promise<void>[] = [];
-    let coreDogStandard: PetlinkGps | undefined;
-    let coreDogEvo: PetlinkGps | undefined;
-    let coreCatStandard: PetlinkGps | undefined;
+    //create DEVICES + ENRICHMENT (all in parallel)
+    const allPromises: Promise<void>[] = [];
 
     if (this.includeDogDevice && this.setup.pets.dog) {
-      devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dog, DeviceTypeEnum.Dog).then((device) => {
-          coreDogStandard = device;
-        }),
+      const dogFixture = fxt.current.devices.DOG;
+      allPromises.push(
+        Promise.all([
+          this.helper.createDeviceForPet(this.setup.pets.dog, DeviceTypeEnum.Dog),
+          this.enrichDeviceWithCheckGps(dogFixture.serialNumber, "dogStandard"),
+        ]).then(() => {}),
       );
     }
 
     if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
-      devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceTypeEnum.Evo).then((device) => {
-          coreDogEvo = device;
-        }),
+      const evoFixture = fxt.KIPPY.devices.EVO;
+      allPromises.push(
+        Promise.all([
+          this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceTypeEnum.Evo),
+          this.enrichDeviceWithCheckGps(evoFixture.serialNumber, "dogEvo"),
+        ]).then(() => {}),
       );
     }
 
     if (this.includeCatDevice && this.setup.pets.cat) {
-      devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.cat, DeviceTypeEnum.Cat).then((device) => {
-          coreCatStandard = device;
-        }),
+      const catFixture = fxt.current.devices.CAT;
+      allPromises.push(
+        Promise.all([
+          this.helper.createDeviceForPet(this.setup.pets.cat, DeviceTypeEnum.Cat),
+          this.enrichDeviceWithCheckGps(catFixture.serialNumber, "catStandard"),
+        ]).then(() => {}),
       );
     }
 
-    await Promise.all(devicePromises);
-
-    // --- ENRICHMENT: Fetch full technical data from CCT in a single call ---
-    if (this.setup.user && (coreDogStandard || coreDogEvo || coreCatStandard)) {
-      logger.debug(`→ Starting strict enrichment for user ${this.setup.user.id}`);
-
-      // Login CCT to access its API
-      await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password);
-
-      // We wait until Sentinel (async) has populated the firmware version
-      const items = await waitFor(
-        async () => {
-          const res = await petlink.cct.graphqlHttp.authJwt.getDevices({
-            filter: {
-              filterType: FilterEnum.And,
-              customerId: this.setup.user!.id,
-            },
-          });
-          return res.getDevices.items || [];
-        },
-        {
-          timeoutError: "[Setup - getDevices()] CCT enrichment Hardware Data (imei,iccid,firmware) failed: firmware data not ready (Sentinel lag?)",
-          isReady: (currentItems) => {
-            const devicesToEnrich = [coreDogStandard, coreDogEvo, coreCatStandard].filter((d): d is PetlinkGps => !!d);
-
-            // Check if ALL devices have valid firmware (not "N/A")
-            return devicesToEnrich.every((coreDevice) => {
-              const cctData = currentItems.find((i) => i?.deviceId === coreDevice.id);
-              // Firmware is "N/A" initially until Sentinel updates lastKnownStatus
-              return cctData && cctData.imei && cctData.iccid && cctData.firmware && cctData.firmware !== "N/A";
-            });
-          },
-        },
-      );
-
-      // Enrich Core devices with hardware data from CCT
-      const enrich = (coreDevice: PetlinkGps): EnrichedDevice => {
-        const cctData = items.find((i) => i?.deviceId === coreDevice.id);
-
-        if (!cctData || !cctData.imei || !cctData.iccid || !cctData.firmware) {
-          throw new Error(`[Setup] CRITICAL: Device ${coreDevice.serialNumber} missing technical data in CCT`);
-        }
-
-        return {
-          ...coreDevice,
-          imei: cctData.imei,
-          iccid: cctData.iccid,
-          firmware: cctData.firmware,
-        };
-      };
-
-      if (coreDogStandard) this.setup.devices.dogStandard = enrich(coreDogStandard);
-      if (coreDogEvo) this.setup.devices.dogEvo = enrich(coreDogEvo);
-      if (coreCatStandard) this.setup.devices.catStandard = enrich(coreCatStandard);
-    }
+    await Promise.all(allPromises);
 
     // Acquista subscription se richiesto
     if (this.includeSubscription && this.setup.user && this.setup.devices.dogStandard) {
       await this.helper.purchaseSubscription(this.setup.user, this.setup.devices.dogStandard);
     }
 
+    logger.debug("Setup", this.setup);
     return this.setup;
   }
 }
@@ -283,7 +257,6 @@ class TestHelper {
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
-            // serialNumbers: testSerialNumbers, TODO: add field to remove all sentinel db from backend
             utilityType: UtilityTestTypeEnum.CleanUpUser,
           },
         })
