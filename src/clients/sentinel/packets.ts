@@ -646,6 +646,43 @@ export class Packet10 {
     energy_saving_area_enabled: undefined as number | undefined,
   };
 
+  static toBuffer(data: Partial<typeof Packet10.Data>): Buffer {
+    const buffer = Buffer.alloc(50);
+    let offset = 0;
+
+    buffer[offset++] = PacketType.PACKET_0x10;
+
+    const evo_tasks = data.evo_tasks || 0;
+    buffer.writeUInt32LE(evo_tasks, offset);
+    offset += 4;
+
+    const EvoFlashlight = 0x01;
+    const EVO_TOUR_RECORDING = 0x02;
+    const EvoSound = 0x04;
+    const EvoEnergySaveArea = 0x08;
+
+    if (evo_tasks & EvoFlashlight) {
+      buffer.writeInt16LE(data.torch_duration || 0, offset);
+      offset += 2;
+    }
+    if (evo_tasks & EVO_TOUR_RECORDING) {
+      buffer.writeInt8(data.tour_recording_enabled || 0, offset);
+      offset += 1;
+    }
+    if (evo_tasks & EvoSound) {
+      buffer.writeInt16LE(data.sound_command || 0, offset);
+      offset += 2;
+      buffer.writeInt16LE(data.sound_duration || 0, offset);
+      offset += 2;
+    }
+    if (evo_tasks & EvoEnergySaveArea) {
+      buffer.writeInt8(data.energy_saving_area_enabled || 0, offset);
+      offset += 1;
+    }
+
+    return buffer.subarray(0, offset);
+  }
+
   static fromBuffer(payload: Buffer): typeof Packet10.Data {
     let offset = 1;
     const evo_tasks = payload.readUInt32LE(offset);

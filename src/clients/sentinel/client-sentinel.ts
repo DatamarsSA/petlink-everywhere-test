@@ -1,7 +1,7 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import { Packet01, Packet02, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap, DeviceIdentity, PacketType } from "./packets.js";
+import { Packet01, Packet02, Packet10, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap, DeviceIdentity, PacketType } from "./packets.js";
 import { fxt } from "../../fixtures/fixtures.js";
 
 export class SentinelTcpClient {
@@ -74,6 +74,19 @@ export class SentinelTcpClient {
         welcome: (device: DeviceIdentity, data: any) => Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01),
         heartbeat: (device: DeviceIdentity, data: any) => Packet01.D2SWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06),
         geofenceResponse: Packet01.S2DGeofenceResponse.toBuffer,
+        torch: (_device: DeviceIdentity, duration: number) => {
+          return Packet10.toBuffer({
+            evo_tasks: 0x01 | 0x10,
+            torch_duration: duration,
+          });
+        },
+        sound: (_device: DeviceIdentity, duration: number) => {
+          return Packet10.toBuffer({
+            evo_tasks: 0x04 | 0x10,
+            sound_command: duration > 0 ? 1 : 0,
+            sound_duration: duration,
+          });
+        },
       };
 
       const encoder = commands[prop];

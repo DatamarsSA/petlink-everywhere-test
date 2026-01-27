@@ -550,11 +550,3 @@ mutation changeForgotPassword($otp: String!, $verificationId: String!, $password
     message
   }
 }
-
-mutation forgotEmail($productNumber: String!, $entityType: ProductTypeEnum, $languageId: LanguageId) {
-  forgotEmail(productNumber: $productNumber, entityType: $entityType, languageId: $languageId) {
-    code
-    translationCode
-    message
-  }
-}
