@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketType, OperatingStatus, Packet01 } from "../../../clients/sentinel/packets.js";
+import { PacketType, OperatingStatus, PacketWelcomeHeartBeat } from "../../../clients/sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -123,7 +123,7 @@ describe("Geofence", () => {
     const insidePayload = {
       latitude: GEOFENCE_COORDINATES.inside.lat,
       longitude: GEOFENCE_COORDINATES.inside.lng,
-      notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NInsideFence, // 0x20 = inside geofence
+      notifications: PacketWelcomeHeartBeat.Notifications.NInsideFence, // 0x20 = inside geofence
       curr_status: OperatingStatus.GEOFENCE_ON,
       last_gps_time: Math.floor(Date.now() / 1000),
     };
@@ -154,7 +154,7 @@ describe("Geofence", () => {
     const outsidePayload = {
       latitude: GEOFENCE_COORDINATES.outside.lat,
       longitude: GEOFENCE_COORDINATES.outside.lng,
-      notifications: Packet01.D2SWelcomeHeartBeat.Notifications.NOutsideFence, // 0x40 = outside geofence
+      notifications: PacketWelcomeHeartBeat.Notifications.NOutsideFence, // 0x40 = outside geofence
       curr_status: OperatingStatus.GEOFENCE_ON, // Still in geofence mode until Sentinel deactivates it
       last_gps_time: Math.floor(Date.now() / 1000),
     };

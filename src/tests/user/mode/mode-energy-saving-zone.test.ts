@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { OperatingStatus, Packet01, PacketType } from "../../../clients/sentinel/packets.js";
+import { OperatingStatus, PacketWelcomeHeartBeat, PacketType } from "../../../clients/sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -119,7 +119,7 @@ describe("Energy Saving Zone", () => {
       latitude: 44.5024,
       longitude: 11.3463,
       curr_status: OperatingStatus.DEFAULT,
-      spare_c5: Packet01.D2SWelcomeHeartBeat.SpareC5.NDetached,
+      spare_c5: PacketWelcomeHeartBeat.SpareC5.NDetached,
     };
 
     // Start listening for ESZ enter event with onReady callback
