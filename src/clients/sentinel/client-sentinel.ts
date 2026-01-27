@@ -1,7 +1,20 @@
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import { logger } from "../../config/logger.js";
-import { PacketWelcomeHeartBeat, PacketGeofenceResponse, Packet02, Packet10, SirfProtocol, parsePacketByType, ParsedPacket, SIRF, PacketTypeMap, DeviceIdentity, PacketType } from "./packets.js";
+import {
+  PacketWelcomeHeartBeat,
+  PacketGeofenceResponse,
+  PacketWelcomeAck,
+  PacketEvoExtraData,
+  PacketSafePlacesWifi,
+  SirfProtocol,
+  parsePacketByType,
+  ParsedPacket,
+  SIRF,
+  PacketTypeMap,
+  DeviceIdentity,
+  PacketType,
+} from "./packets.js";
 import { fxt } from "../../fixtures/fixtures.js";
 
 export class SentinelTcpClient {
@@ -75,13 +88,13 @@ export class SentinelTcpClient {
         heartbeat: (device: DeviceIdentity, data: any) => PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06),
         geofenceResponse: PacketGeofenceResponse.toBuffer,
         torch: (_device: DeviceIdentity, duration: number) => {
-          return Packet10.toBuffer({
+          return PacketEvoExtraData.toBuffer({
             evo_tasks: 0x01 | 0x10,
             torch_duration: duration,
           });
         },
         sound: (_device: DeviceIdentity, duration: number) => {
-          return Packet10.toBuffer({
+          return PacketEvoExtraData.toBuffer({
             evo_tasks: 0x04 | 0x10,
             sound_command: duration > 0 ? 1 : 0,
             sound_duration: duration,
@@ -197,7 +210,7 @@ export class SentinelTcpClient {
       // Se ricevo un comando dal server (0x01=Config, 0x10=ExtraData, 0x15=SafePlaces), rispondo subito con ACK (0x02)
       if ([PacketType.PACKET_0x01, PacketType.PACKET_0x10, PacketType.PACKET_0x15].includes(parsed.type)) {
         logger.debug(`[SENTINEL-CLIENT] Auto-ACKing packet 0x${parsed.type.toString(16).toUpperCase()}`);
-        const ackBuffer = Packet02.toBuffer(0x01 | 0x02 | 0x04); // 0x07 = All OK
+        const ackBuffer = PacketWelcomeAck.toBuffer(PacketWelcomeAck.ALL_OK);
         this.sendRaw(ackBuffer).catch((err) => {
           logger.error(`[SENTINEL-CLIENT] Failed to send auto-ACK: ${err.message}`);
         });

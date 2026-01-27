@@ -9,7 +9,6 @@ import {
   SettingTypeEnum,
   StatusState,
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { fxt } from "../../../fixtures/fixtures.js";
 import { logger } from "../../../config/logger.js";
 
 describe("Energy Saving Zone", () => {

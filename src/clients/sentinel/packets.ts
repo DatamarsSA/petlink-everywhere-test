@@ -30,14 +30,16 @@ export enum OperatingStatus {
 }
 
 export enum PacketType {
-  PACKET_0x01 = 0x01, //PacketWelcomeHeartBeat -> managed by manage_packet01
-  PACKET_0x02 = 0x02, //PacketWelcomeAck -> managed by manage_packet02
-  PACKET_0x06 = 0x06, //Heartbeat -> managed by manage_packet06
+  PACKET_0x01 = 0x01,
+  PACKET_0x02 = 0x02,
+  PACKET_0x06 = 0x06,
   PACKET_0x08 = 0x08,
   PACKET_0x10 = 0x10,
   PACKET_0x14 = 0x14,
   PACKET_0x15 = 0x15,
 }
+
+
 
 // ================================ DIZIONARIO DEI TIPI ================================ //
 
@@ -57,9 +59,9 @@ export interface DeviceIdentity {
  */
 export interface PacketTypeMap {
   [PacketType.PACKET_0x01]: typeof PacketGeofenceResponse.Data;
-  [PacketType.PACKET_0x02]: number;
-  [PacketType.PACKET_0x10]: typeof Packet10.Data;
-  [PacketType.PACKET_0x15]: typeof Packet15.Data;
+  [PacketType.PACKET_0x02]: typeof PacketWelcomeAck.Data;
+  [PacketType.PACKET_0x10]: typeof PacketEvoExtraData.Data;
+  [PacketType.PACKET_0x15]: typeof PacketSafePlacesWifi.Data;
 }
 
 // ================================ SIRF PROTOCOL UTILITIES ================================ //
@@ -138,7 +140,7 @@ function stringToBytes(str: string, length: number): Buffer {
 // ================================ PACKET CLASSES ================================ //
 
 /**
- * Packet 0x01 - (Device → Sentinel)
+ * PacketWelcomeHeartBeat (Device → Sentinel)
  * Heartbeat with GPS, battery, temperature, notifications, WiFi/GSM cells - 109+ bytes
  *
  * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/from_kippy/packet_welcome_heartbeat.rs
@@ -484,7 +486,7 @@ export class PacketWelcomeHeartBeat {
 }
 
 /**
- * Packet 0x01 -  (Sentinel → Device)
+ * PacketGeofenceResponse (Sentinel → Device)
  * Geofence coordinates and operating status - 71 bytes
  *
  * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/to_kippy/packet_geofence_response.rs
@@ -590,37 +592,55 @@ export class PacketGeofenceResponse {
 }
 
 /**
- * Packet 0x02 - PacketWelcomeAck (Device → Sentinel)
- * Acknowledges receipt of commands  (0x01, 0x10, 0x15) dal server.
+ * PacketWelcomeAck (Device → Sentinel)
+ * Acknowledges receipt of commands (0x01, 0x10, 0x15) from server - 2 bytes
  *
  * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/from_kippy/packet_welcome_ack.rs
  */
-export class Packet02 {
+export class PacketWelcomeAck {
   static readonly AckFlags = {
     COMMANDS_OK: 0x01,
     GEOFENCE_OK: 0x02,
     FLASH_OK: 0x04,
   } as const;
 
-  /**
-   * Serializza l'ACK in Buffer.
-   * @param flags Bitmask di conferma (default 0x07 = tutto OK)
-   */
-  static toBuffer(flags: number = 0x01 | 0x02 | 0x04): Buffer {
+  static readonly ALL_OK = PacketWelcomeAck.AckFlags.COMMANDS_OK | PacketWelcomeAck.AckFlags.GEOFENCE_OK | PacketWelcomeAck.AckFlags.FLASH_OK;
+
+  static Data = {
+    answer_geofence_loaded: false as boolean,
+  };
+
+  static toBuffer(flags: number = PacketWelcomeAck.ALL_OK): Buffer {
     const buffer = Buffer.alloc(2);
     buffer[0] = PacketType.PACKET_0x02;
     buffer[1] = flags;
     return buffer;
   }
+
+  static fromBuffer(payload: Buffer): typeof PacketWelcomeAck.Data {
+    const flags = payload[1];
+    return {
+      answer_geofence_loaded: (flags & PacketWelcomeAck.AckFlags.GEOFENCE_OK) !== 0,
+    };
+  }
 }
 
 /**
- * Packet 0x10 - PacketEvoExtraData (Sentinel → Device)
- * Configures: torch, sound, tour recording, enable/disable ESZ, device clock sync
+ * PacketEvoExtraData (Sentinel → Device)
+ * Configures: torch, sound, tour recording, enable/disable ESZ, device clock sync - variable size
  *
  * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/to_kippy/packet_evo_extra_data.rs
  */
-export class Packet10 {
+export class PacketEvoExtraData {
+
+    static readonly EvoTasksFlags = {
+    EvoFlashlight: 0x01,        // Torcia/Flashlight
+    EvoTourRecording: 0x02,   // Tour recording
+    EvoSound: 0x04,             // Suono/Sound
+    EvoEnergySaveArea: 0x08,    // Energy saving area
+    EvoTimestamp: 0x0020,       // Timestamp (optional, only if flag is set)
+  } as const;
+
   static Data = {
     evo_tasks: 0 as number,
     torch_duration: undefined as number | undefined,
@@ -631,7 +651,7 @@ export class Packet10 {
     timestamp: undefined as number | undefined,
   };
 
-  static toBuffer(data: Partial<typeof Packet10.Data>): Buffer {
+  static toBuffer(data: Partial<typeof PacketEvoExtraData.Data>): Buffer {
     const buffer = Buffer.alloc(50);
     let offset = 0;
 
@@ -641,103 +661,124 @@ export class Packet10 {
     buffer.writeUInt32LE(evo_tasks, offset);
     offset += 4;
 
-    const EvoFlashlight = 0x01;
-    const EVO_TOUR_RECORDING = 0x02;
-    const EvoSound = 0x04;
-    const EvoEnergySaveArea = 0x08;
-
-    if (evo_tasks & EvoFlashlight) {
+    if (evo_tasks & this.EvoTasksFlags.EvoFlashlight) {
       buffer.writeInt16LE(data.torch_duration || 0, offset);
       offset += 2;
     }
-    if (evo_tasks & EVO_TOUR_RECORDING) {
+    if (evo_tasks & this.EvoTasksFlags.EvoTourRecording) {
       buffer.writeInt8(data.tour_recording_enabled || 0, offset);
       offset += 1;
     }
-    if (evo_tasks & EvoSound) {
+    if (evo_tasks & this.EvoTasksFlags.EvoSound) {
       buffer.writeInt16LE(data.sound_command || 0, offset);
       offset += 2;
       buffer.writeInt16LE(data.sound_duration || 0, offset);
       offset += 2;
     }
-    if (evo_tasks & EvoEnergySaveArea) {
+    if (evo_tasks & this.EvoTasksFlags.EvoEnergySaveArea) {
       buffer.writeInt8(data.energy_saving_area_enabled || 0, offset);
       offset += 1;
+    }
+    if (evo_tasks & this.EvoTasksFlags.EvoTimestamp) {
+      buffer.writeUInt32LE(data.timestamp || 0, offset);
+      offset += 4;
     }
 
     return buffer.subarray(0, offset);
   }
 
-  static fromBuffer(payload: Buffer): typeof Packet10.Data {
+  static fromBuffer(payload: Buffer): typeof PacketEvoExtraData.Data {
     let offset = 1;
     const evo_tasks = payload.readUInt32LE(offset);
     offset += 4;
-
-    const EvoFlashlight = 0x01;
-    const EVO_TOUR_RECORDING = 0x02;
-    const EvoSound = 0x04;
-    const EvoEnergySaveArea = 0x08;
 
     let torch_duration: number | undefined;
     let tour_recording_enabled: number | undefined;
     let sound_command: number | undefined;
     let sound_duration: number | undefined;
     let energy_saving_area_enabled: number | undefined;
+    let timestamp: number | undefined;
 
-    if (evo_tasks & EvoFlashlight) {
+    if (evo_tasks & this.EvoTasksFlags.EvoFlashlight) {
       torch_duration = payload.readInt16LE(offset);
       offset += 2;
     }
-    if (evo_tasks & EVO_TOUR_RECORDING) {
+    if (evo_tasks & this.EvoTasksFlags.EvoTourRecording) {
       tour_recording_enabled = payload.readInt8(offset);
       offset += 1;
     }
-    if (evo_tasks & EvoSound) {
+    if (evo_tasks & this.EvoTasksFlags.EvoSound) {
       sound_command = payload.readInt16LE(offset);
       offset += 2;
       sound_duration = payload.readInt16LE(offset);
       offset += 2;
     }
-    if (evo_tasks & EvoEnergySaveArea) {
+    if (evo_tasks & this.EvoTasksFlags.EvoEnergySaveArea) {
       energy_saving_area_enabled = payload.readInt8(offset);
       offset += 1;
     }
+    if (evo_tasks & this.EvoTasksFlags.EvoTimestamp) {
+      timestamp = payload.readUInt32LE(offset);
+      offset += 4;
+    }
 
-    const data: typeof Packet10.Data = {
+    const data: typeof PacketEvoExtraData.Data = {
       evo_tasks,
       torch_duration,
       tour_recording_enabled,
       sound_command,
       sound_duration,
       energy_saving_area_enabled,
+      timestamp,
     };
     return data;
   }
 }
 
 /**
- * Packet 0x15 - PacketSafeplacesWifi (Sentinel → Device)
- * Transmits ESZ (Energy Saving Zone) list with WiFi geofences
+ * PacketSafePlacesWifi (Sentinel → Device)
+ * Transmits ESZ (Energy Saving Zone) list with WiFi geofences - variable size
  *
  * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/to_kippy/packet_safe_places_wifi.rs
  */
-export class Packet15 {
+export class PacketSafePlacesWifi {
   static Data = {
     zones: [] as { lat: number; lng: number; radius: number; bssid: string }[],
   };
 
-  static fromBuffer(payload: Buffer): typeof Packet15.Data {
+  static toBuffer(zones: { lat: number; lng: number; radius: number; bssid: string }[]): Buffer {
+    const buffer = Buffer.alloc(1 + zones.length * 18);
+    let offset = 0;
+
+    buffer[offset++] = 0x15;
+
+    zones.forEach(({ lat, lng, radius, bssid }) => {
+      buffer.writeFloatLE(lat, offset);
+      offset += 4;
+      buffer.writeFloatLE(lng, offset);
+      offset += 4;
+      buffer.writeFloatLE(radius, offset);
+      offset += 4;
+      const bssidBytes = Buffer.from(bssid.replace(/:/g, ""), "hex");
+      bssidBytes.copy(buffer, offset);
+      offset += 6;
+    });
+
+    return buffer;
+  }
+
+  static fromBuffer(payload: Buffer): typeof PacketSafePlacesWifi.Data {
     const zones: { lat: number; lng: number; radius: number; bssid: string }[] = [];
     let offset = 1;
-    const zoneSize = 18; // Changed from 30 (4+4+4+6 instead of 8+8+8+6)
+    const zoneSize = 18;
 
     while (offset + zoneSize <= payload.length) {
-      const lat = payload.readFloatLE(offset); // Changed from readDoubleLE
-      offset += 4; // Changed from 8
-      const lng = payload.readFloatLE(offset); // Changed from readDoubleLE
-      offset += 4; // Changed from 8
-      const radius = payload.readFloatLE(offset); // Changed from readDoubleLE
-      offset += 4; // Changed from 8
+      const lat = payload.readFloatLE(offset);
+      offset += 4;
+      const lng = payload.readFloatLE(offset);
+      offset += 4;
+      const radius = payload.readFloatLE(offset);
+      offset += 4;
       const bssid = payload
         .subarray(offset, offset + 6)
         .toString("hex")
@@ -747,7 +788,7 @@ export class Packet15 {
       zones.push({ lat, lng, radius, bssid });
     }
 
-    const data: typeof Packet15.Data = { zones };
+    const data: typeof PacketSafePlacesWifi.Data = { zones };
     return data;
   }
 }
@@ -757,10 +798,11 @@ export class Packet15 {
 export interface ParsedPacket {
   type: number;
   payload:
-    | typeof Packet01.D2SWelcomeHeartBeat.Data
-    | typeof Packet01.S2DGeofenceResponse.Data
-    | typeof Packet10.Data
-    | typeof Packet15.Data
+    | typeof PacketWelcomeHeartBeat.Data
+    | typeof PacketGeofenceResponse.Data
+    | typeof PacketWelcomeAck.Data
+    | typeof PacketEvoExtraData.Data
+    | typeof PacketSafePlacesWifi.Data
     | { error: string };
   raw: Buffer;
 }
@@ -773,16 +815,16 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
       case PacketType.PACKET_0x01:
       case PacketType.PACKET_0x06:
         if (payload.length === 71) {
-          return { type, payload: Packet01.S2DGeofenceResponse.fromBuffer(payload), raw: payload };
+          return { type, payload: PacketGeofenceResponse.fromBuffer(payload), raw: payload };
         } else {
-          return { type, payload: Packet01.D2SWelcomeHeartBeat.fromBuffer(payload), raw: payload };
+          return { type, payload: PacketWelcomeHeartBeat.fromBuffer(payload), raw: payload };
         }
       case PacketType.PACKET_0x02:
-        return { type, payload: payload[1], raw: payload };
+        return { type, payload: PacketWelcomeAck.fromBuffer(payload), raw: payload };
       case PacketType.PACKET_0x10:
-        return { type, payload: Packet10.fromBuffer(payload), raw: payload };
+        return { type, payload: PacketEvoExtraData.fromBuffer(payload), raw: payload };
       case PacketType.PACKET_0x15:
-        return { type, payload: Packet15.fromBuffer(payload), raw: payload };
+        return { type, payload: PacketSafePlacesWifi.fromBuffer(payload), raw: payload };
       default:
         const errorMessage = `Parser for packet ${type.toString(16)} not found.`;
         logger.debug(errorMessage);
