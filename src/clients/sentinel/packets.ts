@@ -146,10 +146,14 @@ function stringToBytes(str: string, length: number): Buffer {
 // ================================ PACKET CLASSES ================================ //
 
 /**
- * Packet 0x01 - BIDIREZIONALE
+ * Packet 0x01 - PacketWelcomeHeartBeat (Device ↔ Sentinel)
+ * Heartbeat with GPS, battery, temperature, notifications, WiFi/GSM cells
+ *
  * 1️⃣ Device → Sentinel (PacketWelcomeHeartBeat) - 109+ bytes
  *
  * 2️⃣ Sentinel → Device (PacketGeofenceResponse) - 71 bytes
+ *
+ * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/from_kippy/packet_welcome_heartbeat.rs
  */
 export class Packet01 {
   /**
@@ -600,8 +604,10 @@ export class Packet01 {
 }
 
 /**
- * Packet 0x02 - ACK (Device → Sentinel)
- * Conferma la ricezione dei comandi (0x01, 0x10, 0x15) dal server.
+ * Packet 0x02 - PacketWelcomeAck (Device → Sentinel)
+ * Acknowledges receipt of commands  (0x01, 0x10, 0x15) dal server.
+ *
+ * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/from_kippy/packet_welcome_ack.rs
  */
 export class Packet02 {
   /**
@@ -630,11 +636,10 @@ export class Packet02 {
 }
 
 /**
- * Packet 0x10 - Evo Extra Settings (Server → Device)
- * Configura funzionalità hardware e logiche avanzate "Evo":
- * - Controllo Torcia (durata)
- * - Controllo Suoni (tipo e durata)
- * - Abilitazione/Disabilitazione ESZ (Energy Saving Zone)
+ * Packet 0x10 - PacketEvoExtraData (Sentinel → Device)
+ * Configures: torch, sound, tour recording, enable/disable ESZ, device clock sync
+ *
+ * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/to_kippy/packet_evo_extra_data.rs
  */
 export class Packet10 {
   static Data = {
@@ -644,6 +649,7 @@ export class Packet10 {
     sound_command: undefined as number | undefined,
     sound_duration: undefined as number | undefined,
     energy_saving_area_enabled: undefined as number | undefined,
+    timestamp: undefined as number | undefined,
   };
 
   static toBuffer(data: Partial<typeof Packet10.Data>): Buffer {
