@@ -3934,6 +3934,60 @@ export type UpdatePhoneNumberUserMutation = {
   updatePhoneNumberUser: { __typename?: "ResponseUser"; code: string; translationCode?: string | null; message: string };
 };
 
+export type GetEnergySavingZoneQueryVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type GetEnergySavingZoneQuery = {
+  __typename?: "Query";
+  getEnergySavingZone: {
+    __typename?: "ResponseEnergySavingZone";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    energySavingZone?: {
+      __typename?: "EnergySavingZone";
+      id: string;
+      name: string;
+      radius: number;
+      ssid: string;
+      bssid: string;
+      icon: string;
+      entityType: EntityTypeEnum;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: { __typename?: "Coordinates"; lat: number; lng: number };
+    } | null;
+  };
+};
+
+export type GetEnergySavingZonesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetEnergySavingZonesQuery = {
+  __typename?: "Query";
+  getEnergySavingZones: {
+    __typename?: "ResponseEnergySavingZones";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    energySavingZones?: Array<{
+      __typename?: "EnergySavingZone";
+      id: string;
+      name: string;
+      radius: number;
+      ssid: string;
+      bssid: string;
+      icon: string;
+      entityType: EntityTypeEnum;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: { __typename?: "Coordinates"; lat: number; lng: number };
+    }> | null;
+  };
+};
+
 export type SendOtpForgotPasswordMutationVariables = Exact<{
   contact: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
@@ -6751,6 +6805,128 @@ export const UpdatePhoneNumberUserDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetEnergySavingZoneDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getEnergySavingZone" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getEnergySavingZone" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "energySavingZone" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "radius" } },
+                      { kind: "Field", name: { kind: "Name", value: "ssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "bssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "icon" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetEnergySavingZonesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getEnergySavingZones" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getEnergySavingZones" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "energySavingZones" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "radius" } },
+                      { kind: "Field", name: { kind: "Name", value: "ssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "bssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "icon" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const SendOtpForgotPasswordDocument = {
   kind: "Document",
   definitions: [
@@ -7503,6 +7679,42 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
           }),
         "updatePhoneNumberUser",
         "mutation",
+        variables,
+      );
+    },
+    getEnergySavingZone(
+      variables: GetEnergySavingZoneQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetEnergySavingZoneQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetEnergySavingZoneQuery>({
+            document: GetEnergySavingZoneDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getEnergySavingZone",
+        "query",
+        variables,
+      );
+    },
+    getEnergySavingZones(
+      variables?: GetEnergySavingZonesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetEnergySavingZonesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetEnergySavingZonesQuery>({
+            document: GetEnergySavingZonesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getEnergySavingZones",
+        "query",
         variables,
       );
     },

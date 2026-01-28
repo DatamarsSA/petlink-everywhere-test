@@ -12,11 +12,9 @@ import {
 import { logger } from "../../../config/logger.js";
 
 describe("Energy Saving Zone", () => {
-  // Sequential per dipendenze
   let setup: TestSetup = {} as TestSetup;
-  let eszId: string; // Per activation/deactivation
+  let eszId: string;
 
-  // Explicit payload for ESZ creation (no spreads, typed)
   const createZonePayload = {
     entityType: SettingTypeEnum.EnergySavingZone,
     name: "Wifi Casa Test",
@@ -199,5 +197,100 @@ describe("Energy Saving Zone", () => {
     expect(packet10.energy_saving_area_enabled).toBe(0); // Disabled
 
     logger.info("✓ ESZ deactivated, packet disable received");
+  });
+
+  // IT 6: Update ESZ - Assert 200 + Verify with getEnergySavingZone
+  it("User UPDATE ESZ (sendSetting UPDATE) - API + Query Assert", async () => {
+    logger.info("📍 User updates ESZ");
+
+    const updatePayload = {
+      ...createZonePayload,
+      id: eszId,
+      name: "Wifi Casa Updated",
+      radius: 150,
+      ssid: "HomeNetworkUpdated",
+    };
+
+    const updateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
+      setting: {
+        operationType: SettingOperationEnum.Update,
+        settingType: SettingTypeEnum.EnergySavingZone,
+        updateObject: JSON.stringify(updatePayload),
+        deviceId: setup.devices.dogStandard!.id,
+      },
+    });
+
+    expect(
+      updateResponse.sendSetting.code,
+      `sendSetting UPDATE should succeed - Error: ${updateResponse.sendSetting.message}${updateResponse.sendSetting.translationCode ? ` (${updateResponse.sendSetting.translationCode})` : ""}`,
+    ).toBe("200");
+
+    const getZoneResponse = await petlink.core.graphqlHttp.authJwt.getEnergySavingZone({
+      id: eszId,
+    });
+
+    expect(getZoneResponse.getEnergySavingZone.code).toBe("200");
+    expect(getZoneResponse.getEnergySavingZone.energySavingZone).toMatchObject({
+      id: eszId,
+      name: updatePayload.name,
+      radius: updatePayload.radius,
+      ssid: updatePayload.ssid,
+      position: updatePayload.position,
+    });
+
+    const getAllZonesResponse = await petlink.core.graphqlHttp.authJwt.getEnergySavingZones({});
+    expect(getAllZonesResponse.getEnergySavingZones.code).toBe("200");
+    expect(getAllZonesResponse.getEnergySavingZones.energySavingZones).toHaveLength(1);
+    expect(getAllZonesResponse.getEnergySavingZones.energySavingZones![0]).toMatchObject({
+      id: eszId,
+      name: updatePayload.name,
+      radius: updatePayload.radius,
+      ssid: updatePayload.ssid,
+    });
+
+    logger.info("✓ ESZ updated and verified with queries");
+  });
+
+  // IT 7: Delete ESZ - Assert 200 + Verify with getEnergySavingZone and getEnergySavingZones
+  it("User DELETE ESZ (sendSetting DELETE) - API + Query Assert", async () => {
+    logger.info("📍 User deletes ESZ");
+
+    // 1. Perform delete
+    const deleteResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
+      setting: {
+        operationType: SettingOperationEnum.Delete,
+        settingType: SettingTypeEnum.EnergySavingZone,
+        id: eszId,
+        deviceId: setup.devices.dogStandard!.id,
+      },
+    });
+
+    expect(
+      deleteResponse.sendSetting.code,
+      `sendSetting DELETE should succeed - Error: ${deleteResponse.sendSetting.message}${deleteResponse.sendSetting.translationCode ? ` (${deleteResponse.sendSetting.translationCode})` : ""}`,
+    ).toBe("200");
+
+    // 2. Verify soft delete with getEnergySavingZone (should return 404 after soft delete)
+    const getZoneResponse = await petlink.core.graphqlHttp.authJwt.getEnergySavingZone({
+      id: eszId,
+    });
+
+    // After soft delete, getEnergySavingZone should return 404
+    expect(getZoneResponse.getEnergySavingZone.code).toBe("404");
+    expect(getZoneResponse.getEnergySavingZone.energySavingZone).toBeNull();
+
+    // 3. Verify with getEnergySavingZones (should not return deleted zone)
+    const getAllZonesResponse = await petlink.core.graphqlHttp.authJwt.getEnergySavingZones({});
+    expect(getAllZonesResponse.getEnergySavingZones.code).toBe("200");
+    expect(getAllZonesResponse.getEnergySavingZones.energySavingZones).toBeDefined();
+
+    // Check that the deleted zone is not in the list (or is marked as deleted)
+    const deletedZone = getAllZonesResponse.getEnergySavingZones.energySavingZones.find((zone: any) => zone.id === eszId);
+
+    // If the API filters out deleted zones, it should not be found
+    // If it returns deleted zones, we might need to check a 'deleted' flag
+    expect(deletedZone).toBeUndefined();
+
+    logger.info("✓ ESZ deleted and verified with queries");
   });
 });

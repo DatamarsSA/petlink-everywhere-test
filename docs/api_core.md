@@ -2,8 +2,8 @@
 
 ## 📊 Summary
 - **Total Operations:** 111
-- **Covered:** 38
-- **Missing:** 73
+- **Covered:** 40
+- **Missing:** 71
 
 ---
 
@@ -129,8 +129,8 @@
 | `getCountryState`            | ❌ Missing |       |
 | `getBreed`                   | ✅ Covered |       |
 | `getColors`                  | ✅ Covered |       |
-| `getEnergySavingZone`        | ❌ Missing |       |
-| `getEnergySavingZones`       | ❌ Missing |       |
+| `getEnergySavingZone`        | ✅ Covered |       |
+| `getEnergySavingZones`       | ✅ Covered |       |
 | `getGeofences`               | ❌ Missing |       |
 | `getActivities`              | ❌ Missing |       |
 | `getActivitiesAverage`       | ❌ Missing |       |

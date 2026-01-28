@@ -532,6 +532,54 @@ mutation updatePhoneNumberUser($phone: String!, $languageId: LanguageId, $verifi
   }
 }
 
+query getEnergySavingZone($id: String!) {
+  getEnergySavingZone(id: $id) {
+    code
+    message
+    translationCode
+    energySavingZone {
+      id
+      name
+      position {
+        lat
+        lng
+      }
+      radius
+      ssid
+      bssid
+      icon
+      entityType
+      userId
+      creationDate
+      updateDate
+    }
+  }
+}
+
+query getEnergySavingZones {
+  getEnergySavingZones {
+    code
+    message
+    translationCode
+    energySavingZones {
+      id
+      name
+      position {
+        lat
+        lng
+      }
+      radius
+      ssid
+      bssid
+      icon
+      entityType
+      userId
+      creationDate
+      updateDate
+    }
+  }
+}
+
 #FORGOT/RECOVERY flows (public - NO auth)
 
 mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId, $appBrand: AppBrand!) {
