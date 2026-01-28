@@ -13,7 +13,6 @@ import { fxt } from "../../../fixtures/fixtures.js";
 import { logger } from "../../../config/logger.js";
 
 describe("Geofence", () => {
-  // Sequential per dipendenze
   let setup: TestSetup = {} as TestSetup;
   let geofenceId: string; // Per activation/deactivation
 
@@ -210,5 +209,81 @@ describe("Geofence", () => {
     expect(packet01, "Should receive 0x01 (Deactivate Geofence)").toBeDefined();
     expect(packet01.requested_operating_status).toBe(OperatingStatus.DEFAULT);
     logger.info("✓ Geofence deactivated, packet default received");
+  });
+
+  // IT 6: Update Geofence - Assert 200 + Verify with getGeofences
+  it("User UPDATE Geofence - API + Query Assert", async () => {
+    logger.info("📍 User updates geofence");
+
+    const updatePayload = {
+      id: geofenceId,
+      name: "Geofence Updated",
+      position: [
+        { lat: 44.51, lng: 11.31 }, // Coordinate diverse
+        { lat: 44.51, lng: 11.36 },
+        { lat: 44.56, lng: 11.36 },
+        { lat: 44.56, lng: 11.31 },
+        { lat: 44.515, lng: 11.33 },
+        { lat: 44.505, lng: 11.33 },
+      ],
+    };
+
+    // 1. UPDATE API call
+    const updateResponse = await petlink.core.graphqlHttp.authJwt.updateGeofence({
+      geofence: updatePayload,
+    });
+
+    expect(updateResponse.updateGeofence.code).toBe("200");
+    expect(updateResponse.updateGeofence.geofence).toMatchObject({
+      id: geofenceId,
+      name: updatePayload.name,
+    });
+
+    // Verify position coordinates are updated
+    expect(updateResponse.updateGeofence.geofence!.position).toHaveLength(6);
+    updateResponse.updateGeofence.geofence!.position.forEach((coord: any, index: number) => {
+      expect(coord.lat).toBeCloseTo(updatePayload.position[index].lat, 3);
+      expect(coord.lng).toBeCloseTo(updatePayload.position[index].lng, 3);
+    });
+
+    // 2. VERIFY con getGeofences
+    const getAllResponse = await petlink.core.graphqlHttp.authJwt.getGeofences({});
+    expect(getAllResponse.getGeofences.code).toBe("200");
+
+    const updatedGeofence = getAllResponse.getGeofences.geofences?.find((g: any) => g.id === geofenceId);
+    expect(updatedGeofence).toMatchObject({
+      id: geofenceId,
+      name: updatePayload.name,
+    });
+
+    // Verify position coordinates in getGeofences response
+    expect(updatedGeofence!.position).toHaveLength(6);
+    updatedGeofence!.position.forEach((coord: any, index: number) => {
+      expect(coord.lat).toBeCloseTo(updatePayload.position[index].lat, 3);
+      expect(coord.lng).toBeCloseTo(updatePayload.position[index].lng, 3);
+    });
+
+    logger.info("✓ Geofence updated and verified");
+  });
+
+  // IT 7: Delete Geofence - Assert 200 + Verify with getGeofences
+  it("User DELETE Geofence - API + Query Assert", async () => {
+    logger.info("📍 User deletes geofence");
+
+    // 1. DELETE API call
+    const deleteResponse = await petlink.core.graphqlHttp.authJwt.deleteGeofence({
+      id: geofenceId,
+    });
+
+    expect(deleteResponse.deleteGeofence.code).toBe("200");
+
+    // 2. VERIFY con getGeofences (non dovrebbe più esistere)
+    const getAllResponse = await petlink.core.graphqlHttp.authJwt.getGeofences({});
+    expect(getAllResponse.getGeofences.code).toBe("200");
+
+    const deletedGeofence = getAllResponse.getGeofences.geofences?.find((g: any) => g.id === geofenceId);
+    expect(deletedGeofence).toBeUndefined();
+
+    logger.info("✓ Geofence deleted and verified");
   });
 });

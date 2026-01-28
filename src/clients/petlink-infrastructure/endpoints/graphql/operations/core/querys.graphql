@@ -580,6 +580,26 @@ query getEnergySavingZones {
   }
 }
 
+query getGeofences {
+  getGeofences {
+    code
+    message
+    translationCode
+    geofences {
+      id
+      entityType
+      name
+      position {
+        lat
+        lng
+      }
+      userId
+      creationDate
+      updateDate
+    }
+  }
+}
+
 #FORGOT/RECOVERY flows (public - NO auth)
 
 mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId, $appBrand: AppBrand!) {

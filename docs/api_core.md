@@ -2,8 +2,8 @@
 
 ## 📊 Summary
 - **Total Operations:** 111
-- **Covered:** 40
-- **Missing:** 71
+- **Covered:** 43
+- **Missing:** 68
 
 ---
 
@@ -52,8 +52,8 @@
 | `sendCommand`                 | ✅ Covered |       |
 | `sendSetting`                 | ✅ Covered |       |
 | `createGeofence`              | ✅ Covered |       |
-| `updateGeofence`              | ❌ Missing |       |
-| `deleteGeofence`              | ❌ Missing |       |
+| `updateGeofence`              | ✅ Covered |       |
+| `deleteGeofence`              | ✅ Covered |       |
 | `appKeepAlive`                | ❌ Missing |       |
 | `updateUserContact`           | ❌ Missing |       |
 | `forceClearCache`             | ❌ Missing |       |
@@ -131,7 +131,7 @@
 | `getColors`                  | ✅ Covered |       |
 | `getEnergySavingZone`        | ✅ Covered |       |
 | `getEnergySavingZones`       | ✅ Covered |       |
-| `getGeofences`               | ❌ Missing |       |
+| `getGeofences`               | ✅ Covered |       |
 | `getActivities`              | ❌ Missing |       |
 | `getActivitiesAverage`       | ❌ Missing |       |
 | `getActivitiesByHour`        | ❌ Missing |       |

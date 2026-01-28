@@ -3313,6 +3313,39 @@ export type CreateGeofenceMutation = {
   };
 };
 
+export type UpdateGeofenceMutationVariables = Exact<{
+  geofence: UpdateGeofenceIn;
+}>;
+
+export type UpdateGeofenceMutation = {
+  __typename?: "Mutation";
+  updateGeofence: {
+    __typename?: "ResponseGeofence";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    geofence?: {
+      __typename?: "Geofence";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
+    } | null;
+  };
+};
+
+export type DeleteGeofenceMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteGeofenceMutation = {
+  __typename?: "Mutation";
+  deleteGeofence: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetUserQuery = {
@@ -3984,6 +4017,28 @@ export type GetEnergySavingZonesQuery = {
       creationDate: string;
       updateDate: string;
       position: { __typename?: "Coordinates"; lat: number; lng: number };
+    }> | null;
+  };
+};
+
+export type GetGeofencesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetGeofencesQuery = {
+  __typename?: "Query";
+  getGeofences: {
+    __typename?: "ResponseGeofences";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    geofences?: Array<{
+      __typename?: "Geofence";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
     }> | null;
   };
 };
@@ -5354,6 +5409,104 @@ export const CreateGeofenceDocument = {
                     ],
                   },
                 },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateGeofenceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateGeofence" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "geofence" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateGeofenceIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateGeofence" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "geofence" }, value: { kind: "Variable", name: { kind: "Name", value: "geofence" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "geofence" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteGeofenceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteGeofence" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteGeofence" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
               ],
             },
           },
@@ -6927,6 +7080,59 @@ export const GetEnergySavingZonesDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetGeofencesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getGeofences" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getGeofences" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "geofences" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const SendOtpForgotPasswordDocument = {
   kind: "Document",
   definitions: [
@@ -7388,6 +7594,42 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    updateGeofence(
+      variables: UpdateGeofenceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateGeofenceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateGeofenceMutation>({
+            document: UpdateGeofenceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateGeofence",
+        "mutation",
+        variables,
+      );
+    },
+    deleteGeofence(
+      variables: DeleteGeofenceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteGeofenceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteGeofenceMutation>({
+            document: DeleteGeofenceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteGeofence",
+        "mutation",
+        variables,
+      );
+    },
     getUser(variables?: GetUserQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit["signal"]): Promise<GetUserQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
@@ -7714,6 +7956,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "getEnergySavingZones",
+        "query",
+        variables,
+      );
+    },
+    getGeofences(
+      variables?: GetGeofencesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetGeofencesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetGeofencesQuery>({
+            document: GetGeofencesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getGeofences",
         "query",
         variables,
       );

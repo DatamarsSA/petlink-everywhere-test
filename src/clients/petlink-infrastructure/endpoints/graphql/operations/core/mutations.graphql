@@ -442,3 +442,31 @@ mutation createGeofence($geofence: GeofenceIn!) {
     }
   }
 }
+
+mutation updateGeofence($geofence: UpdateGeofenceIn!) {
+  updateGeofence(geofence: $geofence) {
+    code
+    translationCode
+    message
+    geofence {
+      id
+      entityType
+      name
+      position {
+        lat
+        lng
+      }
+      userId
+      creationDate
+      updateDate
+    }
+  }
+}
+
+mutation deleteGeofence($id: String!) {
+  deleteGeofence(id: $id) {
+    code
+    translationCode
+    message
+  }
+}
