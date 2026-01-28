@@ -3962,17 +3962,6 @@ export type ChangeForgotPasswordMutation = {
   changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
-export type ForgotEmailMutationVariables = Exact<{
-  productNumber: Scalars["String"]["input"];
-  entityType?: InputMaybe<ProductTypeEnum>;
-  languageId?: InputMaybe<LanguageId>;
-}>;
-
-export type ForgotEmailMutation = {
-  __typename?: "Mutation";
-  forgotEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
-};
-
 export const SendOtpDocument = {
   kind: "Document",
   definitions: [
@@ -6869,67 +6858,6 @@ export const ChangeForgotPasswordDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export const ForgotEmailDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "forgotEmail" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "productNumber" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "entityType" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "ProductTypeEnum" } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "forgotEmail" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "productNumber" },
-                value: { kind: "Variable", name: { kind: "Name", value: "productNumber" } },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "entityType" },
-                value: { kind: "Variable", name: { kind: "Name", value: "entityType" } },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "languageId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -7610,24 +7538,6 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "changeForgotPassword",
-        "mutation",
-        variables,
-      );
-    },
-    forgotEmail(
-      variables: ForgotEmailMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<ForgotEmailMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<ForgotEmailMutation>({
-            document: ForgotEmailDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "forgotEmail",
         "mutation",
         variables,
       );
