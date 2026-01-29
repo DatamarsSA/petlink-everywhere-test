@@ -50,3 +50,27 @@ mutation deleteUser($id: String!) {
     translationCode
   }
 }
+
+mutation updateCustomer($customerId: String!, $updateCustomer: UpdateCustomerInput!) {
+  updateCustomer(customerId: $customerId, updateCustomer: $updateCustomer) {
+    code
+    message
+    translationCode
+    customer {
+      id
+      name
+      surname
+      email
+      phone
+      countryCode
+    }
+  }
+}
+
+mutation deleteCustomer($id: String!) {
+  deleteCustomer(id: $id) {
+    code
+    message
+    translationCode
+  }
+}

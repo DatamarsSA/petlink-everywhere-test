@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { testHelper, TestSetup, EnrichedDevice } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../config/logger.js";
-import { FilterEnum, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import { FilterEnum, LanguageId, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
 import { OperatingStatus } from "../../clients/sentinel/packets.js";
 import {
@@ -82,6 +82,61 @@ describe("CCT Tool", () => {
       expect(targetDevice?.petId).toBe(pet.id);
       expect(targetDevice?.customerId).toBe(user.id);
       expect(targetDevice?.serialId).toBe(device.serialNumber);
+    });
+
+    it("should allow CCT Admin to UPDATE Customer", async () => {
+      logger.info("Updating Customer...");
+
+      const updatePayload = {
+        email: "updated.customer@example.com",
+        confermationEmail: true,
+        language: LanguageId.It,
+      };
+
+      const updateResponse = await petlink.cct.graphqlHttp.authJwt.updateCustomer({
+        customerId: user.id,
+        updateCustomer: updatePayload,
+      });
+
+      expect(updateResponse.updateCustomer.code, "").toBe("200");
+      const getResponse = await petlink.cct.graphqlHttp.authJwt.getCustomer({
+        customerId: user.id,
+      });
+      expect(getResponse.getCustomer.customer).toMatchObject({
+        id: user.id,
+        email: updatePayload.email,
+        language: updatePayload.language,
+      });
+
+      logger.info("✓ Customer updated successfully");
+    });
+
+    it("should allow CCT Admin to DELETE Customer", async () => {
+      logger.info("Deleting Customer...");
+
+      // 1. should not allow to delete customer with pet & gps associted
+      const deleteCustomerWithPetResponse = await petlink.cct.graphqlHttp.authJwt.deleteCustomer({
+        id: user.id,
+      });
+      expect(deleteCustomerWithPetResponse.deleteCustomer.code).not.toBe("200");
+
+
+      // 2. should allow to delete customer without pet & gps associted
+      await testHelper.cleanupAll();
+      let newSetup = await testHelper.setupBuilder().withUser().build();
+      let newUserWithoutPet = newSetup.user!;
+      expect(newSetup.user).toBeDefined();
+      const deleteCustomerWithoutPetResponse = await petlink.cct.graphqlHttp.authJwt.deleteCustomer({
+        id: newUserWithoutPet.id,
+      });
+      expect(deleteCustomerWithoutPetResponse.deleteCustomer.code).toBe("200");
+      // Verify customer no longer exists
+      const getResponse = await petlink.cct.graphqlHttp.authJwt.getCustomer({
+        customerId: newUserWithoutPet.id,
+      });
+      expect(getResponse.getCustomer.code).toBe("404");
+
+      logger.info("✓ Customer deleted and verified");
     });
   });
 

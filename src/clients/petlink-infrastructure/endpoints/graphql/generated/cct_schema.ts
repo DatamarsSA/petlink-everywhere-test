@@ -1906,6 +1906,31 @@ export type DeleteUserMutation = {
   deleteUser: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
 };
 
+export type UpdateCustomerMutationVariables = Exact<{
+  customerId: Scalars["String"]["input"];
+  updateCustomer: UpdateCustomerInput;
+}>;
+
+export type UpdateCustomerMutation = {
+  __typename?: "Mutation";
+  updateCustomer: {
+    __typename?: "UpdateCustomerResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    customer?: { __typename?: "Customer"; id: string; name: string; surname: string; email: string; phone: string; countryCode: string } | null;
+  };
+};
+
+export type DeleteCustomerMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteCustomerMutation = {
+  __typename?: "Mutation";
+  deleteCustomer: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
 export type GetCustomerQueryVariables = Exact<{
   customerId: Scalars["String"]["input"];
 }>;
@@ -2494,6 +2519,107 @@ export const DeleteUserDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "deleteUser" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateCustomerDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateCustomer" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "updateCustomer" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateCustomerInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateCustomer" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "customerId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "updateCustomer" },
+                value: { kind: "Variable", name: { kind: "Name", value: "updateCustomer" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "customer" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteCustomerDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteCustomer" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteCustomer" },
             arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
             selectionSet: {
               kind: "SelectionSet",
@@ -3621,6 +3747,42 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "deleteUser",
+        "mutation",
+        variables,
+      );
+    },
+    updateCustomer(
+      variables: UpdateCustomerMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateCustomerMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateCustomerMutation>({
+            document: UpdateCustomerDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateCustomer",
+        "mutation",
+        variables,
+      );
+    },
+    deleteCustomer(
+      variables: DeleteCustomerMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteCustomerMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteCustomerMutation>({
+            document: DeleteCustomerDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteCustomer",
         "mutation",
         variables,
       );
