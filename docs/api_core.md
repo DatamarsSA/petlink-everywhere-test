@@ -5,6 +5,9 @@
 - **Covered:** 43
 - **Missing:** 68
 
+Total -> `petlink-everywhere-test/src/clients/petlink-infrastructure/endpoints/graphql/schema/core_schema.graphql`  
+Covered -> `petlink-everywhere-test/src/clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.ts`
+
 ---
 
 ### Mutations (57 Total)

@@ -66,10 +66,12 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to view Customer Devices and verify associations", async () => {
-      // CustomGetCustomerDevices
       logger.info("Fetching Customer Devices...");
-      const devicesResponse = await petlink.cct.graphqlHttp.authJwt.customGetCustomerDevices({
-        customerId: user.id,
+      const devicesResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
+        filter: {
+          filterType: FilterEnum.And,
+          customerId: user.id,
+        },
       });
 
       expect(devicesResponse.getDevices.code).toBe("200");
@@ -214,8 +216,8 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to view Device Subscriptions", async () => {
-      // GetCustomDeviceSubscriptions
-      const subResponse = await petlink.cct.graphqlHttp.authJwt.getCustomDeviceSubscriptions({
+      // GetSubscriptions - usando endpoint CCT
+      const subResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
         deviceId: device.id,
       });
       expect(subResponse.getSubscriptions.code).toBe("200");

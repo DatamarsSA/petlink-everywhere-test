@@ -2144,32 +2144,13 @@ export type GetPetQuery = {
   };
 };
 
-export type CustomGetCustomerDevicesQueryVariables = Exact<{
-  customerId: Scalars["String"]["input"];
-}>;
-
-export type CustomGetCustomerDevicesQuery = {
-  __typename?: "Query";
-  getDevices: {
-    __typename?: "GetDevicesResponse";
-    code: string;
-    message: string;
-    items: Array<{
-      __typename?: "Device";
-      serialId: string;
-      deviceId?: string | null;
-      petId?: string | null;
-      customerId?: string | null;
-      hasSubscriptionActive?: boolean | null;
-    }>;
-  };
-};
-
-export type GetCustomDeviceSubscriptionsQueryVariables = Exact<{
+export type GetSubscriptionsQueryVariables = Exact<{
   deviceId: Scalars["String"]["input"];
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
 }>;
 
-export type GetCustomDeviceSubscriptionsQuery = {
+export type GetSubscriptionsQuery = {
   __typename?: "Query";
   getSubscriptions: {
     __typename?: "GetSubscriptionsResponse";
@@ -2215,6 +2196,7 @@ export type GetCustomDeviceSubscriptionsQuery = {
         notes?: string | null;
       } | null;
     }> | null;
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
   };
 };
 
@@ -3055,104 +3037,28 @@ export const GetPetDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export const CustomGetCustomerDevicesDocument = {
+export const GetSubscriptionsDocument = {
   kind: "Document",
   definitions: [
     {
       kind: "OperationDefinition",
       operation: "query",
-      name: { kind: "Name", value: "customGetCustomerDevices" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "getDevices" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "filter" },
-                value: {
-                  kind: "ObjectValue",
-                  fields: [
-                    {
-                      kind: "ObjectField",
-                      name: { kind: "Name", value: "customerId" },
-                      value: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
-                    },
-                    { kind: "ObjectField", name: { kind: "Name", value: "filterType" }, value: { kind: "EnumValue", value: "OR" } },
-                  ],
-                },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "pagination" },
-                value: {
-                  kind: "ObjectValue",
-                  fields: [
-                    { kind: "ObjectField", name: { kind: "Name", value: "pageNumber" }, value: { kind: "IntValue", value: "0" } },
-                    { kind: "ObjectField", name: { kind: "Name", value: "pageSize" }, value: { kind: "IntValue", value: "1000" } },
-                  ],
-                },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "order" },
-                value: {
-                  kind: "ObjectValue",
-                  fields: [
-                    { kind: "ObjectField", name: { kind: "Name", value: "field" }, value: { kind: "StringValue", value: "serialId", block: false } },
-                    { kind: "ObjectField", name: { kind: "Name", value: "order" }, value: { kind: "EnumValue", value: "asc" } },
-                  ],
-                },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "items" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
-                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
-                      { kind: "Field", name: { kind: "Name", value: "petId" } },
-                      { kind: "Field", name: { kind: "Name", value: "customerId" } },
-                      { kind: "Field", name: { kind: "Name", value: "hasSubscriptionActive" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const GetCustomDeviceSubscriptionsDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "query",
-      name: { kind: "Name", value: "getCustomDeviceSubscriptions" },
+      name: { kind: "Name", value: "getSubscriptions" },
       variableDefinitions: [
         {
           kind: "VariableDefinition",
           variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
           type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
         },
       ],
       selectionSet: {
@@ -3166,29 +3072,9 @@ export const GetCustomDeviceSubscriptionsDocument = {
               {
                 kind: "Argument",
                 name: { kind: "Name", value: "pagination" },
-                value: {
-                  kind: "ObjectValue",
-                  fields: [
-                    { kind: "ObjectField", name: { kind: "Name", value: "pageNumber" }, value: { kind: "IntValue", value: "0" } },
-                    { kind: "ObjectField", name: { kind: "Name", value: "pageSize" }, value: { kind: "IntValue", value: "1000000" } },
-                  ],
-                },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
               },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "order" },
-                value: {
-                  kind: "ObjectValue",
-                  fields: [
-                    {
-                      kind: "ObjectField",
-                      name: { kind: "Name", value: "field" },
-                      value: { kind: "StringValue", value: "creationDate", block: false },
-                    },
-                    { kind: "ObjectField", name: { kind: "Name", value: "order" }, value: { kind: "EnumValue", value: "desc" } },
-                  ],
-                },
-              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
             ],
             selectionSet: {
               kind: "SelectionSet",
@@ -3250,6 +3136,19 @@ export const GetCustomDeviceSubscriptionsDocument = {
                       { kind: "Field", name: { kind: "Name", value: "moved" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
                     ],
                   },
                 },
@@ -3873,38 +3772,20 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
-    customGetCustomerDevices(
-      variables: CustomGetCustomerDevicesQueryVariables,
+    getSubscriptions(
+      variables: GetSubscriptionsQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
       signal?: RequestInit["signal"],
-    ): Promise<CustomGetCustomerDevicesQuery> {
+    ): Promise<GetSubscriptionsQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<CustomGetCustomerDevicesQuery>({
-            document: CustomGetCustomerDevicesDocument,
+          client.request<GetSubscriptionsQuery>({
+            document: GetSubscriptionsDocument,
             variables,
             requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
             signal,
           }),
-        "customGetCustomerDevices",
-        "query",
-        variables,
-      );
-    },
-    getCustomDeviceSubscriptions(
-      variables: GetCustomDeviceSubscriptionsQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<GetCustomDeviceSubscriptionsQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetCustomDeviceSubscriptionsQuery>({
-            document: GetCustomDeviceSubscriptionsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "getCustomDeviceSubscriptions",
+        "getSubscriptions",
         "query",
         variables,
       );

@@ -2,9 +2,11 @@
 
 ## 📊 Summary
 - **Total Operations:** 55
-- **Covered:** 14
-- **Missing:** 41
+- **Covered:** 17
+- **Missing:** 38
 
+Total -> `petlink-everywhere-test/src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql`   
+Covered -> `petlink-everywhere-test/src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts`
 ---
 
 ## 📋 API Coverage Details
@@ -16,14 +18,14 @@
 | `createUser`                 | ✅ Covered |       |
 | `deleteUser`                 | ✅ Covered |       |
 | `updateUser`                 | ✅ Covered |       |
-| `deleteCustomer`             | ❌ Missing |       |
+| `deleteCustomer`             | ✅ Covered |       |
+| `updateCustomer`             | ✅ Covered |       |
 | `updateRoleUser`             | ❌ Missing |       |
 | `createSubscription`         | ❌ Missing |       |
 | `refundInvoice`              | ❌ Missing |       |
 | `updateCurrentTermEnd`       | ❌ Missing |       |
 | `resetPetlinkGps`            | ❌ Missing |       |
 | `addFreePeriod`              | ❌ Missing |       |
-| `updateCustomer`             | ❌ Missing |       |
 | `createIssue`                | ❌ Missing |       |
 | `addTicketToIssue`           | ❌ Missing |       |
 | `stopRenewingSubscription`   | ❌ Missing |       |
@@ -49,6 +51,7 @@
 | `getCustomer`                     | ✅ Covered |       |
 | `getPet`                          | ✅ Covered |       |
 | `getLogActivityUser`              | ✅ Covered |       |
+| `getSubscriptions`                | ✅ Covered |       |
 | `getDevicesMap`                   | ❌ Missing |       |
 | `getInsuranceDevicesInfo`         | ❌ Missing |       |
 | `getActivities`                   | ❌ Missing |       |
@@ -57,7 +60,6 @@
 | `getIssues`                       | ❌ Missing |       |
 | `getPetProtections`               | ❌ Missing |       |
 | `getPetProtection`                | ❌ Missing |       |
-| `getSubscriptions`                | ❌ Missing |       |
 | `getSubscription`                 | ❌ Missing |       |
 | `getSubscriptionsCancelled`       | ❌ Missing |       |
 | `getSubscriptionsPrepaid`         | ❌ Missing |       |

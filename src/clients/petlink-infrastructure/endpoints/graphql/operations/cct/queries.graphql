@@ -181,30 +181,9 @@ query getPet($petId: String!) {
   }
 }
 
-query customGetCustomerDevices($customerId: String!) {
-  getDevices(
-    filter: { customerId: $customerId, filterType: OR }
-    pagination: { pageNumber: 0, pageSize: 1000 }
-    order: { field: "serialId", order: asc }
-  ) {
-    code
-    message
-    items {
-      serialId
-      deviceId
-      petId
-      customerId
-      hasSubscriptionActive
-    }
-  }
-}
 
-query getCustomDeviceSubscriptions($deviceId: String!) {
-  getSubscriptions(
-    deviceId: $deviceId
-    pagination: { pageNumber: 0, pageSize: 1000000 }
-    order: { field: "creationDate", order: desc }
-  ) {
+query getSubscriptions($deviceId: String!, $pagination: PaginationInput, $order: OrderInput) {
+  getSubscriptions(deviceId: $deviceId, pagination: $pagination, order: $order) {
     code
     message
     items {
@@ -243,6 +222,12 @@ query getCustomDeviceSubscriptions($deviceId: String!) {
       moved
       creationDate
       updateDate
+    }
+    pagination {
+      pageSize
+      totalPage
+      totalItems
+      currentPage
     }
   }
 }
