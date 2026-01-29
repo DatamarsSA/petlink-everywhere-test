@@ -5,8 +5,8 @@
 - **Covered:** 17
 - **Missing:** 38
 
-Total -> `petlink-everywhere-test/src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql`   
-Covered -> `petlink-everywhere-test/src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts`
+Total -> [FETCHED-cct_schema.graphql](../src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql)   
+Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts)
 ---
 
 ## 📋 API Coverage Details
