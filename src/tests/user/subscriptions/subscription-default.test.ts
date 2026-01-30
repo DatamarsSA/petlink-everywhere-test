@@ -13,7 +13,7 @@ import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import { waitFor } from "../../../helpers/utils.js";
 
-describe.skip("DEFAULT subscription flow", () => {
+describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
