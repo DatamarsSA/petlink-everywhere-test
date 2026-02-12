@@ -1,3 +1,82 @@
+mutation updateEndOfLife(
+  $eolId: String
+  $deviceId: String
+  $input: EndOfLifeIn
+) {
+  updateEndOfLife(eolId: $eolId, deviceId: $deviceId, input: $input) {
+    code
+    message
+    translationCode
+    endOfLife {
+      id
+      step
+      userId
+      productId
+      serialNumber
+      devicePrice {
+        id
+        deviceType
+        price
+        period
+        periodUnit
+        discountPercentage
+        currencyCode
+        countryCode
+        __typename
+      }
+      subscriptionId
+      pricing {
+        id
+        name
+        externalName
+        itemId
+        price
+        period
+        currencyCode
+        periodUnit
+        itemFamilyId
+        status
+        trialPeriod
+        trialPeriodUnit
+        itemType
+        addonPricings {
+          id
+          name
+          externalName
+          itemId
+          price
+          period
+          currencyCode
+          periodUnit
+          itemFamilyId
+          status
+          trialPeriod
+          trialPeriodUnit
+          itemType
+          __typename
+        }
+        __typename
+      }
+      addonIds
+      shopUrl
+      shippingInfo {
+        firstName
+        lastName
+        email
+        phone
+        address
+        city
+        stateCode
+        state
+        country
+        zip
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}
 mutation sendOtp($phone: String!, $languageId: LanguageId) {
   sendOtp(phone: $phone, languageId: $languageId) {
     code
@@ -467,6 +546,12 @@ mutation deleteGeofence($id: String!) {
   deleteGeofence(id: $id) {
     code
     translationCode
+    message
+  }
+}
+mutation acknowledgeCheckout($id: String!) {
+  acknowledgeCheckout(id: $id) {
+    code
     message
   }
 }

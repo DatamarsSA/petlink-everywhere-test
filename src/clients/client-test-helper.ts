@@ -19,11 +19,7 @@ import { waitFor } from "../helpers/utils.js";
 import { existsSync, mkdirSync } from "fs";
 import { unlinkSync } from "node:fs";
 
-type UserOptions = {
-  email?: string;
-  phone?: string;
-  password?: string;
-};
+type UserOptions = Partial<UserIn>;
 
 export type EnrichedDevice = PetlinkGps & {
   imei: string;
@@ -45,6 +41,10 @@ export interface TestSetup {
   };
 }
 
+export type SubscriptionOptions = {
+  priceId?: string;
+};
+
 class TestSetupBuilder {
   private setup: TestSetup = { pets: {}, devices: {} };
   private includeUser = false;
@@ -56,6 +56,7 @@ class TestSetupBuilder {
   private includeDogEvoDevice = false;
   private includeCatDevice = false;
   private includeSubscription = false;
+  private subscriptionOptions: SubscriptionOptions = {};
 
   constructor(private helper: TestHelper) {}
 
@@ -100,12 +101,12 @@ class TestSetupBuilder {
 
   /**
    * Acquista una subscription per il device
-   * Prerequisiti: withUser(), withDogDevice() devono essere chiamati prima
-   * Internamente: aggiorna billing info + acquista subscription in parallelo
-   * Card utilizzata: fxt.current.card.valid
+   * Prerequisiti: withUser(), withDogDevice()/withDogEvoDevice() devono essere chiamati prima
+   * Internamente: aggiorna billing info + acquista subscription
    */
-  withSubscription(): this {
+  withSubscription(options: SubscriptionOptions = {}): this {
     this.includeSubscription = true;
+    this.subscriptionOptions = options;
     return this;
   }
 
@@ -227,8 +228,11 @@ class TestSetupBuilder {
     }
 
     // Acquista subscription se richiesto
-    if (this.includeSubscription && this.setup.user && this.setup.devices.dogStandard) {
-      await this.helper.purchaseSubscription(this.setup.user, this.setup.devices.dogStandard);
+    const deviceToSubscribe =
+      this.setup.devices.dogEvo || this.setup.devices.dogStandard || this.setup.devices.catStandard;
+
+    if (this.includeSubscription && this.setup.user && deviceToSubscribe) {
+      await this.helper.purchaseSubscription(this.setup.user, deviceToSubscribe, this.subscriptionOptions);
     }
 
     return this.setup;
@@ -341,17 +345,9 @@ class TestHelper {
     logger.debug("→ Creating test user");
 
     const userPayload: UserIn = {
-      email: options.email ?? fxt.current.user.email,
-      name: fxt.current.user.name,
-      surname: fxt.current.user.surname,
-      city: fxt.current.user.city,
-      countryCode: fxt.current.user.countryCode,
-      zipCode: fxt.current.user.zipCode,
-      streetAddress: fxt.current.user.streetAddress,
-      phone: options.phone ?? fxt.current.user.phone,
-      password: options.password ?? fxt.current.user.password,
-      confirmPassword: options.password ?? fxt.current.user.confirmPassword,
-      languageId: fxt.current.user.languageId,
+      ...fxt.current.user,
+      ...options,
+      confirmPassword: options.confirmPassword ?? options.password ?? fxt.current.user.confirmPassword,
     };
 
     const response = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
@@ -499,12 +495,12 @@ class TestHelper {
    *   2. Ottiene i piani disponibili
    *   3. Acquista il primo piano disponibile
    */
-  async purchaseSubscription(user: User, device: PetlinkGps): Promise<void> {
-    logger.debug("→ Purchasing subscription for device", { deviceId: device.id });
+  async purchaseSubscription(user: User, device: PetlinkGps, options: SubscriptionOptions = {}): Promise<void> {
+    logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceId: options.priceId });
 
     // STEP 1 & 2: Aggiorna billing info + ottieni piani
     const [_, plansResponse] = await Promise.all([
-      // Aggiorna billing info (non serve il risultato)
+      // Aggiorna billing info
       petlink.core.graphqlHttp.authJwt.updateBillingInfo({
         updateBillingInfoInput: {
           billingInfo: {
@@ -520,7 +516,7 @@ class TestHelper {
         },
       }),
 
-      // Ottieni i piani disponibili
+      // Ottieni i piani disponibili (sempre necessario per fallback o log)
       petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
         productId: device.id,
         countryCode: user.countryCode!,
@@ -532,19 +528,18 @@ class TestHelper {
       throw new Error(`Failed to get subscription plans: ${plansResponse.getSubscriptionPlans.message}`);
     }
 
-    // STEP 3: Seleziona il primo piano disponibile
-    const selectedPlan = plansResponse.getSubscriptionPlans.plans?.[0];
-    if (!selectedPlan || !selectedPlan.pricings[0]) {
-      throw new Error("No subscription plans available");
+    // STEP 3: Seleziona il priceId
+    let chosenPriceId = options.priceId;
+
+    if (!chosenPriceId) {
+      const allPricings = plansResponse.getSubscriptionPlans.plans?.flatMap((p) => p.pricings) || [];
+      if (allPricings.length === 0) {
+        throw new Error("No subscription plans available and no specific priceId provided");
+      }
+      chosenPriceId = allPricings[0].id;
     }
 
-    const chosenPricing = selectedPlan.pricings[0];
-
-    logger.debug("✓ Billing info updated and subscription plan found", {
-      planId: chosenPricing.id,
-      price: chosenPricing.price,
-      period: chosenPricing.period,
-    });
+    logger.debug("✓ Billing info updated and priceId identified", { priceId: chosenPriceId });
 
     // STEP 4: Acquista la subscription
     const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
@@ -552,7 +547,7 @@ class TestHelper {
         utilityType: UtilityTestTypeEnum.BuyNewSubscription,
         phone: user.phone,
         productId: device.id,
-        priceIds: [chosenPricing.id],
+        priceIds: [chosenPriceId],
         card: fxt.current.card.valid,
       },
     });

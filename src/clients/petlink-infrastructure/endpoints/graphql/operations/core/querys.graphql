@@ -1,3 +1,133 @@
+query getPlansEOL($productId: String!, $countryCode: String) {
+  getPlansEOL(productId: $productId, countryCode: $countryCode) {
+    code
+    translationCode
+    message
+    plans {
+      itemId
+      pricings {
+        id
+        name
+        externalName
+        itemId
+        price
+        period
+        currencyCode
+        periodUnit
+        itemFamilyId
+        status
+        trialPeriod
+        trialPeriodUnit
+        itemType
+        addonPricings {
+          id
+          name
+          externalName
+          itemId
+          price
+          period
+          currencyCode
+          periodUnit
+          itemFamilyId
+          status
+          trialPeriod
+          trialPeriodUnit
+          itemType
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    devicePrice {
+      id
+      deviceType
+      price
+      period
+      periodUnit
+      discountPercentage
+      currencyCode
+      countryCode
+      __typename
+    }
+    endOfLife {
+      id
+      step
+      userId
+      productId
+      serialNumber
+      devicePrice {
+        id
+        deviceType
+        price
+        period
+        periodUnit
+        discountPercentage
+        currencyCode
+        countryCode
+        __typename
+      }
+      subscriptionId
+      pricing {
+        id
+        name
+        externalName
+        itemId
+        price
+        period
+        currencyCode
+        periodUnit
+        itemFamilyId
+        status
+        trialPeriod
+        trialPeriodUnit
+        itemType
+        addonPricings {
+          id
+          name
+          externalName
+          itemId
+          price
+          period
+          currencyCode
+          periodUnit
+          itemFamilyId
+          status
+          trialPeriod
+          trialPeriodUnit
+          itemType
+          __typename
+        }
+        __typename
+      }
+      addonIds
+      shopUrl
+      shippingInfo {
+        firstName
+        lastName
+        email
+        phone
+        address
+        city
+        stateCode
+        state
+        country
+        zip
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}
+query checkoutEOLNewDevice($eolId: String!) {
+  checkoutEOLNewDevice(eolId: $eolId) {
+    code
+    message
+    url
+    __typename
+  }
+}
 query getUser {
   getUser {
     code

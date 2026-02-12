@@ -2810,6 +2810,89 @@ export enum ValidationStatusEnum {
   Valid = "valid",
 }
 
+export type UpdateEndOfLifeMutationVariables = Exact<{
+  eolId?: InputMaybe<Scalars["String"]["input"]>;
+  deviceId?: InputMaybe<Scalars["String"]["input"]>;
+  input?: InputMaybe<EndOfLifeIn>;
+}>;
+
+export type UpdateEndOfLifeMutation = {
+  __typename?: "Mutation";
+  updateEndOfLife: {
+    __typename: "ResponseUpdateEndOfLife";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    endOfLife?: {
+      __typename: "EndOfLife";
+      id: string;
+      step: string;
+      userId: string;
+      productId: string;
+      serialNumber: string;
+      subscriptionId?: string | null;
+      addonIds?: Array<string> | null;
+      shopUrl?: string | null;
+      devicePrice?: {
+        __typename: "DevicePrice";
+        id: string;
+        deviceType: DeviceTypeEnum;
+        price: number;
+        period?: number | null;
+        periodUnit?: string | null;
+        discountPercentage: number;
+        currencyCode: string;
+        countryCode: string;
+      } | null;
+      pricing?: {
+        __typename: "Pricing";
+        id: string;
+        name: string;
+        externalName?: string | null;
+        itemId: string;
+        price?: number | null;
+        period?: number | null;
+        currencyCode: string;
+        periodUnit?: string | null;
+        itemFamilyId?: string | null;
+        status?: string | null;
+        trialPeriod?: number | null;
+        trialPeriodUnit?: string | null;
+        itemType?: string | null;
+        addonPricings?: Array<{
+          __typename: "AddonPricing";
+          id: string;
+          name: string;
+          externalName?: string | null;
+          itemId: string;
+          price?: number | null;
+          period?: number | null;
+          currencyCode: string;
+          periodUnit?: string | null;
+          itemFamilyId?: string | null;
+          status?: string | null;
+          trialPeriod?: number | null;
+          trialPeriodUnit?: string | null;
+          itemType?: string | null;
+        } | null> | null;
+      } | null;
+      shippingInfo?: {
+        __typename: "ShippingInfo";
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+        address: string;
+        city: string;
+        stateCode?: string | null;
+        state?: string | null;
+        country: string;
+        zip: string;
+      } | null;
+    } | null;
+  };
+};
+
 export type SendOtpMutationVariables = Exact<{
   phone: Scalars["String"]["input"];
   languageId?: InputMaybe<LanguageId>;
@@ -3344,6 +3427,153 @@ export type DeleteGeofenceMutationVariables = Exact<{
 export type DeleteGeofenceMutation = {
   __typename?: "Mutation";
   deleteGeofence: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type AcknowledgeCheckoutMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type AcknowledgeCheckoutMutation = {
+  __typename?: "Mutation";
+  acknowledgeCheckout: { __typename?: "Response"; code: string; message: string };
+};
+
+export type GetPlansEolQueryVariables = Exact<{
+  productId: Scalars["String"]["input"];
+  countryCode?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetPlansEolQuery = {
+  __typename?: "Query";
+  getPlansEOL: {
+    __typename: "ResponseGetPlansEOL";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    plans?: Array<{
+      __typename: "Plan";
+      itemId: string;
+      pricings: Array<{
+        __typename: "Pricing";
+        id: string;
+        name: string;
+        externalName?: string | null;
+        itemId: string;
+        price?: number | null;
+        period?: number | null;
+        currencyCode: string;
+        periodUnit?: string | null;
+        itemFamilyId?: string | null;
+        status?: string | null;
+        trialPeriod?: number | null;
+        trialPeriodUnit?: string | null;
+        itemType?: string | null;
+        addonPricings?: Array<{
+          __typename: "AddonPricing";
+          id: string;
+          name: string;
+          externalName?: string | null;
+          itemId: string;
+          price?: number | null;
+          period?: number | null;
+          currencyCode: string;
+          periodUnit?: string | null;
+          itemFamilyId?: string | null;
+          status?: string | null;
+          trialPeriod?: number | null;
+          trialPeriodUnit?: string | null;
+          itemType?: string | null;
+        } | null> | null;
+      } | null>;
+    }> | null;
+    devicePrice?: Array<{
+      __typename: "DevicePrice";
+      id: string;
+      deviceType: DeviceTypeEnum;
+      price: number;
+      period?: number | null;
+      periodUnit?: string | null;
+      discountPercentage: number;
+      currencyCode: string;
+      countryCode: string;
+    }> | null;
+    endOfLife?: {
+      __typename: "EndOfLife";
+      id: string;
+      step: string;
+      userId: string;
+      productId: string;
+      serialNumber: string;
+      subscriptionId?: string | null;
+      addonIds?: Array<string> | null;
+      shopUrl?: string | null;
+      devicePrice?: {
+        __typename: "DevicePrice";
+        id: string;
+        deviceType: DeviceTypeEnum;
+        price: number;
+        period?: number | null;
+        periodUnit?: string | null;
+        discountPercentage: number;
+        currencyCode: string;
+        countryCode: string;
+      } | null;
+      pricing?: {
+        __typename: "Pricing";
+        id: string;
+        name: string;
+        externalName?: string | null;
+        itemId: string;
+        price?: number | null;
+        period?: number | null;
+        currencyCode: string;
+        periodUnit?: string | null;
+        itemFamilyId?: string | null;
+        status?: string | null;
+        trialPeriod?: number | null;
+        trialPeriodUnit?: string | null;
+        itemType?: string | null;
+        addonPricings?: Array<{
+          __typename: "AddonPricing";
+          id: string;
+          name: string;
+          externalName?: string | null;
+          itemId: string;
+          price?: number | null;
+          period?: number | null;
+          currencyCode: string;
+          periodUnit?: string | null;
+          itemFamilyId?: string | null;
+          status?: string | null;
+          trialPeriod?: number | null;
+          trialPeriodUnit?: string | null;
+          itemType?: string | null;
+        } | null> | null;
+      } | null;
+      shippingInfo?: {
+        __typename: "ShippingInfo";
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+        address: string;
+        city: string;
+        stateCode?: string | null;
+        state?: string | null;
+        country: string;
+        zip: string;
+      } | null;
+    } | null;
+  };
+};
+
+export type CheckoutEolNewDeviceQueryVariables = Exact<{
+  eolId: Scalars["String"]["input"];
+}>;
+
+export type CheckoutEolNewDeviceQuery = {
+  __typename?: "Query";
+  checkoutEOLNewDevice: { __typename: "ResponseCheckoutEOLNewDevice"; code: string; message: string; url?: string | null };
 };
 
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
@@ -4071,6 +4301,158 @@ export type ChangeForgotPasswordMutation = {
   changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
+export const UpdateEndOfLifeDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateEndOfLife" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "eolId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "EndOfLifeIn" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateEndOfLife" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "eolId" }, value: { kind: "Variable", name: { kind: "Name", value: "eolId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "endOfLife" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "step" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "devicePrice" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "deviceType" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pricing" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "addonPricings" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "id" } },
+                                  { kind: "Field", name: { kind: "Name", value: "name" } },
+                                  { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "price" } },
+                                  { kind: "Field", name: { kind: "Name", value: "period" } },
+                                  { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                                  { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "status" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                                ],
+                              },
+                            },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "addonIds" } },
+                      { kind: "Field", name: { kind: "Name", value: "shopUrl" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "shippingInfo" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "firstName" } },
+                            { kind: "Field", name: { kind: "Name", value: "lastName" } },
+                            { kind: "Field", name: { kind: "Name", value: "email" } },
+                            { kind: "Field", name: { kind: "Name", value: "phone" } },
+                            { kind: "Field", name: { kind: "Name", value: "address" } },
+                            { kind: "Field", name: { kind: "Name", value: "city" } },
+                            { kind: "Field", name: { kind: "Name", value: "stateCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "state" } },
+                            { kind: "Field", name: { kind: "Name", value: "country" } },
+                            { kind: "Field", name: { kind: "Name", value: "zip" } },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                    ],
+                  },
+                },
+                { kind: "Field", name: { kind: "Name", value: "__typename" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const SendOtpDocument = {
   kind: "Document",
   definitions: [
@@ -5507,6 +5889,307 @@ export const DeleteGeofenceDocument = {
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const AcknowledgeCheckoutDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "acknowledgeCheckout" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "acknowledgeCheckout" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetPlansEolDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getPlansEOL" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "countryCode" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPlansEOL" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "countryCode" },
+                value: { kind: "Variable", name: { kind: "Name", value: "countryCode" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "plans" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pricings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "addonPricings" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "id" } },
+                                  { kind: "Field", name: { kind: "Name", value: "name" } },
+                                  { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "price" } },
+                                  { kind: "Field", name: { kind: "Name", value: "period" } },
+                                  { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                                  { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "status" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                                ],
+                              },
+                            },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "devicePrice" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceType" } },
+                      { kind: "Field", name: { kind: "Name", value: "price" } },
+                      { kind: "Field", name: { kind: "Name", value: "period" } },
+                      { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                      { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                      { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "endOfLife" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "step" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "devicePrice" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "deviceType" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pricing" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "addonPricings" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "id" } },
+                                  { kind: "Field", name: { kind: "Name", value: "name" } },
+                                  { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "price" } },
+                                  { kind: "Field", name: { kind: "Name", value: "period" } },
+                                  { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                                  { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "status" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                                ],
+                              },
+                            },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "addonIds" } },
+                      { kind: "Field", name: { kind: "Name", value: "shopUrl" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "shippingInfo" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "firstName" } },
+                            { kind: "Field", name: { kind: "Name", value: "lastName" } },
+                            { kind: "Field", name: { kind: "Name", value: "email" } },
+                            { kind: "Field", name: { kind: "Name", value: "phone" } },
+                            { kind: "Field", name: { kind: "Name", value: "address" } },
+                            { kind: "Field", name: { kind: "Name", value: "city" } },
+                            { kind: "Field", name: { kind: "Name", value: "stateCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "state" } },
+                            { kind: "Field", name: { kind: "Name", value: "country" } },
+                            { kind: "Field", name: { kind: "Name", value: "zip" } },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                    ],
+                  },
+                },
+                { kind: "Field", name: { kind: "Name", value: "__typename" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CheckoutEolNewDeviceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "checkoutEOLNewDevice" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "eolId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "checkoutEOLNewDevice" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "eolId" }, value: { kind: "Variable", name: { kind: "Name", value: "eolId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
+                { kind: "Field", name: { kind: "Name", value: "__typename" } },
               ],
             },
           },
@@ -7252,6 +7935,24 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
+    updateEndOfLife(
+      variables?: UpdateEndOfLifeMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateEndOfLifeMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateEndOfLifeMutation>({
+            document: UpdateEndOfLifeDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateEndOfLife",
+        "mutation",
+        variables,
+      );
+    },
     sendOtp(
       variables: SendOtpMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -7627,6 +8328,60 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
           }),
         "deleteGeofence",
         "mutation",
+        variables,
+      );
+    },
+    acknowledgeCheckout(
+      variables: AcknowledgeCheckoutMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<AcknowledgeCheckoutMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AcknowledgeCheckoutMutation>({
+            document: AcknowledgeCheckoutDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "acknowledgeCheckout",
+        "mutation",
+        variables,
+      );
+    },
+    getPlansEOL(
+      variables: GetPlansEolQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPlansEolQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPlansEolQuery>({
+            document: GetPlansEolDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getPlansEOL",
+        "query",
+        variables,
+      );
+    },
+    checkoutEOLNewDevice(
+      variables: CheckoutEolNewDeviceQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CheckoutEolNewDeviceQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CheckoutEolNewDeviceQuery>({
+            document: CheckoutEolNewDeviceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "checkoutEOLNewDevice",
+        "query",
         variables,
       );
     },
