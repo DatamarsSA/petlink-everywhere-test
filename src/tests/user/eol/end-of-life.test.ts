@@ -95,11 +95,10 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
         productId,
         countryCode: "FR",
       });
-
       expect(eligibility.getPlansEOL.code).toBe("200");
       expect(eligibility.getPlansEOL.plans, "Flow 1 should have empty plans list").toHaveLength(0);
 
-      const selectedDevice = eligibility.getPlansEOL.devicePrice![0];
+      const selectedDevicePrice = eligibility.getPlansEOL.devicePrice![0];
 
       // 2. Device Selection -> Step: SHIPPING_INFO_FROM_ONLY_DEVICE
       const initRes = await petlink.core.graphqlHttp.authJwt.updateEndOfLife({
@@ -110,7 +109,7 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
           userId: testUser.id,
           serialNumber: setup.devices.dogEvo!.serialNumber,
           step: EOL_STEPS.SHIPPING_INFO_FROM_ONLY_DEVICE,
-          devicePriceId: selectedDevice.id,
+          devicePriceId: selectedDevicePrice.id,
         },
       });
       expect(initRes.updateEndOfLife.code).toBe("200");
@@ -137,7 +136,7 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
           userId: testUser.id,
           serialNumber: setup.devices.dogEvo!.serialNumber,
           step: EOL_STEPS.SHIPPING_INFO_DEFINED_BEFORE_EXTERNAL_PAGE,
-          devicePriceId: selectedDevice.id,
+          devicePriceId: selectedDevicePrice.id,
           shippingInfo,
         },
       });
