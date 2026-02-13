@@ -42,3 +42,6 @@ debug/
 # Runtime files
 src/infrastructure/schema/
 src/infrastructure/lib/generated
+
+# All repo of infrastructure
+all-repo/

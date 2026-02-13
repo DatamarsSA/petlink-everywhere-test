@@ -66,7 +66,6 @@ describe.sequential("User Subscription Purchase Flow", () => {
 **Key Principles**:
 - **Clean First**: `cleanupAll()` runs *before* tests (as a config of setupFiles - beforeAll), ensuring a fresh start and allowing manual inspection of the database after a run.
 - **Use the Builder**: `.withUser()`, `.withDog()`, `.withCatDevice()`, etc. abstract away the complexity of entity creation. Access results via the `setup` object.
-- **Sequential Execution**: Use `describe.sequential` when tests in a file depend on each other to form a complete user flow.
 
 ### Step 2: Define Explicit Payloads (No Spread Operator)
 
