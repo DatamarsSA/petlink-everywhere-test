@@ -121,7 +121,7 @@ describe("Subscription Purchase", () => {
 Comprehensive documentation for the entire Petlink/Kippy system:
 
 ### Core Concepts
-- **[🏗️ Architecture Overview](docs/petlink-infrastructure.md)** - System architecture, components, data flows
+- **[🏗️ Architecture & AI Rules](AGENTS.md)** - System architecture, data flows, backend navigation, test rules
 
 ### User Flows
 - **[👤 User Registration](docs/registration/registration-user.md)** - Sign-up with phone/email OTP verification
@@ -134,7 +134,7 @@ Comprehensive documentation for the entire Petlink/Kippy system:
 - **[🚧 Geofence](docs/modes/mode-geofence.md)** - Zone-based alerts (safe zones, danger zones)
 - **[🔋 Energy Saving](docs/modes/mode-energy-saving-zone.md)** - Battery optimization in known zones
 
-**👉 Start here**: Read [Architecture Overview](docs/petlink-infrastructure.md) to understand the system before writing tests.
+**👉 Start here**: Read [AGENTS.md](AGENTS.md) to understand the system architecture and test rules.
 
 ---
 

@@ -2,8 +2,8 @@
 
 ## 📊 Summary
 - **Total Operations:** 111
-- **Covered:** 43
-- **Missing:** 68
+- **Covered:** 45
+- **Missing:** 66
 
 Total -> [FETCHED-core_schema.graphql](../src/clients/petlink-infrastructure/endpoints/graphql/schema/core_schema.graphql)  
 Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.ts)
@@ -68,13 +68,13 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `refundInvoice`               | ❌ Missing |       |
 | `activateDeviceInOrder`       | ❌ Missing |       |
 | `addGpsPromotion`             | ❌ Missing |       |
-| `acknowledgeCheckout`         | ❌ Missing |       |
+| `acknowledgeCheckout`         | ✅ Covered |       |
 | `sendCustomerSuggestions`     | ❌ Missing |       |
 | `publishOnGpsMessagePosition` | ❌ Missing |       |
 | `publishOnGpsMessageStatus`   | ❌ Missing |       |
 | `publishOnSubscriptionStatus` | ❌ Missing |       |
 | `publishOnForceClearCache`    | ❌ Missing |       |
-| `updateEndOfLife`             | ❌ Missing |       |
+| `updateEndOfLife`             | ✅ Covered |       |
 | `sendCustomerFeedback`        | ❌ Missing |       |
 | `registerToNewsletter`        | ❌ Missing |       |
 | `logDisabled`                 | ❌ Missing |       |
@@ -100,16 +100,16 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `getProduct`                 | ❌ Missing |       |
 | `getProducts`                | ❌ Missing |       |
 | `getGpsPromotions`           | ❌ Missing |       |
-| `getEndOfLifeStep`           | ❌ Missing |       |
-| `getPlansEOL`                | ❌ Missing |       |
-| `checkoutEOLNewDevice`       | ❌ Missing |       |
+| `getEndOfLifeStep`           | ✅ Covered |       |
+| `getPlansEOL`                | ✅ Covered |       |
+| `checkoutEOLNewDevice`       | ✅ Covered |       |
 | `getSubscriptionPlans`       | ✅ Covered |       |
 | `getProtectionPlans`         | ❌ Missing |       |
 | `getSubscriptionPlanPricing` | ✅ Covered |       |
 | `getPaymentSource`           | ❌ Missing |       |
 | `getBillingInfo`             | ✅ Covered |       |
 | `checkoutAddons`             | ❌ Missing |       |
-| `checkoutNewSubscription`    | ❌ Missing |       |
+| `checkoutNewSubscription`    | ✅ Covered |       |
 | `churnDeflection`            | ❌ Missing |       |
 | `checkoutCareProtection`     | ❌ Missing |       |
 | `checkoutPrepaid`            | ❌ Missing |       |

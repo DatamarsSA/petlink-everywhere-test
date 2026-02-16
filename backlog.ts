@@ -20,6 +20,4 @@
  */
 
 /** TODO:
- * - find a way to call mongo from github actions to clean db before tests
- * - add trigger for github actions on other repos (add PATTOKEN on other repos)
  */

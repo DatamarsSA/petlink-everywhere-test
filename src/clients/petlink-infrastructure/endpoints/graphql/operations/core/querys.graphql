@@ -1,3 +1,12 @@
+query getEndOfLifeStep($eolId: String, $deviceId: String) {
+  getEndOfLifeStep(eolId: $eolId, deviceId: $deviceId) {
+    code
+    translationCode
+    message
+    step
+  }
+}
+
 query getPlansEOL($productId: String!, $countryCode: String) {
   getPlansEOL(productId: $productId, countryCode: $countryCode) {
     code
@@ -120,14 +129,24 @@ query getPlansEOL($productId: String!, $countryCode: String) {
     __typename
   }
 }
+
 query checkoutEOLNewDevice($eolId: String!) {
   checkoutEOLNewDevice(eolId: $eolId) {
     code
     message
     url
-    __typename
   }
 }
+
+query checkoutNewSubscription($productId: String!, $priceIds: [String!]!, $hostedPageOptions: HostedPageOptionsInput) {
+  checkoutNewSubscription(productId: $productId, priceIds: $priceIds, hostedPageOptions: $hostedPageOptions) {
+    code
+    message
+    url
+    checkoutId
+  }
+}
+
 query getUser {
   getUser {
     code

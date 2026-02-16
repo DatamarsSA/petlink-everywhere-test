@@ -3438,6 +3438,16 @@ export type AcknowledgeCheckoutMutation = {
   acknowledgeCheckout: { __typename?: "Response"; code: string; message: string };
 };
 
+export type GetEndOfLifeStepQueryVariables = Exact<{
+  eolId?: InputMaybe<Scalars["String"]["input"]>;
+  deviceId?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetEndOfLifeStepQuery = {
+  __typename?: "Query";
+  getEndOfLifeStep: { __typename?: "ResponseGetEndOfLifeStep"; code: string; translationCode?: string | null; message: string; step?: string | null };
+};
+
 export type GetPlansEolQueryVariables = Exact<{
   productId: Scalars["String"]["input"];
   countryCode?: InputMaybe<Scalars["String"]["input"]>;
@@ -3573,7 +3583,24 @@ export type CheckoutEolNewDeviceQueryVariables = Exact<{
 
 export type CheckoutEolNewDeviceQuery = {
   __typename?: "Query";
-  checkoutEOLNewDevice: { __typename: "ResponseCheckoutEOLNewDevice"; code: string; message: string; url?: string | null };
+  checkoutEOLNewDevice: { __typename?: "ResponseCheckoutEOLNewDevice"; code: string; message: string; url?: string | null };
+};
+
+export type CheckoutNewSubscriptionQueryVariables = Exact<{
+  productId: Scalars["String"]["input"];
+  priceIds: Array<Scalars["String"]["input"]> | Scalars["String"]["input"];
+  hostedPageOptions?: InputMaybe<HostedPageOptionsInput>;
+}>;
+
+export type CheckoutNewSubscriptionQuery = {
+  __typename?: "Query";
+  checkoutNewSubscription: {
+    __typename?: "ResponseCheckoutNewSubscription";
+    code: string;
+    message: string;
+    url?: string | null;
+    checkoutId?: string | null;
+  };
 };
 
 export type GetUserQueryVariables = Exact<{ [key: string]: never }>;
@@ -5931,6 +5958,50 @@ export const AcknowledgeCheckoutDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetEndOfLifeStepDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getEndOfLifeStep" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "eolId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getEndOfLifeStep" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "eolId" }, value: { kind: "Variable", name: { kind: "Name", value: "eolId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "step" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const GetPlansEolDocument = {
   kind: "Document",
   definitions: [
@@ -6189,7 +6260,67 @@ export const CheckoutEolNewDeviceDocument = {
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
                 { kind: "Field", name: { kind: "Name", value: "url" } },
-                { kind: "Field", name: { kind: "Name", value: "__typename" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CheckoutNewSubscriptionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "checkoutNewSubscription" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "priceIds" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "ListType", type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } } },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "hostedPageOptions" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "HostedPageOptionsInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "checkoutNewSubscription" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "priceIds" }, value: { kind: "Variable", name: { kind: "Name", value: "priceIds" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "hostedPageOptions" },
+                value: { kind: "Variable", name: { kind: "Name", value: "hostedPageOptions" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
+                { kind: "Field", name: { kind: "Name", value: "checkoutId" } },
               ],
             },
           },
@@ -8349,6 +8480,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    getEndOfLifeStep(
+      variables?: GetEndOfLifeStepQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetEndOfLifeStepQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetEndOfLifeStepQuery>({
+            document: GetEndOfLifeStepDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getEndOfLifeStep",
+        "query",
+        variables,
+      );
+    },
     getPlansEOL(
       variables: GetPlansEolQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -8381,6 +8530,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "checkoutEOLNewDevice",
+        "query",
+        variables,
+      );
+    },
+    checkoutNewSubscription(
+      variables: CheckoutNewSubscriptionQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CheckoutNewSubscriptionQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CheckoutNewSubscriptionQuery>({
+            document: CheckoutNewSubscriptionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "checkoutNewSubscription",
         "query",
         variables,
       );
