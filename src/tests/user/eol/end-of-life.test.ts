@@ -128,7 +128,7 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
         country: "FR",
         zip: "75001",
       };
-      await petlink.core.graphqlHttp.authJwt.updateEndOfLife({
+      let shippingInfoRes = await petlink.core.graphqlHttp.authJwt.updateEndOfLife({
         eolId,
         deviceId: productId,
         input: {
@@ -140,11 +140,16 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
           shippingInfo,
         },
       });
+      expect(shippingInfoRes.updateEndOfLife.code).toBe("200");
 
       // 4. Generate Shop URL
       const checkout = await petlink.core.graphqlHttp.authJwt.checkoutEOLNewDevice({ eolId });
       // Non falliamo se il BE torna 500 per lo shop URL (sistema esterno instabile)
       const shopUrl = checkout.checkoutEOLNewDevice.url || "http://mock-url.com";
+      // TODO: when Dani put on env his endpoint checkoutEOLNewDevice shoul return 200 and correct URL for redirect
+      // expect(checkout.checkoutEOLNewDevice.code).toBe("200");
+      // expect(checkout.checkoutEOLNewDevice.url).toBeDefined();
+      // const shopUrl = checkout.checkoutEOLNewDevice.url;
 
       // 5. Final State -> Step: EXTERNAL_PAGE
       await petlink.core.graphqlHttp.authJwt.updateEndOfLife({
@@ -158,6 +163,8 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
           shopUrl,
         },
       });
+
+      //here shuld be redirect fe to THANK YOU PAGE that we are not able to test it...
 
       // 6. Complete flow
       const completeRes = await petlink.core.graphqlHttp.authJwt.updateEndOfLife({
@@ -202,14 +209,15 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
         productId,
         countryCode: "FR",
       });
-
       expect(eligibility.getPlansEOL.code).toBe("200");
       expect(eligibility.getPlansEOL.plans?.length).toBeGreaterThan(0);
 
       const selectedPricing = eligibility.getPlansEOL.plans![0].pricings[0]!;
       const selectedDevice = eligibility.getPlansEOL.devicePrice![0];
 
-      // 2. Plan Selection -> Step: SHIPPING_INFO_FROM_PLAN
+      // 2. Device + Plan Selection -> Step: SHIPPING_INFO_FROM_PLAN
+      // Device- free if you buy sub of 2 or 5 years
+      // Device- 50% if you buy sub of 1 year
       const initRes = await petlink.core.graphqlHttp.authJwt.updateEndOfLife({
         eolId: null,
         deviceId: productId,

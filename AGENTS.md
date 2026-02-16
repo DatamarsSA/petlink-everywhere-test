@@ -6,7 +6,7 @@ alwaysApply: true
 
 ## 1. Quick Reference & Architecture
 
-**📚 System Architecture**: See [README.md](../README.md) for full diagrams, data flows, and component responsibilities.
+**📚 System Architecture**: See [docs/petlink-infrastructure.md](docs/petlink-infrastructure.md) for full diagrams, data flows, and component responsibilities.
 
 **💡 Repository Overview**:
 - **`petlink-everywhere-core`**: Main backend (GraphQL API), user/pet/device management.
@@ -14,9 +14,9 @@ alwaysApply: true
 - **`petlink-everywhere-sentinel`**: Device communication (TCP) and GPS data processing.
 - **`petlink-everywhere-cct-core`**: Backend for the Customer Care Tool.
 - **`petlink-everywhere-mobile`**: Flutter mobile apps (Petlink/Kippy).
-- **`petlink-everywhere-web`**: React web app for public users.
-- **`petlink-everywhere-cct`**: React app for the internal support team.
-
+- **`petlink-everywhere-web`**: React web app for public users (about buy subs).
+- **`petlink-everywhere-cct`**: React app for the internal support team.   
+All of them are cloned under 'all-repo' folder.
 ---
 
 ## 2. Test Philosophy: User-Centric Flows
