@@ -228,8 +228,7 @@ class TestSetupBuilder {
     }
 
     // Acquista subscription se richiesto
-    const deviceToSubscribe =
-      this.setup.devices.dogEvo || this.setup.devices.dogStandard || this.setup.devices.catStandard;
+    const deviceToSubscribe = this.setup.devices.dogEvo || this.setup.devices.dogStandard || this.setup.devices.catStandard;
 
     if (this.includeSubscription && this.setup.user && deviceToSubscribe) {
       await this.helper.purchaseSubscription(this.setup.user, deviceToSubscribe, this.subscriptionOptions);
@@ -272,19 +271,12 @@ class TestHelper {
 
     const errors: Array<{ operation: string; error: any }> = [];
 
-    // Raccogli tutti i serial numbers da fixtures
-    const testSerialNumbers = [
-      ...Object.values(fxt.KIPPY.devices).map((d) => d.serialNumber),
-      ...Object.values(fxt.PETLINK.devices).map((d) => d.serialNumber),
-    ];
-
     await Promise.all([
       // 1. Petlink user & related entity cleanup
       petlink.core.graphqlHttp.authIam
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
-            // serialNumbers: testSerialNumbers, TODO: add field to remove all sentinel db from backend
             utilityType: UtilityTestTypeEnum.CleanUpUser,
           },
         })

@@ -345,6 +345,12 @@ describe("CCT Tool", () => {
       await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password);
     });
 
+    afterAll(async () => {
+      await petlink.cct.graphqlHttp.authJwt.deleteUser({
+        id: createdUser.id,
+      });
+    });
+
     it("should allow CCT Admin to CREATE a new Operator User", async () => {
       logger.info("Creating new CCT User...", { email: newUserPayload.email });
 
