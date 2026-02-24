@@ -122,7 +122,6 @@ describe("CCT Tool", () => {
       });
       expect(deleteCustomerWithPetResponse.deleteCustomer.code).not.toBe("200");
 
-
       // 2. should allow to delete customer without pet & gps associted
       await testHelper.cleanupAll();
       let newSetup = await testHelper.setupBuilder().withUser().build();
@@ -334,7 +333,7 @@ describe("CCT Tool", () => {
       name: "Mario".toLowerCase(),
       surname: "Rossi".toLowerCase(),
       email: `mario.rossi.${Date.now()}@gmail.com`,
-      phone: "+19617707727",
+      phone: `+19617${Date.now().toString().slice(-6)}`,
       role: [RoleEnum.Superadmin],
       active: true,
       deviceVisibility: [DeviceVisibilityEnum.Kippy, DeviceVisibilityEnum.Petlink, DeviceVisibilityEnum.Vodafone],

@@ -312,3 +312,11 @@ stateDiagram-v2
 - **Branch-based Deployments**: Feature branches deploy to isolated environments
 
 ---
+## AI Agent Debugging & Troubleshooting Rules
+
+When an API call fails or a test breaks, **DO NOT make assumptions, guess the cause, or suggest blind fixes** (e.g., "the backend might be doing X" or "try removing this parameter"). Since you have full access to the codebase, you must autonomously investigate the root cause by following these steps:
+
+1. **Inspect Backend Logic**: Locate and read the actual AWS Lambda resolver or backend service code (in `petlink-everywhere-core`, `petlink-everywhere-cct-core`, or `subscriptions-manager`) that handles the failing API. Analyze exactly how the payload is processed, validated, and where the error is thrown.
+2. **Verify Frontend/App Usage**: Search the frontend or mobile repositories (`petlink-everywhere-web`, `petlink-everywhere-mobile`, or `petlink-everywhere-cct`) to see how the user or CCT operator actually calls this endpoint in the real application flow.
+3. **Compare Flows**: Compare the exact GraphQL/REST request (payload, headers, sequence of operations) made by the real client with the one being made in the failing test suite. Identify any missing or malformed parameters.
+4. **Trace the Architecture**: If necessary, follow the data flow through AppSync, SQS queues, MongoDB or all of necessary microservices to understand the exact state of the system during the request.
