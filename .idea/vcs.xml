@@ -2,15 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-bluetooth" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-cct" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-cct-core" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-core" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-dictionary" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-mobile" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-sentinel" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-types" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/petlink-everywhere-web" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/all-repo/subscriptions-manager" vcs="Git" />
   </component>
 </project>

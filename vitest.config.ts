@@ -93,7 +93,7 @@ export default defineConfig(() => {
         concurrent: false,
       },
 
-      exclude: ["**/debug/**", "node_modules/**"],
+      exclude: ["**/debug/**", "node_modules/**", "all-repo/*"],
     },
   };
 });

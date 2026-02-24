@@ -4,7 +4,6 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.zencoder" />
-      <excludeFolder url="file://$MODULE_DIR$/debug" />
       <excludeFolder url="file://$MODULE_DIR$/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/test-reports" />
       <excludeFolder url="file://$MODULE_DIR$/all-repo" />
