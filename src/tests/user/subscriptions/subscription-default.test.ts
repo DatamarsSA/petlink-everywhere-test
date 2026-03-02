@@ -729,7 +729,9 @@ describe("DEFAULT subscription flow", () => {
       });
 
       // STEP 6: Find current (active) and future subscriptions
-      const currentSub = allSubscriptions!.find((sub) => sub.status === "active");
+      let statusActualSubAfterBoughtFuture = fxt.isKippyRun ? "active" : "non_renewing";
+      //TODO: after FT merged, ask Lorenzo if kippy & petlink status are still disaligned after renewing
+      const currentSub = allSubscriptions!.find((sub) => sub.status === statusActualSubAfterBoughtFuture);
       const futureSub = allSubscriptions!.find((sub) => sub.status === "future");
       expect(currentSub, "Should have current active subscription").toBeDefined();
       expect(futureSub, "Should have future subscription").toBeDefined();

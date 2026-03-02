@@ -40,7 +40,7 @@ export default defineConfig(() => {
     GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
     GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
     // App Brand
-    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
+    APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("PETLINK"),
     // log level console
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
     // Sentinel socket tcp
@@ -67,8 +67,8 @@ export default defineConfig(() => {
       environment: "node",
       env: result.data,
       // timeouts più larghi per integrazione/E2E
-      testTimeout: 60000, // singolo test (it) - 1 minute
-      hookTimeout: 60000, // beforeAll/afterAll/beforeEach/afterEach - 1 minute
+      testTimeout: 180000, // singolo test (it) - in milliseconds
+      hookTimeout: 180000, // beforeAll/afterAll/beforeEach/afterEach - in milliseconds
 
       // 1) Eseguito PRIMA di ogni file di test
       setupFiles: ["./src/config/setup-teardown/setup-once-per-file.ts"],

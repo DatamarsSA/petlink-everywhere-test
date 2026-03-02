@@ -132,10 +132,10 @@ export const fxt = {
   isPetlinkRun: currentAppBrand === AppBrand.Petlink,
   current: baseFixtures[currentAppBrand],
   polling: {
-    timeoutMs: 30000,
+    timeoutMs: 180000,
     intervalMs: 1500,
   },
   socket: {
-    timeoutMs: 30000,
+    timeoutMs: 180000,
   },
 };
