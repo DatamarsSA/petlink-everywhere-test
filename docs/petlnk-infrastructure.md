@@ -268,6 +268,22 @@ graph TB
 
 ---
 
+## SQS Queue Map
+
+All async data flows through these queues.
+
+| Queue | Producer | Consumer | Purpose |
+|-------|----------|----------|---------|
+| `gpsMessages` | Sentinel Rust | Core `gpsMessagesConsumer` | GPS positions + device status |
+| `notifications` | Sentinel + Core | Core `notificationsConsumer` | Push, SMS, email dispatch |
+| `activities` | Sentinel Rust | Core `activitiesConsumer` | Pet activity data |
+| `commands` | Core `sendCommand` | Sentinel Rust | Commands to device (torch, sound, liveTracking) |
+| `newGpsDevices` | Core `createPetlinkGps` | Sentinel Rust | New device registration |
+| `settings` | Core `sendSetting` | Sentinel Rust | Device configuration updates |
+| `subscriptionsWebhook` | subscriptions-manager | Core `subscriptionsWebhookConsumer`| Chargebee payment events |
+
+---
+
 ## Data Flows
 
 ### 1. Device to User Flow (Position Updates)

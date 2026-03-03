@@ -6,6 +6,8 @@ globs:
 
 # petlink-everywhere-cct-core (Customer Care API)
 
+> **Domain Knowledge Note:** For the business logic of how the CCT flow operates and proxies requests, read `docs/api_cct.md` and the CCT Flow section in `docs/petlnk-infrastructure.md`.
+
 ## Folder Navigation
 Same as Core: Every GraphQL endpoint is a Lambda function.
 ```

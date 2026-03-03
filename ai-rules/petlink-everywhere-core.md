@@ -6,6 +6,8 @@ globs:
 
 # petlink-everywhere-core (Main API)
 
+> **Domain Knowledge Note:** For business logic about registration, subscriptions, or general architecture flows, read the relevant files in `docs/` first before applying these technical rules.
+
 ## Folder Navigation
 Every GraphQL endpoint is one Lambda function:
 ```

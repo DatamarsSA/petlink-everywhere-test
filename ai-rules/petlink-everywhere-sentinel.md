@@ -6,6 +6,8 @@ globs:
 
 # petlink-everywhere-sentinel (Device Communication)
 
+> **Domain Knowledge Note:** For detailed explanations of how device registration, position updates, and commands flow through the entire system, read the Data Flows section in `docs/petlnk-infrastructure.md`.
+
 ## Architecture
 **Rust TCP server** on AWS EKS with Global Accelerator. Accepts TCP connections from GPS devices, parses SiRF binary protocol, maintains connections, and routes data to SQS.
 
@@ -22,24 +24,4 @@ globs:
 | `settings` | Core `sendSetting` | Sentinel Rust | Device configuration updates |
 
 ## Key Flows
-
-### Device to User (Position Updates)
-1. GPS Device sends binary packet via TCP to Sentinel.
-2. Sentinel parses SiRF packet, extracts position.
-3. Sentinel sends message to `gpsMessages` SQS queue.
-4. Core's `gpsMessagesConsumer` updates MongoDB position.
-5. Core publishes real-time event via `publishOnGpsMessagePosition` (AppSync WebSocket).
-
-### User to Device (Send Command)
-1. Mobile calls `sendCommand` GraphQL mutation.
-2. Core queues command in `commands` SQS.
-3. Sentinel consumes command, sends TCP binary to device.
-4. Device sends ACK/status.
-5. Sentinel sends status update via `gpsMessages` SQS.
-6. Core publishes `publishOnGpsMessageStatus` to WS clients.
-
-### Device Registration (newGpsDevices)
-1. User scans QR / inputs serial. Core validates via `petlinkGpsInventory` whitelist.
-2. Core saves device in DB, activates SIM (ATT/Vodafone).
-3. Core sends message to `newGpsDevices` SQS.
-4. Sentinel updates device-to-user mapping and sends WAKEUP command to device.
+All specific flows (Position Updates, Command Sending, Device Registration) are mapped with sequence diagrams in `docs/petlnk-infrastructure.md`.
