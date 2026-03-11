@@ -1931,6 +1931,15 @@ export type DeleteCustomerMutation = {
   deleteCustomer: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
 };
 
+export type ResetPetlinkGpsMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type ResetPetlinkGpsMutation = {
+  __typename?: "Mutation";
+  resetPetlinkGps: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
 export type GetCustomerQueryVariables = Exact<{
   customerId: Scalars["String"]["input"];
 }>;
@@ -2602,6 +2611,41 @@ export const DeleteCustomerDocument = {
           {
             kind: "Field",
             name: { kind: "Name", value: "deleteCustomer" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ResetPetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "resetPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "resetPetlinkGps" },
             arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
             selectionSet: {
               kind: "SelectionSet",
@@ -3682,6 +3726,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "deleteCustomer",
+        "mutation",
+        variables,
+      );
+    },
+    resetPetlinkGps(
+      variables: ResetPetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ResetPetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ResetPetlinkGpsMutation>({
+            document: ResetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "resetPetlinkGps",
         "mutation",
         variables,
       );

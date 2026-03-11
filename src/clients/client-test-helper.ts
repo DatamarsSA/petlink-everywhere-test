@@ -528,7 +528,7 @@ class TestHelper {
       if (allPricings.length === 0) {
         throw new Error("No subscription plans available and no specific priceId provided");
       }
-      chosenPriceId = allPricings[0].id;
+      chosenPriceId = allPricings[0]!.id;
     }
 
     logger.debug("✓ Billing info updated and priceId identified", { priceId: chosenPriceId });

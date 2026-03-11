@@ -425,6 +425,8 @@
       <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-mobile/windows/flutter/ephemeral/.plugin_symlinks/wakelock_plus/example/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-mobile/windows/flutter/ephemeral/.plugin_symlinks/wakelock_plus/example/build" />
       <excludeFolder url="file://$MODULE_DIR$/.idea/zencoder" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/src/tests/debug" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
