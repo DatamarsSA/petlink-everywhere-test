@@ -216,35 +216,31 @@ describe("DEFAULT subscription flow", () => {
         periodUnit: choosenPlan.periodUnit,
       });
 
-      // Open WebSocket subscription BEFORE purchase (event-driven)
-      const activationPromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      // Open WebSocket subscription and purchase ONLY when ready
+      const subStatusUpdated = await petlink.core.graphqlWS.authJwt.subscribeUntil(
         subscriptions.onSubscriptionStatus,
         { id: setup.user!.id },
         "Subscription should become active after purchase",
         (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
+        async () => {
+          // Purchase subscription
+          const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+            input: {
+              utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+              phone: setup.user!.phone,
+              productId: deviceId,
+              priceIds: [choosenPlan.id],
+              card: fxt.current.card.valid,
+            },
+          });
+
+          expect(
+            purchaseResponse.utilityIntegrationTest.code,
+            `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+          ).toBe("200");
+        }
       );
 
-      // Wait for WebSocket to establish connection
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Purchase subscription
-      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: deviceId,
-          priceIds: [choosenPlan.id],
-          card: fxt.current.card.valid,
-        },
-      });
-
-      expect(
-        purchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-
-      // Wait for WebSocket event (pure event-driven)
-      const subStatusUpdated = await activationPromise;
       logger.info("GraphQlSocket event received -> onSubscriptionStatus", { event: subStatusUpdated });
 
       // Assert on WebSocket event

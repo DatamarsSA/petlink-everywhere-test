@@ -6,6 +6,7 @@ import { PacketType, OperatingStatus } from "../../../clients/sentinel/packets.j
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
+import { waitFor } from "../../../helpers/utils.js";
 
 describe("Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -23,43 +24,44 @@ describe("Live Tracking", () => {
   it("User ACTIVATE Live Tracking (sendCommand duration=900) -> packet should arrives to device AND app receives LiveTracking Status ON", async () => {
     logger.info("📍 User activates Live Tracking");
 
-    // 1. Start listening from App
-    const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessageStatus,
-      { id: setup.devices.dogStandard!.id },
-      "Should receive status update with liveTracking=ON",
-      (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.On,
-    );
-
-    // 2. Setup listener for device packet
+    // 1. Setup listener for device packet BEFORE triggering anything
     logger.info("⏳ Device waiting for 0x01 (FAST_TRACKING)...");
     const commandPacketPromise = sentinelTcpSocketClient.waitForPacket(
       PacketType.PACKET_0x01,
       (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
     );
 
-    // 3. Send ACTIVATE LT from app
-    const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
-      command: {
-        commandType: CommandEnum.LiveTracking,
-        id: setup.devices.dogStandard!.id,
-        duration: 900,
-        modeType: ModeType.Sentinel,
+    // 2. Setup listener for App AND send command ONLY when App WebSocket is fully ready
+    const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onGpsMessageStatus,
+      { id: setup.devices.dogStandard!.id },
+      "Should receive status update with liveTracking=ON",
+      (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.On,
+      async () => {
+        logger.info("⚡ Subscription ready -> Sending ACTIVATE LT...");
+        const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
+          command: {
+            commandType: CommandEnum.LiveTracking,
+            id: setup.devices.dogStandard!.id,
+            duration: 900,
+            modeType: ModeType.Sentinel,
+          },
+        });
+        expect(activateResponse.sendCommand.code).toBe("200");
       },
-    });
-    expect(activateResponse.sendCommand.code).toBe("200");
+    );
 
-    // 4. Device wait for packet
+    // 3. Wait for the TCP command to hit the simulated device
     const commandPacket = await commandPacketPromise;
     expect(commandPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
     logger.info("✓ Device received command");
 
-    // 4. Device sent his new status on LT
+    // 4. Device acknowledges by sending his new FAST_TRACKING status back
     await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
       curr_status: OperatingStatus.FAST_TRACKING,
     });
 
-    // 5. App received correct new status of device
+    // 5. App receives correct new status of device via WebSocket
     const statusEvent = await statusUpdatePromise;
     logger.info("statusEvent:", statusEvent);
     expect(statusEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
@@ -105,11 +107,7 @@ describe("Live Tracking", () => {
   it("User DEACTIVATE Live Tracking (sendCommand duration=0) -> packet should arrives to Device", async () => {
     logger.info("📍 User deactivates Live Tracking");
 
-    const deactivationPacketPromise = sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-    );
-
+    // 1. Send deactivate command
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
       command: {
         commandType: CommandEnum.LiveTracking,
@@ -123,13 +121,33 @@ describe("Live Tracking", () => {
       `sendCommand should succeed - Error: ${deactivateResponse.sendCommand.message}${deactivateResponse.sendCommand.translationCode ? ` (${deactivateResponse.sendCommand.translationCode})` : ""}`,
     ).toBe("200");
 
-    logger.info("⏳ Waiting for 0x01 (DEFAULT)...");
-    // Deactivate on LT not push a command to device, but just update db on sentinel, we must send hb to ask new status (and understand that we are exit from LT), for this we send hb
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
-      curr_status: OperatingStatus.FAST_TRACKING,
-    });
-    const deactivationPacket = await deactivationPacketPromise;
+    // 2. Poll actively via heartbeats until we receive the correct status
+    logger.info("⏳ Polling device heartbeats until 0x01 (DEFAULT) arrives...");
+    
+    const deactivationPacket = await waitFor(
+      async () => {
+        // Prepariamo l'ascolto per la singola iterazione
+        const packetPromise = sentinelTcpSocketClient.waitForPacket(
+          PacketType.PACKET_0x01,
+          (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+          500 // timeout di 500ms per il singolo ascolto
+        );
+        
+        // Manda l'heartbeat per questa iterazione
+        await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+          curr_status: OperatingStatus.FAST_TRACKING,
+        });
+
+        // Ritorna il pacchetto (se va in timeout, lancerà errore e `waitFor` lo catturerà per riprovare)
+        return await packetPromise;
+      },
+      {
+        isReady: (packet) => packet !== undefined,
+        timeoutMs: 10000, // Massimo 10 secondi totali per il test
+        intervalMs: 100,  // Pausa minima tra i tentativi
+        timeoutError: "Live Tracking did not switch to DEFAULT within timeout",
+      }
+    );
 
     expect(deactivationPacket.requested_operating_status).toBe(OperatingStatus.DEFAULT);
     logger.info("✓ Live Tracking deactivated");
