@@ -12,6 +12,7 @@ import {
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import { waitFor } from "../../../helpers/utils.js";
+import { rejects } from "node:assert";
 
 describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;

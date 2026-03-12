@@ -11,6 +11,7 @@ import {
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
+import * as subscriptions from "./petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
@@ -43,6 +44,7 @@ export interface TestSetup {
 
 export type SubscriptionOptions = {
   priceId?: string;
+  waitForActivation?: boolean;
 };
 
 class TestSetupBuilder {
@@ -488,7 +490,8 @@ class TestHelper {
    *   3. Acquista il primo piano disponibile
    */
   async purchaseSubscription(user: User, device: PetlinkGps, options: SubscriptionOptions = {}): Promise<void> {
-    logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceId: options.priceId });
+    const waitForActivation = options.waitForActivation ?? false;
+    logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceId: options.priceId, waitForActivation });
 
     // STEP 1 & 2: Aggiorna billing info + ottieni piani
     const [_, plansResponse] = await Promise.all([
@@ -533,22 +536,42 @@ class TestHelper {
 
     logger.debug("✓ Billing info updated and priceId identified", { priceId: chosenPriceId });
 
-    // STEP 4: Acquista la subscription
-    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-        phone: user.phone,
-        productId: device.id,
-        priceIds: [chosenPriceId],
-        card: fxt.current.card.valid,
-      },
-    });
+    const executePurchase = async () => {
+      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+          phone: user.phone,
+          productId: device.id,
+          priceIds: [chosenPriceId],
+          card: fxt.current.card.valid,
+        },
+      });
 
-    if (purchaseResponse.utilityIntegrationTest.code !== "200") {
-      throw new Error(`Failed to purchase subscription: ${purchaseResponse.utilityIntegrationTest.message}`);
+      if (purchaseResponse.utilityIntegrationTest.code !== "200") {
+        throw new Error(`Failed to purchase subscription: ${purchaseResponse.utilityIntegrationTest.message}`);
+      }
+    };
+
+    if (!waitForActivation) {
+      // Flusso VELOCE: Compra e non aspettare l'evento
+      await executePurchase();
+      logger.debug("✓ Subscription purchased (fast mode, no wait)");
+      return;
     }
 
-    logger.debug("✓ Subscription purchased successfully");
+    // Flusso COMPLETO: Apri socket -> aspetta connessione (onReady) -> compra -> aspetta evento
+    const subStatusUpdated = await petlink.core.graphqlWS.authJwt.subscribeUntil(
+      subscriptions.onSubscriptionStatus,
+      { id: user.id },
+      "Subscription should become active after purchase",
+      (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
+      executePurchase
+    );
+
+    logger.debug("✓ Subscription purchased and activated successfully", {
+      subscriptionId: subStatusUpdated?.onSubscriptionStatus?.id,
+      productId: subStatusUpdated?.onSubscriptionStatus?.status?.productId,
+    });
   }
 
   setupBuilder(): TestSetupBuilder {
