@@ -267,5 +267,3 @@ describe("PetlinkGPS Reset", () => {
     logger.info("✓ Reset completed successfully without subscription");
   });
 });
-
-describe("PetlinkGPS Replacemente", () => {});

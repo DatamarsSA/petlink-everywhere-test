@@ -427,6 +427,17 @@
       <excludeFolder url="file://$MODULE_DIR$/.idea/zencoder" />
       <excludeFolder url="file://$MODULE_DIR$/all-repo/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/src/tests/debug" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-bluetooth" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-cct" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-cct-core" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-core" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-databases" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-dictionary" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-mobile" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-sentinel" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-types" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/petlink-everywhere-web" />
+      <excludeFolder url="file://$MODULE_DIR$/all-repo/subscriptions-manager" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

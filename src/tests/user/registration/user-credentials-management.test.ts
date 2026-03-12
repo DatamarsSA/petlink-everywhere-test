@@ -1,4 +1,4 @@
-import { LanguageId, ProductTypeEnum, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { LanguageId, ProductTypeEnum, SpeciesEnum, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper } from "../../../clients/client-test-helper.js";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
