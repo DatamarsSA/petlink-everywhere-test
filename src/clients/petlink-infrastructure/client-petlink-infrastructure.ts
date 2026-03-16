@@ -44,19 +44,13 @@ type IamCredentials = {
   secretAccessKey: string;
 };
 
-type JwtAuthConfig = { cacheKey: string; headers: { Authorization: string } };
-type ApiKeyAuthConfig = { cacheKey: string; headers: { "x-api-key": string } };
-type IamAuthConfig = { cacheKey: string; headers: Record<string, never>; middleware: RequestMiddleware };
-type AuthConfig = JwtAuthConfig | ApiKeyAuthConfig | IamAuthConfig;
-
-type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
+type HttpProtocolConfig<TSdk extends object> = {
   serviceName: ServiceType;
   endpoint: string;
   apiKey: string;
   jwtProvider: JwtAuthProvider;
   iamProvider: IamAuthProvider;
-  createClient: (authConfig: AuthConfig) => Promise<TClient>;
-  createSdk: (client: TClient) => TSdk;
+  createSdk: (client: GraphQLClient) => TSdk;
 };
 
 type HttpProtocol<TSdk extends object> = {
@@ -201,41 +195,6 @@ class IamAuthProvider {
     return signedRequest.headers as Record<string, string>;
   }
 }
-
-const buildAuthConfig = (authType: AuthType, config: HttpProtocolConfig<any, any>): AuthConfig => {
-  switch (authType) {
-    case AuthType.JWT: {
-      if (!config.jwtProvider.hasValidToken()) {
-        throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first via ${config.serviceName}.loginWith...`);
-      }
-      const token = config.jwtProvider.getToken();
-      return {
-        cacheKey: `${config.serviceName}:jwt:${token}`,
-        headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
-      } as JwtAuthConfig;
-    }
-    case AuthType.IAM:
-      return {
-        cacheKey: `${config.serviceName}:iam:static`,
-        headers: {},
-        middleware: async (request) => {
-          const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-          const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
-          return {
-            ...request,
-            headers: { ...request.headers, ...signedHeaders },
-          };
-        },
-      } as IamAuthConfig;
-    case AuthType.API_KEY: {
-      if (!config.apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
-      return {
-        cacheKey: `${config.serviceName}:apiKey:${config.apiKey}`,
-        headers: { [HTTP_HEADERS.API_KEY]: config.apiKey },
-      } as ApiKeyAuthConfig;
-    }
-  }
-};
 
 // === Protocols ===
 
@@ -532,36 +491,67 @@ const createGraphQLWSProtocol = (serviceLabel: string, endpoint: string, apiKey:
   };
 };
 
-const createHttpProtocol = <TClient extends object, TSdk extends object>(config: HttpProtocolConfig<TClient, TSdk>): HttpProtocol<TSdk> => {
+const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk>): HttpProtocol<TSdk> => {
   const cache = new Map<string, TSdk>();
 
   const createAuthFacet = (authType: AuthType): TSdk => {
     return new Proxy({} as TSdk, {
       get: (_target, prop: string | symbol) => {
         return async (...args: any[]) => {
-          const authConfig = buildAuthConfig(authType, config);
+          let client: TSdk;
 
-          // 2. Create or get client from cache
-          let client = cache.get(authConfig.cacheKey);
-          if (!client) {
-            const httpClient = await config.createClient(authConfig);
-            client = config.createSdk(httpClient);
-            cache.set(authConfig.cacheKey, client);
+          // --- Logica IAM (Dinamica) ---
+          if (authType === AuthType.IAM) {
+            const cacheKey = `${config.serviceName}:iam:static`;
+            if (!cache.has(cacheKey)) {
+              const httpClient = new GraphQLClient(config.endpoint, {
+                requestMiddleware: async (request) => {
+                  const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+                  const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
+                  return {
+                    ...request,
+                    headers: { ...request.headers, ...signedHeaders },
+                  };
+                },
+              });
+              cache.set(cacheKey, config.createSdk(httpClient));
+            }
+            client = cache.get(cacheKey)!;
+          }
+          // --- Logica JWT / API KEY (Statica) ---
+          else {
+            let token = "";
+            let headerKey = "";
+
+            if (authType === AuthType.JWT) {
+              if (!config.jwtProvider.hasValidToken()) {
+                throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first via ${config.serviceName}.loginWith...`);
+              }
+              token = config.jwtProvider.getToken();
+              headerKey = HTTP_HEADERS.AUTHORIZATION;
+            } else {
+              if (!config.apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
+              token = config.apiKey;
+              headerKey = HTTP_HEADERS.API_KEY;
+            }
+
+            const cacheKey = `${config.serviceName}:${authType}:${token}`;
+            if (!cache.has(cacheKey)) {
+              const httpClient = new GraphQLClient(config.endpoint, {
+                headers: { [headerKey]: token },
+              });
+              cache.set(cacheKey, config.createSdk(httpClient));
+            }
+            client = cache.get(cacheKey)!;
           }
 
-          // 3. Execute operation with performance tracking and automatic logging
           const startTime = performance.now();
-
-          // Log request details
           logger.info(`🚀 [${config.serviceName}] CALLING ->: ${String(prop)}`, args);
 
           try {
             const response = await (client as any)[prop](...args);
-
-            // Log successful response
             const duration = (performance.now() - startTime).toFixed(0);
             logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)} (duration ${duration}ms)`, response);
-
             return response;
           } catch (error: any) {
             logger.error(`❌ [${config.serviceName}] ERROR <-: ${String(prop)}`, error);
@@ -603,17 +593,12 @@ class CoreService {
     this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
     const iamProvider = new IamAuthProvider();
 
-    this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
+    this.graphqlHttp = createHttpProtocol<CoreSdk>({
       serviceName: ServiceType.CORE,
       endpoint,
       apiKey,
       jwtProvider: this.jwtProvider,
       iamProvider,
-      createClient: async (authConfig) =>
-        new GraphQLClient(endpoint, {
-          headers: authConfig.headers,
-          requestMiddleware: authConfig.middleware,
-        }),
       createSdk: getCoreSdk,
     });
 
@@ -647,17 +632,12 @@ class CctService {
     this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
     const iamProvider = new IamAuthProvider();
 
-    this.graphqlHttp = createHttpProtocol<GraphQLClient, CctSdk>({
+    this.graphqlHttp = createHttpProtocol<CctSdk>({
       serviceName: ServiceType.CCT,
       endpoint,
       apiKey,
       jwtProvider: this.jwtProvider,
       iamProvider,
-      createClient: async (authConfig) =>
-        new GraphQLClient(endpoint, {
-          headers: authConfig.headers,
-          requestMiddleware: authConfig.middleware,
-        }),
       createSdk: getCctSdk,
     });
   }
