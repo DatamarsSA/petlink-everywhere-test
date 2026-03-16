@@ -53,13 +53,6 @@ type HttpProtocolConfig<TSdk extends object> = {
   createSdk: (client: GraphQLClient) => TSdk;
 };
 
-type HttpProtocol<TSdk extends object> = {
-  authJwt: TSdk;
-  authIam: TSdk;
-  public: TSdk;
-  clearCache: () => void;
-};
-
 enum ServiceType {
   CORE = "CORE",
   CCT = "CCT",
@@ -490,8 +483,24 @@ const createGraphQLWSProtocol = (serviceLabel: string, endpoint: string, apiKey:
     disconnect: () => client.disconnect(),
   };
 };
+type GraphQlWsProtocol = {
+  authJwt: {
+    subscribeUntil: <T = any>(
+      query: string,
+      variables: Record<string, any>,
+      timeoutError: string,
+      filter?: (data: any) => boolean,
+      onReady?: () => Promise<void>,
+      timeoutMs?: number,
+    ) => Promise<T>;
+  };
+  authApiKey: {
+    subscribeUntil: <T = any>() => Promise<T>; // stessa firma
+  };
+  disconnect: () => void;
+};
 
-const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk>): HttpProtocol<TSdk> => {
+const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk>): GraphQlHttpProtocol<TSdk> => {
   const cache = new Map<string, TSdk>();
 
   const createAuthFacet = (authType: AuthType): TSdk => {
@@ -525,7 +534,7 @@ const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk
               }
               const token = config.jwtProvider.getToken();
               const cacheKey = `${config.serviceName}:jwt:${token}`;
-              
+
               if (!cache.has(cacheKey)) {
                 const httpClient = new GraphQLClient(config.endpoint, {
                   headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
@@ -541,7 +550,7 @@ const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk
               }
               const token = config.apiKey;
               const cacheKey = `${config.serviceName}:apiKey:${token}`;
-              
+
               if (!cache.has(cacheKey)) {
                 const httpClient = new GraphQLClient(config.endpoint, {
                   headers: { [HTTP_HEADERS.API_KEY]: token },
@@ -586,13 +595,19 @@ const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk
     clearCache: () => cache.clear(),
   };
 };
+type GraphQlHttpProtocol<TSdk extends object> = {
+  authJwt: TSdk;
+  authIam: TSdk;
+  public: TSdk;
+  clearCache: () => void;
+};
 
 // === Services ===
 
 class CoreService {
   public readonly jwtProvider: JwtAuthProvider;
-  public readonly graphqlHttp: HttpProtocol<CoreSdk>;
-  public readonly graphqlWS: ReturnType<typeof createGraphQLWSProtocol>;
+  public readonly graphqlHttp: GraphQlHttpProtocol<CoreSdk>;
+  public readonly graphqlWS: GraphQlWsProtocol;
 
   constructor() {
     const endpoint = process.env.CORE_GRAPHQL_API_URL!;
@@ -631,7 +646,7 @@ class CoreService {
 
 class CctService {
   public readonly jwtProvider: JwtAuthProvider;
-  public readonly graphqlHttp: HttpProtocol<CctSdk>;
+  public readonly graphqlHttp: GraphQlHttpProtocol<CctSdk>;
 
   constructor() {
     const endpoint = process.env.CCT_GRAPHQL_API_URL!;
