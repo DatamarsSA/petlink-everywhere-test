@@ -3,8 +3,7 @@ import { testHelper, TestSetup, EnrichedDevice } from "../../clients/client-test
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../config/logger.js";
 import { FilterEnum, LanguageId, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
-import { sentinelTcpSocketClient } from "../../clients/sentinel/client-sentinel.js";
-import { OperatingStatus } from "../../clients/sentinel/packets.js";
+import { OperatingStatus } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import {
   RoleEnum,
   DeviceVisibilityEnum,
@@ -230,11 +229,11 @@ describe("CCT Tool", () => {
     beforeAll(async () => {
       await testHelper.cleanupAll();
       setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
-      await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
+      await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
     });
 
     afterAll(async () => {
-      sentinelTcpSocketClient.disconnect();
+      petlink.sentinel.disconnect();
     });
 
     it("should show updated device connection timestamp in CCT list AFTER heartbeat is sent", async () => {
@@ -253,7 +252,7 @@ describe("CCT Tool", () => {
       const testLat = 45.04862;
       const testLng = 7.641921;
 
-      await sentinelTcpSocketClient.simulator.heartbeat(device, {
+      await petlink.sentinel.simulator.heartbeat(device, {
         latitude: testLat,
         longitude: testLng,
         battery: 5800, // 5.8V (che il CCT trasforma in %)

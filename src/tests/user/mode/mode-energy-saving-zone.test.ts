@@ -1,7 +1,6 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { OperatingStatus, PacketWelcomeHeartBeat, PacketType } from "../../../clients/sentinel/packets.js";
+import { OperatingStatus, PacketWelcomeHeartBeat, PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -27,11 +26,11 @@ describe("Energy Saving Zone", () => {
 
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
+    await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
-    sentinelTcpSocketClient.disconnect();
+    petlink.sentinel.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
 
@@ -66,8 +65,8 @@ describe("Energy Saving Zone", () => {
     // 1. Prepare listeners BEFORE action
     logger.info("⏳ Device waiting for 0x15 (zones) and 0x10 (enable)...");
     const packetsPromise = Promise.all([
-      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x15),
-      sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10),
+      petlink.sentinel.waitForPacket(PacketType.PACKET_0x15),
+      petlink.sentinel.waitForPacket(PacketType.PACKET_0x10),
     ]);
 
     // 2. Perform action
@@ -127,7 +126,7 @@ describe("Energy Saving Zone", () => {
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat ENTER ESZ...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, eszEnterPayload);
+        await petlink.sentinel.simulator.heartbeat(device, eszEnterPayload);
       },
     );
 
@@ -157,7 +156,7 @@ describe("Energy Saving Zone", () => {
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat EXIT ESZ...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, eszExitPayload);
+        await petlink.sentinel.simulator.heartbeat(device, eszExitPayload);
       },
     );
 
@@ -173,7 +172,7 @@ describe("Energy Saving Zone", () => {
 
     // 1. Prepare listener
     logger.info("⏳ Device waiting for 0x10 (disable)...");
-    const packet10Promise = sentinelTcpSocketClient.waitForPacket(PacketType.PACKET_0x10);
+    const packet10Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x10);
 
     // 2. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({

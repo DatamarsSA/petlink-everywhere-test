@@ -78,7 +78,7 @@ expect(
 - **Clients are the Interface**: Interact with the backend **only** through provided clients (`petlink`, `testHelper`, `sentinelTcpSocketClient`).
   - **GraphQL HTTP**: `petlink.core.graphqlHttp.authJwt.getUser()`, `petlink.core.graphqlHttp.authIam.utilityIntegrationTest()`
   - **GraphQL WebSocket**: `petlink.core.graphqlWS.authJwt.subscribeUntil(...)`
-  - **Sentinel TCP**: `sentinelTcpSocketClient.connectAndHandshake(device)`
+  - **Sentinel TCP**: `petlink.sentinel.connectAndHandshake(device)`
 - **TypeScript Best Practices**:
   - Always Type Payloads (`as TypeName`).
   - Use Enums (e.g., `SpeciesEnum.DOG`), avoid raw strings.

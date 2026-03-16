@@ -1,8 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
-import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketType, OperatingStatus } from "../../../clients/sentinel/packets.js";
+import { PacketType, OperatingStatus } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
@@ -13,11 +12,11 @@ describe("Live Tracking", () => {
 
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
+    await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
-    sentinelTcpSocketClient.disconnect();
+    petlink.sentinel.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
 
@@ -26,7 +25,7 @@ describe("Live Tracking", () => {
 
     // 1. Setup listener for device packet BEFORE triggering anything
     logger.info("⏳ Device waiting for 0x01 (FAST_TRACKING)...");
-    const commandPacketPromise = sentinelTcpSocketClient.waitForPacket(
+    const commandPacketPromise = petlink.sentinel.waitForPacket(
       PacketType.PACKET_0x01,
       (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
     );
@@ -57,7 +56,7 @@ describe("Live Tracking", () => {
     logger.info("✓ Device received command");
 
     // 4. Device acknowledges by sending his new FAST_TRACKING status back
-    await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+    await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!, {
       curr_status: OperatingStatus.FAST_TRACKING,
     });
 
@@ -93,7 +92,7 @@ describe("Live Tracking", () => {
       },
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat POSITION...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, positionPayload);
+        await petlink.sentinel.simulator.heartbeat(device, positionPayload);
       },
     );
 
@@ -123,18 +122,18 @@ describe("Live Tracking", () => {
 
     // 2. Poll actively via heartbeats until we receive the correct status
     logger.info("⏳ Polling device heartbeats until 0x01 (DEFAULT) arrives...");
-    
+
     const deactivationPacket = await waitFor(
       async () => {
         // Prepariamo l'ascolto per la singola iterazione
-        const packetPromise = sentinelTcpSocketClient.waitForPacket(
+        const packetPromise = petlink.sentinel.waitForPacket(
           PacketType.PACKET_0x01,
           (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-          500 // timeout di 500ms per il singolo ascolto
+          500, // timeout di 500ms per il singolo ascolto
         );
-        
+
         // Manda l'heartbeat per questa iterazione
-        await sentinelTcpSocketClient.simulator.heartbeat(setup.devices.dogStandard!, {
+        await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!, {
           curr_status: OperatingStatus.FAST_TRACKING,
         });
 
@@ -144,9 +143,9 @@ describe("Live Tracking", () => {
       {
         isReady: (packet) => packet !== undefined,
         timeoutMs: 10000, // Massimo 10 secondi totali per il test
-        intervalMs: 100,  // Pausa minima tra i tentativi
+        intervalMs: 100, // Pausa minima tra i tentativi
         timeoutError: "Live Tracking did not switch to DEFAULT within timeout",
-      }
+      },
     );
 
     expect(deactivationPacket.requested_operating_status).toBe(OperatingStatus.DEFAULT);

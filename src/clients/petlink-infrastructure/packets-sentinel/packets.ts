@@ -19,7 +19,7 @@
  * - packet 10 - suono, torcia, ESZ
  */
 
-import { logger } from "../../config/logger.js";
+import { logger } from "../../../config/logger.js";
 
 // ================================ ENUMS ================================ //
 
@@ -38,8 +38,6 @@ export enum PacketType {
   PACKET_0x14 = 0x14,
   PACKET_0x15 = 0x15,
 }
-
-
 
 // ================================ DIZIONARIO DEI TIPI ================================ //
 
@@ -632,13 +630,12 @@ export class PacketWelcomeAck {
  * Rust: /petlink-everywhere-sentinel/src/sentinel/packets/to_kippy/packet_evo_extra_data.rs
  */
 export class PacketEvoExtraData {
-
-    static readonly EvoTasksFlags = {
-    EvoFlashlight: 0x01,        // Torcia/Flashlight
-    EvoTourRecording: 0x02,   // Tour recording
-    EvoSound: 0x04,             // Suono/Sound
-    EvoEnergySaveArea: 0x08,    // Energy saving area
-    EvoTimestamp: 0x0020,       // Timestamp (optional, only if flag is set)
+  static readonly EvoTasksFlags = {
+    EvoFlashlight: 0x01, // Torcia/Flashlight
+    EvoTourRecording: 0x02, // Tour recording
+    EvoSound: 0x04, // Suono/Sound
+    EvoEnergySaveArea: 0x08, // Energy saving area
+    EvoTimestamp: 0x0020, // Timestamp (optional, only if flag is set)
   } as const;
 
   static Data = {

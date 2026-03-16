@@ -1,7 +1,6 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketType, OperatingStatus, PacketWelcomeHeartBeat } from "../../../clients/sentinel/packets.js";
+import { PacketType, OperatingStatus, PacketWelcomeHeartBeat } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
@@ -43,11 +42,11 @@ describe("Geofence", () => {
 
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
+    await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
-    sentinelTcpSocketClient.disconnect();
+    petlink.sentinel.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
 
@@ -76,7 +75,7 @@ describe("Geofence", () => {
 
     // 1. Prepare listener
     logger.info("⏳ Waiting for 0x01 (geofence activation) on device...");
-    const packet01Promise = sentinelTcpSocketClient.waitForPacket(
+    const packet01Promise = petlink.sentinel.waitForPacket(
       PacketType.PACKET_0x01,
       (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
     );
@@ -135,7 +134,7 @@ describe("Geofence", () => {
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat INSIDE GEOFENCE...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, insidePayload);
+        await petlink.sentinel.simulator.heartbeat(device, insidePayload);
       },
     );
 
@@ -166,7 +165,7 @@ describe("Geofence", () => {
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat OUTSIDE GEOFENCE...");
-        await sentinelTcpSocketClient.simulator.heartbeat(device, outsidePayload);
+        await petlink.sentinel.simulator.heartbeat(device, outsidePayload);
       },
     );
 
@@ -182,10 +181,7 @@ describe("Geofence", () => {
 
     // 1. Prepare listener
     logger.info("⏳ Waiting for 0x01 (deactivate)...");
-    const packet01Promise = sentinelTcpSocketClient.waitForPacket(
-      PacketType.PACKET_0x01,
-      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-    );
+    const packet01Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, (p) => p.requested_operating_status === OperatingStatus.DEFAULT);
 
     // 2. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({

@@ -1,8 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../../config/logger.js";
-import { sentinelTcpSocketClient } from "../../../clients/sentinel/client-sentinel.js";
-import { PacketType } from "../../../clients/sentinel/packets.js";
+import { PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
 import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
@@ -12,11 +11,11 @@ describe("Torch & Sound Commands", () => {
 
   beforeAll(async () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await sentinelTcpSocketClient.connectAndHandshake(setup.devices.dogStandard!);
+    await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
   });
 
   afterAll(() => {
-    sentinelTcpSocketClient.disconnect();
+    petlink.sentinel.disconnect();
     petlink.core.graphqlWS.disconnect();
   });
 
@@ -30,7 +29,7 @@ describe("Torch & Sound Commands", () => {
 
       // 1. Setup listener for device packet BEFORE sending command
       logger.info("⏳ Device waiting for 0x10 (TORCH)...");
-      const commandPacketPromise = sentinelTcpSocketClient.waitForPacket(
+      const commandPacketPromise = petlink.sentinel.waitForPacket(
         PacketType.PACKET_0x10,
         (p) => p.torch_duration === torchDurationReceivedByDevice && (p.evo_tasks & 0x01) !== 0,
       );
@@ -63,10 +62,10 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Device received torch command");
 
       // 4. Device sends Packet 0x10 response to confirm state
-      await sentinelTcpSocketClient.simulator.torch(device, torchDurationReceivedByDevice);
+      await petlink.sentinel.simulator.torch(device, torchDurationReceivedByDevice);
 
       // 5. Device sends heartbeat with status update
-      await sentinelTcpSocketClient.simulator.heartbeat(device, {
+      await petlink.sentinel.simulator.heartbeat(device, {
         spare_c4: 80,
       });
 
@@ -84,7 +83,7 @@ describe("Torch & Sound Commands", () => {
       let torchDurationSentByApp = 0;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
 
-      const deactivationPacketPromise = sentinelTcpSocketClient.waitForPacket(
+      const deactivationPacketPromise = petlink.sentinel.waitForPacket(
         PacketType.PACKET_0x10,
         (p) => p.torch_duration === torchDurationReceivedByDevice && (p.evo_tasks & 0x01) !== 0,
       );
@@ -110,7 +109,7 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Torch deactivated");
 
       // Device sends Packet 0x10 response to confirm deactivation
-      await sentinelTcpSocketClient.simulator.torch(device, torchDurationReceivedByDevice);
+      await petlink.sentinel.simulator.torch(device, torchDurationReceivedByDevice);
     });
   });
 
@@ -124,7 +123,7 @@ describe("Torch & Sound Commands", () => {
 
       // 1. Setup listener for device packet BEFORE sending command
       logger.info("⏳ Device waiting for 0x10 (SOUND)...");
-      const commandPacketPromise = sentinelTcpSocketClient.waitForPacket(
+      const commandPacketPromise = petlink.sentinel.waitForPacket(
         PacketType.PACKET_0x10,
         (p) => p.sound_duration === soundDurationReceivedByDevice && p.sound_command === 1 && (p.evo_tasks & 0x04) !== 0,
       );
@@ -158,10 +157,10 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Device received sound command");
 
       // 4. Device sends Packet 0x10 response to confirm state
-      await sentinelTcpSocketClient.simulator.sound(device, soundDurationReceivedByDevice);
+      await petlink.sentinel.simulator.sound(device, soundDurationReceivedByDevice);
 
       // 5. Device sends heartbeat with status update
-      await sentinelTcpSocketClient.simulator.heartbeat(device, {
+      await petlink.sentinel.simulator.heartbeat(device, {
         spare_c4: 75,
       });
 
@@ -179,7 +178,7 @@ describe("Torch & Sound Commands", () => {
       let soundDurationSentByApp = 0;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 
-      const mutePacketPromise = sentinelTcpSocketClient.waitForPacket(
+      const mutePacketPromise = petlink.sentinel.waitForPacket(
         PacketType.PACKET_0x10,
         (p) => p.sound_duration === soundDurationReceivedByDevice && p.sound_command === 0 && (p.evo_tasks & 0x04) !== 0,
       );
@@ -206,7 +205,7 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Sound muted");
 
       // Device sends Packet 0x10 response to confirm mute
-      await sentinelTcpSocketClient.simulator.sound(device, soundDurationReceivedByDevice);
+      await petlink.sentinel.simulator.sound(device, soundDurationReceivedByDevice);
     });
   });
 });
