@@ -500,49 +500,57 @@ const createHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk
         return async (...args: any[]) => {
           let client: TSdk;
 
-          // --- Logica IAM (Dinamica) ---
-          if (authType === AuthType.IAM) {
-            const cacheKey = `${config.serviceName}:iam:static`;
-            if (!cache.has(cacheKey)) {
-              const httpClient = new GraphQLClient(config.endpoint, {
-                requestMiddleware: async (request) => {
-                  const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-                  const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
-                  return {
-                    ...request,
-                    headers: { ...request.headers, ...signedHeaders },
-                  };
-                },
-              });
-              cache.set(cacheKey, config.createSdk(httpClient));
-            }
-            client = cache.get(cacheKey)!;
-          }
-          // --- Logica JWT / API KEY (Statica) ---
-          else {
-            let token = "";
-            let headerKey = "";
-
-            if (authType === AuthType.JWT) {
-              if (!config.jwtProvider.hasValidToken()) {
-                throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first via ${config.serviceName}.loginWith...`);
+          switch (authType) {
+            case AuthType.IAM: {
+              const cacheKey = `${config.serviceName}:iam:static`;
+              if (!cache.has(cacheKey)) {
+                const httpClient = new GraphQLClient(config.endpoint, {
+                  requestMiddleware: async (request) => {
+                    const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+                    const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
+                    return {
+                      ...request,
+                      headers: { ...request.headers, ...signedHeaders },
+                    };
+                  },
+                });
+                cache.set(cacheKey, config.createSdk(httpClient));
               }
-              token = config.jwtProvider.getToken();
-              headerKey = HTTP_HEADERS.AUTHORIZATION;
-            } else {
-              if (!config.apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
-              token = config.apiKey;
-              headerKey = HTTP_HEADERS.API_KEY;
+              client = cache.get(cacheKey)!;
+              break;
             }
-
-            const cacheKey = `${config.serviceName}:${authType}:${token}`;
-            if (!cache.has(cacheKey)) {
-              const httpClient = new GraphQLClient(config.endpoint, {
-                headers: { [headerKey]: token },
-              });
-              cache.set(cacheKey, config.createSdk(httpClient));
+            case AuthType.JWT: {
+              if (!config.jwtProvider.hasValidToken()) {
+                throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first.`);
+              }
+              const token = config.jwtProvider.getToken();
+              const cacheKey = `${config.serviceName}:jwt:${token}`;
+              
+              if (!cache.has(cacheKey)) {
+                const httpClient = new GraphQLClient(config.endpoint, {
+                  headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+                });
+                cache.set(cacheKey, config.createSdk(httpClient));
+              }
+              client = cache.get(cacheKey)!;
+              break;
             }
-            client = cache.get(cacheKey)!;
+            case AuthType.API_KEY: {
+              if (!config.apiKey) {
+                throw new Error(`[${config.serviceName}] API Key not found`);
+              }
+              const token = config.apiKey;
+              const cacheKey = `${config.serviceName}:apiKey:${token}`;
+              
+              if (!cache.has(cacheKey)) {
+                const httpClient = new GraphQLClient(config.endpoint, {
+                  headers: { [HTTP_HEADERS.API_KEY]: token },
+                });
+                cache.set(cacheKey, config.createSdk(httpClient));
+              }
+              client = cache.get(cacheKey)!;
+              break;
+            }
           }
 
           const startTime = performance.now();
