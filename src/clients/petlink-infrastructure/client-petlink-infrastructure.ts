@@ -53,6 +53,7 @@ type AuthConfig = {
 type HttpProtocolConfig<TClient extends object, TSdk extends object> = {
   serviceName: ServiceType;
   endpoint: string;
+  apiKey: string;
   jwtProvider: JwtAuthProvider;
   iamProvider: IamAuthProvider;
   createClient: (authConfig: AuthConfig) => Promise<TClient>;
@@ -71,47 +72,26 @@ enum ServiceType {
   CCT = "CCT",
 }
 
-// === Envs ===
-class EnvConfig {
-  static getEndpoint(service: ServiceType): string {
-    return process.env[`${service}_GRAPHQL_API_URL`]!;
-  }
-
-  static getApiKey(service: ServiceType): string {
-    return process.env[`${service}_GRAPHQL_API_KEY`]!;
-  }
-
-  static getCognitoConfig(service: ServiceType) {
-    const clientId = service === ServiceType.CCT ? process.env.COGNITO_CLIENT_ID_FE_CCT! : process.env.COGNITO_CLIENT_ID_APP_USER!;
-
-    return {
-      region: process.env.COGNITO_REGION!,
-      clientId,
-    };
-  }
-
-  static getAwsRegion(): string {
-    return process.env.AWS_REGION!;
-  }
-}
-
 // === Auth ===
 
 class JwtAuthProvider {
   private token: { token: string; expiry: Date } | null = null;
 
-  constructor(private serviceType: ServiceType) {}
+  constructor(
+    private serviceLabel: string,
+    private cognitoRegion: string,
+    private cognitoClientId: string,
+  ) {}
 
   /**
    * Authenticate via Cognito user pools and cache the ID token.
    */
   async authenticate(username: string, password: string, authMethod: "email" | "phone_number"): Promise<void> {
     try {
-      const config = EnvConfig.getCognitoConfig(this.serviceType);
-      const client = new CognitoIdentityProviderClient({ region: config.region });
+      const client = new CognitoIdentityProviderClient({ region: this.cognitoRegion });
 
       const command = new InitiateAuthCommand({
-        ClientId: config.clientId,
+        ClientId: this.cognitoClientId,
         AuthFlow: "USER_PASSWORD_AUTH",
         AuthParameters: {
           USERNAME: username,
@@ -127,12 +107,12 @@ class JwtAuthProvider {
       const idToken = response.AuthenticationResult?.IdToken;
 
       if (!idToken) {
-        throw new Error(`[${this.serviceType}] Failed to get ID token from Cognito for user: ${username}`);
+        throw new Error(`[${this.serviceLabel}] Failed to get ID token from Cognito for user: ${username}`);
       }
 
       this.token = this.createTokenCacheEntry(idToken);
     } catch (error: any) {
-      logger.error(`[AUTH/JWT/${this.serviceType}] Failed to authenticate user ${username} via ${authMethod}`, {
+      logger.error(`[AUTH/JWT/${this.serviceLabel}] Failed to authenticate user ${username} via ${authMethod}`, {
         error: error.message,
         code: error.code || error.name,
         username,
@@ -148,7 +128,7 @@ class JwtAuthProvider {
 
   getToken(): string {
     if (!this.hasValidToken()) {
-      throw new Error(`[${this.serviceType}] No valid JWT token available. Please login first.`);
+      throw new Error(`[${this.serviceLabel}] No valid JWT token available. Please login first.`);
     }
     return this.token!.token;
   }
@@ -181,12 +161,14 @@ class JwtAuthProvider {
 
 class IamAuthProvider {
   private readonly credentials: IamCredentials;
+  private readonly awsRegion: string;
 
   constructor() {
     this.credentials = {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     };
+    this.awsRegion = process.env.AWS_REGION!;
   }
 
   /**
@@ -198,7 +180,7 @@ class IamAuthProvider {
         accessKeyId: this.credentials.accessKeyId,
         secretAccessKey: this.credentials.secretAccessKey,
       },
-      region: EnvConfig.getAwsRegion(),
+      region: this.awsRegion,
       service: "appsync",
       sha256: Sha256,
     });
@@ -223,7 +205,7 @@ class IamAuthProvider {
 
 // === Clients/Protocols ===
 
-const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthProvider) => {
+const createGraphQLWSProtocol = (serviceLabel: string, endpoint: string, apiKey: string, jwtProvider: JwtAuthProvider) => {
   class WSClient {
     private token: string | null = null;
     private apiKey: string | null = null;
@@ -245,7 +227,7 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
     }
 
     setAuthApiKey() {
-      this.apiKey = EnvConfig.getApiKey(serviceType);
+      this.apiKey = apiKey;
       this.authType = "apikey";
     }
 
@@ -268,7 +250,6 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
         throw new Error("No authentication configured.");
       }
 
-      const endpoint = EnvConfig.getEndpoint(serviceType);
       const host = new URL(endpoint).host;
       const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
 
@@ -374,7 +355,6 @@ const createGraphQLWSProtocol = (serviceType: ServiceType, jwtProvider: JwtAuthP
         const operationNameMatch = query.match(/subscription\s+(\w+)/);
         const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
 
-        const endpoint = EnvConfig.getEndpoint(serviceType);
         const host = new URL(endpoint).host;
 
         let timeout: NodeJS.Timeout | null = null;
@@ -544,11 +524,10 @@ const createAuthStrategies = <TClient extends object, TSdk extends object>(): Re
     },
   }),
   [AuthType.API_KEY]: (config) => {
-    const apiKey = EnvConfig.getApiKey(config.serviceName);
-    if (!apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
+    if (!config.apiKey) throw new Error(`[${config.serviceName}] API Key not found`);
     return {
-      cacheKey: `${config.serviceName}:apiKey:${apiKey}`,
-      headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+      cacheKey: `${config.serviceName}:apiKey:${config.apiKey}`,
+      headers: { [HTTP_HEADERS.API_KEY]: config.apiKey },
     };
   },
 });
@@ -619,24 +598,27 @@ class CoreService {
   public readonly graphqlWS: ReturnType<typeof createGraphQLWSProtocol>;
 
   constructor() {
-    // Initialize all dependencies in constructor
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE);
+    const endpoint = process.env.CORE_GRAPHQL_API_URL!;
+    const apiKey = process.env.CORE_GRAPHQL_API_KEY!;
+
+    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
     const iamProvider = new IamAuthProvider();
 
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CoreSdk>({
       serviceName: ServiceType.CORE,
-      endpoint: EnvConfig.getEndpoint(ServiceType.CORE),
+      endpoint,
+      apiKey,
       jwtProvider: this.jwtProvider,
       iamProvider,
       createClient: async (authConfig) =>
-        new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CORE), {
+        new GraphQLClient(endpoint, {
           headers: authConfig.headers,
           requestMiddleware: authConfig.middleware,
         }),
       createSdk: getCoreSdk,
     });
 
-    this.graphqlWS = createGraphQLWSProtocol(ServiceType.CORE, this.jwtProvider);
+    this.graphqlWS = createGraphQLWSProtocol(ServiceType.CORE, endpoint, apiKey, this.jwtProvider);
   }
 
   // Login methods
@@ -660,16 +642,20 @@ class CctService {
   public readonly graphqlHttp: HttpProtocol<CctSdk>;
 
   constructor() {
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT);
+    const endpoint = process.env.CCT_GRAPHQL_API_URL!;
+    const apiKey = process.env.CCT_GRAPHQL_API_KEY!;
+
+    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
     const iamProvider = new IamAuthProvider();
 
     this.graphqlHttp = createHttpProtocol<GraphQLClient, CctSdk>({
       serviceName: ServiceType.CCT,
-      endpoint: EnvConfig.getEndpoint(ServiceType.CCT),
+      endpoint,
+      apiKey,
       jwtProvider: this.jwtProvider,
       iamProvider,
       createClient: async (authConfig) =>
-        new GraphQLClient(EnvConfig.getEndpoint(ServiceType.CCT), {
+        new GraphQLClient(endpoint, {
           headers: authConfig.headers,
           requestMiddleware: authConfig.middleware,
         }),
@@ -692,7 +678,14 @@ class SentinelService {
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
 
-  constructor(private config: { host: string; port: number }) {}
+  constructor() {
+    this.config = {
+      host: process.env.SENTINEL_HOST!,
+      port: parseInt(process.env.SENTINEL_PORT!, 10),
+    };
+  }
+
+  private config: { host: string; port: number };
 
   /**
    * Connects to the Sentinel TCP server.
@@ -911,7 +904,6 @@ class SentinelService {
   }
 }
 
-// === MAIN INFRASTRUCTURE CLASS ===
 class PetLinkInfrastructure {
   public readonly core: CoreService;
   public readonly cct: CctService;
@@ -920,10 +912,7 @@ class PetLinkInfrastructure {
   constructor() {
     this.core = new CoreService();
     this.cct = new CctService();
-    this.sentinel = new SentinelService({
-      host: process.env.SENTINEL_HOST!,
-      port: parseInt(process.env.SENTINEL_PORT!, 10),
-    });
+    this.sentinel = new SentinelService();
   }
 
   logoutUser() {
@@ -932,5 +921,4 @@ class PetLinkInfrastructure {
   }
 }
 
-// Export singleton instance
 export const petlink = new PetLinkInfrastructure();
