@@ -224,9 +224,7 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
     private async ensureConnected(authType: "jwt" | "apikey"): Promise<void> {
       // Controlla se auth è cambiata
       if (this.ws && this.isConnected) {
-        const currentAuthMatches = (authType === "jwt" && this.authType === "jwt") || (authType === "apikey" && this.authType === "apikey");
-
-        if (currentAuthMatches) {
+        if (authType === this.authType) {
           logger.debug("Reusing existing WebSocket connection");
           return;
         }
@@ -473,33 +471,19 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
 
   const client = new WSClient();
 
+  const makeSubscriber = (authType: "jwt" | "apikey") => ({
+    subscribeUntil: <T = any>(...args: Parameters<WsSubscribeFn>) => client.subscribeUntil<T>(authType, ...args),
+  });
+
   return {
-    authJwt: {
-      subscribeUntil: <T = any>(
-        query: string,
-        variables: Record<string, any>,
-        timeoutError: string,
-        filter?: (data: any) => boolean,
-        onReady?: () => Promise<void>,
-        timeoutMs: number = fxt.socket.timeoutMs,
-      ) => client.subscribeUntil<T>("jwt", query, variables, timeoutError, filter, onReady, timeoutMs),
-    },
-    authApiKey: {
-      subscribeUntil: <T = any>(
-        query: string,
-        variables: Record<string, any>,
-        timeoutError: string,
-        filter?: (data: any) => boolean,
-        onReady?: () => Promise<void>,
-        timeoutMs: number = fxt.socket.timeoutMs,
-      ) => client.subscribeUntil<T>("apikey", query, variables, timeoutError, filter, onReady, timeoutMs),
-    },
+    authJwt: makeSubscriber("jwt"),
+    authApiKey: makeSubscriber("apikey"),
     disconnect: () => client.disconnect(),
   };
 };
 
 const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk>): GraphQlHttpProtocol<TSdk> => {
-  const cache = new Map<string, TSdk>();
+  const cachedSdks = new Map<string, TSdk>();
 
   const createAuthFacet = (authType: AuthType): TSdk => {
     return new Proxy({} as TSdk, {
@@ -510,7 +494,7 @@ const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConf
           switch (authType) {
             case AuthType.IAM: {
               const cacheKey = `${config.serviceName}:iam:static`;
-              if (!cache.has(cacheKey)) {
+              if (!cachedSdks.has(cacheKey)) {
                 const httpClient = new GraphQLClient(config.endpoint, {
                   requestMiddleware: async (request) => {
                     const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
@@ -521,25 +505,26 @@ const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConf
                     };
                   },
                 });
-                cache.set(cacheKey, config.createSdk(httpClient));
+                cachedSdks.set(cacheKey, config.createSdk(httpClient));
               }
-              client = cache.get(cacheKey)!;
+              client = cachedSdks.get(cacheKey)!;
               break;
             }
             case AuthType.JWT: {
-              if (!config.jwtProvider.hasValidToken()) {
-                throw new Error(`[${config.serviceName}] No valid JWT token available. Please login first.`);
-              }
-              const token = config.jwtProvider.getToken();
-              const cacheKey = `${config.serviceName}:jwt:${token}`;
-
-              if (!cache.has(cacheKey)) {
+              const cacheKey = `${config.serviceName}:jwt`;
+              if (!cachedSdks.has(cacheKey)) {
                 const httpClient = new GraphQLClient(config.endpoint, {
-                  headers: { [HTTP_HEADERS.AUTHORIZATION]: token },
+                  requestMiddleware: async (request) => ({
+                    ...request,
+                    headers: {
+                      ...request.headers,
+                      [HTTP_HEADERS.AUTHORIZATION]: config.jwtProvider.getToken(),
+                    },
+                  }),
                 });
-                cache.set(cacheKey, config.createSdk(httpClient));
+                cachedSdks.set(cacheKey, config.createSdk(httpClient));
               }
-              client = cache.get(cacheKey)!;
+              client = cachedSdks.get(cacheKey)!;
               break;
             }
             case AuthType.API_KEY: {
@@ -549,13 +534,13 @@ const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConf
               const token = config.apiKey;
               const cacheKey = `${config.serviceName}:apiKey:${token}`;
 
-              if (!cache.has(cacheKey)) {
+              if (!cachedSdks.has(cacheKey)) {
                 const httpClient = new GraphQLClient(config.endpoint, {
                   headers: { [HTTP_HEADERS.API_KEY]: token },
                 });
-                cache.set(cacheKey, config.createSdk(httpClient));
+                cachedSdks.set(cacheKey, config.createSdk(httpClient));
               }
-              client = cache.get(cacheKey)!;
+              client = cachedSdks.get(cacheKey)!;
               break;
             }
           }
@@ -590,7 +575,7 @@ const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConf
     authJwt: createAuthFacet(AuthType.JWT),
     authIam: createAuthFacet(AuthType.IAM),
     public: createAuthFacet(AuthType.API_KEY),
-    clearCache: () => cache.clear(),
+    clearCache: () => cachedSdks.clear(),
   };
 };
 
