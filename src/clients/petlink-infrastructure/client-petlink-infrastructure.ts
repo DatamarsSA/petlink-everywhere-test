@@ -209,7 +209,7 @@ class IamAuthProvider {
 
 const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: JwtAuthProvider): GraphQlWsProtocol => {
   class WSClient {
-    private authType: "jwt" | "apikey" | null = null;
+    private authType: AuthType.JWT | AuthType.API_KEY | null = null;
     private ws: WebSocket | null = null;
     private isConnected = false;
     private subscriptions = new Map<
@@ -221,7 +221,7 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
     >();
     private subscriptionCounter = 0;
 
-    private async ensureConnected(authType: "jwt" | "apikey"): Promise<void> {
+    private async ensureConnected(authType: AuthType.JWT | AuthType.API_KEY): Promise<void> {
       // Controlla se auth è cambiata
       if (this.ws && this.isConnected) {
         if (authType === this.authType) {
@@ -240,14 +240,14 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
       const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
 
       let tokenOrKey = "";
-      if (authType === "jwt") {
+      if (authType === AuthType.JWT) {
         tokenOrKey = jwtProvider.getToken();
       } else {
         tokenOrKey = apiKey;
       }
 
       const connectionHeaders =
-        authType === "jwt"
+        authType === AuthType.JWT
           ? { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.AUTHORIZATION]: tokenOrKey }
           : { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.API_KEY]: tokenOrKey };
 
@@ -334,7 +334,7 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
     }
 
     async subscribeUntil<T = any>(
-      authType: "jwt" | "apikey",
+      authType: AuthType.JWT | AuthType.API_KEY,
       query: string,
       variables: Record<string, any>,
       timeoutError: string,
@@ -421,7 +421,7 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
 
         // Send subscription payload
         const authPayload =
-          authType === "jwt"
+          authType === AuthType.JWT
             ? {
                 [HTTP_HEADERS.HOST]: host,
                 [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
@@ -471,13 +471,13 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
 
   const client = new WSClient();
 
-  const makeSubscriber = (authType: "jwt" | "apikey") => ({
+  const makeSubscriber = (authType: AuthType.JWT | AuthType.API_KEY) => ({
     subscribeUntil: <T = any>(...args: Parameters<WsSubscribeFn>) => client.subscribeUntil<T>(authType, ...args),
   });
 
   return {
-    authJwt: makeSubscriber("jwt"),
-    authApiKey: makeSubscriber("apikey"),
+    authJwt: makeSubscriber(AuthType.JWT),
+    authApiKey: makeSubscriber(AuthType.API_KEY),
     disconnect: () => client.disconnect(),
   };
 };
@@ -656,15 +656,10 @@ class SentinelService {
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
-
-  constructor() {
-    this.config = {
-      host: process.env.SENTINEL_HOST!,
-      port: parseInt(process.env.SENTINEL_PORT!, 10),
-    };
-  }
-
-  private config: { host: string; port: number };
+  private readonly config = {
+    host: process.env.SENTINEL_HOST!,
+    port: parseInt(process.env.SENTINEL_PORT!, 10),
+  };
 
   /**
    * Connects to the Sentinel TCP server.
@@ -689,12 +684,6 @@ class SentinelService {
       this.socket.on("close", () => {
         logger.debug("✓ Connection closed");
       });
-
-      // Timeout for initial connection
-      this.socket.setTimeout(10000);
-      this.socket.on("timeout", () => {
-        // Idle timeout handled if needed
-      });
     });
   }
 
@@ -706,11 +695,11 @@ class SentinelService {
       this.socket.destroy();
       this.socket = null;
     }
+    this.clearBuffer();
   }
 
   /**
    * Private raw sender. Handles SIRF encapsulation and final socket write.
-   * Internal logging is handled by the simulator Proxy.
    */
   private async sendRaw(kippyPayload: Buffer): Promise<void> {
     if (!this.socket) throw new Error("Not connected");
@@ -719,46 +708,47 @@ class SentinelService {
   }
 
   /**
-   * Simulator facet: provides a high-level API to simulate device behavior.
-   * Uses a Proxy to automatically log intent and encode data before sending raw bytes.
+   * Logs intent and sends the encoded buffer through the socket.
    */
-  public readonly simulator = new Proxy({} as any, {
-    get: (_target, prop: string) => {
-      // Mapping of human names to encoder functions
-      const commands: Record<string, Function> = {
-        welcome: (device: DeviceIdentity, data: any) => PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01),
-        heartbeat: (device: DeviceIdentity, data: any) => PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06),
-        geofenceResponse: PacketGeofenceResponse.toBuffer,
-        torch: (_device: DeviceIdentity, duration: number) => {
-          return PacketEvoExtraData.toBuffer({
-            evo_tasks: 0x01 | 0x10,
-            torch_duration: duration,
-          });
-        },
-        sound: (_device: DeviceIdentity, duration: number) => {
-          return PacketEvoExtraData.toBuffer({
-            evo_tasks: 0x04 | 0x10,
-            sound_command: duration > 0 ? 1 : 0,
-            sound_duration: duration,
-          });
-        },
-      };
+  private async simulateAndSend(name: string, args: any[], buffer: Buffer): Promise<void> {
+    logger.info(`🚀 [SENTINEL] SIMULATING ->: ${name}`, args);
+    return this.sendRaw(buffer);
+  }
 
-      const encoder = commands[prop];
-      if (!encoder) return undefined;
+  /**
+   * Simulator facet: provides a high-level typed API to simulate device behavior.
+   */
+  public readonly simulator = {
+    welcome: (device: DeviceIdentity, data?: any) =>
+      this.simulateAndSend("welcome", [device, data], PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01)),
 
-      return async (...args: any[]) => {
-        // 1. Generate the binary payload using the encoder
-        const buffer = encoder(...args);
+    heartbeat: (device: DeviceIdentity, data?: any) =>
+      this.simulateAndSend("heartbeat", [device, data], PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06)),
 
-        // 2. Automatic Logging (similar to GraphQL infrastructure)
-        logger.info(`🚀 [SENTINEL] SIMULATING ->: ${prop}`, args);
+    geofenceResponse: (data: typeof PacketGeofenceResponse.Data) =>
+      this.simulateAndSend("geofenceResponse", [data], PacketGeofenceResponse.toBuffer(data)),
 
-        // 3. Send the raw bytes through the socket
-        return this.sendRaw(buffer);
-      };
-    },
-  });
+    torch: (device: DeviceIdentity, duration: number) =>
+      this.simulateAndSend(
+        "torch",
+        [device, duration],
+        PacketEvoExtraData.toBuffer({
+          evo_tasks: 0x01 | 0x10,
+          torch_duration: duration,
+        }),
+      ),
+
+    sound: (device: DeviceIdentity, duration: number) =>
+      this.simulateAndSend(
+        "sound",
+        [device, duration],
+        PacketEvoExtraData.toBuffer({
+          evo_tasks: 0x04 | 0x10,
+          sound_command: duration > 0 ? 1 : 0,
+          sound_duration: duration,
+        }),
+      ),
+  };
 
   /**
    * Waits for a specific packet type to arrive from the socket.
