@@ -2,8 +2,8 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { OperatingStatus, PacketWelcomeHeartBeat, PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
+  OnGpsMessageStatusDocument,
   SettingOperationEnum,
   SettingTypeEnum,
   StatusState,
@@ -120,7 +120,7 @@ describe("Energy Saving Zone", () => {
 
     // Start listening for ESZ enter event with onReady callback
     const eszEnterEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessageStatus,
+      OnGpsMessageStatusDocument,
       { id: setup.devices.dogStandard!.id },
       "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
@@ -150,7 +150,7 @@ describe("Energy Saving Zone", () => {
 
     // Start listening for ESZ exit event with onReady callback
     const eszExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessageStatus,
+      OnGpsMessageStatusDocument,
       { id: setup.devices.dogStandard!.id },
       "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,

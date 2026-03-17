@@ -346,6 +346,14 @@ export interface DiscoutItem {
   discountType: Scalars["String"]["output"];
 }
 
+export interface DunningAttemptsItem {
+  __typename?: "DunningAttemptsItem";
+  attempt: Scalars["Int"]["output"];
+  createdAt: Scalars["String"]["output"];
+  status: Scalars["String"]["output"];
+  transactionId: Scalars["String"]["output"];
+}
+
 export interface EndOfLife {
   __typename?: "EndOfLife";
   addonIds?: Maybe<Array<Scalars["String"]["output"]>>;
@@ -788,6 +796,7 @@ export interface Mutation {
   /**   TODO: rename in deleteProduct */
   updatePetlinkGps: ResponsePetlinkGps;
   updatePhoneNumberUser: ResponseUser;
+  updateRegistrationToken: Response;
   updateUser: ResponseUser;
   /**   cct */
   updateUserContact: Response;
@@ -1062,6 +1071,12 @@ export type MutationUpdatePhoneNumberUserArgs = {
   otp: Scalars["String"]["input"];
   phone: Scalars["String"]["input"];
   verificationId: Scalars["String"]["input"];
+};
+
+export type MutationUpdateRegistrationTokenArgs = {
+  os: MobileOsEnum;
+  registrationToken: Scalars["String"]["input"];
+  serialNumber: Scalars["String"]["input"];
 };
 
 export type MutationUpdateUserArgs = {
@@ -1679,7 +1694,7 @@ export type QueryCheckoutNewSubscriptionArgs = {
 };
 
 export type QueryCheckoutPrepaidArgs = {
-  appBrand?: InputMaybe<AppBrand>;
+  appBrand: AppBrand;
   hostedPageOptions?: InputMaybe<HostedPageOptionsInput>;
   orderId: Scalars["String"]["input"];
   priceIds: Array<Scalars["String"]["input"]>;
@@ -2589,6 +2604,8 @@ export interface SubscriptionShortInfo {
   currencyCode: Scalars["String"]["output"];
   currentTermEnd?: Maybe<Scalars["String"]["output"]>;
   currentTermStart?: Maybe<Scalars["String"]["output"]>;
+  dunningAttempts?: Maybe<Array<DunningAttemptsItem>>;
+  dunningStatus?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
   invoice?: Maybe<InvoiceShortInfo>;
   nextBillingAt?: Maybe<Scalars["String"]["output"]>;
@@ -2809,634 +2826,6 @@ export enum ValidationStatusEnum {
   PartiallyValid = "partially_valid",
   Valid = "valid",
 }
-
-export type UpdateEndOfLifeMutationVariables = Exact<{
-  eolId?: InputMaybe<Scalars["String"]["input"]>;
-  deviceId?: InputMaybe<Scalars["String"]["input"]>;
-  input?: InputMaybe<EndOfLifeIn>;
-}>;
-
-export type UpdateEndOfLifeMutation = {
-  __typename?: "Mutation";
-  updateEndOfLife: {
-    __typename: "ResponseUpdateEndOfLife";
-    code: string;
-    message: string;
-    translationCode?: string | null;
-    endOfLife?: {
-      __typename: "EndOfLife";
-      id: string;
-      step: string;
-      userId: string;
-      productId: string;
-      serialNumber: string;
-      subscriptionId?: string | null;
-      addonIds?: Array<string> | null;
-      shopUrl?: string | null;
-      devicePrice?: {
-        __typename: "DevicePrice";
-        id: string;
-        deviceType: DeviceTypeEnum;
-        price: number;
-        period?: number | null;
-        periodUnit?: string | null;
-        discountPercentage: number;
-        currencyCode: string;
-        countryCode: string;
-      } | null;
-      pricing?: {
-        __typename: "Pricing";
-        id: string;
-        name: string;
-        externalName?: string | null;
-        itemId: string;
-        price?: number | null;
-        period?: number | null;
-        currencyCode: string;
-        periodUnit?: string | null;
-        itemFamilyId?: string | null;
-        status?: string | null;
-        trialPeriod?: number | null;
-        trialPeriodUnit?: string | null;
-        itemType?: string | null;
-        addonPricings?: Array<{
-          __typename: "AddonPricing";
-          id: string;
-          name: string;
-          externalName?: string | null;
-          itemId: string;
-          price?: number | null;
-          period?: number | null;
-          currencyCode: string;
-          periodUnit?: string | null;
-          itemFamilyId?: string | null;
-          status?: string | null;
-          trialPeriod?: number | null;
-          trialPeriodUnit?: string | null;
-          itemType?: string | null;
-        } | null> | null;
-      } | null;
-      shippingInfo?: {
-        __typename: "ShippingInfo";
-        firstName: string;
-        lastName: string;
-        email: string;
-        phone: string;
-        address: string;
-        city: string;
-        stateCode?: string | null;
-        state?: string | null;
-        country: string;
-        zip: string;
-      } | null;
-    } | null;
-  };
-};
-
-export type SendOtpMutationVariables = Exact<{
-  phone: Scalars["String"]["input"];
-  languageId?: InputMaybe<LanguageId>;
-}>;
-
-export type SendOtpMutation = {
-  __typename?: "Mutation";
-  sendOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
-};
-
-export type CheckOtpMutationVariables = Exact<{
-  verificationId: Scalars["String"]["input"];
-  otp: Scalars["String"]["input"];
-  contact: Scalars["String"]["input"];
-}>;
-
-export type CheckOtpMutation = {
-  __typename?: "Mutation";
-  checkOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
-};
-
-export type SignUpUserMutationVariables = Exact<{
-  user: UserIn;
-  otpData: OtpInput;
-  languageId?: InputMaybe<LanguageId>;
-  appBrand: AppBrand;
-}>;
-
-export type SignUpUserMutation = {
-  __typename?: "Mutation";
-  signUpUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type UtilityIntegrationTestMutationVariables = Exact<{
-  input: UtilityIntegrationTestInput;
-}>;
-
-export type UtilityIntegrationTestMutation = {
-  __typename?: "Mutation";
-  utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string };
-};
-
-export type VerifyEmailMutationVariables = Exact<{
-  verificationId: Scalars["String"]["input"];
-  otp: Scalars["String"]["input"];
-  uuid: Scalars["String"]["input"];
-}>;
-
-export type VerifyEmailMutation = {
-  __typename?: "Mutation";
-  verifyEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
-};
-
-export type CreatePetMutationVariables = Exact<{
-  pet: PetIn;
-}>;
-
-export type CreatePetMutation = {
-  __typename?: "Mutation";
-  createPet: {
-    __typename?: "ResponsePet";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    pet?: {
-      __typename?: "Pet";
-      id: string;
-      entityType: EntityTypeEnum;
-      name: string;
-      birthDate?: string | null;
-      species: string;
-      breedType: string;
-      breeds: Array<string>;
-      gender: string;
-      primaryColor?: string | null;
-      weight?: number | null;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      neutered?: boolean | null;
-      livingEnvironment?: PetLivingEnvironment | null;
-      length?: number | null;
-      dateMarkedAsLost?: string | null;
-      petProtectionId?: string | null;
-      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
-    } | null;
-  };
-};
-
-export type UpdatePetMutationVariables = Exact<{
-  pet: UpdatePetIn;
-}>;
-
-export type UpdatePetMutation = {
-  __typename?: "Mutation";
-  updatePet: {
-    __typename?: "ResponsePet";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    pet?: {
-      __typename?: "Pet";
-      id: string;
-      entityType: EntityTypeEnum;
-      name: string;
-      birthDate?: string | null;
-      species: string;
-      breedType: string;
-      breeds: Array<string>;
-      gender: string;
-      primaryColor?: string | null;
-      weight?: number | null;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      neutered?: boolean | null;
-      livingEnvironment?: PetLivingEnvironment | null;
-      length?: number | null;
-      dateMarkedAsLost?: string | null;
-      petProtectionId?: string | null;
-      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
-    } | null;
-  };
-};
-
-export type DeletePetMutationVariables = Exact<{
-  petId: Scalars["String"]["input"];
-}>;
-
-export type DeletePetMutation = {
-  __typename?: "Mutation";
-  deletePet: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type CreatePetlinkGpsMutationVariables = Exact<{
-  petlinkGps: PetlinkGpsIn;
-  appBrand: AppBrand;
-}>;
-
-export type CreatePetlinkGpsMutation = {
-  __typename?: "Mutation";
-  createPetlinkGps: {
-    __typename?: "ResponseCreatePetlinkGps";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    currentTermEnd?: string | null;
-    url?: string | null;
-    petlinkGps?: {
-      __typename?: "PetlinkGps";
-      id: string;
-      entityType: EntityTypeEnum;
-      serialNumber: string;
-      petId: string;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      countryCode?: string | null;
-      timezone?: string | null;
-      lastKnownPosition?: {
-        __typename?: "GpsPosition";
-        lat: number;
-        lng: number;
-        alt?: number | null;
-        radius: number;
-        speed?: number | null;
-        positionType: PositionType;
-        date: string;
-      } | null;
-      lastKnownStatus?: {
-        __typename?: "GpsStatus";
-        battery: number;
-        flashlight: StatusState;
-        sound: StatusState;
-        liveTracking: StatusState;
-        geofence: StatusState;
-        inGeofence?: boolean | null;
-        energySavingMode: StatusState;
-        inEnergySavingZone?: boolean | null;
-        firmwareVersion: string;
-        offline?: boolean | null;
-        date: string;
-      } | null;
-      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
-      newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; url: string; version: string } | null;
-      settings: {
-        __typename?: "GpsSettings";
-        activityProfile?: ActivityProfileEnum | null;
-        updateFrequency: number;
-        enableGpsOnDefault: boolean;
-        optimizationDone?: boolean | null;
-      };
-    } | null;
-  };
-};
-
-export type UpdatePetlinkGpsMutationVariables = Exact<{
-  petlinkGps: UpdatePetlinkGpsIn;
-}>;
-
-export type UpdatePetlinkGpsMutation = {
-  __typename?: "Mutation";
-  updatePetlinkGps: {
-    __typename?: "ResponsePetlinkGps";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    petlinkGps?: {
-      __typename?: "PetlinkGps";
-      id: string;
-      entityType: EntityTypeEnum;
-      serialNumber: string;
-      petId: string;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      countryCode?: string | null;
-      timezone?: string | null;
-      subscriptionId?: string | null;
-      subscriptionIsActive?: boolean | null;
-      logEnabled?: boolean | null;
-      lastKnownPosition?: {
-        __typename?: "GpsPosition";
-        lat: number;
-        lng: number;
-        alt?: number | null;
-        radius: number;
-        speed?: number | null;
-        positionType: PositionType;
-        date: string;
-      } | null;
-      lastKnownStatus?: {
-        __typename?: "GpsStatus";
-        battery: number;
-        flashlight: StatusState;
-        sound: StatusState;
-        liveTracking: StatusState;
-        geofence: StatusState;
-        inGeofence?: boolean | null;
-        energySavingMode: StatusState;
-        inEnergySavingZone?: boolean | null;
-        firmwareVersion: string;
-        offline?: boolean | null;
-        date: string;
-      } | null;
-      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
-      newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; version: string; url: string } | null;
-      settings: {
-        __typename?: "GpsSettings";
-        activityProfile?: ActivityProfileEnum | null;
-        updateFrequency: number;
-        enableGpsOnDefault: boolean;
-        optimizationDone?: boolean | null;
-      };
-    } | null;
-  };
-};
-
-export type ResetPetlinkGpsMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
-}>;
-
-export type ResetPetlinkGpsMutation = {
-  __typename?: "Mutation";
-  resetPetlinkGps: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type UpdateBillingInfoMutationVariables = Exact<{
-  updateBillingInfoInput: UpdateBillingInfoInput;
-}>;
-
-export type UpdateBillingInfoMutation = {
-  __typename?: "Mutation";
-  updateBillingInfo: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type UpdatePetProtectionDataMutationVariables = Exact<{
-  petProtectionId: Scalars["String"]["input"];
-  owner: PetProtectionOwnerIn;
-  pet: PetProtectionPetIn;
-}>;
-
-export type UpdatePetProtectionDataMutation = {
-  __typename?: "Mutation";
-  updatePetProtectionData?: {
-    __typename?: "ResponseUpdatePetProtectionData";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    petProtection?: {
-      __typename?: "PetProtection";
-      id: string;
-      petId?: string | null;
-      userId: string;
-      chargebeeSubscriptionId?: string | null;
-      currentTermStart: string;
-      currentTermEnd: string;
-      status: PetProtectionStatus;
-      codiceTessera?: string | null;
-      fileName?: string | null;
-      name: string;
-      price: number;
-      currencyCode: string;
-      period: number;
-      periodUnit: string;
-      reservedCoupon: string;
-      reservedCouponPercent: number;
-      customerServiceContact: string;
-      petOwner?: {
-        __typename?: "PetProtectionOwnerData";
-        name: string;
-        surname: string;
-        email: string;
-        fiscalCode: string;
-        city: string;
-        zipCode: string;
-        streetAddress: string;
-        countryCode: string;
-        provinceCode: string;
-        homePhone: string;
-        mobilePhone: string;
-      } | null;
-      pet?: {
-        __typename?: "PetProtectionPetData";
-        species: string;
-        breed: string;
-        gender: string;
-        name: string;
-        birthDate?: string | null;
-        microchip?: string | null;
-      } | null;
-      petFlag: { __typename?: "PetProtectionFlag"; country: boolean; age: boolean };
-      card?: {
-        __typename?: "Card";
-        expiryMonth?: number | null;
-        expiryYear?: number | null;
-        maskedNumber?: string | null;
-        type?: string | null;
-        brand?: string | null;
-        paymentMethod: string;
-      } | null;
-    } | null;
-  } | null;
-};
-
-export type StopRenewingSubscriptionMutationVariables = Exact<{
-  subscriptionId: Scalars["String"]["input"];
-  appBrand: AppBrand;
-  cancelReason: Scalars["String"]["input"];
-  cancelReasonCode: CancelReasonCodeEnum;
-}>;
-
-export type StopRenewingSubscriptionMutation = {
-  __typename?: "Mutation";
-  stopRenewingSubscription?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
-};
-
-export type UpdateUserMutationVariables = Exact<{
-  user: UpdateUserIn;
-}>;
-
-export type UpdateUserMutation = {
-  __typename?: "Mutation";
-  updateUser: {
-    __typename?: "ResponseUser";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    user?: {
-      __typename?: "User";
-      id: string;
-      entityType: EntityTypeEnum;
-      name: string;
-      surname: string;
-      email: string;
-      phone: string;
-      birthDate?: string | null;
-      gender?: Gender | null;
-      city?: string | null;
-      countryCode: string;
-      zipCode?: string | null;
-      streetAddress?: string | null;
-      stateCode?: string | null;
-      languageId: LanguageId;
-      timezone?: string | null;
-      creationDate: string;
-      updateDate: string;
-      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
-    } | null;
-  };
-};
-
-export type DeleteUserMutationVariables = Exact<{
-  id?: InputMaybe<Scalars["String"]["input"]>;
-}>;
-
-export type DeleteUserMutation = {
-  __typename?: "Mutation";
-  deleteUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type SendCommandMutationVariables = Exact<{
-  command: Command;
-}>;
-
-export type SendCommandMutation = {
-  __typename?: "Mutation";
-  sendCommand: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type SendSettingMutationVariables = Exact<{
-  setting: Setting;
-}>;
-
-export type SendSettingMutation = {
-  __typename?: "Mutation";
-  sendSetting: {
-    __typename?: "ResponseSendSetting";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    petlinkGps?: {
-      __typename?: "PetlinkGps";
-      id: string;
-      entityType: EntityTypeEnum;
-      serialNumber: string;
-      petId: string;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      countryCode?: string | null;
-      timezone?: string | null;
-      subscriptionId?: string | null;
-      subscriptionIsActive?: boolean | null;
-      endOfLifeDevice?: boolean | null;
-      lastKnownPosition?: {
-        __typename?: "GpsPosition";
-        lat: number;
-        lng: number;
-        alt?: number | null;
-        radius: number;
-        speed?: number | null;
-        positionType: PositionType;
-        date: string;
-      } | null;
-      lastKnownStatus?: {
-        __typename?: "GpsStatus";
-        battery: number;
-        flashlight: StatusState;
-        sound: StatusState;
-        liveTracking: StatusState;
-        geofence: StatusState;
-        inGeofence?: boolean | null;
-        energySavingMode: StatusState;
-        inEnergySavingZone?: boolean | null;
-        firmwareVersion: string;
-        offline?: boolean | null;
-        date: string;
-      } | null;
-      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
-      settings: { __typename?: "GpsSettings"; updateFrequency: number; enableGpsOnDefault: boolean };
-    } | null;
-    energySavingZone?: {
-      __typename?: "EnergySavingZone";
-      entityType: EntityTypeEnum;
-      id: string;
-      name: string;
-      icon: string;
-      ssid: string;
-      bssid: string;
-      userId: string;
-      radius: number;
-      creationDate: string;
-      updateDate: string;
-      position: { __typename?: "Coordinates"; lat: number; lng: number };
-    } | null;
-  };
-};
-
-export type CreateGeofenceMutationVariables = Exact<{
-  geofence: GeofenceIn;
-}>;
-
-export type CreateGeofenceMutation = {
-  __typename?: "Mutation";
-  createGeofence: {
-    __typename?: "ResponseGeofence";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    geofence?: {
-      __typename?: "Geofence";
-      id: string;
-      entityType: EntityTypeEnum;
-      name: string;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
-    } | null;
-  };
-};
-
-export type UpdateGeofenceMutationVariables = Exact<{
-  geofence: UpdateGeofenceIn;
-}>;
-
-export type UpdateGeofenceMutation = {
-  __typename?: "Mutation";
-  updateGeofence: {
-    __typename?: "ResponseGeofence";
-    code: string;
-    translationCode?: string | null;
-    message: string;
-    geofence?: {
-      __typename?: "Geofence";
-      id: string;
-      entityType: EntityTypeEnum;
-      name: string;
-      userId: string;
-      creationDate: string;
-      updateDate: string;
-      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
-    } | null;
-  };
-};
-
-export type DeleteGeofenceMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
-}>;
-
-export type DeleteGeofenceMutation = {
-  __typename?: "Mutation";
-  deleteGeofence: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
-};
-
-export type AcknowledgeCheckoutMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
-}>;
-
-export type AcknowledgeCheckoutMutation = {
-  __typename?: "Mutation";
-  acknowledgeCheckout: { __typename?: "Response"; code: string; message: string };
-};
 
 export type GetEndOfLifeStepQueryVariables = Exact<{
   eolId?: InputMaybe<Scalars["String"]["input"]>;
@@ -4328,1636 +3717,707 @@ export type ChangeForgotPasswordMutation = {
   changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
-export const UpdateEndOfLifeDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updateEndOfLife" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "eolId" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "EndOfLifeIn" } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updateEndOfLife" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "eolId" }, value: { kind: "Variable", name: { kind: "Name", value: "eolId" } } },
-              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
-              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "endOfLife" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "step" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "productId" } },
-                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "devicePrice" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "id" } },
-                            { kind: "Field", name: { kind: "Name", value: "deviceType" } },
-                            { kind: "Field", name: { kind: "Name", value: "price" } },
-                            { kind: "Field", name: { kind: "Name", value: "period" } },
-                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
-                            { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
-                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "pricing" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "id" } },
-                            { kind: "Field", name: { kind: "Name", value: "name" } },
-                            { kind: "Field", name: { kind: "Name", value: "externalName" } },
-                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
-                            { kind: "Field", name: { kind: "Name", value: "price" } },
-                            { kind: "Field", name: { kind: "Name", value: "period" } },
-                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
-                            { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
-                            { kind: "Field", name: { kind: "Name", value: "status" } },
-                            { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
-                            { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
-                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
-                            {
-                              kind: "Field",
-                              name: { kind: "Name", value: "addonPricings" },
-                              selectionSet: {
-                                kind: "SelectionSet",
-                                selections: [
-                                  { kind: "Field", name: { kind: "Name", value: "id" } },
-                                  { kind: "Field", name: { kind: "Name", value: "name" } },
-                                  { kind: "Field", name: { kind: "Name", value: "externalName" } },
-                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
-                                  { kind: "Field", name: { kind: "Name", value: "price" } },
-                                  { kind: "Field", name: { kind: "Name", value: "period" } },
-                                  { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
-                                  { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
-                                  { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
-                                  { kind: "Field", name: { kind: "Name", value: "status" } },
-                                  { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
-                                  { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
-                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
-                                  { kind: "Field", name: { kind: "Name", value: "__typename" } },
-                                ],
-                              },
-                            },
-                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "addonIds" } },
-                      { kind: "Field", name: { kind: "Name", value: "shopUrl" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "shippingInfo" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "firstName" } },
-                            { kind: "Field", name: { kind: "Name", value: "lastName" } },
-                            { kind: "Field", name: { kind: "Name", value: "email" } },
-                            { kind: "Field", name: { kind: "Name", value: "phone" } },
-                            { kind: "Field", name: { kind: "Name", value: "address" } },
-                            { kind: "Field", name: { kind: "Name", value: "city" } },
-                            { kind: "Field", name: { kind: "Name", value: "stateCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "state" } },
-                            { kind: "Field", name: { kind: "Name", value: "country" } },
-                            { kind: "Field", name: { kind: "Name", value: "zip" } },
-                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "__typename" } },
-                    ],
-                  },
-                },
-                { kind: "Field", name: { kind: "Name", value: "__typename" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const SendOtpDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "sendOtp" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "phone" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "sendOtp" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "phone" }, value: { kind: "Variable", name: { kind: "Name", value: "phone" } } },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "languageId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "verificationId" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const CheckOtpDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "checkOtp" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "contact" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "checkOtp" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "verificationId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
-              },
-              { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
-              { kind: "Argument", name: { kind: "Name", value: "contact" }, value: { kind: "Variable", name: { kind: "Name", value: "contact" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "verificationId" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const SignUpUserDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "signUpUser" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UserIn" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "otpData" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "OtpInput" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "signUpUser" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
-              { kind: "Argument", name: { kind: "Name", value: "otpData" }, value: { kind: "Variable", name: { kind: "Name", value: "otpData" } } },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "languageId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
-              },
-              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UtilityIntegrationTestDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "utilityIntegrationTest" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UtilityIntegrationTestInput" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "utilityIntegrationTest" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const VerifyEmailDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "verifyEmail" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "uuid" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "verifyEmail" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "verificationId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
-              },
-              { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
-              { kind: "Argument", name: { kind: "Name", value: "uuid" }, value: { kind: "Variable", name: { kind: "Name", value: "uuid" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const CreatePetDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "createPet" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "createPet" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "pet" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "species" } },
-                      { kind: "Field", name: { kind: "Name", value: "breedType" } },
-                      { kind: "Field", name: { kind: "Name", value: "breeds" } },
-                      { kind: "Field", name: { kind: "Name", value: "gender" } },
-                      { kind: "Field", name: { kind: "Name", value: "primaryColor" } },
-                      { kind: "Field", name: { kind: "Name", value: "weight" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "image" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "id" } },
-                            { kind: "Field", name: { kind: "Name", value: "url" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "neutered" } },
-                      { kind: "Field", name: { kind: "Name", value: "livingEnvironment" } },
-                      { kind: "Field", name: { kind: "Name", value: "length" } },
-                      { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
-                      { kind: "Field", name: { kind: "Name", value: "petProtectionId" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdatePetDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updatePet" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdatePetIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updatePet" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "pet" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "species" } },
-                      { kind: "Field", name: { kind: "Name", value: "breedType" } },
-                      { kind: "Field", name: { kind: "Name", value: "breeds" } },
-                      { kind: "Field", name: { kind: "Name", value: "gender" } },
-                      { kind: "Field", name: { kind: "Name", value: "primaryColor" } },
-                      { kind: "Field", name: { kind: "Name", value: "weight" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "image" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "id" } },
-                            { kind: "Field", name: { kind: "Name", value: "url" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "neutered" } },
-                      { kind: "Field", name: { kind: "Name", value: "livingEnvironment" } },
-                      { kind: "Field", name: { kind: "Name", value: "length" } },
-                      { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
-                      { kind: "Field", name: { kind: "Name", value: "petProtectionId" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const DeletePetDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "deletePet" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "petId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "deletePet" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "petId" }, value: { kind: "Variable", name: { kind: "Name", value: "petId" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const CreatePetlinkGpsDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "createPetlinkGps" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetlinkGpsIn" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "createPetlinkGps" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "petlinkGps" },
-                value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
-              },
-              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "petlinkGps" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
-                      { kind: "Field", name: { kind: "Name", value: "petId" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "lastKnownPosition" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                            { kind: "Field", name: { kind: "Name", value: "alt" } },
-                            { kind: "Field", name: { kind: "Name", value: "radius" } },
-                            { kind: "Field", name: { kind: "Name", value: "speed" } },
-                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
-                            { kind: "Field", name: { kind: "Name", value: "date" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "lastKnownStatus" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "battery" } },
-                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
-                            { kind: "Field", name: { kind: "Name", value: "sound" } },
-                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
-                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
-                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
-                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
-                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
-                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
-                            { kind: "Field", name: { kind: "Name", value: "offline" } },
-                            { kind: "Field", name: { kind: "Name", value: "date" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "geofenceCoordinates" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "newFirmwareVersion" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "url" } },
-                            { kind: "Field", name: { kind: "Name", value: "version" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "settings" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "activityProfile" } },
-                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
-                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
-                            { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-                { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
-                { kind: "Field", name: { kind: "Name", value: "url" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdatePetlinkGpsDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updatePetlinkGps" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdatePetlinkGpsIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updatePetlinkGps" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "petlinkGps" },
-                value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "petlinkGps" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
-                      { kind: "Field", name: { kind: "Name", value: "petId" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "lastKnownPosition" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                            { kind: "Field", name: { kind: "Name", value: "alt" } },
-                            { kind: "Field", name: { kind: "Name", value: "radius" } },
-                            { kind: "Field", name: { kind: "Name", value: "speed" } },
-                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
-                            { kind: "Field", name: { kind: "Name", value: "date" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "lastKnownStatus" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "battery" } },
-                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
-                            { kind: "Field", name: { kind: "Name", value: "sound" } },
-                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
-                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
-                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
-                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
-                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
-                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
-                            { kind: "Field", name: { kind: "Name", value: "offline" } },
-                            { kind: "Field", name: { kind: "Name", value: "date" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "geofenceCoordinates" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "newFirmwareVersion" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "version" } },
-                            { kind: "Field", name: { kind: "Name", value: "url" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "settings" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "activityProfile" } },
-                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
-                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
-                            { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
-                      { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
-                      { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const ResetPetlinkGpsDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "resetPetlinkGps" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "resetPetlinkGps" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdateBillingInfoDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updateBillingInfo" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "updateBillingInfoInput" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateBillingInfoInput" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updateBillingInfo" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "updateBillingInfoInput" },
-                value: { kind: "Variable", name: { kind: "Name", value: "updateBillingInfoInput" } },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdatePetProtectionDataDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updatePetProtectionData" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "owner" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetProtectionOwnerIn" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetProtectionPetIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updatePetProtectionData" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "petProtectionId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
-              },
-              { kind: "Argument", name: { kind: "Name", value: "owner" }, value: { kind: "Variable", name: { kind: "Name", value: "owner" } } },
-              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "petProtection" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "petId" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
-                      { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
-                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
-                      { kind: "Field", name: { kind: "Name", value: "status" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "petOwner" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "name" } },
-                            { kind: "Field", name: { kind: "Name", value: "surname" } },
-                            { kind: "Field", name: { kind: "Name", value: "email" } },
-                            { kind: "Field", name: { kind: "Name", value: "fiscalCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "city" } },
-                            { kind: "Field", name: { kind: "Name", value: "zipCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "streetAddress" } },
-                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "provinceCode" } },
-                            { kind: "Field", name: { kind: "Name", value: "homePhone" } },
-                            { kind: "Field", name: { kind: "Name", value: "mobilePhone" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "pet" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "species" } },
-                            { kind: "Field", name: { kind: "Name", value: "breed" } },
-                            { kind: "Field", name: { kind: "Name", value: "gender" } },
-                            { kind: "Field", name: { kind: "Name", value: "name" } },
-                            { kind: "Field", name: { kind: "Name", value: "birthDate" } },
-                            { kind: "Field", name: { kind: "Name", value: "microchip" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "petFlag" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "country" } },
-                            { kind: "Field", name: { kind: "Name", value: "age" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "codiceTessera" } },
-                      { kind: "Field", name: { kind: "Name", value: "fileName" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "price" } },
-                      { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "period" } },
-                      { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
-                      { kind: "Field", name: { kind: "Name", value: "reservedCoupon" } },
-                      { kind: "Field", name: { kind: "Name", value: "reservedCouponPercent" } },
-                      { kind: "Field", name: { kind: "Name", value: "customerServiceContact" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "card" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
-                            { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
-                            { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
-                            { kind: "Field", name: { kind: "Name", value: "type" } },
-                            { kind: "Field", name: { kind: "Name", value: "brand" } },
-                            { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const StopRenewingSubscriptionDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "stopRenewingSubscription" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "cancelReasonCode" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "CancelReasonCodeEnum" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "stopRenewingSubscription" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "subscriptionId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
-              },
-              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "cancelReason" },
-                value: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "cancelReasonCode" },
-                value: { kind: "Variable", name: { kind: "Name", value: "cancelReasonCode" } },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdateUserDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updateUser" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateUserIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updateUser" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "user" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "surname" } },
-                      { kind: "Field", name: { kind: "Name", value: "email" } },
-                      { kind: "Field", name: { kind: "Name", value: "phone" } },
-                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "gender" } },
-                      { kind: "Field", name: { kind: "Name", value: "city" } },
-                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "zipCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "streetAddress" } },
-                      { kind: "Field", name: { kind: "Name", value: "stateCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "languageId" } },
-                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "image" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "id" } },
-                            { kind: "Field", name: { kind: "Name", value: "url" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const DeleteUserDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "deleteUser" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "deleteUser" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const SendCommandDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "sendCommand" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "command" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "Command" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "sendCommand" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "command" }, value: { kind: "Variable", name: { kind: "Name", value: "command" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const SendSettingDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "sendSetting" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "setting" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "Setting" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "sendSetting" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "setting" }, value: { kind: "Variable", name: { kind: "Name", value: "setting" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "petlinkGps" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
-                      { kind: "Field", name: { kind: "Name", value: "petId" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "lastKnownPosition" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                            { kind: "Field", name: { kind: "Name", value: "alt" } },
-                            { kind: "Field", name: { kind: "Name", value: "radius" } },
-                            { kind: "Field", name: { kind: "Name", value: "speed" } },
-                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
-                            { kind: "Field", name: { kind: "Name", value: "date" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "lastKnownStatus" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "battery" } },
-                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
-                            { kind: "Field", name: { kind: "Name", value: "sound" } },
-                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
-                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
-                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
-                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
-                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
-                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
-                            { kind: "Field", name: { kind: "Name", value: "offline" } },
-                            { kind: "Field", name: { kind: "Name", value: "date" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "geofenceCoordinates" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                          ],
-                        },
-                      },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "settings" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
-                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
-                      { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
-                      { kind: "Field", name: { kind: "Name", value: "endOfLifeDevice" } },
-                    ],
-                  },
-                },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "energySavingZone" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "icon" } },
-                      { kind: "Field", name: { kind: "Name", value: "ssid" } },
-                      { kind: "Field", name: { kind: "Name", value: "bssid" } },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "position" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "radius" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const CreateGeofenceDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "createGeofence" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "geofence" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "GeofenceIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "createGeofence" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "geofence" }, value: { kind: "Variable", name: { kind: "Name", value: "geofence" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "geofence" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "position" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdateGeofenceDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updateGeofence" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "geofence" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateGeofenceIn" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updateGeofence" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "geofence" }, value: { kind: "Variable", name: { kind: "Name", value: "geofence" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "geofence" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      {
-                        kind: "Field",
-                        name: { kind: "Name", value: "position" },
-                        selectionSet: {
-                          kind: "SelectionSet",
-                          selections: [
-                            { kind: "Field", name: { kind: "Name", value: "lat" } },
-                            { kind: "Field", name: { kind: "Name", value: "lng" } },
-                          ],
-                        },
-                      },
-                      { kind: "Field", name: { kind: "Name", value: "userId" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const DeleteGeofenceDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "deleteGeofence" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "deleteGeofence" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const AcknowledgeCheckoutDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "acknowledgeCheckout" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "acknowledgeCheckout" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
+export type UpdateEndOfLifeMutationVariables = Exact<{
+  eolId?: InputMaybe<Scalars["String"]["input"]>;
+  deviceId?: InputMaybe<Scalars["String"]["input"]>;
+  input?: InputMaybe<EndOfLifeIn>;
+}>;
+
+export type UpdateEndOfLifeMutation = {
+  __typename?: "Mutation";
+  updateEndOfLife: {
+    __typename: "ResponseUpdateEndOfLife";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    endOfLife?: {
+      __typename: "EndOfLife";
+      id: string;
+      step: string;
+      userId: string;
+      productId: string;
+      serialNumber: string;
+      subscriptionId?: string | null;
+      addonIds?: Array<string> | null;
+      shopUrl?: string | null;
+      devicePrice?: {
+        __typename: "DevicePrice";
+        id: string;
+        deviceType: DeviceTypeEnum;
+        price: number;
+        period?: number | null;
+        periodUnit?: string | null;
+        discountPercentage: number;
+        currencyCode: string;
+        countryCode: string;
+      } | null;
+      pricing?: {
+        __typename: "Pricing";
+        id: string;
+        name: string;
+        externalName?: string | null;
+        itemId: string;
+        price?: number | null;
+        period?: number | null;
+        currencyCode: string;
+        periodUnit?: string | null;
+        itemFamilyId?: string | null;
+        status?: string | null;
+        trialPeriod?: number | null;
+        trialPeriodUnit?: string | null;
+        itemType?: string | null;
+        addonPricings?: Array<{
+          __typename: "AddonPricing";
+          id: string;
+          name: string;
+          externalName?: string | null;
+          itemId: string;
+          price?: number | null;
+          period?: number | null;
+          currencyCode: string;
+          periodUnit?: string | null;
+          itemFamilyId?: string | null;
+          status?: string | null;
+          trialPeriod?: number | null;
+          trialPeriodUnit?: string | null;
+          itemType?: string | null;
+        } | null> | null;
+      } | null;
+      shippingInfo?: {
+        __typename: "ShippingInfo";
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+        address: string;
+        city: string;
+        stateCode?: string | null;
+        state?: string | null;
+        country: string;
+        zip: string;
+      } | null;
+    } | null;
+  };
+};
+
+export type SendOtpMutationVariables = Exact<{
+  phone: Scalars["String"]["input"];
+  languageId?: InputMaybe<LanguageId>;
+}>;
+
+export type SendOtpMutation = {
+  __typename?: "Mutation";
+  sendOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+};
+
+export type CheckOtpMutationVariables = Exact<{
+  verificationId: Scalars["String"]["input"];
+  otp: Scalars["String"]["input"];
+  contact: Scalars["String"]["input"];
+}>;
+
+export type CheckOtpMutation = {
+  __typename?: "Mutation";
+  checkOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+};
+
+export type SignUpUserMutationVariables = Exact<{
+  user: UserIn;
+  otpData: OtpInput;
+  languageId?: InputMaybe<LanguageId>;
+  appBrand: AppBrand;
+}>;
+
+export type SignUpUserMutation = {
+  __typename?: "Mutation";
+  signUpUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type UtilityIntegrationTestMutationVariables = Exact<{
+  input: UtilityIntegrationTestInput;
+}>;
+
+export type UtilityIntegrationTestMutation = {
+  __typename?: "Mutation";
+  utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string };
+};
+
+export type VerifyEmailMutationVariables = Exact<{
+  verificationId: Scalars["String"]["input"];
+  otp: Scalars["String"]["input"];
+  uuid: Scalars["String"]["input"];
+}>;
+
+export type VerifyEmailMutation = {
+  __typename?: "Mutation";
+  verifyEmail?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
+};
+
+export type CreatePetMutationVariables = Exact<{
+  pet: PetIn;
+}>;
+
+export type CreatePetMutation = {
+  __typename?: "Mutation";
+  createPet: {
+    __typename?: "ResponsePet";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    pet?: {
+      __typename?: "Pet";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      livingEnvironment?: PetLivingEnvironment | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+      petProtectionId?: string | null;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
+    } | null;
+  };
+};
+
+export type UpdatePetMutationVariables = Exact<{
+  pet: UpdatePetIn;
+}>;
+
+export type UpdatePetMutation = {
+  __typename?: "Mutation";
+  updatePet: {
+    __typename?: "ResponsePet";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    pet?: {
+      __typename?: "Pet";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      birthDate?: string | null;
+      species: string;
+      breedType: string;
+      breeds: Array<string>;
+      gender: string;
+      primaryColor?: string | null;
+      weight?: number | null;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      neutered?: boolean | null;
+      livingEnvironment?: PetLivingEnvironment | null;
+      length?: number | null;
+      dateMarkedAsLost?: string | null;
+      petProtectionId?: string | null;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
+    } | null;
+  };
+};
+
+export type DeletePetMutationVariables = Exact<{
+  petId: Scalars["String"]["input"];
+}>;
+
+export type DeletePetMutation = {
+  __typename?: "Mutation";
+  deletePet: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type CreatePetlinkGpsMutationVariables = Exact<{
+  petlinkGps: PetlinkGpsIn;
+  appBrand: AppBrand;
+}>;
+
+export type CreatePetlinkGpsMutation = {
+  __typename?: "Mutation";
+  createPetlinkGps: {
+    __typename?: "ResponseCreatePetlinkGps";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    currentTermEnd?: string | null;
+    url?: string | null;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
+      newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; url: string; version: string } | null;
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
+    } | null;
+  };
+};
+
+export type UpdatePetlinkGpsMutationVariables = Exact<{
+  petlinkGps: UpdatePetlinkGpsIn;
+}>;
+
+export type UpdatePetlinkGpsMutation = {
+  __typename?: "Mutation";
+  updatePetlinkGps: {
+    __typename?: "ResponsePetlinkGps";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      subscriptionId?: string | null;
+      subscriptionIsActive?: boolean | null;
+      logEnabled?: boolean | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
+      newFirmwareVersion?: { __typename?: "NewFirmwareVersion"; version: string; url: string } | null;
+      settings: {
+        __typename?: "GpsSettings";
+        activityProfile?: ActivityProfileEnum | null;
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+      };
+    } | null;
+  };
+};
+
+export type ResetPetlinkGpsMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type ResetPetlinkGpsMutation = {
+  __typename?: "Mutation";
+  resetPetlinkGps: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type UpdateBillingInfoMutationVariables = Exact<{
+  updateBillingInfoInput: UpdateBillingInfoInput;
+}>;
+
+export type UpdateBillingInfoMutation = {
+  __typename?: "Mutation";
+  updateBillingInfo: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type UpdatePetProtectionDataMutationVariables = Exact<{
+  petProtectionId: Scalars["String"]["input"];
+  owner: PetProtectionOwnerIn;
+  pet: PetProtectionPetIn;
+}>;
+
+export type UpdatePetProtectionDataMutation = {
+  __typename?: "Mutation";
+  updatePetProtectionData?: {
+    __typename?: "ResponseUpdatePetProtectionData";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petProtection?: {
+      __typename?: "PetProtection";
+      id: string;
+      petId?: string | null;
+      userId: string;
+      chargebeeSubscriptionId?: string | null;
+      currentTermStart: string;
+      currentTermEnd: string;
+      status: PetProtectionStatus;
+      codiceTessera?: string | null;
+      fileName?: string | null;
+      name: string;
+      price: number;
+      currencyCode: string;
+      period: number;
+      periodUnit: string;
+      reservedCoupon: string;
+      reservedCouponPercent: number;
+      customerServiceContact: string;
+      petOwner?: {
+        __typename?: "PetProtectionOwnerData";
+        name: string;
+        surname: string;
+        email: string;
+        fiscalCode: string;
+        city: string;
+        zipCode: string;
+        streetAddress: string;
+        countryCode: string;
+        provinceCode: string;
+        homePhone: string;
+        mobilePhone: string;
+      } | null;
+      pet?: {
+        __typename?: "PetProtectionPetData";
+        species: string;
+        breed: string;
+        gender: string;
+        name: string;
+        birthDate?: string | null;
+        microchip?: string | null;
+      } | null;
+      petFlag: { __typename?: "PetProtectionFlag"; country: boolean; age: boolean };
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
+    } | null;
+  } | null;
+};
+
+export type StopRenewingSubscriptionMutationVariables = Exact<{
+  subscriptionId: Scalars["String"]["input"];
+  appBrand: AppBrand;
+  cancelReason: Scalars["String"]["input"];
+  cancelReasonCode: CancelReasonCodeEnum;
+}>;
+
+export type StopRenewingSubscriptionMutation = {
+  __typename?: "Mutation";
+  stopRenewingSubscription?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
+};
+
+export type UpdateUserMutationVariables = Exact<{
+  user: UpdateUserIn;
+}>;
+
+export type UpdateUserMutation = {
+  __typename?: "Mutation";
+  updateUser: {
+    __typename?: "ResponseUser";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    user?: {
+      __typename?: "User";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      birthDate?: string | null;
+      gender?: Gender | null;
+      city?: string | null;
+      countryCode: string;
+      zipCode?: string | null;
+      streetAddress?: string | null;
+      stateCode?: string | null;
+      languageId: LanguageId;
+      timezone?: string | null;
+      creationDate: string;
+      updateDate: string;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
+    } | null;
+  };
+};
+
+export type DeleteUserMutationVariables = Exact<{
+  id?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type DeleteUserMutation = {
+  __typename?: "Mutation";
+  deleteUser: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type SendCommandMutationVariables = Exact<{
+  command: Command;
+}>;
+
+export type SendCommandMutation = {
+  __typename?: "Mutation";
+  sendCommand: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type SendSettingMutationVariables = Exact<{
+  setting: Setting;
+}>;
+
+export type SendSettingMutation = {
+  __typename?: "Mutation";
+  sendSetting: {
+    __typename?: "ResponseSendSetting";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    petlinkGps?: {
+      __typename?: "PetlinkGps";
+      id: string;
+      entityType: EntityTypeEnum;
+      serialNumber: string;
+      petId: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      countryCode?: string | null;
+      timezone?: string | null;
+      subscriptionId?: string | null;
+      subscriptionIsActive?: boolean | null;
+      endOfLifeDevice?: boolean | null;
+      lastKnownPosition?: {
+        __typename?: "GpsPosition";
+        lat: number;
+        lng: number;
+        alt?: number | null;
+        radius: number;
+        speed?: number | null;
+        positionType: PositionType;
+        date: string;
+      } | null;
+      lastKnownStatus?: {
+        __typename?: "GpsStatus";
+        battery: number;
+        flashlight: StatusState;
+        sound: StatusState;
+        liveTracking: StatusState;
+        geofence: StatusState;
+        inGeofence?: boolean | null;
+        energySavingMode: StatusState;
+        inEnergySavingZone?: boolean | null;
+        firmwareVersion: string;
+        offline?: boolean | null;
+        date: string;
+      } | null;
+      geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
+      settings: { __typename?: "GpsSettings"; updateFrequency: number; enableGpsOnDefault: boolean };
+    } | null;
+    energySavingZone?: {
+      __typename?: "EnergySavingZone";
+      entityType: EntityTypeEnum;
+      id: string;
+      name: string;
+      icon: string;
+      ssid: string;
+      bssid: string;
+      userId: string;
+      radius: number;
+      creationDate: string;
+      updateDate: string;
+      position: { __typename?: "Coordinates"; lat: number; lng: number };
+    } | null;
+  };
+};
+
+export type CreateGeofenceMutationVariables = Exact<{
+  geofence: GeofenceIn;
+}>;
+
+export type CreateGeofenceMutation = {
+  __typename?: "Mutation";
+  createGeofence: {
+    __typename?: "ResponseGeofence";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    geofence?: {
+      __typename?: "Geofence";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
+    } | null;
+  };
+};
+
+export type UpdateGeofenceMutationVariables = Exact<{
+  geofence: UpdateGeofenceIn;
+}>;
+
+export type UpdateGeofenceMutation = {
+  __typename?: "Mutation";
+  updateGeofence: {
+    __typename?: "ResponseGeofence";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    geofence?: {
+      __typename?: "Geofence";
+      id: string;
+      entityType: EntityTypeEnum;
+      name: string;
+      userId: string;
+      creationDate: string;
+      updateDate: string;
+      position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
+    } | null;
+  };
+};
+
+export type DeleteGeofenceMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteGeofenceMutation = {
+  __typename?: "Mutation";
+  deleteGeofence: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type AcknowledgeCheckoutMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type AcknowledgeCheckoutMutation = {
+  __typename?: "Mutation";
+  acknowledgeCheckout: { __typename?: "Response"; code: string; message: string };
+};
+
+export type ReplacementMutationVariables = Exact<{
+  productId: Scalars["String"]["input"];
+  newSerialNumber: Scalars["String"]["input"];
+  entityType: ProductTypeEnum;
+}>;
+
+export type ReplacementMutation = {
+  __typename?: "Mutation";
+  replacement: { __typename?: "ResponseReplacement"; code: string; message: string; translationCode?: string | null };
+};
+
+export type OnGpsMessagePositionSubscriptionVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type OnGpsMessagePositionSubscription = {
+  __typename?: "Subscription";
+  onGpsMessagePosition?: {
+    __typename?: "GpsMessagePosition";
+    id: string;
+    messageType: GpsMessageType;
+    position: {
+      __typename?: "GpsPosition";
+      lat: number;
+      lng: number;
+      alt?: number | null;
+      radius: number;
+      speed?: number | null;
+      positionType: PositionType;
+      date: string;
+    };
+  } | null;
+};
+
+export type OnGpsMessageStatusSubscriptionVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type OnGpsMessageStatusSubscription = {
+  __typename?: "Subscription";
+  onGpsMessageStatus?: {
+    __typename?: "GpsMessageStatus";
+    id: string;
+    messageType: GpsMessageType;
+    status: {
+      __typename?: "GpsStatus";
+      battery: number;
+      flashlight: StatusState;
+      sound: StatusState;
+      liveTracking: StatusState;
+      geofence: StatusState;
+      inGeofence?: boolean | null;
+      energySavingMode: StatusState;
+      inEnergySavingZone?: boolean | null;
+      firmwareVersion: string;
+      date: string;
+    };
+  } | null;
+};
+
+export type OnSubscriptionStatusSubscriptionVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type OnSubscriptionStatusSubscription = {
+  __typename?: "Subscription";
+  onSubscriptionStatus?: {
+    __typename?: "SubscriptionMessageStatus";
+    id: string;
+    status: { __typename?: "SubscriptionStatus"; productId: string; subscriptionIsActive: boolean; currentTermEnd: string };
+  } | null;
+};
+
 export const GetEndOfLifeStepDocument = {
   kind: "Document",
   definitions: [
@@ -8054,6 +6514,1845 @@ export const ChangeForgotPasswordDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const UpdateEndOfLifeDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateEndOfLife" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "eolId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "EndOfLifeIn" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateEndOfLife" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "eolId" }, value: { kind: "Variable", name: { kind: "Name", value: "eolId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "endOfLife" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "step" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "devicePrice" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "deviceType" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pricing" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "price" } },
+                            { kind: "Field", name: { kind: "Name", value: "period" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                            { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "addonPricings" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "id" } },
+                                  { kind: "Field", name: { kind: "Name", value: "name" } },
+                                  { kind: "Field", name: { kind: "Name", value: "externalName" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "price" } },
+                                  { kind: "Field", name: { kind: "Name", value: "period" } },
+                                  { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                                  { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemFamilyId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "status" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriod" } },
+                                  { kind: "Field", name: { kind: "Name", value: "trialPeriodUnit" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                                ],
+                              },
+                            },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "addonIds" } },
+                      { kind: "Field", name: { kind: "Name", value: "shopUrl" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "shippingInfo" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "firstName" } },
+                            { kind: "Field", name: { kind: "Name", value: "lastName" } },
+                            { kind: "Field", name: { kind: "Name", value: "email" } },
+                            { kind: "Field", name: { kind: "Name", value: "phone" } },
+                            { kind: "Field", name: { kind: "Name", value: "address" } },
+                            { kind: "Field", name: { kind: "Name", value: "city" } },
+                            { kind: "Field", name: { kind: "Name", value: "stateCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "state" } },
+                            { kind: "Field", name: { kind: "Name", value: "country" } },
+                            { kind: "Field", name: { kind: "Name", value: "zip" } },
+                            { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "__typename" } },
+                    ],
+                  },
+                },
+                { kind: "Field", name: { kind: "Name", value: "__typename" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SendOtpDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "sendOtp" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "phone" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "sendOtp" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "phone" }, value: { kind: "Variable", name: { kind: "Name", value: "phone" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "verificationId" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CheckOtpDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "checkOtp" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "contact" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "checkOtp" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
+              { kind: "Argument", name: { kind: "Name", value: "contact" }, value: { kind: "Variable", name: { kind: "Name", value: "contact" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "verificationId" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SignUpUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "signUpUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UserIn" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "otpData" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "OtpInput" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "LanguageId" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "signUpUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
+              { kind: "Argument", name: { kind: "Name", value: "otpData" }, value: { kind: "Variable", name: { kind: "Name", value: "otpData" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "languageId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "languageId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UtilityIntegrationTestDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "utilityIntegrationTest" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UtilityIntegrationTestInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "utilityIntegrationTest" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const VerifyEmailDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "verifyEmail" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "otp" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "uuid" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "verifyEmail" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "verificationId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "verificationId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "otp" }, value: { kind: "Variable", name: { kind: "Name", value: "otp" } } },
+              { kind: "Argument", name: { kind: "Name", value: "uuid" }, value: { kind: "Variable", name: { kind: "Name", value: "uuid" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CreatePetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createPet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createPet" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pet" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "species" } },
+                      { kind: "Field", name: { kind: "Name", value: "breedType" } },
+                      { kind: "Field", name: { kind: "Name", value: "breeds" } },
+                      { kind: "Field", name: { kind: "Name", value: "gender" } },
+                      { kind: "Field", name: { kind: "Name", value: "primaryColor" } },
+                      { kind: "Field", name: { kind: "Name", value: "weight" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "neutered" } },
+                      { kind: "Field", name: { kind: "Name", value: "livingEnvironment" } },
+                      { kind: "Field", name: { kind: "Name", value: "length" } },
+                      { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
+                      { kind: "Field", name: { kind: "Name", value: "petProtectionId" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdatePetIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePet" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pet" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "species" } },
+                      { kind: "Field", name: { kind: "Name", value: "breedType" } },
+                      { kind: "Field", name: { kind: "Name", value: "breeds" } },
+                      { kind: "Field", name: { kind: "Name", value: "gender" } },
+                      { kind: "Field", name: { kind: "Name", value: "primaryColor" } },
+                      { kind: "Field", name: { kind: "Name", value: "weight" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "neutered" } },
+                      { kind: "Field", name: { kind: "Name", value: "livingEnvironment" } },
+                      { kind: "Field", name: { kind: "Name", value: "length" } },
+                      { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
+                      { kind: "Field", name: { kind: "Name", value: "petProtectionId" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeletePetDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deletePet" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deletePet" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "petId" }, value: { kind: "Variable", name: { kind: "Name", value: "petId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CreatePetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetlinkGpsIn" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createPetlinkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petlinkGps" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                            { kind: "Field", name: { kind: "Name", value: "alt" } },
+                            { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "speed" } },
+                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
+                            { kind: "Field", name: { kind: "Name", value: "sound" } },
+                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
+                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
+                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                            { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "newFirmwareVersion" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                            { kind: "Field", name: { kind: "Name", value: "version" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "activityProfile" } },
+                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
+                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
+                            { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdatePetlinkGpsIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePetlinkGps" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petlinkGps" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petlinkGps" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                            { kind: "Field", name: { kind: "Name", value: "alt" } },
+                            { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "speed" } },
+                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
+                            { kind: "Field", name: { kind: "Name", value: "sound" } },
+                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
+                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
+                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                            { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "newFirmwareVersion" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "version" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "activityProfile" } },
+                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
+                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
+                            { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ResetPetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "resetPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "resetPetlinkGps" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateBillingInfoDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateBillingInfo" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "updateBillingInfoInput" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateBillingInfoInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateBillingInfo" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "updateBillingInfoInput" },
+                value: { kind: "Variable", name: { kind: "Name", value: "updateBillingInfoInput" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdatePetProtectionDataDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updatePetProtectionData" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "owner" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetProtectionOwnerIn" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pet" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "PetProtectionPetIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updatePetProtectionData" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "petProtectionId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "petProtectionId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "owner" }, value: { kind: "Variable", name: { kind: "Name", value: "owner" } } },
+              { kind: "Argument", name: { kind: "Name", value: "pet" }, value: { kind: "Variable", name: { kind: "Name", value: "pet" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petProtection" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petOwner" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "surname" } },
+                            { kind: "Field", name: { kind: "Name", value: "email" } },
+                            { kind: "Field", name: { kind: "Name", value: "fiscalCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "city" } },
+                            { kind: "Field", name: { kind: "Name", value: "zipCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "streetAddress" } },
+                            { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "provinceCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "homePhone" } },
+                            { kind: "Field", name: { kind: "Name", value: "mobilePhone" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "pet" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "species" } },
+                            { kind: "Field", name: { kind: "Name", value: "breed" } },
+                            { kind: "Field", name: { kind: "Name", value: "gender" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "microchip" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "petFlag" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "country" } },
+                            { kind: "Field", name: { kind: "Name", value: "age" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "codiceTessera" } },
+                      { kind: "Field", name: { kind: "Name", value: "fileName" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "price" } },
+                      { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "period" } },
+                      { kind: "Field", name: { kind: "Name", value: "periodUnit" } },
+                      { kind: "Field", name: { kind: "Name", value: "reservedCoupon" } },
+                      { kind: "Field", name: { kind: "Name", value: "reservedCouponPercent" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerServiceContact" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "card" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                            { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                            { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "type" } },
+                            { kind: "Field", name: { kind: "Name", value: "brand" } },
+                            { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const StopRenewingSubscriptionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "stopRenewingSubscription" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "appBrand" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AppBrand" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "cancelReasonCode" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "CancelReasonCodeEnum" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "stopRenewingSubscription" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "subscriptionId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "appBrand" }, value: { kind: "Variable", name: { kind: "Name", value: "appBrand" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "cancelReason" },
+                value: { kind: "Variable", name: { kind: "Name", value: "cancelReason" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "cancelReasonCode" },
+                value: { kind: "Variable", name: { kind: "Name", value: "cancelReasonCode" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateUserIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "birthDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "gender" } },
+                      { kind: "Field", name: { kind: "Name", value: "city" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "zipCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "streetAddress" } },
+                      { kind: "Field", name: { kind: "Name", value: "stateCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "languageId" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteUser" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SendCommandDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "sendCommand" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "command" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "Command" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "sendCommand" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "command" }, value: { kind: "Variable", name: { kind: "Name", value: "command" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SendSettingDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "sendSetting" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "setting" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "Setting" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "sendSetting" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "setting" }, value: { kind: "Variable", name: { kind: "Name", value: "setting" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "petlinkGps" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "timezone" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownPosition" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                            { kind: "Field", name: { kind: "Name", value: "alt" } },
+                            { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "speed" } },
+                            { kind: "Field", name: { kind: "Name", value: "positionType" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "lastKnownStatus" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "flashlight" } },
+                            { kind: "Field", name: { kind: "Name", value: "sound" } },
+                            { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
+                            { kind: "Field", name: { kind: "Name", value: "geofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
+                            { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
+                            { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                            { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "date" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "geofenceCoordinates" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "settings" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
+                            { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "endOfLifeDevice" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "energySavingZone" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "icon" } },
+                      { kind: "Field", name: { kind: "Name", value: "ssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "bssid" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "radius" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CreateGeofenceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createGeofence" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "geofence" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "GeofenceIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createGeofence" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "geofence" }, value: { kind: "Variable", name: { kind: "Name", value: "geofence" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "geofence" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateGeofenceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateGeofence" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "geofence" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateGeofenceIn" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateGeofence" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "geofence" }, value: { kind: "Variable", name: { kind: "Name", value: "geofence" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "geofence" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "position" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "lat" } },
+                            { kind: "Field", name: { kind: "Name", value: "lng" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteGeofenceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteGeofence" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteGeofence" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const AcknowledgeCheckoutDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "acknowledgeCheckout" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "acknowledgeCheckout" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ReplacementDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "replacement" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "newSerialNumber" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "entityType" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "ProductTypeEnum" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "replacement" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "newSerialNumber" },
+                value: { kind: "Variable", name: { kind: "Name", value: "newSerialNumber" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "entityType" },
+                value: { kind: "Variable", name: { kind: "Name", value: "entityType" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const OnGpsMessagePositionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "subscription",
+      name: { kind: "Name", value: "onGpsMessagePosition" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "onGpsMessagePosition" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "messageType" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "position" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "lat" } },
+                      { kind: "Field", name: { kind: "Name", value: "lng" } },
+                      { kind: "Field", name: { kind: "Name", value: "alt" } },
+                      { kind: "Field", name: { kind: "Name", value: "radius" } },
+                      { kind: "Field", name: { kind: "Name", value: "speed" } },
+                      { kind: "Field", name: { kind: "Name", value: "positionType" } },
+                      { kind: "Field", name: { kind: "Name", value: "date" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const OnGpsMessageStatusDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "subscription",
+      name: { kind: "Name", value: "onGpsMessageStatus" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "onGpsMessageStatus" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "messageType" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "status" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "battery" } },
+                      { kind: "Field", name: { kind: "Name", value: "flashlight" } },
+                      { kind: "Field", name: { kind: "Name", value: "sound" } },
+                      { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
+                      { kind: "Field", name: { kind: "Name", value: "geofence" } },
+                      { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
+                      { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
+                      { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                      { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                      { kind: "Field", name: { kind: "Name", value: "date" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const OnSubscriptionStatusDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "subscription",
+      name: { kind: "Name", value: "onSubscriptionStatus" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "onSubscriptionStatus" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "status" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -8066,420 +8365,6 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
-    updateEndOfLife(
-      variables?: UpdateEndOfLifeMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdateEndOfLifeMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdateEndOfLifeMutation>({
-            document: UpdateEndOfLifeDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updateEndOfLife",
-        "mutation",
-        variables,
-      );
-    },
-    sendOtp(
-      variables: SendOtpMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<SendOtpMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<SendOtpMutation>({
-            document: SendOtpDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "sendOtp",
-        "mutation",
-        variables,
-      );
-    },
-    checkOtp(
-      variables: CheckOtpMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<CheckOtpMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<CheckOtpMutation>({
-            document: CheckOtpDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "checkOtp",
-        "mutation",
-        variables,
-      );
-    },
-    signUpUser(
-      variables: SignUpUserMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<SignUpUserMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<SignUpUserMutation>({
-            document: SignUpUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "signUpUser",
-        "mutation",
-        variables,
-      );
-    },
-    utilityIntegrationTest(
-      variables: UtilityIntegrationTestMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UtilityIntegrationTestMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UtilityIntegrationTestMutation>({
-            document: UtilityIntegrationTestDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "utilityIntegrationTest",
-        "mutation",
-        variables,
-      );
-    },
-    verifyEmail(
-      variables: VerifyEmailMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<VerifyEmailMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<VerifyEmailMutation>({
-            document: VerifyEmailDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "verifyEmail",
-        "mutation",
-        variables,
-      );
-    },
-    createPet(
-      variables: CreatePetMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<CreatePetMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<CreatePetMutation>({
-            document: CreatePetDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "createPet",
-        "mutation",
-        variables,
-      );
-    },
-    updatePet(
-      variables: UpdatePetMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdatePetMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdatePetMutation>({
-            document: UpdatePetDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updatePet",
-        "mutation",
-        variables,
-      );
-    },
-    deletePet(
-      variables: DeletePetMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<DeletePetMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<DeletePetMutation>({
-            document: DeletePetDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "deletePet",
-        "mutation",
-        variables,
-      );
-    },
-    createPetlinkGps(
-      variables: CreatePetlinkGpsMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<CreatePetlinkGpsMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<CreatePetlinkGpsMutation>({
-            document: CreatePetlinkGpsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "createPetlinkGps",
-        "mutation",
-        variables,
-      );
-    },
-    updatePetlinkGps(
-      variables: UpdatePetlinkGpsMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdatePetlinkGpsMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdatePetlinkGpsMutation>({
-            document: UpdatePetlinkGpsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updatePetlinkGps",
-        "mutation",
-        variables,
-      );
-    },
-    resetPetlinkGps(
-      variables: ResetPetlinkGpsMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<ResetPetlinkGpsMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<ResetPetlinkGpsMutation>({
-            document: ResetPetlinkGpsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "resetPetlinkGps",
-        "mutation",
-        variables,
-      );
-    },
-    updateBillingInfo(
-      variables: UpdateBillingInfoMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdateBillingInfoMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdateBillingInfoMutation>({
-            document: UpdateBillingInfoDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updateBillingInfo",
-        "mutation",
-        variables,
-      );
-    },
-    updatePetProtectionData(
-      variables: UpdatePetProtectionDataMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdatePetProtectionDataMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdatePetProtectionDataMutation>({
-            document: UpdatePetProtectionDataDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updatePetProtectionData",
-        "mutation",
-        variables,
-      );
-    },
-    stopRenewingSubscription(
-      variables: StopRenewingSubscriptionMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<StopRenewingSubscriptionMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<StopRenewingSubscriptionMutation>({
-            document: StopRenewingSubscriptionDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "stopRenewingSubscription",
-        "mutation",
-        variables,
-      );
-    },
-    updateUser(
-      variables: UpdateUserMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdateUserMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdateUserMutation>({
-            document: UpdateUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updateUser",
-        "mutation",
-        variables,
-      );
-    },
-    deleteUser(
-      variables?: DeleteUserMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<DeleteUserMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<DeleteUserMutation>({
-            document: DeleteUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "deleteUser",
-        "mutation",
-        variables,
-      );
-    },
-    sendCommand(
-      variables: SendCommandMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<SendCommandMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<SendCommandMutation>({
-            document: SendCommandDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "sendCommand",
-        "mutation",
-        variables,
-      );
-    },
-    sendSetting(
-      variables: SendSettingMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<SendSettingMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<SendSettingMutation>({
-            document: SendSettingDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "sendSetting",
-        "mutation",
-        variables,
-      );
-    },
-    createGeofence(
-      variables: CreateGeofenceMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<CreateGeofenceMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<CreateGeofenceMutation>({
-            document: CreateGeofenceDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "createGeofence",
-        "mutation",
-        variables,
-      );
-    },
-    updateGeofence(
-      variables: UpdateGeofenceMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdateGeofenceMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdateGeofenceMutation>({
-            document: UpdateGeofenceDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updateGeofence",
-        "mutation",
-        variables,
-      );
-    },
-    deleteGeofence(
-      variables: DeleteGeofenceMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<DeleteGeofenceMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<DeleteGeofenceMutation>({
-            document: DeleteGeofenceDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "deleteGeofence",
-        "mutation",
-        variables,
-      );
-    },
-    acknowledgeCheckout(
-      variables: AcknowledgeCheckoutMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<AcknowledgeCheckoutMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<AcknowledgeCheckoutMutation>({
-            document: AcknowledgeCheckoutDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "acknowledgeCheckout",
-        "mutation",
-        variables,
-      );
-    },
     getEndOfLifeStep(
       variables?: GetEndOfLifeStepQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -8933,6 +8818,492 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
           }),
         "changeForgotPassword",
         "mutation",
+        variables,
+      );
+    },
+    updateEndOfLife(
+      variables?: UpdateEndOfLifeMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateEndOfLifeMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateEndOfLifeMutation>({
+            document: UpdateEndOfLifeDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateEndOfLife",
+        "mutation",
+        variables,
+      );
+    },
+    sendOtp(
+      variables: SendOtpMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendOtpMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SendOtpMutation>({
+            document: SendOtpDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "sendOtp",
+        "mutation",
+        variables,
+      );
+    },
+    checkOtp(
+      variables: CheckOtpMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CheckOtpMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CheckOtpMutation>({
+            document: CheckOtpDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "checkOtp",
+        "mutation",
+        variables,
+      );
+    },
+    signUpUser(
+      variables: SignUpUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SignUpUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SignUpUserMutation>({
+            document: SignUpUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "signUpUser",
+        "mutation",
+        variables,
+      );
+    },
+    utilityIntegrationTest(
+      variables: UtilityIntegrationTestMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UtilityIntegrationTestMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UtilityIntegrationTestMutation>({
+            document: UtilityIntegrationTestDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "utilityIntegrationTest",
+        "mutation",
+        variables,
+      );
+    },
+    verifyEmail(
+      variables: VerifyEmailMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<VerifyEmailMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<VerifyEmailMutation>({
+            document: VerifyEmailDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "verifyEmail",
+        "mutation",
+        variables,
+      );
+    },
+    createPet(
+      variables: CreatePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreatePetMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreatePetMutation>({
+            document: CreatePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createPet",
+        "mutation",
+        variables,
+      );
+    },
+    updatePet(
+      variables: UpdatePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetMutation>({
+            document: UpdatePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updatePet",
+        "mutation",
+        variables,
+      );
+    },
+    deletePet(
+      variables: DeletePetMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeletePetMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeletePetMutation>({
+            document: DeletePetDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deletePet",
+        "mutation",
+        variables,
+      );
+    },
+    createPetlinkGps(
+      variables: CreatePetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreatePetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreatePetlinkGpsMutation>({
+            document: CreatePetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createPetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
+    updatePetlinkGps(
+      variables: UpdatePetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetlinkGpsMutation>({
+            document: UpdatePetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updatePetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
+    resetPetlinkGps(
+      variables: ResetPetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ResetPetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ResetPetlinkGpsMutation>({
+            document: ResetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "resetPetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
+    updateBillingInfo(
+      variables: UpdateBillingInfoMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateBillingInfoMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateBillingInfoMutation>({
+            document: UpdateBillingInfoDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateBillingInfo",
+        "mutation",
+        variables,
+      );
+    },
+    updatePetProtectionData(
+      variables: UpdatePetProtectionDataMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdatePetProtectionDataMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdatePetProtectionDataMutation>({
+            document: UpdatePetProtectionDataDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updatePetProtectionData",
+        "mutation",
+        variables,
+      );
+    },
+    stopRenewingSubscription(
+      variables: StopRenewingSubscriptionMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<StopRenewingSubscriptionMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<StopRenewingSubscriptionMutation>({
+            document: StopRenewingSubscriptionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "stopRenewingSubscription",
+        "mutation",
+        variables,
+      );
+    },
+    updateUser(
+      variables: UpdateUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateUserMutation>({
+            document: UpdateUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateUser",
+        "mutation",
+        variables,
+      );
+    },
+    deleteUser(
+      variables?: DeleteUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteUserMutation>({
+            document: DeleteUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteUser",
+        "mutation",
+        variables,
+      );
+    },
+    sendCommand(
+      variables: SendCommandMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendCommandMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SendCommandMutation>({
+            document: SendCommandDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "sendCommand",
+        "mutation",
+        variables,
+      );
+    },
+    sendSetting(
+      variables: SendSettingMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SendSettingMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SendSettingMutation>({
+            document: SendSettingDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "sendSetting",
+        "mutation",
+        variables,
+      );
+    },
+    createGeofence(
+      variables: CreateGeofenceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreateGeofenceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateGeofenceMutation>({
+            document: CreateGeofenceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createGeofence",
+        "mutation",
+        variables,
+      );
+    },
+    updateGeofence(
+      variables: UpdateGeofenceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateGeofenceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateGeofenceMutation>({
+            document: UpdateGeofenceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateGeofence",
+        "mutation",
+        variables,
+      );
+    },
+    deleteGeofence(
+      variables: DeleteGeofenceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteGeofenceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteGeofenceMutation>({
+            document: DeleteGeofenceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteGeofence",
+        "mutation",
+        variables,
+      );
+    },
+    acknowledgeCheckout(
+      variables: AcknowledgeCheckoutMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<AcknowledgeCheckoutMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AcknowledgeCheckoutMutation>({
+            document: AcknowledgeCheckoutDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "acknowledgeCheckout",
+        "mutation",
+        variables,
+      );
+    },
+    replacement(
+      variables: ReplacementMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ReplacementMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ReplacementMutation>({
+            document: ReplacementDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "replacement",
+        "mutation",
+        variables,
+      );
+    },
+    onGpsMessagePosition(
+      variables: OnGpsMessagePositionSubscriptionVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<OnGpsMessagePositionSubscription> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<OnGpsMessagePositionSubscription>({
+            document: OnGpsMessagePositionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "onGpsMessagePosition",
+        "subscription",
+        variables,
+      );
+    },
+    onGpsMessageStatus(
+      variables: OnGpsMessageStatusSubscriptionVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<OnGpsMessageStatusSubscription> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<OnGpsMessageStatusSubscription>({
+            document: OnGpsMessageStatusDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "onGpsMessageStatus",
+        "subscription",
+        variables,
+      );
+    },
+    onSubscriptionStatus(
+      variables: OnSubscriptionStatusSubscriptionVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<OnSubscriptionStatusSubscription> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<OnSubscriptionStatusSubscription>({
+            document: OnSubscriptionStatusDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "onSubscriptionStatus",
+        "subscription",
         variables,
       );
     },

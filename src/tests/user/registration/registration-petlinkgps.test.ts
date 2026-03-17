@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { PetlinkGps, PetlinkGpsIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { PetlinkGps, PetlinkGpsIn, ProductTypeEnum, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { logger } from "../../../config/logger.js";
 
 describe("PetlinkGPS Registration", () => {
@@ -260,5 +260,63 @@ describe("PetlinkGPS Reset", () => {
     expect(deviceDetailResponse.getDevice.device?.petId).toBeNull;
     expect(deviceDetailResponse.getDevice.device?.registrationDate).toBeNull;
     logger.info("✓ Reset completed successfully without subscription");
+  });
+});
+
+describe("PetlinkGps Replacemente", async () => {
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+  });
+
+  it("should track reset gps after user change", async () => {
+    // SETUP: Creiamo utente + pet + device esistente (vecchio device)
+    const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+    const oldDevice = setup.devices.dogStandard!;
+    const user = setup.user!;
+    const pet = setup.pets.dog!;
+
+    logger.info("→ STEP 1: Verifica che non ci siano replacement history iniziali");
+    const initialHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
+      productId: oldDevice.id,
+    });
+    expect(initialHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
+    expect(initialHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(0);
+
+    logger.info("→ STEP 2: Simuliamo che l'utente ha comprato un nuovo device esternamente");
+    // Il nuovo device serial number deve essere un device disponibile nell'inventario
+    const newSerialNumber = fxt.current.devices.CAT.serialNumber; // Usiamo un device diverso come "nuovo"
+
+    logger.info("→ STEP 3: Chiamata alla mutation replacement come farebbe l'app");
+    const replacementResponse = await petlink.core.graphqlHttp.authJwt.replacement({
+      productId: oldDevice.id,
+      newSerialNumber: newSerialNumber,
+      entityType: ProductTypeEnum.PetlinkGps,
+    });
+
+    expect(replacementResponse.replacement.code, `Replacement should succeed - Error: ${replacementResponse.replacement.message}`).toBe("200");
+
+    logger.info("→ STEP 4: Verifica che il replacement sia stato tracciato correttamente");
+    const finalHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
+      productId: oldDevice.id,
+    });
+    expect(finalHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
+    expect(finalHistory.getReplacementPetlinkGpsHistory.items?.length || 0).toBe(1);
+
+    const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items![0];
+    expect(replacementRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
+    expect(replacementRecord.newSerialNumber).toBe(newSerialNumber);
+    expect(replacementRecord.productId).toBe(oldDevice.id);
+    expect(replacementRecord.petId).toBe(pet.id);
+    expect(replacementRecord.userId).toBe(user.id);
+
+    logger.info("→ STEP 5: Verifica che il device sia stato aggiornato nel sistema");
+    const updatedDeviceResponse = await petlink.core.graphqlHttp.authJwt.getPetlinkGps({
+      id: oldDevice.id,
+    });
+
+    expect(updatedDeviceResponse.getPetlinkGps.code).toBe("200");
+    expect(updatedDeviceResponse.getPetlinkGps.petlinkGps?.serialNumber).toBe(newSerialNumber);
+
+    logger.info("✓ GPS replacement test completed successfully");
   });
 });

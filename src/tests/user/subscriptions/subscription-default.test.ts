@@ -8,9 +8,9 @@ import {
   UtilityTestTypeEnum,
   LanguageId,
   CancelReasonCodeEnum,
+  OnSubscriptionStatusDocument,
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { SubscriptionStatusEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
-import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import { waitFor } from "../../../helpers/utils.js";
 
 describe("DEFAULT subscription flow", () => {
@@ -217,7 +217,7 @@ describe("DEFAULT subscription flow", () => {
 
       // Open WebSocket subscription and purchase ONLY when ready
       const subStatusUpdated = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-        subscriptions.onSubscriptionStatus,
+        OnSubscriptionStatusDocument,
         { id: setup.user!.id },
         "Subscription should become active after purchase",
         (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,

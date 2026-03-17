@@ -1,9 +1,9 @@
 # CCT API Coverage Report
 
 ## 📊 Summary
-- **Total Operations:** 55
+- **Total Operations:** 54
 - **Covered:** 17
-- **Missing:** 38
+- **Missing:** 37
 
 Total -> [FETCHED-cct_schema.graphql](../src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql)   
 Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts)
@@ -11,7 +11,7 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 
 ## 📋 API Coverage Details
 
-### Mutations (20 Total)
+### Mutations (19 Total)
 
 | Operation                    |  Status   | Notes |
 |:-----------------------------|:---------:|:------|
@@ -20,7 +20,6 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 | `updateUser`                 | ✅ Covered |       |
 | `deleteCustomer`             | ✅ Covered |       |
 | `updateCustomer`             | ✅ Covered |       |
-| `updateRoleUser`             | ❌ Missing |       |
 | `createSubscription`         | ❌ Missing |       |
 | `refundInvoice`              | ❌ Missing |       |
 | `updateCurrentTermEnd`       | ❌ Missing |       |
@@ -28,13 +27,13 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 | `addFreePeriod`              | ❌ Missing |       |
 | `createIssue`                | ❌ Missing |       |
 | `addTicketToIssue`           | ❌ Missing |       |
+| `hidePet`                    | ❌ Missing |       |
+| `logEnabled`                 | ❌ Missing |       |
+| `setCoupon`                  | ❌ Missing |       |
 | `stopRenewingSubscription`   | ❌ Missing |       |
 | `stopRenewingAddon`          | ❌ Missing |       |
 | `renewInsuranceSubscription` | ❌ Missing |       |
-| `hidePet`                    | ❌ Missing |       |
-| `logEnabled`                 | ❌ Missing |       |
 | `setPlanProfiles`            | ❌ Missing |       |
-| `setCoupon`                  | ❌ Missing |       |
 
 ### Queries (35 Total)
 
@@ -42,6 +41,8 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 |:----------------------------------|:---------:|:------|
 | `getUser`                         | ✅ Covered |       |
 | `getUsers`                        | ✅ Covered |       |
+| `getBreed`                        | ❌ Missing |       |
+| `getColors`                       | ❌ Missing |       |
 | `getMyInfo`                       | ✅ Covered |       |
 | `getLastConnections`              | ✅ Covered |       |
 | `getDevices`                      | ✅ Covered |       |
@@ -53,11 +54,10 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 | `getLogActivityUser`              | ✅ Covered |       |
 | `getSubscriptions`                | ✅ Covered |       |
 | `getDevicesMap`                   | ❌ Missing |       |
+| `getDevicesWithCoupon`            | ❌ Missing |       |
 | `getInsuranceDevicesInfo`         | ❌ Missing |       |
-| `getActivities`                   | ❌ Missing |       |
-| `getBreed`                        | ❌ Missing |       |
-| `getColors`                       | ❌ Missing |       |
 | `getIssues`                       | ❌ Missing |       |
+| `getActivities`                   | ❌ Missing |       |
 | `getPetProtections`               | ❌ Missing |       |
 | `getPetProtection`                | ❌ Missing |       |
 | `getSubscription`                 | ❌ Missing |       |
@@ -68,10 +68,17 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 | `getOrder`                        | ❌ Missing |       |
 | `getPlanProfiles`                 | ❌ Missing |       |
 | `getCoupons`                      | ❌ Missing |       |
-| `getDevicesWithCoupon`            | ❌ Missing |       |
-| `getReplacementPetlinkGpsHistory` | ❌ Missing |       |
 | `getDeviceProtectionReplacements` | ❌ Missing |       |
+| `getMigrationSession`             | ❌ Missing |       |
+| `getMigrationSessions`            | ❌ Missing |       |
+| `getReplacementPetlinkGpsHistory` | ❌ Missing |       |
 | `getShelterOrder`                 | ❌ Missing |       |
 | `getShelterOrders`                | ❌ Missing |       |
-| `getMigrationSessions`            | ❌ Missing |       |
-| `getMigrationSession`             | ❌ Missing |       |
+
+---
+
+### Subscriptions (0 Total)
+
+CCT API currently has no WebSocket subscriptions.
+
+---

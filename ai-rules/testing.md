@@ -100,7 +100,8 @@ expect(
 - Verify fields against `.graphql` files.
 
 ### Adding New Operations
-- **Location**: `src/clients/petlink-infrastructure/endpoints/graphql/operations/{microservice}/`.
+- **Location**: `src/clients/petlink-infrastructure/endpoints/graphql/operations/{service}_ops.graphql`.
+- **Unified Structure**: Each microservice has a single `.graphql` file containing ALL operations (queries, mutations, subscriptions).
 - **Field Selection**: ALWAYS select ALL available fields defined in the schema to ensure SDK has full data availability.
 - Run `yarn generate-sdk` after changes.
 

@@ -1,19 +1,23 @@
 # CORE API Coverage Report
 
 ## 📊 Summary
-- **Total Operations:** 111
-- **Covered:** 45
-- **Missing:** 66
+- **Total Operations:** 127
+- **Covered:** 53
+- **Missing:** 74
 
 Total -> [FETCHED-core_schema.graphql](../src/clients/petlink-infrastructure/endpoints/graphql/schema/core_schema.graphql)  
 Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.ts)
 
 ---
 
-### Mutations (57 Total)
+### Mutations (66 Total)
 
 | Operation                     |  Status   | Notes |
 |:------------------------------|:---------:|:------|
+| `acknowledgeCheckout`         | ✅ Covered |       |
+| `activateDeviceInOrder`        | ❌ Missing |       |
+| `addGpsPromotion`              | ❌ Missing |       |
+| `appKeepAlive`                 | ❌ Missing |       |
 | `sendOtp`                     | ✅ Covered |       |
 | `checkOtp`                    | ✅ Covered |       |
 | `signUpUser`                  | ✅ Covered |       |
@@ -48,6 +52,14 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `setSafetyTermsCat`           | ❌ Missing |       |
 | `setArcaPlanetTerms`          | ❌ Missing |       |
 | `qrTagHasBeenScanned`         | ❌ Missing |       |
+| `registerToNewsletter`        | ❌ Missing |       |
+| `forceClearCache`             | ❌ Missing |       |
+| `logDisabled`                 | ❌ Missing |       |
+| `publishOnForceClearCache`    | ❌ Missing |       |
+| `publishOnGpsMessagePosition` | ❌ Missing |       |
+| `publishOnGpsMessageStatus`   | ❌ Missing |       |
+| `publishOnSubscriptionStatus` | ❌ Missing |       |
+| `pushGpsMessagePositionBLE`   | ❌ Missing |       |
 | `sendMessageFoundPet`         | ❌ Missing |       |
 | `setPetIsFound`               | ❌ Missing |       |
 | `setMacAddress`               | ❌ Missing |       |
@@ -70,6 +82,8 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `addGpsPromotion`             | ❌ Missing |       |
 | `acknowledgeCheckout`         | ✅ Covered |       |
 | `sendCustomerSuggestions`     | ❌ Missing |       |
+| `sendCustomerFeedback`        | ❌ Missing |       |
+| `setMacAddress`               | ❌ Missing |       |
 | `publishOnGpsMessagePosition` | ❌ Missing |       |
 | `publishOnGpsMessageStatus`   | ❌ Missing |       |
 | `publishOnSubscriptionStatus` | ❌ Missing |       |
@@ -83,10 +97,28 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 
 ---
 
-### Queries (54 Total)
+### Queries (57 Total)
 
 | Operation                    |  Status   | Notes |
 |:-----------------------------|:---------:|:------|
+| `changeSubscriptionPlan`     | ❌ Missing |       |
+| `checkContact`               | ✅ Covered |       |
+| `checkGps`                   | ✅ Covered |       |
+| `checkMicrochip`             | ❌ Missing |       |
+| `checkMigration`             | ❌ Missing |       |
+| `checkoutAddons`             | ❌ Missing |       |
+| `checkoutCareProtection`     | ❌ Missing |       |
+| `checkoutNewSubscription`    | ✅ Covered |       |
+| `checkoutEOLNewDevice`       | ✅ Covered |       |
+| `checkoutPrepaid`            | ❌ Missing |       |
+| `churnDeflection`             | ❌ Missing |       |
+| `getActiveSubscriptions`     | ❌ Missing |       |
+| `getActivities`              | ❌ Missing |       |
+| `getActivitiesAverage`       | ❌ Missing |       |
+| `getActivitiesAverageCat`     | ❌ Missing |       |
+| `getActivitiesByHour`        | ❌ Missing |       |
+| `getActivitiesCat`           | ❌ Missing |       |
+| `getBaseConfig`              | ❌ Missing |       |
 | `getUser`                    | ✅ Covered |       |
 | `getPet`                     | ✅ Covered |       |
 | `getPetByQrTag`              | ❌ Missing |       |
@@ -118,6 +150,7 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `getPurchasedServices`       | ❌ Missing |       |
 | `getSubscriptionByProductId` | ✅ Covered |       |
 | `getOrder`                   | ❌ Missing |       |
+| `getPaymentSource`           | ❌ Missing |       |
 | `getPetsAndProducts`         | ❌ Missing |       |
 | `getNotificationsHistory`    | ❌ Missing |       |
 | `getPositionsHistory`        | ❌ Missing |       |
@@ -130,6 +163,7 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `checkContact`               | ✅ Covered |       |
 | `checkMigration`             | ❌ Missing |       |
 | `getCountryState`            | ❌ Missing |       |
+| `getDictionary`              | ❌ Missing |       |
 | `getBreed`                   | ✅ Covered |       |
 | `getColors`                  | ✅ Covered |       |
 | `getEnergySavingZone`        | ✅ Covered |       |
@@ -142,7 +176,20 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `getActivitiesAverageCat`    | ❌ Missing |       |
 | `getActiveSubscriptions`     | ❌ Missing |       |
 | `getPosts`                   | ❌ Missing |       |
+| `getBaseConfig`              | ❌ Missing |       |
 | `getSsoToken`                | ❌ Missing |       |
 | `getBaseConfig`              | ❌ Missing |       |
+
+---
+
+### Subscriptions (4 Total)
+
+| Operation                    |  Status   | Notes |
+|:-----------------------------|:---------:|:------|
+| `onForceClearCache`          | ❌ Missing | WebSocket subscription |
+| `onGpsMessagePosition`       | ✅ Covered | WebSocket subscription |
+| `onGpsMessageStatus`         | ✅ Covered | WebSocket subscription |
+| `onSendingOtp`               | ❌ Missing | WebSocket subscription |
+| `onSubscriptionStatus`       | ✅ Covered | WebSocket subscription |
 
 ---

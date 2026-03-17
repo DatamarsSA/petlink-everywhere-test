@@ -37,7 +37,7 @@ This suite uses **auto-generated TypeScript clients**. Generate them before runn
 ```bash
 #1. fetch-schema    → Downloads GraphQL schemas from Core/CCT APIs
 yarn fetch-schema 
-#2. write operation → Add manually query/mutation in inside src/clients/.../operations/*.graphql
+#2. write operation → Add manually query/mutation/subscription in src/clients/.../operations/{service}_ops.graphql
 #3. generate-sdk    → Codegen creates typed TypeScript methods
 yarn generate-sdk 
 #4. use in tests    → petlink.core.graphql.authJwt.createPet(...)

@@ -8,10 +8,10 @@ import {
   SpeciesEnum,
   UtilityTestTypeEnum,
   DeviceTypeEnum,
+  OnSubscriptionStatusDocument,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
-import * as subscriptions from "./petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
@@ -561,11 +561,11 @@ class TestHelper {
 
     // Flusso COMPLETO: Apri socket -> aspetta connessione (onReady) -> compra -> aspetta evento
     const subStatusUpdated = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onSubscriptionStatus,
+      OnSubscriptionStatusDocument,
       { id: user.id },
       "Subscription should become active after purchase",
       (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
-      executePurchase
+      executePurchase,
     );
 
     logger.debug("✓ Subscription purchased and activated successfully", {

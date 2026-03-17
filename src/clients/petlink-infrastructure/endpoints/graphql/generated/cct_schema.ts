@@ -88,7 +88,7 @@ export interface Card {
   expiryMonth?: Maybe<Scalars["Int"]["output"]>;
   expiryYear?: Maybe<Scalars["Int"]["output"]>;
   maskedNumber?: Maybe<Scalars["String"]["output"]>;
-  paymentMethod: PaymentMethodEnum;
+  paymentMethod: Scalars["String"]["output"];
   type?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -1072,11 +1072,6 @@ export interface PaginationInput {
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
 }
 
-export enum PaymentMethodEnum {
-  Card = "CARD",
-  Paypal = "PAYPAL",
-}
-
 export enum PaymentStatusTypeEnum {
   Failed = "FAILED",
   Pending = "PENDING",
@@ -1839,107 +1834,6 @@ export interface SetPlanProfilesResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
-export type CreateUserMutationVariables = Exact<{
-  user: CreateUserInput;
-}>;
-
-export type CreateUserMutation = {
-  __typename?: "Mutation";
-  createUser: {
-    __typename?: "CreateUserResponse";
-    code: string;
-    message: string;
-    translationCode?: string | null;
-    user?: {
-      __typename?: "User";
-      id: string;
-      name: string;
-      surname: string;
-      email: string;
-      phone: string;
-      role: Array<RoleEnum>;
-      username: string;
-      active: boolean;
-      deviceVisibility: Array<DeviceVisibilityEnum>;
-      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
-      creationDate: string;
-      updateDate: string;
-    } | null;
-  };
-};
-
-export type UpdateUserMutationVariables = Exact<{
-  userInfo: UpdateUserInput;
-}>;
-
-export type UpdateUserMutation = {
-  __typename?: "Mutation";
-  updateUser: {
-    __typename?: "UpdateUserResponse";
-    code: string;
-    message: string;
-    translationCode?: string | null;
-    user?: {
-      __typename?: "User";
-      id: string;
-      name: string;
-      surname: string;
-      email: string;
-      phone: string;
-      role: Array<RoleEnum>;
-      username: string;
-      active: boolean;
-      deviceVisibility: Array<DeviceVisibilityEnum>;
-      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
-      creationDate: string;
-      updateDate: string;
-    } | null;
-  };
-};
-
-export type DeleteUserMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
-}>;
-
-export type DeleteUserMutation = {
-  __typename?: "Mutation";
-  deleteUser: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
-};
-
-export type UpdateCustomerMutationVariables = Exact<{
-  customerId: Scalars["String"]["input"];
-  updateCustomer: UpdateCustomerInput;
-}>;
-
-export type UpdateCustomerMutation = {
-  __typename?: "Mutation";
-  updateCustomer: {
-    __typename?: "UpdateCustomerResponse";
-    code: string;
-    message: string;
-    translationCode?: string | null;
-    customer?: { __typename?: "Customer"; id: string; name: string; surname: string; email: string; phone: string; countryCode: string } | null;
-  };
-};
-
-export type DeleteCustomerMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
-}>;
-
-export type DeleteCustomerMutation = {
-  __typename?: "Mutation";
-  deleteCustomer: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
-};
-
-export type ResetPetlinkGpsMutationVariables = Exact<{
-  id: Scalars["String"]["input"];
-}>;
-
-export type ResetPetlinkGpsMutation = {
-  __typename?: "Mutation";
-  resetPetlinkGps: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
-};
-
 export type GetCustomerQueryVariables = Exact<{
   customerId: Scalars["String"]["input"];
 }>;
@@ -2374,293 +2268,141 @@ export type GetLogActivityUserQuery = {
   };
 };
 
-export const CreateUserDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "createUser" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "CreateUserInput" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "createUser" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "user" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "surname" } },
-                      { kind: "Field", name: { kind: "Name", value: "email" } },
-                      { kind: "Field", name: { kind: "Name", value: "phone" } },
-                      { kind: "Field", name: { kind: "Name", value: "role" } },
-                      { kind: "Field", name: { kind: "Name", value: "username" } },
-                      { kind: "Field", name: { kind: "Name", value: "active" } },
-                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
-                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdateUserDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updateUser" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "userInfo" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateUserInput" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updateUser" },
-            arguments: [
-              { kind: "Argument", name: { kind: "Name", value: "userInfo" }, value: { kind: "Variable", name: { kind: "Name", value: "userInfo" } } },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "user" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "surname" } },
-                      { kind: "Field", name: { kind: "Name", value: "email" } },
-                      { kind: "Field", name: { kind: "Name", value: "phone" } },
-                      { kind: "Field", name: { kind: "Name", value: "role" } },
-                      { kind: "Field", name: { kind: "Name", value: "username" } },
-                      { kind: "Field", name: { kind: "Name", value: "active" } },
-                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
-                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
-                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const DeleteUserDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "deleteUser" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "deleteUser" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const UpdateCustomerDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "updateCustomer" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "updateCustomer" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateCustomerInput" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "updateCustomer" },
-            arguments: [
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "customerId" },
-                value: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
-              },
-              {
-                kind: "Argument",
-                name: { kind: "Name", value: "updateCustomer" },
-                value: { kind: "Variable", name: { kind: "Name", value: "updateCustomer" } },
-              },
-            ],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-                {
-                  kind: "Field",
-                  name: { kind: "Name", value: "customer" },
-                  selectionSet: {
-                    kind: "SelectionSet",
-                    selections: [
-                      { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "name" } },
-                      { kind: "Field", name: { kind: "Name", value: "surname" } },
-                      { kind: "Field", name: { kind: "Name", value: "email" } },
-                      { kind: "Field", name: { kind: "Name", value: "phone" } },
-                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const DeleteCustomerDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "deleteCustomer" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "deleteCustomer" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export const ResetPetlinkGpsDocument = {
-  kind: "Document",
-  definitions: [
-    {
-      kind: "OperationDefinition",
-      operation: "mutation",
-      name: { kind: "Name", value: "resetPetlinkGps" },
-      variableDefinitions: [
-        {
-          kind: "VariableDefinition",
-          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
-          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
-        },
-      ],
-      selectionSet: {
-        kind: "SelectionSet",
-        selections: [
-          {
-            kind: "Field",
-            name: { kind: "Name", value: "resetPetlinkGps" },
-            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
-            selectionSet: {
-              kind: "SelectionSet",
-              selections: [
-                { kind: "Field", name: { kind: "Name", value: "code" } },
-                { kind: "Field", name: { kind: "Name", value: "message" } },
-                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
+export type GetReplacementPetlinkGpsHistoryQueryVariables = Exact<{
+  productId: Scalars["String"]["input"];
+}>;
+
+export type GetReplacementPetlinkGpsHistoryQuery = {
+  __typename?: "Query";
+  getReplacementPetlinkGpsHistory: {
+    __typename?: "ResponseGetReplacementHistory";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items?: Array<{
+      __typename?: "ReplacementHistory";
+      id: string;
+      petId: string;
+      creationDate: string;
+      registrationDate: string;
+      expirationDate?: string | null;
+      planProfileId?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      planProfileType?: string | null;
+      reasonCode?: Array<TicketActionReason> | null;
+      customerEmail: string;
+      typeAction?: TicketAction | null;
+      productId?: string | null;
+      userId?: string | null;
+      oldSerialNumber: string;
+      newSerialNumber?: string | null;
+      deviceProtectionId?: string | null;
+    }> | null;
+  };
+};
+
+export type CreateUserMutationVariables = Exact<{
+  user: CreateUserInput;
+}>;
+
+export type CreateUserMutation = {
+  __typename?: "Mutation";
+  createUser: {
+    __typename?: "CreateUserResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    user?: {
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    } | null;
+  };
+};
+
+export type UpdateUserMutationVariables = Exact<{
+  userInfo: UpdateUserInput;
+}>;
+
+export type UpdateUserMutation = {
+  __typename?: "Mutation";
+  updateUser: {
+    __typename?: "UpdateUserResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    user?: {
+      __typename?: "User";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      phone: string;
+      role: Array<RoleEnum>;
+      username: string;
+      active: boolean;
+      deviceVisibility: Array<DeviceVisibilityEnum>;
+      vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
+      creationDate: string;
+      updateDate: string;
+    } | null;
+  };
+};
+
+export type DeleteUserMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteUserMutation = {
+  __typename?: "Mutation";
+  deleteUser: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
+export type UpdateCustomerMutationVariables = Exact<{
+  customerId: Scalars["String"]["input"];
+  updateCustomer: UpdateCustomerInput;
+}>;
+
+export type UpdateCustomerMutation = {
+  __typename?: "Mutation";
+  updateCustomer: {
+    __typename?: "UpdateCustomerResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    customer?: { __typename?: "Customer"; id: string; name: string; surname: string; email: string; phone: string; countryCode: string } | null;
+  };
+};
+
+export type DeleteCustomerMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type DeleteCustomerMutation = {
+  __typename?: "Mutation";
+  deleteCustomer: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
+export type ResetPetlinkGpsMutationVariables = Exact<{
+  id: Scalars["String"]["input"];
+}>;
+
+export type ResetPetlinkGpsMutation = {
+  __typename?: "Mutation";
+  resetPetlinkGps: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
 export const GetCustomerDocument = {
   kind: "Document",
   definitions: [
@@ -3628,6 +3370,360 @@ export const GetLogActivityUserDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetReplacementPetlinkGpsHistoryDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getReplacementPetlinkGpsHistory" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getReplacementPetlinkGpsHistory" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "registrationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "expirationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "planProfileId" } },
+                      { kind: "Field", name: { kind: "Name", value: "brand" } },
+                      { kind: "Field", name: { kind: "Name", value: "model" } },
+                      { kind: "Field", name: { kind: "Name", value: "planProfileType" } },
+                      { kind: "Field", name: { kind: "Name", value: "reasonCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerEmail" } },
+                      { kind: "Field", name: { kind: "Name", value: "typeAction" } },
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "oldSerialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "newSerialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceProtectionId" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const CreateUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "user" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "CreateUserInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "user" }, value: { kind: "Variable", name: { kind: "Name", value: "user" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "userInfo" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateUserInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateUser" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "userInfo" }, value: { kind: "Variable", name: { kind: "Name", value: "userInfo" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "user" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "role" } },
+                      { kind: "Field", name: { kind: "Name", value: "username" } },
+                      { kind: "Field", name: { kind: "Name", value: "active" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "vodafoneCountryVisibility" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteUserDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteUser" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteUser" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UpdateCustomerDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "updateCustomer" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "updateCustomer" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UpdateCustomerInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateCustomer" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "customerId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "customerId" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "updateCustomer" },
+                value: { kind: "Variable", name: { kind: "Name", value: "updateCustomer" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "customer" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "surname" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteCustomerDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteCustomer" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteCustomer" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const ResetPetlinkGpsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "resetPetlinkGps" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "resetPetlinkGps" },
+            arguments: [{ kind: "Argument", name: { kind: "Name", value: "id" }, value: { kind: "Variable", name: { kind: "Name", value: "id" } } }],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -3640,114 +3736,6 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
-    createUser(
-      variables: CreateUserMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<CreateUserMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<CreateUserMutation>({
-            document: CreateUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "createUser",
-        "mutation",
-        variables,
-      );
-    },
-    updateUser(
-      variables: UpdateUserMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdateUserMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdateUserMutation>({
-            document: UpdateUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updateUser",
-        "mutation",
-        variables,
-      );
-    },
-    deleteUser(
-      variables: DeleteUserMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<DeleteUserMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<DeleteUserMutation>({
-            document: DeleteUserDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "deleteUser",
-        "mutation",
-        variables,
-      );
-    },
-    updateCustomer(
-      variables: UpdateCustomerMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<UpdateCustomerMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<UpdateCustomerMutation>({
-            document: UpdateCustomerDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "updateCustomer",
-        "mutation",
-        variables,
-      );
-    },
-    deleteCustomer(
-      variables: DeleteCustomerMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<DeleteCustomerMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<DeleteCustomerMutation>({
-            document: DeleteCustomerDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "deleteCustomer",
-        "mutation",
-        variables,
-      );
-    },
-    resetPetlinkGps(
-      variables: ResetPetlinkGpsMutationVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<ResetPetlinkGpsMutation> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<ResetPetlinkGpsMutation>({
-            document: ResetPetlinkGpsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "resetPetlinkGps",
-        "mutation",
-        variables,
-      );
-    },
     getCustomer(
       variables: GetCustomerQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -3953,6 +3941,132 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
           }),
         "getLogActivityUser",
         "query",
+        variables,
+      );
+    },
+    getReplacementPetlinkGpsHistory(
+      variables: GetReplacementPetlinkGpsHistoryQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetReplacementPetlinkGpsHistoryQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetReplacementPetlinkGpsHistoryQuery>({
+            document: GetReplacementPetlinkGpsHistoryDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getReplacementPetlinkGpsHistory",
+        "query",
+        variables,
+      );
+    },
+    createUser(
+      variables: CreateUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreateUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateUserMutation>({
+            document: CreateUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createUser",
+        "mutation",
+        variables,
+      );
+    },
+    updateUser(
+      variables: UpdateUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateUserMutation>({
+            document: UpdateUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateUser",
+        "mutation",
+        variables,
+      );
+    },
+    deleteUser(
+      variables: DeleteUserMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteUserMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteUserMutation>({
+            document: DeleteUserDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteUser",
+        "mutation",
+        variables,
+      );
+    },
+    updateCustomer(
+      variables: UpdateCustomerMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UpdateCustomerMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UpdateCustomerMutation>({
+            document: UpdateCustomerDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "updateCustomer",
+        "mutation",
+        variables,
+      );
+    },
+    deleteCustomer(
+      variables: DeleteCustomerMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteCustomerMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteCustomerMutation>({
+            document: DeleteCustomerDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteCustomer",
+        "mutation",
+        variables,
+      );
+    },
+    resetPetlinkGps(
+      variables: ResetPetlinkGpsMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ResetPetlinkGpsMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ResetPetlinkGpsMutation>({
+            document: ResetPetlinkGpsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "resetPetlinkGps",
+        "mutation",
         variables,
       );
     },

@@ -1,0 +1,478 @@
+###################### QUERY ######################
+query getCustomer($customerId: String!) {
+    getCustomer(customerId: $customerId) {
+        code
+        message
+        customer {
+            id
+            name
+            surname
+            email
+            emailConfirmed
+            phone
+            phoneConfirmed
+            language
+            countryCode
+            appBrand
+        }
+    }
+}
+
+query getCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $order: OrderInput) {
+    getCustomers(filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        items {
+            id
+            name
+            surname
+            email
+            emailConfirmed
+            phone
+            phoneConfirmed
+            language
+            registrationDate
+            countryCode
+            chargebeeId
+            appBrand
+        }
+        pagination {
+            pageSize
+            totalPage
+            totalItems
+            currentPage
+        }
+    }
+}
+
+query getDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order: OrderInput) {
+    getDevices(filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        items {
+            serialId
+            deviceId
+            petId
+            customerId
+            customerName
+            customerSurname
+            customerEmail
+            customerBrand
+            customerCountry
+            customerLanguage
+            imei
+            iccid
+            registrationDate
+            lastPurchasedSubscriptionId
+            lastPurchasedSubscriptionExpiringDate
+            lastActivatedSubscriptionId
+            lastActivatedSubscriptionExpiringDate
+            hasSubscriptionActive
+            hasEverSubscriptionActive
+            planProfileId
+            brand
+            model
+            planProfileType
+            vodafoneCountry
+            simStatus
+            lastOperationInAppDate
+            lastConnectionDate
+            firmware
+            battery
+            factory
+            hardwareType
+            simManufacturer
+            testingDate
+            group
+            lat
+            lng
+            timezone
+            updateFrequency
+            country
+            logEnabled
+        }
+        pagination {
+            pageSize
+            totalPage
+            totalItems
+            currentPage
+        }
+    }
+}
+
+query getDevice($serialId: String!) {
+    getDevice(serialId: $serialId) {
+        code
+        message
+        device {
+            serialId
+            deviceId
+            petId
+            customerId
+            customerName
+            customerSurname
+            customerEmail
+            customerBrand
+            customerCountry
+            customerLanguage
+            imei
+            iccid
+            registrationDate
+            lastPurchasedSubscriptionId
+            lastPurchasedSubscriptionExpiringDate
+            lastActivatedSubscriptionId
+            lastActivatedSubscriptionExpiringDate
+            hasSubscriptionActive
+            hasEverSubscriptionActive
+            planProfileId
+            brand
+            model
+            planProfileType
+            vodafoneCountry
+            simStatus
+            lastOperationInAppDate
+            lastConnectionDate
+            firmware
+            battery
+            factory
+            hardwareType
+            simManufacturer
+            testingDate
+            group
+            lat
+            lng
+            timezone
+            updateFrequency
+            country
+            logEnabled
+        }
+    }
+}
+
+query getPet($petId: String!) {
+    getPet(petId: $petId) {
+        code
+        message
+        pet {
+            id
+            name
+            birthDate
+            species
+            breedType
+            breeds
+            gender
+            primaryColor
+            weight
+            userId
+            creationDate
+            updateDate
+            neutered
+            length
+            dateMarkedAsLost
+            activityProfile
+            hidden
+            petProtection {
+                id
+                currentTermStart
+                currentTermEnd
+                status
+                name
+            }
+        }
+    }
+}
+
+
+query getSubscriptions($deviceId: String!, $pagination: PaginationInput, $order: OrderInput) {
+    getSubscriptions(deviceId: $deviceId, pagination: $pagination, order: $order) {
+        code
+        message
+        items {
+            id
+            chargebeeSubscriptionId
+            entityType
+            status
+            paymentStatus
+            currencyCode
+            currentTermStart
+            currentTermEnd
+            createdAt
+            startedAt
+            activatedAt
+            updatedAt
+            cancelledAt
+            subscriptionItems {
+                amount
+                billingCycles
+                name
+                itemPriceId
+                itemId
+                itemType
+                quantity
+                unitPrice
+            }
+            invoice {
+                status
+                businessEntityId
+                currencyCode
+                creationDate
+                updateDate
+                notes
+            }
+            note
+            moved
+            creationDate
+            updateDate
+        }
+        pagination {
+            pageSize
+            totalPage
+            totalItems
+            currentPage
+        }
+    }
+}
+
+query getUsers($filter: GetUsersInput, $pagination: PaginationInput, $order: OrderInput) {
+    getUsers(filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        translationCode
+        items {
+            id
+            name
+            surname
+            email
+            phone
+            role
+            username
+            active
+            deviceVisibility
+            vodafoneCountryVisibility
+            creationDate
+            updateDate
+        }
+        pagination {
+            pageSize
+            totalPage
+            totalItems
+            currentPage
+        }
+    }
+}
+
+query getUser($userId: String!) {
+    getUser(userId: $userId) {
+        code
+        message
+        translationCode
+        user {
+            id
+            name
+            surname
+            email
+            phone
+            role
+            username
+            active
+            deviceVisibility
+            vodafoneCountryVisibility
+            creationDate
+            updateDate
+        }
+    }
+}
+
+query getMyInfo {
+    getMyInfo {
+        code
+        message
+        translationCode
+        user {
+            id
+            name
+            surname
+            email
+            phone
+            role
+            username
+            active
+            deviceVisibility
+            vodafoneCountryVisibility
+            creationDate
+            updateDate
+        }
+    }
+}
+
+query getLastConnections($filter: GetLastConnectionsInput, $pagination: PaginationInput, $order: OrderInput) {
+    getLastConnections(filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        items {
+            serialId
+            deviceId
+            lastConnectionDate
+            firmware
+            imei
+            iccid
+        }
+        pagination {
+            totalItems
+        }
+    }
+}
+
+query getConnectionsHistory($serialId: String!, $filter: GetConnectionsHistoryInput, $pagination: PaginationInput, $order: OrderInput) {
+    getConnectionsHistory(serialId: $serialId, filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        items {
+            serialId
+            deviceId
+            connectionDate
+            lat
+            lng
+            battery
+        }
+        pagination {
+            totalItems
+        }
+    }
+}
+
+query getLogActivityUser($filter: GetLogActivityUserInput, $pagination: PaginationInput, $order: OrderInput) {
+    getLogActivityUser(filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        translationCode
+        items {
+            id
+            userId
+            userName
+            activityType
+            request
+            creationDate
+        }
+        pagination {
+            pageSize
+            totalPage
+            totalItems
+            currentPage
+        }
+    }
+}
+
+query getReplacementPetlinkGpsHistory($productId: String!) {
+    getReplacementPetlinkGpsHistory(productId: $productId) {
+        code
+        message
+        translationCode
+        items {
+            id
+            petId
+            creationDate
+            registrationDate
+            expirationDate
+            planProfileId
+            brand
+            model
+            planProfileType
+            reasonCode
+            customerEmail
+            typeAction
+            productId
+            userId
+            oldSerialNumber
+            newSerialNumber
+            deviceProtectionId
+        }
+    }
+}
+
+
+
+###################### MUTATION ######################
+mutation createUser($user: CreateUserInput!) {
+    createUser(user: $user) {
+        code
+        message
+        translationCode
+        user {
+            id
+            name
+            surname
+            email
+            phone
+            role
+            username
+            active
+            deviceVisibility
+            vodafoneCountryVisibility
+            creationDate
+            updateDate
+        }
+    }
+}
+
+mutation updateUser($userInfo: UpdateUserInput!) {
+    updateUser(userInfo: $userInfo) {
+        code
+        message
+        translationCode
+        user {
+            id
+            name
+            surname
+            email
+            phone
+            role
+            username
+            active
+            deviceVisibility
+            vodafoneCountryVisibility
+            creationDate
+            updateDate
+        }
+    }
+}
+
+mutation deleteUser($id: String!) {
+    deleteUser(id: $id) {
+        code
+        message
+        translationCode
+    }
+}
+
+mutation updateCustomer($customerId: String!, $updateCustomer: UpdateCustomerInput!) {
+    updateCustomer(customerId: $customerId, updateCustomer: $updateCustomer) {
+        code
+        message
+        translationCode
+        customer {
+            id
+            name
+            surname
+            email
+            phone
+            countryCode
+        }
+    }
+}
+
+mutation deleteCustomer($id: String!) {
+    deleteCustomer(id: $id) {
+        code
+        message
+        translationCode
+    }
+}
+
+mutation resetPetlinkGps($id: String!) {
+    resetPetlinkGps(id: $id) {
+        code
+        message
+        translationCode
+    }
+}

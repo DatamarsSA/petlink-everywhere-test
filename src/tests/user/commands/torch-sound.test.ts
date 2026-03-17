@@ -3,8 +3,12 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { logger } from "../../../config/logger.js";
 import { PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
+import {
+  CommandEnum,
+  ModeType,
+  OnGpsMessageStatusDocument,
+  StatusState,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe("Torch & Sound Commands", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -36,7 +40,7 @@ describe("Torch & Sound Commands", () => {
 
       // 2. Start listening from App
       const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
-        subscriptions.onGpsMessageStatus,
+        OnGpsMessageStatusDocument,
         { id: device.id },
         "Should receive status update with flashlight=ON",
         (data) => data?.onGpsMessageStatus?.status?.flashlight === StatusState.On,
@@ -130,7 +134,7 @@ describe("Torch & Sound Commands", () => {
 
       // 2. Start listening from App WITH onReady callback
       const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
-        subscriptions.onGpsMessageStatus,
+        OnGpsMessageStatusDocument,
         { id: device.id },
         "Should receive status update with sound=ON",
         (data) => data?.onGpsMessageStatus?.status?.sound === StatusState.On,

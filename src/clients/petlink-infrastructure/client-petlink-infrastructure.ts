@@ -24,6 +24,7 @@ import {
   SIRF,
   SirfProtocol,
 } from "./packets-sentinel/packets.js";
+import { DocumentNode, print } from "graphql";
 
 // === Types ===
 const HTTP_HEADERS = {
@@ -39,7 +40,14 @@ enum AuthType {
   API_KEY = "apiKey",
 }
 
-type HttpProtocolConfig<TSdk extends object> = {
+type WsClientConfig = {
+  serviceName: ServiceType;
+  endpoint: string;
+  apiKey: string;
+  jwtProvider: JwtAuthProvider;
+};
+
+type HttpClientConfig<TSdk extends object> = {
   serviceName: ServiceType;
   endpoint: string;
   apiKey: string;
@@ -49,7 +57,7 @@ type HttpProtocolConfig<TSdk extends object> = {
 };
 
 type WsSubscribeFn = <T = any>(
-  query: string,
+  query: DocumentNode,
   variables: Record<string, any>,
   timeoutError: string,
   filter?: (data: any) => boolean,
@@ -57,13 +65,13 @@ type WsSubscribeFn = <T = any>(
   timeoutMs?: number,
 ) => Promise<T>;
 
-type GraphQlWsProtocol = {
+type GraphQLWSClient = {
   authJwt: { subscribeUntil: WsSubscribeFn };
   authApiKey: { subscribeUntil: WsSubscribeFn };
   disconnect: () => void;
 };
 
-type GraphQlHttpProtocol<TSdk extends object> = {
+type GraphQLHttpClient<TSdk extends object> = {
   authJwt: TSdk;
   authIam: TSdk;
   public: TSdk;
@@ -207,7 +215,7 @@ class IamAuthProvider {
 
 // === Protocols ===
 
-const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: JwtAuthProvider): GraphQlWsProtocol => {
+const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
   class WSClient {
     private authType: AuthType.JWT | AuthType.API_KEY | null = null;
     private ws: WebSocket | null = null;
@@ -236,14 +244,14 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
 
       this.authType = authType;
 
-      const host = new URL(endpoint).host;
-      const wsUrl = endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
+      const host = new URL(config.endpoint).host;
+      const wsUrl = config.endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
 
       let tokenOrKey = "";
       if (authType === AuthType.JWT) {
-        tokenOrKey = jwtProvider.getToken();
+        tokenOrKey = config.jwtProvider.getToken();
       } else {
-        tokenOrKey = apiKey;
+        tokenOrKey = config.apiKey;
       }
 
       const connectionHeaders =
@@ -335,7 +343,7 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
 
     async subscribeUntil<T = any>(
       authType: AuthType.JWT | AuthType.API_KEY,
-      query: string,
+      query: DocumentNode,
       variables: Record<string, any>,
       timeoutError: string,
       filter?: (data: any) => boolean,
@@ -346,10 +354,13 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
         await this.ensureConnected(authType);
 
         const subId = (++this.subscriptionCounter).toString();
-        const operationNameMatch = query.match(/subscription\s+(\w+)/);
-        const operationName = operationNameMatch ? operationNameMatch[1] : "unknown";
+        const queryString = print(query);
+        const operationDefinition = query.definitions.find(
+          (def): def is any => def.kind === "OperationDefinition" && def.operation === "subscription",
+        );
+        const operationName = operationDefinition?.name?.value || "unknown";
 
-        const host = new URL(endpoint).host;
+        const host = new URL(config.endpoint).host;
 
         let timeout: NodeJS.Timeout | null = null;
         let isCleanedUp = false;
@@ -427,19 +438,19 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
                 [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
                   operationName,
                   variables,
-                  authToken: jwtProvider.getToken(),
+                  authToken: config.jwtProvider.getToken(),
                 }),
               }
             : {
                 [HTTP_HEADERS.HOST]: host,
-                [HTTP_HEADERS.API_KEY]: apiKey,
+                [HTTP_HEADERS.API_KEY]: config.apiKey,
               };
 
         const subscriptionPayload = {
           id: subId,
           type: "start",
           payload: {
-            data: JSON.stringify({ query, variables }),
+            data: JSON.stringify({ query: queryString, variables }),
             extensions: {
               authorization: authPayload,
             },
@@ -482,7 +493,7 @@ const createGraphQlWSProtocol = (endpoint: string, apiKey: string, jwtProvider: 
   };
 };
 
-const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConfig<TSdk>): GraphQlHttpProtocol<TSdk> => {
+const createGraphQlHttpClient = <TSdk extends object>(config: HttpClientConfig<TSdk>): GraphQLHttpClient<TSdk> => {
   const cachedSdks = new Map<string, TSdk>();
 
   const createAuthFacet = (authType: AuthType): TSdk => {
@@ -583,8 +594,8 @@ const createGraphQlHttpProtocol = <TSdk extends object>(config: HttpProtocolConf
 
 class CoreService {
   public readonly jwtProvider: JwtAuthProvider;
-  public readonly graphqlHttp: GraphQlHttpProtocol<CoreSdk>;
-  public readonly graphqlWS: GraphQlWsProtocol;
+  public readonly graphqlHttp: GraphQLHttpClient<CoreSdk>;
+  public readonly graphqlWS: GraphQLWSClient;
 
   constructor() {
     const endpoint = process.env.CORE_GRAPHQL_API_URL!;
@@ -593,7 +604,7 @@ class CoreService {
     this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
     const iamProvider = new IamAuthProvider();
 
-    this.graphqlHttp = createGraphQlHttpProtocol<CoreSdk>({
+    this.graphqlHttp = createGraphQlHttpClient<CoreSdk>({
       serviceName: ServiceType.CORE,
       endpoint,
       apiKey,
@@ -602,7 +613,12 @@ class CoreService {
       createSdk: getCoreSdk,
     });
 
-    this.graphqlWS = createGraphQlWSProtocol(endpoint, apiKey, this.jwtProvider);
+    this.graphqlWS = createGraphQlWSClient({
+      serviceName: ServiceType.CORE,
+      endpoint,
+      apiKey,
+      jwtProvider: this.jwtProvider,
+    });
   }
 
   // Login methods
@@ -623,7 +639,7 @@ class CoreService {
 
 class CctService {
   public readonly jwtProvider: JwtAuthProvider;
-  public readonly graphqlHttp: GraphQlHttpProtocol<CctSdk>;
+  public readonly graphqlHttp: GraphQLHttpClient<CctSdk>;
 
   constructor() {
     const endpoint = process.env.CCT_GRAPHQL_API_URL!;
@@ -632,7 +648,7 @@ class CctService {
     this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
     const iamProvider = new IamAuthProvider();
 
-    this.graphqlHttp = createGraphQlHttpProtocol<CctSdk>({
+    this.graphqlHttp = createGraphQlHttpClient<CctSdk>({
       serviceName: ServiceType.CCT,
       endpoint,
       apiKey,

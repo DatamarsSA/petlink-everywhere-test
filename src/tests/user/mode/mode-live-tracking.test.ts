@@ -3,9 +3,15 @@ import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-
 import { logger } from "../../../config/logger.js";
 import { PacketType, OperatingStatus } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { CommandEnum, ModeType, StatusState } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
+import {
+  CommandEnum,
+  ModeType,
+  OnGpsMessagePositionDocument,
+  OnGpsMessageStatusDocument,
+  StatusState,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { waitFor } from "../../../helpers/utils.js";
+// import { onGpsMessageStatus, onGpsMessagePosition, onSubscriptionStatus } from ".../core_schema.js";
 
 describe("Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -32,7 +38,7 @@ describe("Live Tracking", () => {
 
     // 2. Setup listener for App AND send command ONLY when App WebSocket is fully ready
     const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessageStatus,
+      OnGpsMessageStatusDocument,
       { id: setup.devices.dogStandard!.id },
       "Should receive status update with liveTracking=ON",
       (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.On,
@@ -81,7 +87,7 @@ describe("Live Tracking", () => {
 
     // Subscribe with onReady callback to ensure sequential execution
     const positionEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessagePosition,
+      OnGpsMessagePositionDocument,
       { id: setup.devices.dogStandard!.id },
       "Position update should arrive via WebSocket",
       (data) => {

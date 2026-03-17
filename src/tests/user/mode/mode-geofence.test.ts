@@ -2,8 +2,8 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { PacketType, OperatingStatus, PacketWelcomeHeartBeat } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import * as subscriptions from "../../../clients/petlink-infrastructure/endpoints/graphql/operations/core/subscriptions.js";
 import {
+  OnGpsMessageStatusDocument,
   SettingOperationEnum,
   SettingTypeEnum,
   StatusState,
@@ -128,7 +128,7 @@ describe("Geofence", () => {
 
     // Start listening for geofence active event with onReady callback
     const geofenceActiveEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessageStatus,
+      OnGpsMessageStatusDocument,
       { id: setup.devices.dogStandard!.id },
       `Notification inGeofence=true not arrived to app after ${fxt.socket.timeoutMs}ms`,
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
@@ -159,7 +159,7 @@ describe("Geofence", () => {
 
     // Start listening for geofence exit event with onReady callback
     const geofenceExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      subscriptions.onGpsMessageStatus,
+      OnGpsMessageStatusDocument,
       { id: setup.devices.dogStandard!.id },
       "Device should notify inGeofence=false when outside",
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,

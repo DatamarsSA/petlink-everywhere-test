@@ -1,0 +1,1384 @@
+###################### QUERY ######################
+query getEndOfLifeStep($eolId: String, $deviceId: String) {
+    getEndOfLifeStep(eolId: $eolId, deviceId: $deviceId) {
+        code
+        translationCode
+        message
+        step
+    }
+}
+
+query getPlansEOL($productId: String!, $countryCode: String) {
+    getPlansEOL(productId: $productId, countryCode: $countryCode) {
+        code
+        translationCode
+        message
+        plans {
+            itemId
+            pricings {
+                id
+                name
+                externalName
+                itemId
+                price
+                period
+                currencyCode
+                periodUnit
+                itemFamilyId
+                status
+                trialPeriod
+                trialPeriodUnit
+                itemType
+                addonPricings {
+                    id
+                    name
+                    externalName
+                    itemId
+                    price
+                    period
+                    currencyCode
+                    periodUnit
+                    itemFamilyId
+                    status
+                    trialPeriod
+                    trialPeriodUnit
+                    itemType
+                    __typename
+                }
+                __typename
+            }
+            __typename
+        }
+        devicePrice {
+            id
+            deviceType
+            price
+            period
+            periodUnit
+            discountPercentage
+            currencyCode
+            countryCode
+            __typename
+        }
+        endOfLife {
+            id
+            step
+            userId
+            productId
+            serialNumber
+            devicePrice {
+                id
+                deviceType
+                price
+                period
+                periodUnit
+                discountPercentage
+                currencyCode
+                countryCode
+                __typename
+            }
+            subscriptionId
+            pricing {
+                id
+                name
+                externalName
+                itemId
+                price
+                period
+                currencyCode
+                periodUnit
+                itemFamilyId
+                status
+                trialPeriod
+                trialPeriodUnit
+                itemType
+                addonPricings {
+                    id
+                    name
+                    externalName
+                    itemId
+                    price
+                    period
+                    currencyCode
+                    periodUnit
+                    itemFamilyId
+                    status
+                    trialPeriod
+                    trialPeriodUnit
+                    itemType
+                    __typename
+                }
+                __typename
+            }
+            addonIds
+            shopUrl
+            shippingInfo {
+                firstName
+                lastName
+                email
+                phone
+                address
+                city
+                stateCode
+                state
+                country
+                zip
+                __typename
+            }
+            __typename
+        }
+        __typename
+    }
+}
+
+query checkoutEOLNewDevice($eolId: String!) {
+    checkoutEOLNewDevice(eolId: $eolId) {
+        code
+        message
+        url
+    }
+}
+
+query checkoutNewSubscription($productId: String!, $priceIds: [String!]!, $hostedPageOptions: HostedPageOptionsInput) {
+    checkoutNewSubscription(productId: $productId, priceIds: $priceIds, hostedPageOptions: $hostedPageOptions) {
+        code
+        message
+        url
+        checkoutId
+    }
+}
+
+query getUser {
+    getUser {
+        code
+        message
+        translationCode
+        user {
+            birthDate
+            chargebeeId
+            city
+            contactVerified {
+                email
+                phone
+            }
+            countryCode
+            creationDate
+            email
+            entityType
+            haveMicrochip
+            gender
+            id
+            image {
+                id
+                url
+            }
+            languageId
+            name
+            mobileDevices {
+                os
+                registrationToken
+                serialNumber
+            }
+            notificationSettings {
+                email
+                energySavingZone {
+                    push
+                }
+                push
+                sms
+            }
+            phone
+            safetyTermsCat
+            settings {
+                liveDistance
+                liveSpeed
+                liveTrack
+            }
+            stateCode
+            streetAddress
+            surname
+            timezone
+            updateDate
+            zipCode
+        }
+    }
+}
+
+query checkContact($contact: String!, $contactType: ContactType!, $appBrand: AppBrand!) {
+    checkContact(contact: $contact, contactType: $contactType, appBrand: $appBrand) {
+        code
+        translationCode
+        message
+    }
+}
+
+query getPet($id: String!) {
+    getPet(id: $id) {
+        code
+        translationCode
+        message
+        pet {
+            id
+            name
+            birthDate
+            species
+            breedType
+            breeds
+            gender
+            primaryColor
+            weight
+            userId
+            creationDate
+            updateDate
+            neutered
+            length
+            dateMarkedAsLost
+            petProtectionId
+        }
+    }
+}
+
+query getPets {
+    getPets {
+        code
+        message
+        pets {
+            id
+            name
+            birthDate
+            species
+            breedType
+            breeds
+            gender
+            primaryColor
+            weight
+            userId
+            creationDate
+            updateDate
+            neutered
+            length
+            dateMarkedAsLost
+            petProtectionId
+        }
+    }
+}
+
+query getColors($species: SpeciesEnum!, $languageId: LanguageId) {
+    getColors(species: $species, languageId: $languageId) {
+        code
+        message
+        translationCode
+        items {
+            code
+            name
+        }
+    }
+}
+
+query getBreed($species: SpeciesEnum!, $languageId: LanguageId) {
+    getBreed(species: $species, languageId: $languageId) {
+        code
+        message
+        translationCode
+        items {
+            breedName
+            code
+            species
+        }
+    }
+}
+
+query getPetlinkGps($id: String!) {
+    getPetlinkGps(id: $id) {
+        code
+        translationCode
+        message
+        petlinkGps {
+            id
+            entityType
+            serialNumber
+            petId
+            userId
+            creationDate
+            updateDate
+            countryCode
+            timezone
+            lastKnownPosition {
+                lat
+                lng
+                alt
+                radius
+                speed
+                positionType
+                date
+            }
+            lastKnownStatus {
+                battery
+                flashlight
+                sound
+                liveTracking
+                geofence
+                inGeofence
+                energySavingMode
+                inEnergySavingZone
+                firmwareVersion
+                offline
+                date
+            }
+            geofenceCoordinates {
+                lat
+                lng
+            }
+            newFirmwareVersion {
+                version
+                url
+            }
+            settings {
+                activityProfile
+                updateFrequency
+                enableGpsOnDefault
+                optimizationDone
+            }
+            subscriptionId
+            subscriptionIsActive
+            logEnabled
+        }
+    }
+}
+
+query getSubscriptionPlans($productId: String, $countryCode: String, $serialNumber: String) {
+    getSubscriptionPlans(productId: $productId, countryCode: $countryCode, serialNumber: $serialNumber) {
+        code
+        translationCode
+        message
+        plans {
+            itemId
+            pricings {
+                addonPricings {
+                    id
+                    name
+                    externalName
+                    itemId
+                    price
+                    period
+                    currencyCode
+                    periodUnit
+                    itemFamilyId
+                    status
+                    trialPeriod
+                    trialPeriodUnit
+                }
+                id
+                name
+                externalName
+                itemId
+                price
+                period
+                currencyCode
+                periodUnit
+                itemFamilyId
+                status
+                trialPeriod
+                trialPeriodUnit
+            }
+        }
+        careProtectionPlans {
+            itemId
+            pricings {
+                id
+                name
+                externalName
+                itemId
+                price
+                period
+                currencyCode
+                periodUnit
+                itemFamilyId
+                status
+                trialPeriod
+                trialPeriodUnit
+            }
+        }
+        trialDuration
+        paymentMethodRequired
+        coupon {
+            id
+            name
+            discountType
+            discountPercentage
+            discountAmount
+            discountQuantity
+            currencyCode
+        }
+    }
+}
+
+query getBillingInfo {
+    getBillingInfo {
+        code
+        translationCode
+        message
+        billingInfo {
+            firstName
+            lastName
+            email
+            phone
+            address
+            city
+            stateCode
+            state
+            country
+            zip
+        }
+    }
+}
+
+query getSubscriptionPlanPricing($planPriceId: String!, $careProtectionPlanId: String, $addonPriceIds: [String!], $countryCode: String!, $productId: String!) {
+    getSubscriptionPlanPricing(planPriceId: $planPriceId, careProtectionPlanId: $careProtectionPlanId, addonPriceIds: $addonPriceIds, countryCode: $countryCode, productId: $productId) {
+        code
+        translationCode
+        message
+        pricing {
+            id
+            name
+            externalName
+            itemId
+            price
+            period
+            currencyCode
+            periodUnit
+            itemFamilyId
+            status
+            trialPeriod
+            trialPeriodUnit
+        }
+        careProtectionPricing {
+            id
+            name
+            externalName
+            itemId
+            price
+            period
+            currencyCode
+            periodUnit
+            itemFamilyId
+            status
+            trialPeriod
+            trialPeriodUnit
+        }
+        trialDuration
+        paymentMethodRequired
+        coupon {
+            id
+            name
+            discountType
+            discountPercentage
+            discountAmount
+            discountQuantity
+            currencyCode
+        }
+    }
+}
+
+query getSubscriptionByProductId($productId: String!) {
+    getSubscriptionByProductId(productId: $productId) {
+        code
+        translationCode
+        message
+        subscription {
+            id
+            status
+            currentTermStart
+            currentTermEnd
+            nextBillingAt
+            card {
+                expiryMonth
+                expiryYear
+                maskedNumber
+                type
+                brand
+                paymentMethod
+            }
+            currencyCode
+            paymentStatus
+            planChangeNotAllowed
+            subscriptionItems {
+                amount
+                name
+                itemPriceId
+                itemType
+                quantity
+                unitPrice
+                itemId
+            }
+            billingPeriod
+            billingPeriodUnit
+            addonToStopIds
+        }
+    }
+}
+
+query getSubscriptions($productId: String!) {
+    getSubscriptions(productId: $productId) {
+        code
+        translationCode
+        message
+        subscriptions {
+            id
+            status
+            creationDate
+            currentTermStart
+            currentTermEnd
+            billingPeriod
+            billingPeriodUnit
+            currencyCode
+            paymentStatus
+            planChangeNotAllowed
+            totalAmount
+            addonToStopIds
+            card {
+                expiryMonth
+                expiryYear
+                maskedNumber
+                type
+                brand
+                paymentMethod
+            }
+            subscriptionItems {
+                amount
+                name
+                itemPriceId
+                itemType
+                itemId
+                quantity
+            }
+            invoice {
+                id
+                status
+                creationDate
+                currencyCode
+                total
+                items {
+                    itemId
+                    itemType
+                    description
+                    quantity
+                    unitPrice
+                    amount
+                }
+                discountItems {
+                    couponId
+                    chargebeeInvoiceItemId
+                    discountType
+                    discountPercentage
+                    amount
+                }
+            }
+        }
+    }
+}
+
+query getPetProtection($petProtectionId: String!) {
+    getPetProtection(petProtectionId: $petProtectionId) {
+        code
+        translationCode
+        message
+        petProtection {
+            id
+            petId
+            userId
+            chargebeeSubscriptionId
+            currentTermStart
+            currentTermEnd
+            status
+            petOwner {
+                name
+                surname
+                email
+                fiscalCode
+                city
+                zipCode
+                streetAddress
+                countryCode
+                provinceCode
+                homePhone
+                mobilePhone
+            }
+            pet {
+                species
+                breed
+                gender
+                name
+                birthDate
+                microchip
+            }
+            petFlag {
+                country
+                age
+            }
+            codiceTessera
+            fileName
+            name
+            price
+            currencyCode
+            period
+            periodUnit
+            reservedCoupon
+            reservedCouponPercent
+            customerServiceContact
+            card {
+                expiryMonth
+                expiryYear
+                maskedNumber
+                type
+                brand
+                paymentMethod
+            }
+        }
+    }
+}
+
+query checkGps($serialNumber: String!) {
+    checkGps(serialNumber: $serialNumber) {
+        code
+        translationCode
+        message
+        imei
+        idccd
+        planProfileId
+        brand
+        model
+        firmwareVersion
+        simStatus
+        simRequestedStatus
+    }
+}
+
+# mange User credentials #
+
+#CHANGE flows (authenticated - JWT required)
+
+mutation changePassword($oldPassword: String!, $password: String!) {
+    changePassword(oldPassword: $oldPassword, password: $password) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation updateEmailUser($email: String!, $languageId: LanguageId, $appBrand: AppBrand!) {
+    updateEmailUser(email: $email, languageId: $languageId, appBrand: $appBrand) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation updatePhoneNumberUser($phone: String!, $languageId: LanguageId, $verificationId: String!, $otp: String!) {
+    updatePhoneNumberUser(phone: $phone, languageId: $languageId, verificationId: $verificationId, otp: $otp) {
+        code
+        translationCode
+        message
+    }
+}
+
+query getEnergySavingZone($id: String!) {
+    getEnergySavingZone(id: $id) {
+        code
+        message
+        translationCode
+        energySavingZone {
+            id
+            name
+            position {
+                lat
+                lng
+            }
+            radius
+            ssid
+            bssid
+            icon
+            entityType
+            userId
+            creationDate
+            updateDate
+        }
+    }
+}
+
+query getEnergySavingZones {
+    getEnergySavingZones {
+        code
+        message
+        translationCode
+        energySavingZones {
+            id
+            name
+            position {
+                lat
+                lng
+            }
+            radius
+            ssid
+            bssid
+            icon
+            entityType
+            userId
+            creationDate
+            updateDate
+        }
+    }
+}
+
+query getGeofences {
+    getGeofences {
+        code
+        message
+        translationCode
+        geofences {
+            id
+            entityType
+            name
+            position {
+                lat
+                lng
+            }
+            userId
+            creationDate
+            updateDate
+        }
+    }
+}
+
+#FORGOT/RECOVERY flows (public - NO auth)
+
+mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId, $appBrand: AppBrand!) {
+    sendOtpForgotPassword(contact: $contact, languageId: $languageId, appBrand: $appBrand) {
+        code
+        translationCode
+        message
+        verificationId
+    }
+}
+
+mutation changeForgotPassword($otp: String!, $verificationId: String!, $password: String!) {
+    changeForgotPassword(otp: $otp, verificationId: $verificationId, password: $password) {
+        code
+        translationCode
+        message
+    }
+}
+
+###################### MUTATION ######################
+mutation updateEndOfLife(
+    $eolId: String
+    $deviceId: String
+    $input: EndOfLifeIn
+) {
+    updateEndOfLife(eolId: $eolId, deviceId: $deviceId, input: $input) {
+        code
+        message
+        translationCode
+        endOfLife {
+            id
+            step
+            userId
+            productId
+            serialNumber
+            devicePrice {
+                id
+                deviceType
+                price
+                period
+                periodUnit
+                discountPercentage
+                currencyCode
+                countryCode
+                __typename
+            }
+            subscriptionId
+            pricing {
+                id
+                name
+                externalName
+                itemId
+                price
+                period
+                currencyCode
+                periodUnit
+                itemFamilyId
+                status
+                trialPeriod
+                trialPeriodUnit
+                itemType
+                addonPricings {
+                    id
+                    name
+                    externalName
+                    itemId
+                    price
+                    period
+                    currencyCode
+                    periodUnit
+                    itemFamilyId
+                    status
+                    trialPeriod
+                    trialPeriodUnit
+                    itemType
+                    __typename
+                }
+                __typename
+            }
+            addonIds
+            shopUrl
+            shippingInfo {
+                firstName
+                lastName
+                email
+                phone
+                address
+                city
+                stateCode
+                state
+                country
+                zip
+                __typename
+            }
+            __typename
+        }
+        __typename
+    }
+}
+mutation sendOtp($phone: String!, $languageId: LanguageId) {
+    sendOtp(phone: $phone, languageId: $languageId) {
+        code
+        translationCode
+        message
+        verificationId
+    }
+}
+mutation checkOtp($verificationId: String!, $otp: String!, $contact: String!) {
+    checkOtp(verificationId: $verificationId, otp: $otp, contact: $contact) {
+        code
+        translationCode
+        message
+        verificationId
+    }
+}
+mutation signUpUser($user: UserIn!, $otpData: OtpInput!, $languageId: LanguageId, $appBrand: AppBrand!) {
+    signUpUser(user: $user, otpData: $otpData, languageId: $languageId, appBrand: $appBrand) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation utilityIntegrationTest($input: UtilityIntegrationTestInput!) {
+    utilityIntegrationTest(input: $input) {
+        code
+        message
+    }
+}
+
+mutation verifyEmail($verificationId: String!, $otp: String!, $uuid: String!) {
+    verifyEmail(verificationId: $verificationId, otp: $otp, uuid: $uuid) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation createPet($pet: PetIn!) {
+    createPet(pet: $pet) {
+        code
+        translationCode
+        message
+        pet {
+            id
+            entityType
+            name
+            birthDate
+            species
+            breedType
+            breeds
+            gender
+            primaryColor
+            weight
+            userId
+            creationDate
+            updateDate
+            image {
+                id
+                url
+            }
+            neutered
+            livingEnvironment
+            length
+            dateMarkedAsLost
+            petProtectionId
+        }
+    }
+}
+
+mutation updatePet($pet: UpdatePetIn!) {
+    updatePet(pet: $pet) {
+        code
+        translationCode
+        message
+        pet {
+            id
+            entityType
+            name
+            birthDate
+            species
+            breedType
+            breeds
+            gender
+            primaryColor
+            weight
+            userId
+            creationDate
+            updateDate
+            image {
+                id
+                url
+            }
+            neutered
+            livingEnvironment
+            length
+            dateMarkedAsLost
+            petProtectionId
+        }
+    }
+}
+
+mutation deletePet($petId: String!) {
+    deletePet(petId: $petId) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation createPetlinkGps($petlinkGps: PetlinkGpsIn!, $appBrand: AppBrand!) {
+    createPetlinkGps(petlinkGps: $petlinkGps, appBrand: $appBrand) {
+        code
+        translationCode
+        message
+        petlinkGps {
+            id
+            entityType
+            serialNumber
+            petId
+            userId
+            creationDate
+            updateDate
+            countryCode
+            timezone
+            lastKnownPosition {
+                lat
+                lng
+                alt
+                radius
+                speed
+                positionType
+                date
+            }
+            lastKnownStatus {
+                battery
+                flashlight
+                sound
+                liveTracking
+                geofence
+                inGeofence
+                energySavingMode
+                inEnergySavingZone
+                firmwareVersion
+                offline
+                date
+            }
+            geofenceCoordinates {
+                lat
+                lng
+            }
+            newFirmwareVersion {
+                url
+                version
+            }
+            settings {
+                activityProfile
+                updateFrequency
+                enableGpsOnDefault
+                optimizationDone
+            }
+        }
+        currentTermEnd
+        url
+    }
+}
+
+mutation updatePetlinkGps($petlinkGps: UpdatePetlinkGpsIn!) {
+    updatePetlinkGps(petlinkGps: $petlinkGps) {
+        code
+        translationCode
+        message
+        petlinkGps {
+            id
+            entityType
+            serialNumber
+            petId
+            userId
+            creationDate
+            updateDate
+            countryCode
+            timezone
+            lastKnownPosition {
+                lat
+                lng
+                alt
+                radius
+                speed
+                positionType
+                date
+            }
+            lastKnownStatus {
+                battery
+                flashlight
+                sound
+                liveTracking
+                geofence
+                inGeofence
+                energySavingMode
+                inEnergySavingZone
+                firmwareVersion
+                offline
+                date
+            }
+            geofenceCoordinates {
+                lat
+                lng
+            }
+            newFirmwareVersion {
+                version
+                url
+            }
+            settings {
+                activityProfile
+                updateFrequency
+                enableGpsOnDefault
+                optimizationDone
+            }
+            subscriptionId
+            subscriptionIsActive
+            logEnabled
+        }
+    }
+}
+
+mutation resetPetlinkGps($id: String!) {
+    resetPetlinkGps(id: $id) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation updateBillingInfo($updateBillingInfoInput: UpdateBillingInfoInput!) {
+    updateBillingInfo(updateBillingInfoInput: $updateBillingInfoInput) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation updatePetProtectionData($petProtectionId: String!, $owner: PetProtectionOwnerIn!, $pet: PetProtectionPetIn!) {
+    updatePetProtectionData(petProtectionId: $petProtectionId, owner: $owner, pet: $pet) {
+        code
+        translationCode
+        message
+        petProtection {
+            id
+            petId
+            userId
+            chargebeeSubscriptionId
+            currentTermStart
+            currentTermEnd
+            status
+            petOwner {
+                name
+                surname
+                email
+                fiscalCode
+                city
+                zipCode
+                streetAddress
+                countryCode
+                provinceCode
+                homePhone
+                mobilePhone
+            }
+            pet {
+                species
+                breed
+                gender
+                name
+                birthDate
+                microchip
+            }
+            petFlag {
+                country
+                age
+            }
+            codiceTessera
+            fileName
+            name
+            price
+            currencyCode
+            period
+            periodUnit
+            reservedCoupon
+            reservedCouponPercent
+            customerServiceContact
+            card {
+                expiryMonth
+                expiryYear
+                maskedNumber
+                type
+                brand
+                paymentMethod
+            }
+        }
+    }
+}
+
+mutation stopRenewingSubscription($subscriptionId: String!, $appBrand: AppBrand!, $cancelReason: String!, $cancelReasonCode: CancelReasonCodeEnum!) {
+    stopRenewingSubscription(subscriptionId: $subscriptionId, appBrand: $appBrand, cancelReason: $cancelReason, cancelReasonCode: $cancelReasonCode) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation updateUser($user: UpdateUserIn!) {
+    updateUser(user: $user) {
+        code
+        translationCode
+        message
+        user {
+            id
+            entityType
+            name
+            surname
+            email
+            phone
+            birthDate
+            gender
+            city
+            countryCode
+            zipCode
+            streetAddress
+            stateCode
+            languageId
+            timezone
+            image {
+                id
+                url
+            }
+            creationDate
+            updateDate
+        }
+    }
+}
+
+mutation deleteUser($id: String) {
+    deleteUser(id: $id) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation sendCommand($command: Command!) {
+    sendCommand(command: $command) {
+        code
+        translationCode
+        message
+    }
+}
+
+mutation sendSetting($setting: Setting!) {
+    sendSetting(setting: $setting) {
+        code
+        translationCode
+        message
+        petlinkGps {
+            id
+            entityType
+            serialNumber
+            petId
+            userId
+            creationDate
+            updateDate
+            countryCode
+            timezone
+            lastKnownPosition {
+                lat
+                lng
+                alt
+                radius
+                speed
+                positionType
+                date
+            }
+            lastKnownStatus {
+                battery
+                flashlight
+                sound
+                liveTracking
+                geofence
+                inGeofence
+                energySavingMode
+                inEnergySavingZone
+                firmwareVersion
+                offline
+                date
+            }
+            geofenceCoordinates {
+                lat
+                lng
+            }
+            settings {
+                updateFrequency
+                enableGpsOnDefault
+            }
+            subscriptionId
+            subscriptionIsActive
+            endOfLifeDevice
+        }
+        energySavingZone {
+            entityType
+            id
+            name
+            icon
+            ssid
+            bssid
+            userId
+            position {
+                lat
+                lng
+            }
+            radius
+            creationDate
+            updateDate
+        }
+    }
+}
+
+mutation createGeofence($geofence: GeofenceIn!) {
+    createGeofence(geofence: $geofence) {
+        code
+        translationCode
+        message
+        geofence {
+            id
+            entityType
+            name
+            position {
+                lat
+                lng
+            }
+            userId
+            creationDate
+            updateDate
+        }
+    }
+}
+
+mutation updateGeofence($geofence: UpdateGeofenceIn!) {
+    updateGeofence(geofence: $geofence) {
+        code
+        translationCode
+        message
+        geofence {
+            id
+            entityType
+            name
+            position {
+                lat
+                lng
+            }
+            userId
+            creationDate
+            updateDate
+        }
+    }
+}
+
+mutation deleteGeofence($id: String!) {
+    deleteGeofence(id: $id) {
+        code
+        translationCode
+        message
+    }
+}
+mutation acknowledgeCheckout($id: String!) {
+    acknowledgeCheckout(id: $id) {
+        code
+        message
+    }
+}
+
+mutation replacement($productId: String!, $newSerialNumber: String!, $entityType: ProductTypeEnum!) {
+    replacement(productId: $productId, newSerialNumber: $newSerialNumber, entityType: $entityType) {
+        code
+        message
+        translationCode
+    }
+}
+###################### SUBSCRIPTION ######################
+
+subscription onGpsMessagePosition($id: String!) {
+    onGpsMessagePosition(id: $id) {
+        id
+        messageType
+        position {
+            lat
+            lng
+            alt
+            radius
+            speed
+            positionType
+            date
+        }
+    }
+}
+
+subscription onGpsMessageStatus($id: String!) {
+    onGpsMessageStatus(id: $id) {
+        id
+        messageType
+        status {
+            battery
+            flashlight
+            sound
+            liveTracking
+            geofence
+            inGeofence
+            energySavingMode
+            inEnergySavingZone
+            firmwareVersion
+            date
+        }
+    }
+}
+
+subscription onSubscriptionStatus($id: String!) {
+    onSubscriptionStatus(id: $id) {
+        id
+        status {
+            productId
+            subscriptionIsActive
+            currentTermEnd
+        }
+    }
+}
