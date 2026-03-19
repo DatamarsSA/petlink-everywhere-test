@@ -82,6 +82,14 @@ jobs:
       COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
       COGNITO_CLIENT_ID_APP_USER: ${{ secrets.COGNITO_CLIENT_ID_APP_USER }}
       COGNITO_CLIENT_ID_FE_CCT: ${{ secrets.COGNITO_CLIENT_ID_FE_CCT }}
+      # USER (app) credentials login
+      USER_APP_NAME: ${{ secrets.USER_APP_NAME }}
+      USER_APP_SURNAME: ${{ secrets.USER_APP_SURNAME }}
+      USER_APP_PASSWORD: ${{ secrets.USER_APP_PASSWORD }}
+      # OPERATOR (cct) credentials login
+      OPERATOR_CCT_EMAIL: ${{ secrets.OPERATOR_CCT_EMAIL }}
+      OPERATOR_CCT_PASSWORD: ${{ secrets.OPERATOR_CCT_PASSWORD }}
+      OPERATOR_CCT_PHONE: ${{ secrets.OPERATOR_CCT_PHONE }}
       # AWS IAM
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -89,10 +97,12 @@ jobs:
       # Twilio
       TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
       TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_USER_PHONE_NUMBER: ${{ secrets.TWILIO_USER_PHONE_NUMBER }}
       # Gmail
       GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
       GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
       GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      GMAIL_USER_EMAIL: ${{ secrets.GMAIL_USER_EMAIL }}
       # App Brand
       APP_BRAND: ${{ matrix.app_brand }}
       # Sentinel socket tcp
@@ -136,14 +146,22 @@ jobs:
             -e COGNITO_REGION \
             -e COGNITO_CLIENT_ID_APP_USER \
             -e COGNITO_CLIENT_ID_FE_CCT \
+            -e USER_APP_NAME \
+            -e USER_APP_SURNAME \
+            -e USER_APP_PASSWORD \
+            -e OPERATOR_CCT_EMAIL \
+            -e OPERATOR_CCT_PASSWORD \
+            -e OPERATOR_CCT_PHONE \
             -e AWS_REGION \
             -e AWS_ACCESS_KEY_ID \
             -e AWS_SECRET_ACCESS_KEY \
             -e TWILIO_ACCOUNT_SID \
             -e TWILIO_AUTH_TOKEN \
+            -e TWILIO_USER_PHONE_NUMBER \
             -e GMAIL_CLIENT_ID \
             -e GMAIL_CLIENT_SECRET \
             -e GMAIL_REFRESH_TOKEN \
+            -e GMAIL_USER_EMAIL \
             -e APP_BRAND \
             -e SENTINEL_HOST \
             -e SENTINEL_PORT \

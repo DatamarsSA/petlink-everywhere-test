@@ -22,12 +22,11 @@ const currentAppBrand = process.env.APP_BRAND as "PETLINK" | "KIPPY";
 // ============================================
 
 const commonUser = {
-  name: "Test",
-  surname: "User",
-  password: "Ciaokippy3!",
-  confirmPassword: "Ciaokippy3!",
-  email: "t90086085@gmail.com",
-  phone: "+18777804236",
+  name: process.env.USER_APP_NAME,
+  surname: process.env.USER_APP_SURNAME,
+  password: process.env.USER_APP_PASSWORD,
+  email: process.env.GMAIL_USER_EMAIL,
+  phone: process.env.TWILIO_USER_PHONE_NUMBER,
 };
 
 const commonPet = {
@@ -78,9 +77,9 @@ const commonCard = {
 };
 
 const cctAdmin = {
-  email: "emanuel.epifani@overtechconsulting.com",
-  password: "f2y7}Ja0[_3O",
-  phone: "+393803810255",
+  email: process.env.OPERATOR_CCT_EMAIL,
+  password: process.env.OPERATOR_CCT_PASSWORD,
+  phone: process.env.OPERATOR_CCT_PHONE,
   role: [RoleEnum.Superadmin],
   deviceVisibility: [DeviceVisibilityEnum.Kippy, DeviceVisibilityEnum.Petlink, DeviceVisibilityEnum.Vodafone],
   vodafoneCountryVisibility: [VodafoneCountryVisibilityEnum.Eu, VodafoneCountryVisibilityEnum.Gb],

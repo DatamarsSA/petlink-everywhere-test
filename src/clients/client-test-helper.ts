@@ -337,11 +337,13 @@ class TestHelper {
 
   async createUser(options: UserOptions = {}): Promise<User> {
     logger.debug("→ Creating test user");
+    const password = options.password ?? fxt.current.user.password;
 
     const userPayload: UserIn = {
       ...fxt.current.user,
       ...options,
-      confirmPassword: options.confirmPassword ?? options.password ?? fxt.current.user.confirmPassword,
+      password: password,
+      confirmPassword: password,
     };
 
     const response = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
@@ -358,7 +360,7 @@ class TestHelper {
 
     await Promise.all([
       petlink.core.loginWithPhone(userPayload.phone, userPayload.password),
-      await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password),
+      await petlink.cct.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!),
     ]);
     const userResponse = await petlink.core.graphqlHttp.authJwt.getUser();
 

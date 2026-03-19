@@ -18,7 +18,7 @@ describe("User Registration", () => {
     streetAddress: fxt.current.user.streetAddress,
     phone: fxt.current.user.phone,
     password: fxt.current.user.password,
-    confirmPassword: fxt.current.user.confirmPassword,
+    confirmPassword: fxt.current.user.password,
     languageId: fxt.current.user.languageId,
   } as UserIn;
 
