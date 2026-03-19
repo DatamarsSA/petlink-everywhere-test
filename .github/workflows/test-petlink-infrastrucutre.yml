@@ -18,7 +18,8 @@ concurrency:
   # 2. If runs start on different branches (e.g., 'develop' vs 'feature-x'), they run in parallel.
   group: ${{ github.workflow }}-${{ github.event.inputs.branch || github.ref_name || 'develop' }}
   # false = Do not cancel the in-progress run, but queue the new one instead
-  cancel-in-progress: false
+  # true = cancel the in-progress run (useful when some change need deploy of more microservices, deployed sequentially)
+  cancel-in-progress: true
 
 jobs:
   info-job:
