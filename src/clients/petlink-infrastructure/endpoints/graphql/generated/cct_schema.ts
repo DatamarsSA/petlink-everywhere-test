@@ -2302,6 +2302,49 @@ export type GetReplacementPetlinkGpsHistoryQuery = {
   };
 };
 
+export type GetIssuesQueryVariables = Exact<{
+  deviceId: Scalars["String"]["input"];
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetIssuesQuery = {
+  __typename?: "Query";
+  getIssues: {
+    __typename?: "GetIssuesResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items: Array<{
+      __typename?: "Issue";
+      id: string;
+      creationDate: string;
+      zendeskId: string;
+      customerId: string;
+      deviceId: string;
+      customerIssues: Array<TicketIssue>;
+      tickets: Array<{
+        __typename?: "Ticket";
+        id: string;
+        creationDate: string;
+        suspectedIssues: Array<TicketIssue>;
+        customerMood: CustomerMood;
+        status: TicketStatus;
+        action?: TicketAction | null;
+        actionReason: Array<TicketActionReason>;
+        inspectionRequired?: boolean | null;
+        negativeReview?: boolean | null;
+        notes?: string | null;
+        techNotes?: string | null;
+        username: string;
+        userId: string;
+        productId?: string | null;
+      }>;
+    }>;
+    pagination: { __typename?: "Pagination"; currentPage: number; pageSize: number; totalItems: number; totalPage: number };
+  };
+};
+
 export type CreateUserMutationVariables = Exact<{
   user: CreateUserInput;
 }>;
@@ -2401,6 +2444,46 @@ export type ResetPetlinkGpsMutationVariables = Exact<{
 export type ResetPetlinkGpsMutation = {
   __typename?: "Mutation";
   resetPetlinkGps: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
+export type CreateIssueMutationVariables = Exact<{
+  issue: IssueInput;
+}>;
+
+export type CreateIssueMutation = {
+  __typename?: "Mutation";
+  createIssue: {
+    __typename?: "CreateIssueResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    issue?: {
+      __typename?: "Issue";
+      id: string;
+      creationDate: string;
+      zendeskId: string;
+      customerId: string;
+      deviceId: string;
+      customerIssues: Array<TicketIssue>;
+      tickets: Array<{
+        __typename?: "Ticket";
+        id: string;
+        creationDate: string;
+        suspectedIssues: Array<TicketIssue>;
+        customerMood: CustomerMood;
+        status: TicketStatus;
+        action?: TicketAction | null;
+        actionReason: Array<TicketActionReason>;
+        inspectionRequired?: boolean | null;
+        negativeReview?: boolean | null;
+        notes?: string | null;
+        techNotes?: string | null;
+        username: string;
+        userId: string;
+        productId?: string | null;
+      }>;
+    } | null;
+  };
 };
 
 export const GetCustomerDocument = {
@@ -3437,6 +3520,110 @@ export const GetReplacementPetlinkGpsHistoryDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetIssuesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getIssues" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "deviceId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getIssues" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "deviceId" }, value: { kind: "Variable", name: { kind: "Name", value: "deviceId" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "zendeskId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerId" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerIssues" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "tickets" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "suspectedIssues" } },
+                            { kind: "Field", name: { kind: "Name", value: "customerMood" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "action" } },
+                            { kind: "Field", name: { kind: "Name", value: "actionReason" } },
+                            { kind: "Field", name: { kind: "Name", value: "inspectionRequired" } },
+                            { kind: "Field", name: { kind: "Name", value: "negativeReview" } },
+                            { kind: "Field", name: { kind: "Name", value: "notes" } },
+                            { kind: "Field", name: { kind: "Name", value: "techNotes" } },
+                            { kind: "Field", name: { kind: "Name", value: "username" } },
+                            { kind: "Field", name: { kind: "Name", value: "userId" } },
+                            { kind: "Field", name: { kind: "Name", value: "productId" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "pagination" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const CreateUserDocument = {
   kind: "Document",
   definitions: [
@@ -3724,6 +3911,81 @@ export const ResetPetlinkGpsDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const CreateIssueDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "createIssue" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "issue" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "IssueInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createIssue" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "issue" }, value: { kind: "Variable", name: { kind: "Name", value: "issue" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "issue" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "zendeskId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerId" } },
+                      { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "customerIssues" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "tickets" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "suspectedIssues" } },
+                            { kind: "Field", name: { kind: "Name", value: "customerMood" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "action" } },
+                            { kind: "Field", name: { kind: "Name", value: "actionReason" } },
+                            { kind: "Field", name: { kind: "Name", value: "inspectionRequired" } },
+                            { kind: "Field", name: { kind: "Name", value: "negativeReview" } },
+                            { kind: "Field", name: { kind: "Name", value: "notes" } },
+                            { kind: "Field", name: { kind: "Name", value: "techNotes" } },
+                            { kind: "Field", name: { kind: "Name", value: "username" } },
+                            { kind: "Field", name: { kind: "Name", value: "userId" } },
+                            { kind: "Field", name: { kind: "Name", value: "productId" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -3962,6 +4224,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    getIssues(
+      variables: GetIssuesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetIssuesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetIssuesQuery>({
+            document: GetIssuesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getIssues",
+        "query",
+        variables,
+      );
+    },
     createUser(
       variables: CreateUserMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -4066,6 +4346,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "resetPetlinkGps",
+        "mutation",
+        variables,
+      );
+    },
+    createIssue(
+      variables: CreateIssueMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<CreateIssueMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateIssueMutation>({
+            document: CreateIssueDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "createIssue",
         "mutation",
         variables,
       );

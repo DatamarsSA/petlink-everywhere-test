@@ -390,6 +390,44 @@ query getReplacementPetlinkGpsHistory($productId: String!) {
     }
 }
 
+query getIssues($deviceId: String!, $pagination: PaginationInput, $order: OrderInput) {
+    getIssues(deviceId: $deviceId, pagination: $pagination, order: $order) {
+        code
+        message
+        translationCode
+        items {
+            id
+            creationDate
+            zendeskId
+            customerId
+            deviceId
+            customerIssues
+            tickets {
+                id
+                creationDate
+                suspectedIssues
+                customerMood
+                status
+                action
+                actionReason
+                inspectionRequired
+                negativeReview
+                notes
+                techNotes
+                username
+                userId
+                productId
+            }
+        }
+        pagination {
+            currentPage
+            pageSize
+            totalItems
+            totalPage
+        }
+    }
+}
+
 
 
 ###################### MUTATION ######################
@@ -474,5 +512,37 @@ mutation resetPetlinkGps($id: String!) {
         code
         message
         translationCode
+    }
+}
+
+mutation createIssue($issue: IssueInput!) {
+    createIssue(issue: $issue) {
+        code
+        message
+        translationCode
+        issue {
+            id
+            creationDate
+            zendeskId
+            customerId
+            deviceId
+            customerIssues
+            tickets {
+                id
+                creationDate
+                suspectedIssues
+                customerMood
+                status
+                action
+                actionReason
+                inspectionRequired
+                negativeReview
+                notes
+                techNotes
+                username
+                userId
+                productId
+            }
+        }
     }
 }

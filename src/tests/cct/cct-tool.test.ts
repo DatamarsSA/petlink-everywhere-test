@@ -341,13 +341,14 @@ describe("CCT Tool", () => {
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      await petlink.cct.loginWithEmail(fxt.cctAdmin.email, fxt.cctAdmin.password);
+      await petlink.cct.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!);
     });
 
     afterAll(async () => {
       await petlink.cct.graphqlHttp.authJwt.deleteUser({
         id: createdUser.id,
       });
+      //TODO: here when lore add endpoint to delete all action by user cct could be removed this deleteUser?
     });
 
     it("should allow CCT Admin to CREATE a new Operator User", async () => {

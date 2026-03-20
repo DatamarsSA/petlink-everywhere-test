@@ -1,8 +1,16 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { PetlinkGps, PetlinkGpsIn, ProductTypeEnum, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { PetlinkGps, PetlinkGpsIn, ProductTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  CustomerMood,
+  OrderEnum,
+  TicketAction,
+  TicketActionReason,
+  TicketIssue,
+  TicketStatus,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { logger } from "../../../config/logger.js";
 
 describe("PetlinkGPS Registration", () => {
@@ -255,20 +263,20 @@ describe("PetlinkGPS Reset", () => {
       serialId: device.serialNumber,
     });
     expect(deviceDetailResponse.getDevice.code).toBe("200");
-    expect(deviceDetailResponse.getDevice.device?.deviceId).toBeNull;
-    expect(deviceDetailResponse.getDevice.device?.customerId).toBeNull;
-    expect(deviceDetailResponse.getDevice.device?.petId).toBeNull;
-    expect(deviceDetailResponse.getDevice.device?.registrationDate).toBeNull;
+    expect(deviceDetailResponse.getDevice.device?.deviceId).toBeNull();
+    expect(deviceDetailResponse.getDevice.device?.customerId).toBeNull();
+    expect(deviceDetailResponse.getDevice.device?.petId).toBeNull();
+    expect(deviceDetailResponse.getDevice.device?.registrationDate).toBeNull();
     logger.info("✓ Reset completed successfully without subscription");
   });
 });
 
-describe("PetlinkGps Replacemente", async () => {
+describe("PetlinkGps Replacement", async () => {
   beforeEach(async () => {
     await testHelper.cleanupAll();
   });
 
-  it("should track reset gps after user change", async () => {
+  it("flow user buy another device and replace old", async () => {
     // SETUP: Creiamo utente + pet + device esistente (vecchio device)
     const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
     const oldDevice = setup.devices.dogStandard!;
@@ -300,7 +308,7 @@ describe("PetlinkGps Replacemente", async () => {
       productId: oldDevice.id,
     });
     expect(finalHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
-    expect(finalHistory.getReplacementPetlinkGpsHistory.items?.length || 0).toBe(1);
+    expect(finalHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(1);
 
     const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items![0];
     expect(replacementRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
@@ -318,5 +326,94 @@ describe("PetlinkGps Replacemente", async () => {
     expect(updatedDeviceResponse.getPetlinkGps.petlinkGps?.serialNumber).toBe(newSerialNumber);
 
     logger.info("✓ GPS replacement test completed successfully");
+  });
+
+  it("flow user open ticket cct to replacement", async () => {
+    const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+    const user = setup.user!;
+    const pet = setup.pets.dog!;
+    const oldDevice = setup.devices.dogStandard!;
+
+    logger.info("→ STEP 1: History must be empty before opening ticket");
+    const initialHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
+      productId: oldDevice.id,
+    });
+    expect(initialHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
+    expect(initialHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(0);
+
+    logger.info("→ STEP 2: CCT operator opens replacement ticket");
+    const createIssueResponse = await petlink.cct.graphqlHttp.authJwt.createIssue({
+      issue: {
+        customerId: user.id,
+        deviceId: oldDevice.id,
+        zendeskId: `ZD-${Date.now()}`,
+        customerIssues: [TicketIssue.BatteryNotCharge],
+        tickets: [
+          {
+            suspectedIssues: [TicketIssue.BatteryNotCharge],
+            customerMood: CustomerMood.Collaborative,
+            action: TicketAction.Replacement,
+            actionReason: [TicketActionReason.BatteryCharging],
+            inspectionRequired: false,
+            negativeReview: false,
+            status: TicketStatus.Open,
+          },
+        ],
+      },
+    });
+    expect(createIssueResponse.createIssue.code).toBe("200");
+    expect(createIssueResponse.createIssue.issue?.tickets?.length).toBe(1);
+
+    logger.info("→ STEP 3: History should contain pending replacement without newSerialNumber");
+    const pendingHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
+      productId: oldDevice.id,
+    });
+    expect(pendingHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
+    expect(pendingHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(1);
+    const pendingRecord = pendingHistory.getReplacementPetlinkGpsHistory.items![0];
+    expect(pendingRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
+    expect(pendingRecord.newSerialNumber).toBeNull();
+    expect(pendingRecord.petId).toBe(pet.id);
+    expect(pendingRecord.productId).toBe(oldDevice.id);
+
+    logger.info("→ STEP 4: CCT should expose the opened issue via getIssues");
+    const issuesResponse = await petlink.cct.graphqlHttp.authJwt.getIssues({
+      deviceId: oldDevice.id,
+      pagination: { pageNumber: 0, pageSize: 10 },
+      order: { field: "creationDate", order: OrderEnum.Desc },
+    });
+    expect(issuesResponse.getIssues.code).toBe("200");
+    expect(issuesResponse.getIssues.items?.length || 0).toBeGreaterThanOrEqual(1);
+    const createdIssue = issuesResponse.getIssues.items?.find((issue) => issue?.id === createIssueResponse.createIssue.issue?.id);
+    expect(createdIssue).toBeDefined();
+
+    logger.info("→ STEP 5: User receives new device and performs replacement from the app");
+    const newSerialNumber = fxt.current.devices.CAT.serialNumber;
+    // TODO: add coverage for prepaid devices replacement guard once implemented (if i try to replace old device that has a prepaid shoudl fail)
+    const replacementResponse = await petlink.core.graphqlHttp.authJwt.replacement({
+      productId: oldDevice.id,
+      newSerialNumber,
+      entityType: ProductTypeEnum.PetlinkGps,
+    });
+    expect(replacementResponse.replacement.code).toBe("200");
+
+    logger.info("→ STEP 6: History should now contain newSerialNumber");
+    const finalHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
+      productId: oldDevice.id,
+    });
+    expect(finalHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
+    expect(finalHistory.getReplacementPetlinkGpsHistory.items?.length || 0).toBe(1);
+    //FIXME: perchè qui torna sempre 0?
+    const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items![0];
+    expect(replacementRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
+    expect(replacementRecord.newSerialNumber).toBe(newSerialNumber);
+    expect(replacementRecord.userId).toBe(user.id);
+
+    logger.info("→ STEP 7: Device should be updated with the new serial number");
+    const updatedDeviceResponse = await petlink.core.graphqlHttp.authJwt.getPetlinkGps({
+      id: oldDevice.id,
+    });
+    expect(updatedDeviceResponse.getPetlinkGps.code).toBe("200");
+    expect(updatedDeviceResponse.getPetlinkGps.petlinkGps?.serialNumber).toBe(newSerialNumber);
   });
 });
