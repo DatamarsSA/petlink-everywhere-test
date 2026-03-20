@@ -98,6 +98,10 @@ const baseFixtures = {
       CAT: { serialNumber: "UTEST01", countryCode: "IT", timezone: "Europe/Rome" },
       DOG: { serialNumber: "UTEST02", countryCode: "IT", timezone: "Europe/Rome" },
       EVO: { serialNumber: "UTEST03", countryCode: "IT", timezone: "Europe/Rome" },
+      //OLD devices
+      VITA: { serialNumber: "VITA001", countryCode: "IT", timezone: "Europe/Rome" },
+      FINDER: { serialNumber: "FINDER0", countryCode: "IT", timezone: "Europe/Rome" },
+      EVO6: { serialNumber: "EVO0006", countryCode: "IT", timezone: "Europe/Rome" },
     },
     card: commonCard,
   },

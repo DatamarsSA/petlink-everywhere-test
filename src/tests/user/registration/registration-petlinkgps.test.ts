@@ -115,6 +115,60 @@ describe("PetlinkGPS Registration", () => {
     catDevice = catResponse.createPetlinkGps.petlinkGps!;
   });
 
+  it.runIf(fxt.isKippyRun)("Should not allow to register old devices", async () => {
+    const vitaDevicePayload = {
+      serialNumber: fxt.KIPPY.devices.VITA.serialNumber,
+      countryCode: fxt.KIPPY.devices.VITA.countryCode,
+      timezone: fxt.KIPPY.devices.VITA.timezone,
+      petId: setup.pets.dog!.id,
+    } as PetlinkGpsIn;
+    const finderDevicePayload = {
+      serialNumber: fxt.KIPPY.devices.FINDER.serialNumber,
+      countryCode: fxt.KIPPY.devices.FINDER.countryCode,
+      timezone: fxt.KIPPY.devices.FINDER.timezone,
+      petId: setup.pets.cat!.id,
+    } as PetlinkGpsIn;
+    const evo6DevicePayload = {
+      serialNumber: fxt.KIPPY.devices.EVO6.serialNumber,
+      countryCode: fxt.KIPPY.devices.EVO6.countryCode,
+      timezone: fxt.KIPPY.devices.EVO6.timezone,
+      petId: setup.pets.cat!.id,
+    } as PetlinkGpsIn;
+
+    const [vitaResponse, finderResponse, evo6Response] = await Promise.all([
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
+        petlinkGps: vitaDevicePayload,
+        appBrand: fxt.current.appBrand,
+      }),
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
+        petlinkGps: finderDevicePayload,
+        appBrand: fxt.current.appBrand,
+      }),
+      petlink.core.graphqlHttp.authJwt.createPetlinkGps({
+        petlinkGps: evo6DevicePayload,
+        appBrand: fxt.current.appBrand,
+      }),
+    ]);
+
+    // Assert VITA device
+    expect(
+      vitaResponse.createPetlinkGps.code,
+      `createPetlinkGps should not succeed for VITA device - Error: ${vitaResponse.createPetlinkGps.message}${vitaResponse.createPetlinkGps.translationCode ? ` (${vitaResponse.createPetlinkGps.translationCode})` : ""}`,
+    ).not.toBe("200");
+
+    // Assert FINDER device
+    expect(
+      finderResponse.createPetlinkGps.code,
+      `createPetlinkGps should succeed for FINDER device - Error: ${finderResponse.createPetlinkGps.message}${finderResponse.createPetlinkGps.translationCode ? ` (${finderResponse.createPetlinkGps.translationCode})` : ""}`,
+    ).not.toBe("200");
+
+    // Assert EVO6 device
+    expect(
+      evo6Response.createPetlinkGps.code,
+      `createPetlinkGps should succeed for EVO6 device - Error: ${evo6Response.createPetlinkGps.message}${evo6Response.createPetlinkGps.translationCode ? ` (${evo6Response.createPetlinkGps.translationCode})` : ""}`,
+    ).not.toBe("200");
+  });
+
   it.runIf(fxt.isKippyRun)("Associate EVO device to DOG", async () => {
     const evoDevicePayload = {
       serialNumber: fxt.KIPPY.devices.EVO.serialNumber,
