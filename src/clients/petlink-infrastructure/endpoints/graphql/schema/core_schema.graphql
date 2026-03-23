@@ -2,22 +2,6 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by sigv4 signing.
-"""
-directive @aws_iam on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""
 Tells the service which subscriptions will be published to when this mutation is
 called. This directive is deprecated use @aws_susbscribe directive instead.
 """
@@ -27,14 +11,6 @@ directive @aws_publish(
   """
   subscriptions: [String]
 ) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by a Lambda Authorizer.
@@ -52,6 +28,30 @@ directive @aws_subscribe(
   List of mutations which will trigger this subscription when they are called.
   """
   mutations: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Cognito User Pools token.
+"""
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
 ) on FIELD_DEFINITION
 
 type Activities {
@@ -172,6 +172,13 @@ type BaseConfig {
   sentinelUrl: String!
   sentinelPort: String!
   webappUrl: String!
+  timeoutWakeUp20s: Int!
+  timeoutWakeUp60s: Int!
+  timeoutWakeUp120s: Int!
+  timeoutNoPosition90s: Int!
+  timeoutNoHighPrecision120s: Int!
+  timeoutOnlyLowPrecision30s: Int!
+  timeoutOnlyLowPrecision5Min: Int!
 }
 
 type BillingInfo {
@@ -265,6 +272,7 @@ input Command {
   id: String!
   duration: Int
   modeType: ModeType
+  unhappyFlowDeactivation: Boolean
 }
 
 enum CommandEnum {
@@ -511,9 +519,25 @@ type GpsPosition {
   lng: Float!
   alt: Float
   radius: Float!
+  precision: PositionPrecision
   speed: Float
   positionType: PositionType!
   date: String!
+  isSkip: Boolean
+}
+
+type GpsPositionHistory {
+  lat: Float!
+  lng: Float!
+  alt: Float
+  radius: Float!
+  precision: PositionPrecision
+  speed: Float
+  positionType: PositionType!
+  date: String!
+  isSkip: Boolean
+  inEnergySavingZone: Boolean
+  activeGeofenceCoordinates: [Coordinates!]
 }
 
 input GpsPositionIn {
@@ -521,9 +545,11 @@ input GpsPositionIn {
   lng: Float!
   alt: Float
   radius: Float!
+  precision: PositionPrecision
   speed: Float
   positionType: PositionType!
   date: String!
+  isSkip: Boolean
 }
 
 type GpsSettings {
@@ -542,6 +568,7 @@ input GpsSettingsIn {
 
 type GpsStatus {
   battery: Int!
+  charging: Boolean
   flashlight: StatusState!
   sound: StatusState!
   liveTracking: StatusState!
@@ -732,6 +759,7 @@ type Mutation {
   setReadPopupMigratedUser: Response!
   updateRegistrationToken(serialNumber: String!, registrationToken: String!, os: MobileOsEnum!): Response!
   startMigration(contact: String!, password: String!, appBrand: AppBrand!): Response!
+  setReadPetHistory(notificationId: [String]!): Response!
   createPet(pet: PetIn!): ResponsePet!
   updatePet(pet: UpdatePetIn!): ResponsePet!
   deletePet(petId: String!): Response!
@@ -746,7 +774,7 @@ type Mutation {
   replacement(productId: String!, newSerialNumber: String!, entityType: ProductTypeEnum!): ResponseReplacement!
   setPetIsLost(petId: String!, lostIn: LostIn!): ResponseSetPetIsLost!
   setOptimizationDone(productId: String!): Response!
-  setDeviceOffline(productId: String!): Response!
+  setDeviceUnhappyFlow(productId: String!): Response!
   setSentinelMigrationDone(productId: String!): Response!
   setSafetyTermsCat: Response!
   setArcaPlanetTerms: Response!
@@ -754,6 +782,7 @@ type Mutation {
   sendMessageFoundPet(message: MessageFoundPetIn!): Response!
   setPetIsFound(petId: String!): ResponseSetPetIsFound!
   setMacAddress(macAddresses: [SetMacAddressInput!]!): Response!
+  updateRegistrationDeviceFlow(petId: String!, step: String!): ResponseUpdateRegistrationDeviceFlow!
   pushGpsMessagePositionBLE(productId: String!, position: GpsPositionIn!): Response!
   sendCommand(command: Command!): Response!
   sendSetting(setting: Setting!): ResponseSendSetting!
@@ -929,6 +958,7 @@ type PetHistoryEvent {
   petId: String!
   date: String!
   extra: PetHistoryExtra
+  read: Boolean
 }
 
 enum PetHistoryEventTypeEnum {
@@ -943,6 +973,9 @@ enum PetHistoryEventTypeEnum {
   ENERGY_SAVING_ZONE_OUT
   ENERGY_SAVING_ZONE_ACTIVE
   DEVICE_BATTERY
+  DEVICE_BATTERY_20
+  DEVICE_BATTERY_10
+  DEVICE_BATTERY_OFF
   DEVICE_OFF
   FIRMWARE_UPDATE
   UPDATED_POSITION
@@ -1175,6 +1208,11 @@ input Position {
   lng: Float!
 }
 
+enum PositionPrecision {
+  HIGH
+  LOW
+}
+
 enum PositionType {
   GPS
   LBS
@@ -1275,7 +1313,7 @@ type Query {
   getPetByQrTag(serialNumber: String!): ResponsePetByQrTag!
   getPets: ResponsePets!
   getPetProtection(petProtectionId: String!): ResponseGetPetProtection!
-  getPetHistory(petId: String!): ResponsePetHistory!
+  getPetHistory(petId: String): ResponsePetHistory!
   getPetLostInfo(petId: String!): ResponseGetPetLostInfo!
   getPetlinkMicrochip(id: String!): ResponsePetlinkMicrochip!
   getPetlinkQrTag(id: String!): ResponsePetlinkQrTag!
@@ -1283,6 +1321,8 @@ type Query {
   getProduct(id: String!, entityType: ProductTypeEnum!): ResponseProduct!
   getProducts(petId: String!): ResponseProducts!
   getGpsPromotions(productId: String!): ResponseGetGpsPromotions!
+  getRegisteredPetlinkGps(serialNumbers: [String!]!): ResponseRegisteredPetlinkGps!
+  getRegistrationDeviceFlow(petId: String!): ResponseUpdateRegistrationDeviceFlow!
 
   """  end of life"""
   getEndOfLifeStep(eolId: String, deviceId: String): ResponseGetEndOfLifeStep!
@@ -1304,6 +1344,7 @@ type Query {
   getSubscriptionByProductId(productId: String!): ResponseGetSubscriptionByProductId!
   getOrder(orderId: String!): ResponseGetOrder
   getPetsAndProducts: ResponsePetsAndProducts!
+  countPetHistoryUnread: ResponseCountPetHistoryUnread!
   getNotificationsHistory(from: String, to: String): ResponseNotificationsHistory!
   getPositionsHistory(petId: String!, from: String, to: String): ResponsePositionsHistory!
   getPositionsHistoryDates(petId: String!, from: String, to: String): ResponsePositionsHistoryDates
@@ -1452,6 +1493,13 @@ type ResponseChurnDeflection {
   url: String
 }
 
+type ResponseCountPetHistoryUnread {
+  code: String!
+  translationCode: String
+  message: String!
+  countPetHistoryUnread: Int
+}
+
 type ResponseCreatePetlinkGps {
   code: String!
   translationCode: String
@@ -1459,6 +1507,7 @@ type ResponseCreatePetlinkGps {
   petlinkGps: PetlinkGps
   currentTermEnd: String
   url: String
+  subscriptionPlan: SubscriptionPlanEnum
 }
 
 type ResponseEnergySavingZone {
@@ -1701,7 +1750,7 @@ type ResponsePositionsHistory {
   code: String!
   translationCode: String
   message: String!
-  positions: [GpsPosition!]
+  positions: [GpsPositionHistory!]
 }
 
 type ResponsePositionsHistoryDates {
@@ -1731,6 +1780,14 @@ type ResponseProtectionPlans {
   translationCode: String
   message: String!
   careProtectionPlans: [CareProtectionPlan!]
+}
+
+type ResponseRegisteredPetlinkGps {
+  code: String!
+  translationCode: String
+  message: String!
+  registered: [String!]
+  unregistered: [String!]
 }
 
 type ResponseReplacement {
@@ -1825,6 +1882,12 @@ type ResponseUpdatePetProtectionData {
   petProtection: PetProtection
 }
 
+type ResponseUpdateRegistrationDeviceFlow {
+  code: String!
+  translationCode: String
+  step: String
+}
+
 type ResponseUser {
   code: String!
   translationCode: String
@@ -1867,6 +1930,7 @@ input Setting {
   settingType: SettingTypeEnum!
   deviceId: String
   geofence: [CoordinatesIn]
+  geofenceId: String
   id: String
 
   """  id and deviceId both used for activation ESZ and eventually others"""
@@ -1944,6 +2008,12 @@ type SubscriptionMessageStatus {
 input SubscriptionMessageStatusIn {
   id: String!
   status: SubscriptionStatusIn!
+}
+
+enum SubscriptionPlanEnum {
+  prepaid
+  insurance
+  in_trial
 }
 
 type SubscriptionShortInfo {

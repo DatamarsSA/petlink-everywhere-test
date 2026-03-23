@@ -865,6 +865,8 @@ export interface Mutation {
    * @aws_cognito_user_pools (cognito_groups:["SUPERADMIN"])
    */
   updateUser: UpdateUserResponse;
+  /**   test suite */
+  utilityIntegrationTest: ResponseUtilityIntegrationTest;
 }
 
 export type MutationAddFreePeriodArgs = {
@@ -957,6 +959,10 @@ export type MutationUpdateCustomerArgs = {
 
 export type MutationUpdateUserArgs = {
   userInfo: UpdateUserInput;
+};
+
+export type MutationUtilityIntegrationTestArgs = {
+  input: UtilityIntegrationTestInput;
 };
 
 export interface Order {
@@ -1559,6 +1565,12 @@ export interface ResponseGetShelterOrders {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseUtilityIntegrationTest {
+  __typename?: "ResponseUtilityIntegrationTest";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+}
+
 export interface RetentionDiscountItem {
   __typename?: "RetentionDiscountItem";
   amount?: Maybe<Scalars["Float"]["output"]>;
@@ -1816,6 +1828,15 @@ export interface User {
   vodafoneCountryVisibility: Array<VodafoneCountryVisibilityEnum>;
 }
 
+export interface UtilityIntegrationTestInput {
+  email?: InputMaybe<Scalars["String"]["input"]>;
+  utilityType: UtilityTestTypeEnum;
+}
+
+export enum UtilityTestTypeEnum {
+  CleanUpUser = "CLEAN_UP_USER",
+}
+
 export enum VodafoneCountryVisibilityEnum {
   De = "DE",
   Es = "ES",
@@ -1858,6 +1879,15 @@ export type GetCustomerQuery = {
       appBrand?: string | null;
     } | null;
   };
+};
+
+export type UtilityIntegrationTestMutationVariables = Exact<{
+  input: UtilityIntegrationTestInput;
+}>;
+
+export type UtilityIntegrationTestMutation = {
+  __typename?: "Mutation";
+  utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string };
 };
 
 export type GetCustomersQueryVariables = Exact<{
@@ -2537,6 +2567,42 @@ export const GetCustomerDocument = {
                     ],
                   },
                 },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const UtilityIntegrationTestDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "utilityIntegrationTest" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "UtilityIntegrationTestInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "utilityIntegrationTest" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
               ],
             },
           },
@@ -4013,6 +4079,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
           }),
         "getCustomer",
         "query",
+        variables,
+      );
+    },
+    utilityIntegrationTest(
+      variables: UtilityIntegrationTestMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<UtilityIntegrationTestMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<UtilityIntegrationTestMutation>({
+            document: UtilityIntegrationTestDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "utilityIntegrationTest",
+        "mutation",
         variables,
       );
     },

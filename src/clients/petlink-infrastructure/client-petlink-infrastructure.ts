@@ -175,9 +175,9 @@ class IamAuthProvider {
   private readonly secretAccessKey: string;
   private readonly awsRegion: string;
 
-  constructor() {
-    this.accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
-    this.secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY!;
+  constructor(accessKeyId: string, secretAccessKey: string) {
+    this.accessKeyId = accessKeyId;
+    this.secretAccessKey = secretAccessKey;
     this.awsRegion = process.env.AWS_REGION!;
   }
 
@@ -602,7 +602,7 @@ class CoreService {
     const apiKey = process.env.CORE_GRAPHQL_API_KEY!;
 
     this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
-    const iamProvider = new IamAuthProvider();
+    const iamProvider = new IamAuthProvider(process.env.AWS_CORE_ACCESS_KEY_ID!, process.env.AWS_CORE_SECRET_ACCESS_KEY!);
 
     this.graphqlHttp = createGraphQlHttpClient<CoreSdk>({
       serviceName: ServiceType.CORE,
@@ -646,7 +646,7 @@ class CctService {
     const apiKey = process.env.CCT_GRAPHQL_API_KEY!;
 
     this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
-    const iamProvider = new IamAuthProvider();
+    const iamProvider = new IamAuthProvider(process.env.AWS_CCT_ACCESS_KEY_ID!, process.env.AWS_CCT_SECRET_ACCESS_KEY!);
 
     this.graphqlHttp = createGraphQlHttpClient<CctSdk>({
       serviceName: ServiceType.CCT,

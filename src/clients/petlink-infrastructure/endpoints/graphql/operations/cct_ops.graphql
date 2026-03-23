@@ -18,6 +18,13 @@ query getCustomer($customerId: String!) {
     }
 }
 
+mutation utilityIntegrationTest($input: UtilityIntegrationTestInput!) {
+    utilityIntegrationTest(input: $input) {
+        code
+        message
+    }
+}
+
 query getCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $order: OrderInput) {
     getCustomers(filter: $filter, pagination: $pagination, order: $order) {
         code

@@ -138,6 +138,13 @@ export interface BaseConfig {
   __typename?: "BaseConfig";
   sentinelPort: Scalars["String"]["output"];
   sentinelUrl: Scalars["String"]["output"];
+  timeoutNoHighPrecision120s: Scalars["Int"]["output"];
+  timeoutNoPosition90s: Scalars["Int"]["output"];
+  timeoutOnlyLowPrecision5Min: Scalars["Int"]["output"];
+  timeoutOnlyLowPrecision30s: Scalars["Int"]["output"];
+  timeoutWakeUp20s: Scalars["Int"]["output"];
+  timeoutWakeUp60s: Scalars["Int"]["output"];
+  timeoutWakeUp120s: Scalars["Int"]["output"];
   webappUrl: Scalars["String"]["output"];
 }
 
@@ -240,6 +247,7 @@ export interface Command {
   duration?: InputMaybe<Scalars["Int"]["input"]>;
   id: Scalars["String"]["input"];
   modeType?: InputMaybe<ModeType>;
+  unhappyFlowDeactivation?: InputMaybe<Scalars["Boolean"]["input"]>;
 }
 
 export enum CommandEnum {
@@ -503,9 +511,26 @@ export interface GpsPosition {
   __typename?: "GpsPosition";
   alt?: Maybe<Scalars["Float"]["output"]>;
   date: Scalars["String"]["output"];
+  isSkip?: Maybe<Scalars["Boolean"]["output"]>;
   lat: Scalars["Float"]["output"];
   lng: Scalars["Float"]["output"];
   positionType: PositionType;
+  precision?: Maybe<PositionPrecision>;
+  radius: Scalars["Float"]["output"];
+  speed?: Maybe<Scalars["Float"]["output"]>;
+}
+
+export interface GpsPositionHistory {
+  __typename?: "GpsPositionHistory";
+  activeGeofenceCoordinates?: Maybe<Array<Coordinates>>;
+  alt?: Maybe<Scalars["Float"]["output"]>;
+  date: Scalars["String"]["output"];
+  inEnergySavingZone?: Maybe<Scalars["Boolean"]["output"]>;
+  isSkip?: Maybe<Scalars["Boolean"]["output"]>;
+  lat: Scalars["Float"]["output"];
+  lng: Scalars["Float"]["output"];
+  positionType: PositionType;
+  precision?: Maybe<PositionPrecision>;
   radius: Scalars["Float"]["output"];
   speed?: Maybe<Scalars["Float"]["output"]>;
 }
@@ -513,9 +538,11 @@ export interface GpsPosition {
 export interface GpsPositionIn {
   alt?: InputMaybe<Scalars["Float"]["input"]>;
   date: Scalars["String"]["input"];
+  isSkip?: InputMaybe<Scalars["Boolean"]["input"]>;
   lat: Scalars["Float"]["input"];
   lng: Scalars["Float"]["input"];
   positionType: PositionType;
+  precision?: InputMaybe<PositionPrecision>;
   radius: Scalars["Float"]["input"];
   speed?: InputMaybe<Scalars["Float"]["input"]>;
 }
@@ -538,6 +565,7 @@ export interface GpsSettingsIn {
 export interface GpsStatus {
   __typename?: "GpsStatus";
   battery: Scalars["Int"]["output"];
+  charging?: Maybe<Scalars["Boolean"]["output"]>;
   date: Scalars["String"]["output"];
   energySavingMode: StatusState;
   firmwareVersion: Scalars["String"]["output"];
@@ -769,11 +797,12 @@ export interface Mutation {
   /**   add sub w/uuid from verifyEmail */
   sendTokenEmail: Response;
   setArcaPlanetTerms: Response;
-  setDeviceOffline: Response;
+  setDeviceUnhappyFlow: Response;
   setMacAddress: Response;
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
+  setReadPetHistory: Response;
   setReadPopupMigratedUser: Response;
   setSafetyTermsCat: Response;
   setSentinelMigrationDone: Response;
@@ -796,6 +825,7 @@ export interface Mutation {
   /**   TODO: rename in deleteProduct */
   updatePetlinkGps: ResponsePetlinkGps;
   updatePhoneNumberUser: ResponseUser;
+  updateRegistrationDeviceFlow: ResponseUpdateRegistrationDeviceFlow;
   updateRegistrationToken: Response;
   updateUser: ResponseUser;
   /**   cct */
@@ -972,7 +1002,7 @@ export type MutationSendTokenEmailArgs = {
   languageId?: InputMaybe<LanguageId>;
 };
 
-export type MutationSetDeviceOfflineArgs = {
+export type MutationSetDeviceUnhappyFlowArgs = {
   productId: Scalars["String"]["input"];
 };
 
@@ -991,6 +1021,10 @@ export type MutationSetPetIsFoundArgs = {
 export type MutationSetPetIsLostArgs = {
   lostIn: LostIn;
   petId: Scalars["String"]["input"];
+};
+
+export type MutationSetReadPetHistoryArgs = {
+  notificationId: Array<InputMaybe<Scalars["String"]["input"]>>;
 };
 
 export type MutationSetSentinelMigrationDoneArgs = {
@@ -1071,6 +1105,11 @@ export type MutationUpdatePhoneNumberUserArgs = {
   otp: Scalars["String"]["input"];
   phone: Scalars["String"]["input"];
   verificationId: Scalars["String"]["input"];
+};
+
+export type MutationUpdateRegistrationDeviceFlowArgs = {
+  petId: Scalars["String"]["input"];
+  step: Scalars["String"]["input"];
 };
 
 export type MutationUpdateRegistrationTokenArgs = {
@@ -1223,6 +1262,7 @@ export interface PetHistoryEvent {
   extra?: Maybe<PetHistoryExtra>;
   id: Scalars["String"]["output"];
   petId: Scalars["String"]["output"];
+  read?: Maybe<Scalars["Boolean"]["output"]>;
 }
 
 export enum PetHistoryEventTypeEnum {
@@ -1230,6 +1270,9 @@ export enum PetHistoryEventTypeEnum {
   ActiveSubscriptionTrial = "ACTIVE_SUBSCRIPTION_TRIAL",
   DeviceAssociate = "DEVICE_ASSOCIATE",
   DeviceBattery = "DEVICE_BATTERY",
+  DeviceBattery_10 = "DEVICE_BATTERY_10",
+  DeviceBattery_20 = "DEVICE_BATTERY_20",
+  DeviceBatteryOff = "DEVICE_BATTERY_OFF",
   DeviceOff = "DEVICE_OFF",
   DeviceOffline = "DEVICE_OFFLINE",
   DevicePosition = "DEVICE_POSITION",
@@ -1480,6 +1523,11 @@ export interface Position {
   lng: Scalars["Float"]["input"];
 }
 
+export enum PositionPrecision {
+  High = "HIGH",
+  Low = "LOW",
+}
+
 export enum PositionType {
   Ble = "BLE",
   Gps = "GPS",
@@ -1590,6 +1638,7 @@ export interface Query {
   checkoutNewSubscription: ResponseCheckoutNewSubscription;
   checkoutPrepaid: ResponseCheckoutNewSubscription;
   churnDeflection: ResponseChurnDeflection;
+  countPetHistoryUnread: ResponseCountPetHistoryUnread;
   getActiveSubscriptions: ResponseActiveSubscriptions;
   getActivities: ResponseActivities;
   /**   TODO: rename in dog */
@@ -1634,6 +1683,8 @@ export interface Query {
   getProducts: ResponseProducts;
   getProtectionPlans: ResponseProtectionPlans;
   getPurchasedServices: ResponseGetPurchasedServices;
+  getRegisteredPetlinkGps: ResponseRegisteredPetlinkGps;
+  getRegistrationDeviceFlow: ResponseUpdateRegistrationDeviceFlow;
   getS3UploadUrl: ResponseS3Upload;
   /**  sso */
   getSsoToken: ResponseSsoToken;
@@ -1806,7 +1857,7 @@ export type QueryGetPetByQrTagArgs = {
 };
 
 export type QueryGetPetHistoryArgs = {
-  petId: Scalars["String"]["input"];
+  petId?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryGetPetLostInfoArgs = {
@@ -1866,6 +1917,14 @@ export type QueryGetProtectionPlansArgs = {
 
 export type QueryGetPurchasedServicesArgs = {
   productId: Scalars["String"]["input"];
+};
+
+export type QueryGetRegisteredPetlinkGpsArgs = {
+  serialNumbers: Array<Scalars["String"]["input"]>;
+};
+
+export type QueryGetRegistrationDeviceFlowArgs = {
+  petId: Scalars["String"]["input"];
 };
 
 export type QueryGetS3UploadUrlArgs = {
@@ -2023,12 +2082,21 @@ export interface ResponseChurnDeflection {
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseCountPetHistoryUnread {
+  __typename?: "ResponseCountPetHistoryUnread";
+  code: Scalars["String"]["output"];
+  countPetHistoryUnread?: Maybe<Scalars["Int"]["output"]>;
+  message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseCreatePetlinkGps {
   __typename?: "ResponseCreatePetlinkGps";
   code: Scalars["String"]["output"];
   currentTermEnd?: Maybe<Scalars["String"]["output"]>;
   message: Scalars["String"]["output"];
   petlinkGps?: Maybe<PetlinkGps>;
+  subscriptionPlan?: Maybe<SubscriptionPlanEnum>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
   url?: Maybe<Scalars["String"]["output"]>;
 }
@@ -2306,7 +2374,7 @@ export interface ResponsePositionsHistory {
   __typename?: "ResponsePositionsHistory";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
-  positions?: Maybe<Array<GpsPosition>>;
+  positions?: Maybe<Array<GpsPositionHistory>>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -2341,6 +2409,15 @@ export interface ResponseProtectionPlans {
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseRegisteredPetlinkGps {
+  __typename?: "ResponseRegisteredPetlinkGps";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  registered?: Maybe<Array<Scalars["String"]["output"]>>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+  unregistered?: Maybe<Array<Scalars["String"]["output"]>>;
 }
 
 export interface ResponseReplacement {
@@ -2447,6 +2524,13 @@ export interface ResponseUpdatePetProtectionData {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseUpdateRegistrationDeviceFlow {
+  __typename?: "ResponseUpdateRegistrationDeviceFlow";
+  code: Scalars["String"]["output"];
+  step?: Maybe<Scalars["String"]["output"]>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseUser {
   __typename?: "ResponseUser";
   code: Scalars["String"]["output"];
@@ -2491,6 +2575,7 @@ export interface Setting {
   createObject?: InputMaybe<Scalars["AWSJSON"]["input"]>;
   deviceId?: InputMaybe<Scalars["String"]["input"]>;
   geofence?: InputMaybe<Array<InputMaybe<CoordinatesIn>>>;
+  geofenceId?: InputMaybe<Scalars["String"]["input"]>;
   id?: InputMaybe<Scalars["String"]["input"]>;
   modeType?: InputMaybe<ModeType>;
   operationType: SettingOperationEnum;
@@ -2591,6 +2676,12 @@ export interface SubscriptionMessageStatus {
 export interface SubscriptionMessageStatusIn {
   id: Scalars["String"]["input"];
   status: SubscriptionStatusIn;
+}
+
+export enum SubscriptionPlanEnum {
+  InTrial = "in_trial",
+  Insurance = "insurance",
+  Prepaid = "prepaid",
 }
 
 export interface SubscriptionShortInfo {

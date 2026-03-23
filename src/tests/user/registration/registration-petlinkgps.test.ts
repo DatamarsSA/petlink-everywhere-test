@@ -457,7 +457,6 @@ describe("PetlinkGps Replacement", async () => {
     });
     expect(finalHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
     expect(finalHistory.getReplacementPetlinkGpsHistory.items?.length || 0).toBe(1);
-    //FIXME: perchè qui torna sempre 0?
     const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items![0];
     expect(replacementRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
     expect(replacementRecord.newSerialNumber).toBe(newSerialNumber);

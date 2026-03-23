@@ -38,8 +38,10 @@ export default defineConfig(() => {
     CCT_GRAPHQL_API_KEY: z.string().min(1, "CCT_GRAPHQL_API_KEY è richiesta"),
     // AWS IAM
     AWS_REGION: z.string().min(1, "AWS_REGION è richiesta"),
-    AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID è richiesta"),
-    AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY è richiesta"),
+    AWS_CORE_ACCESS_KEY_ID: z.string().min(1, "AWS_CORE_ACCESS_KEY_ID è richiesta"),
+    AWS_CORE_SECRET_ACCESS_KEY: z.string().min(1, "AWS_CORE_SECRET_ACCESS_KEY è richiesta"),
+    AWS_CCT_ACCESS_KEY_ID: z.string().min(1, "AWS_CCT_ACCESS_KEY_ID è richiesta"),
+    AWS_CCT_SECRET_ACCESS_KEY: z.string().min(1, "AWS_CCT_SECRET_ACCESS_KEY è richiesta"),
     // Twilio
     TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
     TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),

@@ -6,11 +6,12 @@ import {
   PetlinkGps,
   PetlinkGpsIn,
   SpeciesEnum,
-  UtilityTestTypeEnum,
   DeviceTypeEnum,
+  UtilityTestTypeEnum as CoreUtilityTestTypeEnum,
   OnSubscriptionStatusDocument,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { FilterEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+
+import { FilterEnum, UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
@@ -279,7 +280,7 @@ class TestHelper {
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
-            utilityType: UtilityTestTypeEnum.CleanUpUser,
+            utilityType: CoreUtilityTestTypeEnum.CleanUpUser,
           },
         })
         .then((response) => {
@@ -300,6 +301,23 @@ class TestHelper {
       twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone).catch((error) => {
         errors.push({ operation: "Twilio-deleteAllMessages()", error });
       }),
+
+      // 4. CCT cleanup
+      petlink.cct.graphqlHttp.authIam
+        .utilityIntegrationTest({
+          input: {
+            utilityType: CctUtilityTestTypeEnum.CleanUpUser,
+            email: fxt.cctAdmin.email,
+          },
+        })
+        .then((response) => {
+          if (response.utilityIntegrationTest.code !== "200") {
+            throw new Error(response.utilityIntegrationTest.message);
+          }
+        })
+        .catch((error) => {
+          errors.push({ operation: "CCT-CLEAN_UP_USER", error });
+        }),
     ]);
     petlink.logoutUser();
 
@@ -319,7 +337,7 @@ class TestHelper {
       const response = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
           phone: userPhone ?? fxt.current.user.phone,
-          utilityType: UtilityTestTypeEnum.CleanUpUser,
+          utilityType: CoreUtilityTestTypeEnum.CleanUpUser,
         },
       });
 
@@ -348,7 +366,7 @@ class TestHelper {
 
     const response = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
       input: {
-        utilityType: UtilityTestTypeEnum.SignUp,
+        utilityType: CoreUtilityTestTypeEnum.SignUp,
         userIn: userPayload,
         appBrand: fxt.current.appBrand,
       },
@@ -541,7 +559,7 @@ class TestHelper {
     const executePurchase = async () => {
       const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+          utilityType: CoreUtilityTestTypeEnum.BuyNewSubscription,
           phone: user.phone,
           productId: device.id,
           priceIds: [chosenPriceId],
