@@ -78,4 +78,7 @@ temp/
 .zencoder/
 
 
-
+# All repo of infrastructure
+all-repo/*
+ai-rules/*
+test-reports/*

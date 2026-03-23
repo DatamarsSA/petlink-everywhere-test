@@ -21,6 +21,10 @@ concurrency:
   # true = cancel the in-progress run (useful when some change need deploy of more microservices, deployed sequentially)
   cancel-in-progress: true
 
+env:
+  DOCKER_IMAGE_NAME: petlink-everywhere-test
+  DOCKER_IMAGE_ARTIFACT: petlink-test-image
+
 jobs:
   info-job:
     runs-on: ubuntu-latest
@@ -61,8 +65,32 @@ jobs:
              echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
              echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
           fi
+  
+
+  build-image:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.DOCKER_IMAGE_NAME }} .
+
+      - name: Save Docker image to artifact
+        run: |
+          docker save ${{ env.DOCKER_IMAGE_NAME }} -o ${{ env.DOCKER_IMAGE_ARTIFACT }}.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.DOCKER_IMAGE_ARTIFACT }}
+          path: |
+            ${{ env.DOCKER_IMAGE_ARTIFACT }}.tar
+          retention-days: 1
 
   run-tests:
+    needs: build-image
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
     # ENVIRONMENT DETERMINISTICO:
@@ -131,8 +159,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -t petlink-everywhere-test .
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.DOCKER_IMAGE_ARTIFACT }}
+
+      - name: Load Docker image
+        run: docker load -i ${{ env.DOCKER_IMAGE_ARTIFACT }}.tar
 
       - name: Run integration tests (${{ matrix.app_brand }} on env ${{ env.NODE_ENV }})
         run: |
@@ -175,7 +208,7 @@ jobs:
             -e SENTINEL_MONGO_DATABASE \
             -e NODE_ENV \
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
-            petlink-everywhere-test yarn pipeline:$NODE_ENV
+            ${{ env.DOCKER_IMAGE_NAME }} yarn pipeline:$NODE_ENV
 
       # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
