@@ -1,6 +1,5 @@
 import { writeFileSync, mkdirSync, appendFileSync, readFileSync, existsSync } from "fs";
 import { dirname } from "path";
-import { isPerformanceTrackingEnabled } from "../config/env.js";
 
 export type PerformanceRecord = {
   service: string;
