@@ -159,14 +159,15 @@ describe("PetlinkGPS Registration", () => {
     // Assert FINDER device
     expect(
       finderResponse.createPetlinkGps.code,
-      `createPetlinkGps should succeed for FINDER device - Error: ${finderResponse.createPetlinkGps.message}${finderResponse.createPetlinkGps.translationCode ? ` (${finderResponse.createPetlinkGps.translationCode})` : ""}`,
+      `createPetlinkGps should not succeed for FINDER device - Error: ${finderResponse.createPetlinkGps.message}${finderResponse.createPetlinkGps.translationCode ? ` (${finderResponse.createPetlinkGps.translationCode})` : ""}`,
     ).not.toBe("200");
 
     // Assert EVO6 device
     expect(
       evo6Response.createPetlinkGps.code,
-      `createPetlinkGps should succeed for EVO6 device - Error: ${evo6Response.createPetlinkGps.message}${evo6Response.createPetlinkGps.translationCode ? ` (${evo6Response.createPetlinkGps.translationCode})` : ""}`,
+      `createPetlinkGps should not succeed for EVO6 device - Error: ${evo6Response.createPetlinkGps.message}${evo6Response.createPetlinkGps.translationCode ? ` (${evo6Response.createPetlinkGps.translationCode})` : ""}`,
     ).not.toBe("200");
+    //FIXME: should not registre evo6 device, now it allow it, say to fix at BE
   });
 
   it.runIf(fxt.isKippyRun)("Associate EVO device to DOG", async () => {
