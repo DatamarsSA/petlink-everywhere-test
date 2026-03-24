@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Add Trigger Info to Summary
         run: |
-          echo '${{ toJSON(github.event) }}' 
+          echo "${{ toJSON(github.event) }}"
           echo "## 🔔 Info Trigger Pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 

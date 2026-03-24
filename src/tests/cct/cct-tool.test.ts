@@ -60,7 +60,7 @@ describe("CCT Tool", () => {
       expect(detailResponse.getCustomer.customer?.surname).toBe(user.surname);
       expect(detailResponse.getCustomer.customer?.appBrand).toBe(user.appBrand);
       expect(detailResponse.getCustomer.customer?.countryCode).toBe(user.countryCode);
-      // expect(detailResponse.getCustomer.customer?.language).toBe(user.language);TODO. fix
+      // TODO. fix -> expect(detailResponse.getCustomer.customer?.language).toBe(user.language);
       expect(detailResponse.getCustomer.customer?.phone).toBe(user.phone);
     });
 

@@ -55,6 +55,7 @@ export default defineConfig(() => {
     APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
     // log level console
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
+    ENABLE_PERFORMANCE_TRACKER: z.enum(["true", "false"]).default("true"),
     // Sentinel socket tcp
     SENTINEL_HOST: z.ipv4().min(1, "SENTINEL_HOST è richiesto"),
     SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
@@ -72,6 +73,7 @@ export default defineConfig(() => {
   console.log("✅ Envs validated successfully");
   console.log("APP_BRAND: ", result.data?.APP_BRAND);
   console.log("LOG_LEVEL: ", result.data?.LOG_LEVEL);
+  console.log("ENABLE_PERFORMANCE_TRACKER: ", process.env.ENABLE_PERFORMANCE_TRACKER);
 
   return {
     test: {

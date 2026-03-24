@@ -1,6 +1,6 @@
 import { writeFileSync, mkdirSync, appendFileSync, readFileSync, existsSync } from "fs";
 import { dirname } from "path";
-import { logger } from "../config/logger.js";
+import { isPerformanceTrackingEnabled } from "../config/env.js";
 
 export type PerformanceRecord = {
   service: string;
@@ -14,10 +14,12 @@ export type PerformanceRecord = {
 export class PerformanceTracker {
   private readonly jsonlPath: string;
   private readonly reportPath: string;
+  private readonly enabled: boolean;
 
   constructor(jsonlPath = "./test-reports/performance-records.jsonl", reportPath = "./test-reports/performance-report.txt") {
     this.jsonlPath = jsonlPath;
     this.reportPath = reportPath;
+    this.enabled = process.env.ENABLE_PERFORMANCE_TRACKER === "true";
   }
 
   /**
@@ -25,6 +27,8 @@ export class PerformanceTracker {
    * Appends to JSONL and regenerates the report
    */
   recordPerformance(data: Omit<PerformanceRecord, "timestamp">): void {
+    if (!this.enabled) return;
+
     const newRecord: PerformanceRecord = {
       ...data,
       timestamp: new Date(),
