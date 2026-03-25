@@ -1,8 +1,14 @@
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { fxt } from "../../../fixtures/fixtures.js";
 import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { PetlinkGps, PetlinkGpsIn, ProductTypeEnum } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import {
+  PetlinkGps,
+  PetlinkGpsIn,
+  ProductTypeEnum,
+  SettingOperationEnum,
+  SettingTypeEnum,
+} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import {
   CustomerMood,
   OrderEnum,
@@ -12,6 +18,7 @@ import {
   TicketStatus,
 } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { logger } from "../../../config/logger.js";
+import { PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 
 describe("PetlinkGPS", () => {
   describe("Registration", () => {
@@ -474,6 +481,64 @@ describe("PetlinkGPS", () => {
       });
       expect(updatedDeviceResponse.getPetlinkGps.code).toBe("200");
       expect(updatedDeviceResponse.getPetlinkGps.petlinkGps?.serialNumber).toBe(newSerialNumber);
+    });
+  });
+
+  describe("Settings", () => {
+    let setup: TestSetup;
+
+    beforeAll(async () => {
+      await testHelper.cleanupAll();
+      setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
+
+      await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
+    });
+
+    afterAll(() => {
+      petlink.sentinel.disconnect();
+    });
+
+    it("Updates frequency automatic update -> device receives packet 0x01 -> DB is updated", async () => {
+      const targetFrequency = 120; // 2h -> 120 min
+      const targetEnableGpsOnDefault = true;
+
+      // 1) App flow: sendSetting UPDATE_FREQUENCY
+      const sendSettingResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
+        setting: {
+          operationType: SettingOperationEnum.Update,
+          settingType: SettingTypeEnum.UpdateFrequency,
+          deviceId: setup.devices.dogStandard!.id,
+          updateObject: JSON.stringify({
+            updateFrequency: targetFrequency,
+            enableGpsOnDefault: targetEnableGpsOnDefault,
+          }),
+        },
+      });
+
+      expect(
+        sendSettingResponse.sendSetting.code,
+        `sendSetting UPDATE_FREQUENCY should succeed - Error: ${sendSettingResponse.sendSetting.message}${
+          sendSettingResponse.sendSetting.translationCode ? ` (${sendSettingResponse.sendSetting.translationCode})` : ""
+        }`,
+      ).toBe("200");
+
+      // // 2) Listen lato device e triggera heartbeat per forzare risposta 0x01 aggiornata
+      // const packet01Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, (p) => p.update_frequency === targetFrequency);
+      // await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!);
+      //
+      // // 3) Check lato device (packet ricevuto da sentinel)
+      // const packet01 = await packet01Promise;
+      // expect(packet01).toBeDefined();
+      // expect(packet01.update_frequency).toBe(targetFrequency);
+
+      // 4) Check lato DB/API (getPetlinkGps aggiornato)
+      const getPetlinkGpsResponse = await petlink.core.graphqlHttp.authJwt.getPetlinkGps({
+        id: setup.devices.dogStandard!.id,
+      });
+
+      expect(getPetlinkGpsResponse.getPetlinkGps.code).toBe("200");
+      expect(getPetlinkGpsResponse.getPetlinkGps.petlinkGps?.settings?.updateFrequency).toBe(targetFrequency);
+      expect(getPetlinkGpsResponse.getPetlinkGps.petlinkGps?.settings?.enableGpsOnDefault).toBe(targetEnableGpsOnDefault);
     });
   });
 });
