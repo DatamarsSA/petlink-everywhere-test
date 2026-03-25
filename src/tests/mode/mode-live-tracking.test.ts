@@ -11,12 +11,12 @@ import {
   StatusState,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { waitFor } from "../../helpers/utils.js";
-// import { onGpsMessageStatus, onGpsMessagePosition, onSubscriptionStatus } from ".../core_schema.js";
 
 describe("Live Tracking", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
+    await testHelper.cleanupAll();
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
   });

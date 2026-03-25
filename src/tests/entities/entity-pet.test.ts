@@ -33,6 +33,7 @@ describe("Pet", () => {
     } as PetIn;
 
     beforeAll(async () => {
+      await testHelper.cleanupAll();
       testUser = await testHelper.createUser();
     });
 

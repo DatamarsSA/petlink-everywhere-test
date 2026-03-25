@@ -36,7 +36,6 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
     let shopUrl: string;
 
     beforeAll(async () => {
-      // Pulisci l'utente prima di iniziare per garantire un ambiente pulito
       await testHelper.cleanupAll();
 
       // Setup base senza subscription per scoprire i piani EOL
@@ -243,7 +242,6 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
     let shopUrl: string;
 
     beforeAll(async () => {
-      // Pulisci l'utente prima di iniziare per garantire un ambiente pulito
       await testHelper.cleanupAll();
 
       // SETUP: Utente FR con EVO e SENZA abbonamento -> Forza Flow 2

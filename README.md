@@ -157,7 +157,7 @@ petlink.core.graphql.authJwt.createPet(...)
 
 ### Cleanup Strategy
 
-Tests run with `cleanupAll()` in `beforeAll` (not `afterAll`) to:
+Tests should call `cleanupAll()` explicitly in their `beforeAll` blocks (not `afterAll`) to:
 - Ensure fresh state before each test file
 - Allow manual DB inspection after failures
 - Clean: MongoDB users/pets/devices, Gmail inbox, Twilio SMS, Sentinel DB

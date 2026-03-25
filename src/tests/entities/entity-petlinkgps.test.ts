@@ -29,6 +29,7 @@ describe("PetlinkGPS", () => {
     let evoDevice: PetlinkGps;
 
     beforeAll(async () => {
+      await testHelper.cleanupAll();
       const builder = testHelper.setupBuilder().withUser().withDog().withCat();
 
       if (fxt.isKippyRun) {

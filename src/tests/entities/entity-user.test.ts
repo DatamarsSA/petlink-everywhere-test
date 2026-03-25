@@ -32,6 +32,10 @@ describe("User", () => {
     let verificationLink: string | null;
     let userId: string;
 
+    beforeAll(async () => {
+      await testHelper.cleanupAll();
+    });
+
     it("Verify phone number availability", async () => {
       const response = await petlink.core.graphqlHttp.public.checkContact({
         contact: signUpPayload.phone,

@@ -19,7 +19,7 @@ describe("CCT Tool", () => {
     let device: EnrichedDevice;
 
     beforeAll(async () => {
-      // 1. Setup: Create User + Pet + Device via Core
+      await testHelper.cleanupAll();
       const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
       user = setup.user!;
       pet = setup.pets.dog!;

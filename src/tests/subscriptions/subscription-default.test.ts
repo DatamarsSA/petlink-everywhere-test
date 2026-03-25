@@ -17,7 +17,7 @@ describe("DEFAULT subscription flow", () => {
   let setup: TestSetup = {} as TestSetup;
 
   beforeAll(async () => {
-    // Base setup: common for all brands
+    await testHelper.cleanupAll();
     const builder = testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice();
 
     // Add EVO device only for KIPPY brand

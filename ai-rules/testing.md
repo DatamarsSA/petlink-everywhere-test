@@ -39,7 +39,7 @@ describe.sequential("User Subscription Purchase Flow", () => {
   });
 });
 ```
-- **Clean First**: `cleanupAll()` runs *before* tests (as a config of setupFiles - beforeAll), ensuring a fresh start.
+- **Clean First**: Call `cleanupAll()` explicitly in your `beforeAll` blocks to ensure a fresh start.
 - **Use the Builder**: `.withUser()`, `.withDog()`, `.withCatDevice()`, etc. abstract away entity creation.
 
 ### Step 2: Define Explicit Payloads (No Spread Operator)

@@ -41,6 +41,7 @@ describe("Geofence", () => {
   };
 
   beforeAll(async () => {
+    await testHelper.cleanupAll();
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
     await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
   });
