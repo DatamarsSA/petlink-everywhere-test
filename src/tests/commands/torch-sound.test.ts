@@ -1,14 +1,14 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { logger } from "../../../config/logger.js";
-import { PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
-import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { logger } from "../../config/logger.js";
+import { PacketType } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
+import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import {
   CommandEnum,
   ModeType,
   OnGpsMessageStatusDocument,
   StatusState,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 describe("Torch & Sound Commands", () => {
   let setup: TestSetup = {} as TestSetup;

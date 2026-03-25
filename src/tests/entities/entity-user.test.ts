@@ -1,13 +1,13 @@
-import { ContactType, PetIn, UserIn } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { LanguageId, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { fxt } from "../../../fixtures/fixtures.js";
-import { testHelper } from "../../../clients/client-test-helper.js";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { ContactType, PetIn, UserIn } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { LanguageId, User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { fxt } from "../../fixtures/fixtures.js";
+import { testHelper } from "../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { twilioClient } from "../../../clients/twilio/client-twillio.js";
-import { logger } from "../../../config/logger.js";
-import { gmailClient } from "../../../clients/gmail/client-gmail.js";
-import { extractParamsFromUrl, waitFor } from "../../../helpers/utils.js";
+import { twilioClient } from "../../clients/twilio/client-twillio.js";
+import { logger } from "../../config/logger.js";
+import { gmailClient } from "../../clients/gmail/client-gmail.js";
+import { extractParamsFromUrl, waitFor } from "../../helpers/utils.js";
 
 describe("User", () => {
   describe("Registration", () => {

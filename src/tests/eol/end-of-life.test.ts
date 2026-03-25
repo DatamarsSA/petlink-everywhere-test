@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { User, ShippingInfoIn, LanguageId } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { fxt } from "../../../fixtures/fixtures.js";
-import { waitFor } from "../../../helpers/utils.js";
-import { logger } from "../../../config/logger.js";
+import { User, ShippingInfoIn, LanguageId } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { fxt } from "../../fixtures/fixtures.js";
+import { waitFor } from "../../helpers/utils.js";
+import { logger } from "../../config/logger.js";
 
 /**
  * End of Life (EOL) Test Suite
@@ -127,7 +127,7 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.SHIPPING_INFO_FROM_ONLY_DEVICE);
     });
@@ -159,12 +159,12 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
         },
       });
       expect(shippingInfoRes.updateEndOfLife.code).toBe("200");
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.SHIPPING_INFO_DEFINED_BEFORE_EXTERNAL_PAGE);
     });
@@ -192,14 +192,14 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       });
       expect(
         externalPageRes.updateEndOfLife.code,
-        `updateEndOfLife should succeed - Error: ${externalPageRes.updateEndOfLife.message}${externalPageRes.updateEndOfLife.translationCode ? ` (${externalPageRes.updateEndOfLife.translationCode})` : ''}`
+        `updateEndOfLife should succeed - Error: ${externalPageRes.updateEndOfLife.message}${externalPageRes.updateEndOfLife.translationCode ? ` (${externalPageRes.updateEndOfLife.translationCode})` : ""}`,
       ).toBe("200");
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.EXTERNAL_PAGE);
 
@@ -219,15 +219,15 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       });
       expect(
         completeRes.updateEndOfLife.code,
-        `updateEndOfLife should succeed - Error: ${completeRes.updateEndOfLife.message}${completeRes.updateEndOfLife.translationCode ? ` (${completeRes.updateEndOfLife.translationCode})` : ''}`
+        `updateEndOfLife should succeed - Error: ${completeRes.updateEndOfLife.message}${completeRes.updateEndOfLife.translationCode ? ` (${completeRes.updateEndOfLife.translationCode})` : ""}`,
       ).toBe("200");
       expect(completeRes.updateEndOfLife.endOfLife?.step).toBe(EOL_STEPS.COMPLETED_SUCCESS);
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.COMPLETED_SUCCESS);
     });
@@ -302,7 +302,7 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.SHIPPING_INFO_FROM_PLAN);
     });
@@ -335,12 +335,12 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
         },
       });
       expect(res.updateEndOfLife.code).toBe("200");
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.PLAN_SUMMARY_PAGE);
     });
@@ -356,14 +356,14 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
           layout: "full_page",
         },
       });
-      
+
       expect(
         checkoutRes.checkoutNewSubscription.code,
-        `checkoutNewSubscription should succeed - Error: ${checkoutRes.checkoutNewSubscription.message}${checkoutRes.checkoutNewSubscription.translationCode ? ` (${checkoutRes.checkoutNewSubscription.translationCode})` : ''}`
+        `checkoutNewSubscription should succeed - Error: ${checkoutRes.checkoutNewSubscription.message}${checkoutRes.checkoutNewSubscription.translationCode ? ` (${checkoutRes.checkoutNewSubscription.translationCode})` : ""}`,
       ).toBe("200");
       expect(checkoutRes.checkoutNewSubscription.url).toBeDefined();
       expect(checkoutRes.checkoutNewSubscription.url).toContain("chargebee");
-      
+
       logger.info("✅ checkoutNewSubscription API test passed - URL generated successfully");
     });
 
@@ -401,14 +401,14 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       });
       expect(
         res.updateEndOfLife.code,
-        `updateEndOfLife should succeed - Error: ${res.updateEndOfLife.message}${res.updateEndOfLife.translationCode ? ` (${res.updateEndOfLife.translationCode})` : ''}`
+        `updateEndOfLife should succeed - Error: ${res.updateEndOfLife.message}${res.updateEndOfLife.translationCode ? ` (${res.updateEndOfLife.translationCode})` : ""}`,
       ).toBe("200");
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.WAITING_PLAN_PURCHASE);
       // The update should succeed regardless of payment status (client side state update)
@@ -448,14 +448,14 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       });
       expect(
         externalPageRes.updateEndOfLife.code,
-        `updateEndOfLife should succeed - Error: ${externalPageRes.updateEndOfLife.message}${externalPageRes.updateEndOfLife.translationCode ? ` (${externalPageRes.updateEndOfLife.translationCode})` : ''}`
+        `updateEndOfLife should succeed - Error: ${externalPageRes.updateEndOfLife.message}${externalPageRes.updateEndOfLife.translationCode ? ` (${externalPageRes.updateEndOfLife.translationCode})` : ""}`,
       ).toBe("200");
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.EXTERNAL_PAGE);
     });
@@ -473,15 +473,15 @@ describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
       });
       expect(
         completeRes.updateEndOfLife.code,
-        `updateEndOfLife should succeed - Error: ${completeRes.updateEndOfLife.message}${completeRes.updateEndOfLife.translationCode ? ` (${completeRes.updateEndOfLife.translationCode})` : ''}`
+        `updateEndOfLife should succeed - Error: ${completeRes.updateEndOfLife.message}${completeRes.updateEndOfLife.translationCode ? ` (${completeRes.updateEndOfLife.translationCode})` : ""}`,
       ).toBe("200");
       expect(completeRes.updateEndOfLife.endOfLife?.step).toBe(EOL_STEPS.COMPLETED_SUCCESS);
-      
+
       // Verify step with getEndOfLifeStep
       const stepCheck = await petlink.core.graphqlHttp.authJwt.getEndOfLifeStep({ eolId });
       expect(
         stepCheck.getEndOfLifeStep.code,
-        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ''}`
+        `getEndOfLifeStep should succeed - Error: ${stepCheck.getEndOfLifeStep.message}${stepCheck.getEndOfLifeStep.translationCode ? ` (${stepCheck.getEndOfLifeStep.translationCode})` : ""}`,
       ).toBe("200");
       expect(stepCheck.getEndOfLifeStep.step).toBe(EOL_STEPS.COMPLETED_SUCCESS);
     });

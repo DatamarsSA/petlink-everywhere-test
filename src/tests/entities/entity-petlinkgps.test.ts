@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { fxt } from "../../../fixtures/fixtures.js";
-import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { fxt } from "../../fixtures/fixtures.js";
+import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import {
   PetlinkGps,
   PetlinkGpsIn,
   ProductTypeEnum,
   SettingOperationEnum,
   SettingTypeEnum,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import {
   CustomerMood,
   OrderEnum,
@@ -16,9 +16,9 @@ import {
   TicketActionReason,
   TicketIssue,
   TicketStatus,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
-import { logger } from "../../../config/logger.js";
-import { PacketType } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import { logger } from "../../config/logger.js";
+import { PacketType } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 
 describe("PetlinkGPS", () => {
   describe("Registration", () => {
@@ -514,7 +514,6 @@ describe("PetlinkGPS", () => {
           }),
         },
       });
-
       expect(
         sendSettingResponse.sendSetting.code,
         `sendSetting UPDATE_FREQUENCY should succeed - Error: ${sendSettingResponse.sendSetting.message}${
@@ -522,10 +521,10 @@ describe("PetlinkGPS", () => {
         }`,
       ).toBe("200");
 
+      //NOTE: here should assert packet on device but for device socekt_alway_on (mine of test) arrive alway 90 so we not assert on it
       // // 2) Listen lato device e triggera heartbeat per forzare risposta 0x01 aggiornata
       // const packet01Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, (p) => p.update_frequency === targetFrequency);
       // await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!);
-      //
       // // 3) Check lato device (packet ricevuto da sentinel)
       // const packet01 = await packet01Promise;
       // expect(packet01).toBeDefined();

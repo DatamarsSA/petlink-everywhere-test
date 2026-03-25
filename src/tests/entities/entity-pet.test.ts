@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { BreedTypeEnum, PetIn, User } from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { fxt } from "../../../fixtures/fixtures.js";
-import { testHelper } from "../../../clients/client-test-helper.js";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { BreedTypeEnum, PetIn, User } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { fxt } from "../../fixtures/fixtures.js";
+import { testHelper } from "../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 
 describe("Pet", () => {
   describe("Registration", () => {

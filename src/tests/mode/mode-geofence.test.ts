@@ -1,15 +1,15 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { PacketType, OperatingStatus, PacketWelcomeHeartBeat } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
-import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { PacketType, OperatingStatus, PacketWelcomeHeartBeat } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
+import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import {
   OnGpsMessageStatusDocument,
   SettingOperationEnum,
   SettingTypeEnum,
   StatusState,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { fxt } from "../../../fixtures/fixtures.js";
-import { logger } from "../../../config/logger.js";
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { fxt } from "../../fixtures/fixtures.js";
+import { logger } from "../../config/logger.js";
 
 describe("Geofence", () => {
   let setup: TestSetup = {} as TestSetup;

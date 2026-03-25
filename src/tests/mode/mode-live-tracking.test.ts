@@ -1,16 +1,16 @@
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { petlink } from "../../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { logger } from "../../../config/logger.js";
-import { PacketType, OperatingStatus } from "../../../clients/petlink-infrastructure/packets-sentinel/packets.js";
-import { testHelper, TestSetup } from "../../../clients/client-test-helper.js";
+import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
+import { logger } from "../../config/logger.js";
+import { PacketType, OperatingStatus } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
+import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import {
   CommandEnum,
   ModeType,
   OnGpsMessagePositionDocument,
   OnGpsMessageStatusDocument,
   StatusState,
-} from "../../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { waitFor } from "../../../helpers/utils.js";
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { waitFor } from "../../helpers/utils.js";
 // import { onGpsMessageStatus, onGpsMessagePosition, onSubscriptionStatus } from ".../core_schema.js";
 
 describe("Live Tracking", () => {
