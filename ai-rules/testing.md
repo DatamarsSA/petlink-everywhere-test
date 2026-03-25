@@ -6,8 +6,8 @@ globs:
 
 # Testing Philosophy & Guide
 
-## Test Philosophy: User-Centric Flows
-Our tests validate the system through **end-to-end user journeys**, not isolated technical layers.
+## Test Philosophy: Entity-Centric Flows
+Our tests validate the system through **end-to-end entity flows**, not isolated technical layers.
 
 **Core Entity Flow**: The system follows a clear entity sequence. Tests must respect this dependency:
 1.  **User**: A user is created first.
@@ -16,7 +16,7 @@ Our tests validate the system through **end-to-end user journeys**, not isolated
 4.  **Subscription**: A subscription is purchased to activate a device.
 5.  **Activities**: Now activities of pet (through device) can be tracked.
 
-Tests are organized by actor (`user/`, `cct/`) and journey (`registration/`, `subscriptions/`, `commands/`, `mode/`, `eol/`).
+Tests are organized by entity (`entities/`, `mode/`, `commands/`, `subscriptions/`, `eol/`). Entity tests may validate both app-side and CCT-side operations to ensure consistency.
 
 ## How to Write a Test
 
@@ -26,7 +26,7 @@ Use the `testHelper` builder to create a clean state before tests run. This is t
 ```typescript
 import { describe, expect, it, beforeAll } from "vitest";
 
-describe.sequential("User Subscription Purchase Flow", () => {
+describe.sequential("User Registration Flow", () => {
   let setup: TestSetup;
 
   beforeAll(async () => {

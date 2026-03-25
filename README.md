@@ -85,12 +85,12 @@ yarn pipeline:develop
 
 ## 📝 Writing Tests
 
-Tests follow **user-centric flows** using a builder pattern. See `.cursorrules` for detailed guidelines.
+Tests follow **entity-centric flows** using a builder pattern.
 
 **Example**:
 
 ```typescript
-describe("Subscription Purchase", () => {
+describe("User Registration", () => {
   let setup: TestSetup;
 
   beforeAll(async () => {
@@ -102,9 +102,10 @@ describe("Subscription Purchase", () => {
       .build();
   });
 
-  it("should activate device after purchase", async () => {
-    const device = setup.devices.dogStandard;
-    expect(device.subscriptionActive).toBe(true);
+  it("should create user successfully", async () => {
+    const user = setup.user;
+    expect(user).toBeDefined();
+    expect(user?.phone).toBeDefined();
   });
 });
 ```
@@ -192,11 +193,10 @@ After running tests, check `test-reports/`:
 petlink-everywhere-test/
 ├── src/
 │   ├── clients/           # API clients (Core, CCT, Gmail, Twilio, Sentinel)
-│   ├── tests/             # Test suites (user/, cct/, debug/)
+│   ├── tests/             # Test suites (entities/, mode/, commands/, subscriptions/, eol/)
 │   ├── fixtures/          # Test data (brand-specific)
 │   ├── helpers/           # Utilities (performance tracking, waitFor)
 │   └── config/            # Setup/teardown, logger
 ├── docs/                  # Architecture and flow documentation
 ├── test-reports/          # Generated after test runs
-└── .cursorrules           # Test writing guidelines (read this!)
 ```
