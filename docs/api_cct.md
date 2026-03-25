@@ -2,8 +2,8 @@
 
 ## 📊 Summary
 - **Total Operations:** 54
-- **Covered:** 17
-- **Missing:** 37
+- **Covered:** 20
+- **Missing:** 34
 
 Total -> [FETCHED-cct_schema.graphql](../src/clients/petlink-infrastructure/endpoints/graphql/schema/cct_schema.graphql)   
 Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.ts)
@@ -23,9 +23,9 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 | `createSubscription`         | ❌ Missing |       |
 | `refundInvoice`              | ❌ Missing |       |
 | `updateCurrentTermEnd`       | ❌ Missing |       |
-| `resetPetlinkGps`            | ❌ Missing |       |
+| `resetPetlinkGps`            | ✅ Covered |       |
 | `addFreePeriod`              | ❌ Missing |       |
-| `createIssue`                | ❌ Missing |       |
+| `createIssue`                | ✅ Covered |       |
 | `addTicketToIssue`           | ❌ Missing |       |
 | `hidePet`                    | ❌ Missing |       |
 | `logEnabled`                 | ❌ Missing |       |
@@ -56,7 +56,7 @@ Covered -> [GENERATED-cct_schema.ts](../src/clients/petlink-infrastructure/endpo
 | `getDevicesMap`                   | ❌ Missing |       |
 | `getDevicesWithCoupon`            | ❌ Missing |       |
 | `getInsuranceDevicesInfo`         | ❌ Missing |       |
-| `getIssues`                       | ❌ Missing |       |
+| `getIssues`                       | ✅ Covered |       |
 | `getActivities`                   | ❌ Missing |       |
 | `getPetProtections`               | ❌ Missing |       |
 | `getPetProtection`                | ❌ Missing |       |

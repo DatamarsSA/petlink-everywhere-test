@@ -2,8 +2,8 @@
 
 ## 📊 Summary
 - **Total Operations:** 127
-- **Covered:** 53
-- **Missing:** 74
+- **Covered:** 64
+- **Missing:** 63
 
 Total -> [FETCHED-core_schema.graphql](../src/clients/petlink-infrastructure/endpoints/graphql/schema/core_schema.graphql)  
 Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.ts)
@@ -44,7 +44,7 @@ Covered -> [GENERATED-core_schema.ts](../src/clients/petlink-infrastructure/endp
 | `removeProduct`               | ❌ Missing |       |
 | `updatePetlinkGps`            | ✅ Covered |       |
 | `resetPetlinkGps`             | ✅ Covered |       |
-| `replacement`                 | ❌ Missing |       |
+| `replacement`                 | ✅ Covered |       |
 | `setPetIsLost`                | ❌ Missing |       |
 | `setOptimizationDone`         | ❌ Missing |       |
 | `setDeviceOffline`            | ❌ Missing |       |
