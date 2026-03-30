@@ -55,7 +55,7 @@ export default defineConfig(() => {
     APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
     // log level console
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
-    ENABLE_PERFORMANCE_TRACKER: z.enum(["true", "false"]).default("true"),
+    ENABLE_PERFORMANCE_TRACKER: z.enum(["true", "false"]).default("false"),
     // Sentinel socket tcp
     SENTINEL_HOST: z.ipv4().min(1, "SENTINEL_HOST è richiesto"),
     SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
