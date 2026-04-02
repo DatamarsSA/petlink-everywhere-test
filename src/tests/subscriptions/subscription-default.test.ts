@@ -817,7 +817,7 @@ describe("SUBSCRIPTION", () => {
   });
 
   //NEW Flows
-  describe("DEFAULT", () => {
+  describe.skip("DEFAULT", () => {
     it.todo("Buy inside app", async () => {
       // If I'm KIPPY -> the subscription must be able to include DEVICE protection
       // If I'm KIPPY and IT -> the subscription must be able to include DEVICE protection and PET protection
@@ -828,9 +828,9 @@ describe("SUBSCRIPTION", () => {
     it.todo("Cancel", async () => {});
   });
 
-  describe("TRIAL", () => {});
+  describe.skip("TRIAL", () => {});
 
-  describe("PAID_EXTERNALLY (Axa,Europass)", () => {
+  describe.skip("PAID_EXTERNALLY (Axa,Europass)", () => {
     it.todo("Buy externally (how?) -> sub must be available afer registration on app", async () => {});
     it.todo("Change (Upgrade/Downgrade)", async () => {});
     it.todo("Automatic renewal", async () => {});
@@ -838,7 +838,7 @@ describe("SUBSCRIPTION", () => {
     it.todo("Cancel", async () => {});
   });
 
-  describe("PREPAID (purchase on external shop as shopify etc", () => {
+  describe.skip("PREPAID (purchase on external shop as shopify etc", () => {
     it.todo("Buy (pre-purchase outside app) -> sub must be available afer registration on app", async () => {});
     it.todo("Change (Upgrade/Downgrade)", async () => {});
     it.todo("Automatic renewal", async () => {});
@@ -846,7 +846,7 @@ describe("SUBSCRIPTION", () => {
     it.todo("Cancel", async () => {});
   });
 
-  describe("NOT_PAYING", () => {});
+  describe.skip("NOT_PAYING", () => {});
 
-  describe("COUPON", () => {});
+  describe.skip("COUPON", () => {});
 });
