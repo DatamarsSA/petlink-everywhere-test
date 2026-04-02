@@ -1,17 +1,8 @@
 import { execSync } from "child_process";
 import { mkdirSync } from "fs";
-import { config } from "dotenv";
+import { getEnvironment } from "../config/environment.js";
 
-/**
- * Load environment variables from .env.{environment} file
- */
-function loadEnvironmentVariables(): void {
-  const environment = process.env.NODE_ENV || "develop";
-  console.log(`\n📦 Loading environment variables from .env.${environment}`);
-  config({ path: `.env.${environment}` });
-}
-
-loadEnvironmentVariables();
+const env = getEnvironment();
 
 /**
  * Fetch GraphQL schemas from remote endpoints
@@ -25,21 +16,15 @@ export async function fetchSchemas(): Promise<void> {
 
   // Fetch CORE
   console.log("  → Fetching CORE schema...");
-  execSync(
-    `npx get-graphql-schema -h "X-API-KEY=${process.env.CORE_GRAPHQL_API_KEY}" ${process.env.CORE_GRAPHQL_API_URL} > ${SCHEMA_DIR}/core_schema.graphql`,
-    {
-      stdio: "inherit",
-    },
-  );
+  execSync(`npx get-graphql-schema -h "X-API-KEY=${env.CORE_GRAPHQL_API_KEY}" ${env.CORE_GRAPHQL_API_URL} > ${SCHEMA_DIR}/core_schema.graphql`, {
+    stdio: "inherit",
+  });
 
   // Fetch CCT
   console.log("  → Fetching CCT schema...");
-  execSync(
-    `npx get-graphql-schema -h "X-API-KEY=${process.env.CCT_GRAPHQL_API_KEY}" ${process.env.CCT_GRAPHQL_API_URL} > ${SCHEMA_DIR}/cct_schema.graphql`,
-    {
-      stdio: "inherit",
-    },
-  );
+  execSync(`npx get-graphql-schema -h "X-API-KEY=${env.CCT_GRAPHQL_API_KEY}" ${env.CCT_GRAPHQL_API_URL} > ${SCHEMA_DIR}/cct_schema.graphql`, {
+    stdio: "inherit",
+  });
 
   console.log("✅ Schemas fetched successfully!");
 }

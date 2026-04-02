@@ -8,8 +8,8 @@
     "fetch-schema": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts fetch",
     "generate-sdk": "npx tsx src/scripts/fetch-schema-and-generate-sdk.ts generate",
     "test": "vitest run",
-    "pipeline:develop": "NODE_ENV=develop yarn fetch-schema && yarn generate-sdk && yarn test",
-    "pipeline:test": "NODE_ENV=test yarn fetch-schema && yarn generate-sdk  && yarn test"
+    "pipeline:develop": "NODE_ENV=develop yarn fetch-schema && NODE_ENV=develop yarn generate-sdk && NODE_ENV=develop yarn test",
+    "pipeline:test": "NODE_ENV=test yarn fetch-schema && NODE_ENV=test yarn generate-sdk && NODE_ENV=test yarn test"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",

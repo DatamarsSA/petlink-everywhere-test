@@ -1898,6 +1898,7 @@ export type QueryGetPositionsHistoryDatesArgs = {
 };
 
 export type QueryGetPostsArgs = {
+  appBrand?: InputMaybe<Scalars["String"]["input"]>;
   languageId?: InputMaybe<Scalars["String"]["input"]>;
   pagination?: InputMaybe<PaginationInput>;
 };

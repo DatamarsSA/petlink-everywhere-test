@@ -12,16 +12,6 @@ directive @aws_publish(
   subscriptions: [String]
 ) on FIELD_DEFINITION
 
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
 """Tells the service which mutation triggers this subscription."""
 directive @aws_subscribe(
   """
@@ -36,6 +26,22 @@ Tells the service this field/object has access authorized by sigv4 signing.
 directive @aws_iam on OBJECT | FIELD_DEFINITION
 
 """
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
 Tells the service this field/object has access authorized by an OIDC token.
 """
 directive @aws_oidc on OBJECT | FIELD_DEFINITION
@@ -47,12 +53,6 @@ directive @aws_cognito_user_pools(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -1376,7 +1376,7 @@ type Query {
   getActivitiesCat(petId: String!, weekIndex: Int!, from: Int!, to: Int!): ResponseActivitiesCat!
   getActivitiesAverageCat(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesAverageCat
   getActiveSubscriptions(subscriptionsIds: [String!]): ResponseActiveSubscriptions!
-  getPosts(languageId: String, pagination: PaginationInput): ResponseGetPosts!
+  getPosts(languageId: String, pagination: PaginationInput, appBrand: String): ResponseGetPosts!
 
   """ sso"""
   getSsoToken(id: String!): ResponseSsoToken!
