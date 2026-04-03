@@ -3,55 +3,44 @@ import { z } from "zod";
 
 export const environmentSchema = z.object({
   NODE_ENV: z.enum(["develop", "test"]).default("develop"),
-
   // AWS Cognito (endpoints)
   COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
   COGNITO_CLIENT_ID_APP_USER: z.string().min(1, "COGNITO_CLIENT_ID_APP_USER è richiesto"),
   COGNITO_CLIENT_ID_FE_CCT: z.string().min(1, "COGNITO_CLIENT_ID_FE_CCT è richiesto"),
-
   // USER (app) credentials login
   USER_APP_NAME: z.string().min(1, "USER_APP_NAME è richiesta"),
   USER_APP_SURNAME: z.string().min(1, "USER_APP_SURNAME è richiesta"),
   USER_APP_PASSWORD: z.string().min(1, "USER_APP_PASSWORD è richiesta"),
-
   // OPERATOR (cct) credentials login
   OPERATOR_CCT_EMAIL: z.string().min(1, "OPERATOR_CCT_EMAIL è richiesta"),
   OPERATOR_CCT_PASSWORD: z.string().min(1, "OPERATOR_CCT_PASSWORD è richiesta"),
   OPERATOR_CCT_PHONE: z.string().min(1, "OPERATOR_CCT_PHONE è richiesta"),
-
   // CORE API
   CORE_GRAPHQL_API_URL: z.url("CORE_GRAPHQL_API_URL deve essere un URL valido"),
   CORE_GRAPHQL_API_KEY: z.string().min(1, "CORE_GRAPHQL_API_KEY è richiesta"),
-
   // CCT API
   CCT_GRAPHQL_API_URL: z.url("CCT_GRAPHQL_API_URL deve essere un URL valido"),
   CCT_GRAPHQL_API_KEY: z.string().min(1, "CCT_GRAPHQL_API_KEY è richiesta"),
-
   // AWS IAM
   AWS_REGION: z.string().min(1, "AWS_REGION è richiesta"),
   AWS_CORE_ACCESS_KEY_ID: z.string().min(1, "AWS_CORE_ACCESS_KEY_ID è richiesta"),
   AWS_CORE_SECRET_ACCESS_KEY: z.string().min(1, "AWS_CORE_SECRET_ACCESS_KEY è richiesta"),
   AWS_CCT_ACCESS_KEY_ID: z.string().min(1, "AWS_CCT_ACCESS_KEY_ID è richiesta"),
   AWS_CCT_SECRET_ACCESS_KEY: z.string().min(1, "AWS_CCT_SECRET_ACCESS_KEY è richiesta"),
-
   // Twilio
   TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
   TWILIO_USER_PHONE_NUMBER: z.string().min(1, "TWILIO_USER_PHONE_NUMBER è richiesto"),
-
   // Gmail
   GMAIL_CLIENT_ID: z.string().min(1, "GMAIL_CLIENT_ID è richiesto"),
   GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
   GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
   GMAIL_USER_EMAIL: z.string().min(1, "GMAIL_USER_EMAIL è richiesto"),
-
   // App Brand
   APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
-
   // log level console
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
   ENABLE_PERFORMANCE_TRACKER: z.enum(["true", "false"]).default("false"),
-
   // Sentinel socket tcp
   SENTINEL_HOST: z.string().min(1, "SENTINEL_HOST è richiesto"),
   SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
@@ -59,7 +48,7 @@ export const environmentSchema = z.object({
 
 export type Environment = z.infer<typeof environmentSchema>;
 
-export function getEnvironment(): Environment {
+export function getEnvs(): Environment {
   const nodeEnv = process.env.NODE_ENV || "develop";
   config({ path: `.env.${nodeEnv}` });
 
@@ -71,6 +60,9 @@ export function getEnvironment(): Environment {
     });
     process.exit(1);
   }
-  console.log(`🚀 Running in ${result.data.NODE_ENV} environment`);
+  console.log(`Running in environment: ${result.data.NODE_ENV}`);
+  console.log("APP_BRAND: ", result.data.APP_BRAND);
+  console.log("LOG_LEVEL: ", result.data.LOG_LEVEL);
+  console.log("ENABLE_PERFORMANCE_TRACKER: ", result.data.ENABLE_PERFORMANCE_TRACKER);
   return result.data;
 }

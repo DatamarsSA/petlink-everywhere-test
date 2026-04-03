@@ -1,19 +1,14 @@
 import { defineConfig } from "vitest/config";
-import { getEnvironment } from "./src/config/environment.js";
+import { getEnvs } from "./src/config/environment.js";
 
+// @ts-ignore
 export default defineConfig(() => {
-  const env = getEnvironment();
-
-  console.log("APP_BRAND: ", env.APP_BRAND);
-  console.log("LOG_LEVEL: ", env.LOG_LEVEL);
-  console.log("ENABLE_PERFORMANCE_TRACKER: ", env.ENABLE_PERFORMANCE_TRACKER);
-
   return {
     // look at https://vitest.dev/guide/lifecycle for vitest config
     test: {
       globals: true,
       environment: "node",
-      env: env,
+      env: getEnvs(),
       // timeouts più larghi per integrazione/E2E
       testTimeout: 180000, // singolo test (it) - in milliseconds
       hookTimeout: 180000, // beforeAll/afterAll/beforeEach/afterEach - in milliseconds

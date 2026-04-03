@@ -1,8 +1,8 @@
 import { execSync } from "child_process";
 import { mkdirSync } from "fs";
-import { getEnvironment } from "../config/environment.js";
+import { getEnvs } from "../config/environment.js";
 
-const env = getEnvironment();
+const env = getEnvs();
 
 /**
  * Fetch GraphQL schemas from remote endpoints
