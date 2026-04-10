@@ -238,7 +238,7 @@ jobs:
             cat test-reports-${{ matrix.app_brand }}/performance-report.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Performance report not available" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Performance report not available, set secret ENABLE_PERFORMANCE_TRACKER=true to record it." >> $GITHUB_STEP_SUMMARY
           fi
   
 
