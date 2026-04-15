@@ -98,7 +98,7 @@ jobs:
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
 
     env:
-      NODE_ENV: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+      ENV: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
@@ -168,7 +168,7 @@ jobs:
       - name: Load Docker image
         run: docker load -i ${{ env.DOCKER_IMAGE_ARTIFACT }}.tar
 
-      - name: Run integration tests (${{ matrix.app_brand }} on env ${{ env.NODE_ENV }})
+      - name: Run integration tests (${{ matrix.app_brand }} on env ${{ env.ENV }})
         run: |
           # Crea directory per estrarre i report (separata per ogni brand)
           mkdir -p ./test-reports-${{ matrix.app_brand }}
@@ -207,10 +207,10 @@ jobs:
             -e SENTINEL_MONGO_USER \
             -e SENTINEL_MONGO_PASSWORD \
             -e SENTINEL_MONGO_DATABASE \
-            -e NODE_ENV \
+            -e ENV \
             -e ENABLE_PERFORMANCE_TRACKER \
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
-            ${{ env.DOCKER_IMAGE_NAME }} yarn pipeline:$NODE_ENV
+            ${{ env.DOCKER_IMAGE_NAME }} yarn pipeline:$ENV
 
       # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
@@ -218,7 +218,7 @@ jobs:
         if: always()
         with:
           report_paths: "test-reports-${{ matrix.app_brand }}/junit.xml"
-          check_name: "Report (test ${{ matrix.app_brand }} on ${{ env.NODE_ENV }})"
+          check_name: "Report (test ${{ matrix.app_brand }} on ${{ env.ENV }})"
           fail_on_failure: true
           require_tests: true
           # Summary (pagina "Summary" del run su Actions)

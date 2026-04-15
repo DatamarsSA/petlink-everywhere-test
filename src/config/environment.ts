@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { z } from "zod";
 
 export const environmentSchema = z.object({
-  NODE_ENV: z.enum(["develop", "test"]).default("develop"),
+  ENV: z.enum(["develop", "test"]).default("develop"),
   // AWS Cognito (endpoints)
   COGNITO_REGION: z.string().min(1, "COGNITO_REGION è richiesta"),
   COGNITO_CLIENT_ID_APP_USER: z.string().min(1, "COGNITO_CLIENT_ID_APP_USER è richiesto"),
@@ -49,7 +49,7 @@ export const environmentSchema = z.object({
 export type Environment = z.infer<typeof environmentSchema>;
 
 export function getEnvs(): Environment {
-  const nodeEnv = process.env.NODE_ENV || "develop";
+  const nodeEnv = process.env.ENV || "develop";
   config({ path: `.env.${nodeEnv}` });
 
   const result = environmentSchema.safeParse(process.env);
@@ -60,7 +60,7 @@ export function getEnvs(): Environment {
     });
     process.exit(1);
   }
-  console.log(`Running in environment: ${result.data.NODE_ENV}`);
+  console.log(`Running in environment: ${result.data.ENV}`);
   console.log("APP_BRAND: ", result.data.APP_BRAND);
   console.log("LOG_LEVEL: ", result.data.LOG_LEVEL);
   console.log("ENABLE_PERFORMANCE_TRACKER: ", result.data.ENABLE_PERFORMANCE_TRACKER);
