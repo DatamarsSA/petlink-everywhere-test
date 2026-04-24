@@ -289,7 +289,7 @@ class TestHelper {
           }
         })
         .catch((error) => {
-          errors.push({ operation: "Petlink-CLEAN_UP_USER", error });
+          errors.push({ operation: "CLEAN_UP_USER_CORE", error });
         }),
 
       // 2. Gmail cleanup
@@ -316,7 +316,7 @@ class TestHelper {
           }
         })
         .catch((error) => {
-          errors.push({ operation: "CCT-CLEAN_UP_USER", error });
+          errors.push({ operation: "CLEAN_UP_USER_CCT", error });
         }),
     ]);
     petlink.logoutUser();

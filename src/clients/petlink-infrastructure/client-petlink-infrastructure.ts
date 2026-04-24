@@ -601,7 +601,7 @@ class CoreService {
     const endpoint = process.env.CORE_GRAPHQL_API_URL!;
     const apiKey = process.env.CORE_GRAPHQL_API_KEY!;
 
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
+    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
     const iamProvider = new IamAuthProvider(process.env.AWS_CORE_ACCESS_KEY_ID!, process.env.AWS_CORE_SECRET_ACCESS_KEY!);
 
     this.graphqlHttp = createGraphQlHttpClient<CoreSdk>({
@@ -645,7 +645,7 @@ class CctService {
     const endpoint = process.env.CCT_GRAPHQL_API_URL!;
     const apiKey = process.env.CCT_GRAPHQL_API_KEY!;
 
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.COGNITO_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
+    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
     const iamProvider = new IamAuthProvider(process.env.AWS_CCT_ACCESS_KEY_ID!, process.env.AWS_CCT_SECRET_ACCESS_KEY!);
 
     this.graphqlHttp = createGraphQlHttpClient<CctSdk>({
