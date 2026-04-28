@@ -190,11 +190,27 @@ describe("Energy Saving Zone", () => {
       `sendSetting DEACTIVATE should succeed - Error: ${deactivateResponse.sendSetting.message}${deactivateResponse.sendSetting.translationCode ? ` (${deactivateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // 3. Wait for packet
+    // 3. Wait for packet  
     const packet10 = await packet10Promise;
     logger.info("Packet 0x10", packet10);
     expect(packet10, "Should receive 0x10 (Disable ESZ)").toBeDefined();
     expect(packet10.energy_saving_area_enabled).toBe(0); // Disabled
+
+    const statusOffEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
+      OnGpsMessageStatusDocument,
+      { id: setup.devices.dogStandard!.id },
+      "Device should notify energySavingMode=OFF after ESZ deactivation",
+      (data) => data?.onGpsMessageStatus?.status?.energySavingMode === StatusState.Off,
+      async () => {
+        logger.info("⚡ Subscription ready -> Sending heartbeat after ESZ disable...");
+        await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!, {
+          curr_status: OperatingStatus.DEFAULT,
+          spare_c5: 0x00,
+        });
+      },
+    );
+
+    expect(statusOffEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.Off);
 
     logger.info("✓ ESZ deactivated, packet disable received");
   });

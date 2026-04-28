@@ -155,6 +155,21 @@ describe("Live Tracking", () => {
     );
 
     expect(deactivationPacket.requested_operating_status).toBe(OperatingStatus.DEFAULT);
+
+    const statusOffEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
+      OnGpsMessageStatusDocument,
+      { id: setup.devices.dogStandard!.id },
+      "Should receive status update with liveTracking=OFF",
+      (data) => data?.onGpsMessageStatus?.status?.liveTracking === StatusState.Off,
+      async () => {
+        logger.info("⚡ Subscription ready -> Sending heartbeat DEFAULT...");
+        await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!, {
+          curr_status: OperatingStatus.DEFAULT,
+        });
+      },
+    );
+
+    expect(statusOffEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.Off);
     logger.info("✓ Live Tracking deactivated");
   });
 });

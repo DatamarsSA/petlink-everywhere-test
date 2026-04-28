@@ -158,6 +158,11 @@ describe("Geofence", () => {
       last_gps_time: Math.floor(Date.now() / 1000),
     };
 
+    const fastTrackingPacketPromise = petlink.sentinel.waitForPacket(
+      PacketType.PACKET_0x01,
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
+
     // Start listening for geofence exit event with onReady callback
     const geofenceExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
@@ -173,6 +178,9 @@ describe("Geofence", () => {
     logger.info("Device EXITS onGpsMessageStatus:", geofenceExitEvent);
     expect(geofenceExitEvent.onGpsMessageStatus.status.inGeofence).toBe(false);
     expect(geofenceExitEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
+
+    const fastTrackingPacket = await fastTrackingPacketPromise;
+    expect(fastTrackingPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
     logger.info("✓ Exit emulated, auto Live Tracking activated");
   });
 

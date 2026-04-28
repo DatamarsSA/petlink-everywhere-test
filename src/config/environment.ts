@@ -48,7 +48,7 @@ export const environmentSchema = z.object({
 export type Environment = z.infer<typeof environmentSchema>;
 
 export function getEnvs(): Environment {
-  const nodeEnv = process.env.ENV || "next";
+  const nodeEnv = process.env.ENV || "develop";
 
   const availableEnvs = ["develop", "test", "next"];
   if (!availableEnvs.includes(nodeEnv)) {
@@ -65,7 +65,7 @@ export function getEnvs(): Environment {
     });
     process.exit(1);
   }
-  console.log(`Running in environment: ${result.data.ENV}`);
+  console.log(`Running in environment: ${nodeEnv}`);
   console.log("APP_BRAND: ", result.data.APP_BRAND);
   console.log("LOG_LEVEL: ", result.data.LOG_LEVEL);
   console.log("ENABLE_PERFORMANCE_TRACKER: ", result.data.ENABLE_PERFORMANCE_TRACKER);
