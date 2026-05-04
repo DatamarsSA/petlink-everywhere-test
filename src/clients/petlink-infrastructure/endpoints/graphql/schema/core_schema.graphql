@@ -1,6 +1,22 @@
 """This directive allows results to be deferred during execution"""
 directive @defer on FIELD
 
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
 """
 Tells the service which subscriptions will be published to when this mutation is
 called. This directive is deprecated use @aws_susbscribe directive instead.
@@ -21,30 +37,9 @@ directive @aws_subscribe(
 ) on FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by sigv4 signing.
-"""
-directive @aws_iam on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
 Tells the service this field/object has access authorized by an API key.
 """
 directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by a Cognito User Pools token.
@@ -53,6 +48,11 @@ directive @aws_cognito_user_pools(
   """List of cognito user pool groups which have access on this field"""
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -179,6 +179,7 @@ type BaseConfig {
   timeoutNoHighPrecision120s: Int!
   timeoutOnlyLowPrecision30s: Int!
   timeoutOnlyLowPrecision5Min: Int!
+  timeoutOptimization: Int!
 }
 
 type BillingInfo {
@@ -576,6 +577,7 @@ type GpsStatus {
   inGeofence: Boolean
   energySavingMode: StatusState!
   inEnergySavingZone: Boolean
+  tourRecording: StatusState
   firmwareVersion: String!
   offline: Boolean
   shutdown: Boolean
@@ -591,6 +593,7 @@ input GpsStatusIn {
   inGeofence: Boolean
   energySavingMode: StatusState!
   inEnergySavingZone: Boolean
+  tourRecording: StatusState
   firmwareVersion: String!
   offline: Boolean
   shutdown: Boolean
@@ -637,6 +640,8 @@ type InvoiceItemShortInfo {
   chargebeeInvoiceItemId: String!
   quantity: Int!
   unitPrice: Int!
+  dateFrom: String
+  dateTo: String
 }
 
 enum InvoiceReasonCodeEnum {
@@ -656,6 +661,9 @@ type InvoiceShortInfo {
   creationDate: String!
   items: [InvoiceItemShortInfo!]!
   discountItems: [DiscoutItem!]
+  dateFrom: String
+  dateTo: String
+  card: Card
 }
 
 enum InvoiceStatusEnum {
@@ -783,6 +791,7 @@ type Mutation {
   setPetIsFound(petId: String!): ResponseSetPetIsFound!
   setMacAddress(macAddresses: [SetMacAddressInput!]!): Response!
   updateRegistrationDeviceFlow(petId: String!, step: String!): ResponseUpdateRegistrationDeviceFlow!
+  updateRegistrationUserFlow(userId: String!, step: String!): ResponseUpdateRegistrationUserFlow!
   pushGpsMessagePositionBLE(productId: String!, position: GpsPositionIn!): Response!
   sendCommand(command: Command!): Response!
   sendSetting(setting: Setting!): ResponseSendSetting!
@@ -812,6 +821,7 @@ type Mutation {
   updatePaymentSources: ResponseManagePaymentSources!
   stopRenewingSubscription(subscriptionId: String!, cancelReason: String!, cancelReasonCode: CancelReasonCodeEnum!, appBrand: AppBrand!): Response
   stopRenewingAddon(subscriptionId: String!, itemPriceIds: [String!]!): Response
+  reactivateSubscription(subscriptionId: String!): Response!
 
   """
    refundInvoice(invoiceId: String!, refundAmount: Float!, reasonCode:
@@ -905,6 +915,23 @@ type Pagination {
 input PaginationInput {
   pageSize: Int
   pageNumber: Int
+}
+
+enum PaymentMethodEnum {
+  CARD
+  PAYPAL
+  DIRECT_DEBIT
+  GOOGLE_PAY
+  APPLE_PAY
+}
+
+type PaymentSource {
+  expiryMonth: Int
+  expiryYear: Int
+  maskedNumber: String
+  type: String
+  brand: String
+  paymentMethod: PaymentMethodEnum
 }
 
 enum PaymentSourceStatus {
@@ -1323,6 +1350,7 @@ type Query {
   getGpsPromotions(productId: String!): ResponseGetGpsPromotions!
   getRegisteredPetlinkGps(serialNumbers: [String!]!): ResponseRegisteredPetlinkGps!
   getRegistrationDeviceFlow(petId: String!): ResponseUpdateRegistrationDeviceFlow!
+  getRegistrationUserFlow(userId: String!): ResponseUpdateRegistrationUserFlow!
 
   """  end of life"""
   getEndOfLifeStep(eolId: String, deviceId: String): ResponseGetEndOfLifeStep!
@@ -1376,7 +1404,7 @@ type Query {
   getActivitiesCat(petId: String!, weekIndex: Int!, from: Int!, to: Int!): ResponseActivitiesCat!
   getActivitiesAverageCat(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesAverageCat
   getActiveSubscriptions(subscriptionsIds: [String!]): ResponseActiveSubscriptions!
-  getPosts(languageId: String, pagination: PaginationInput, appBrand: String): ResponseGetPosts!
+  getPosts(languageId: LanguageId, pagination: PaginationInput, appBrand: AppBrand): ResponseGetPosts!
 
   """ sso"""
   getSsoToken(id: String!): ResponseSsoToken!
@@ -1437,6 +1465,7 @@ type ResponseChangeSubscriptionPlan {
   message: String!
   url: String
   checkoutId: String
+  translationCode: String
 }
 
 type ResponseCheckGps {
@@ -1592,6 +1621,7 @@ type ResponseGetLogUploadUrl {
   translationCode: String
   message: String!
   uploadData: UploadData
+  command: [String!]
 }
 
 type ResponseGetOrder {
@@ -1605,6 +1635,7 @@ type ResponseGetPaymentSource {
   code: String!
   message: String!
   status: PaymentSourceStatus
+  paymentSource: PaymentSource
 }
 
 type ResponseGetPetLostInfo {
@@ -1888,6 +1919,12 @@ type ResponseUpdateRegistrationDeviceFlow {
   step: String
 }
 
+type ResponseUpdateRegistrationUserFlow {
+  code: String!
+  translationCode: String
+  step: String
+}
+
 type ResponseUser {
   code: String!
   translationCode: String
@@ -1907,6 +1944,17 @@ type RetentionDiscountItem {
   couponName: String!
   discountPercentage: Float
   discountType: String!
+}
+
+type ScheduledChanges {
+  billingPeriod: Int!
+  billingPeriodUnit: String!
+  currencyCode: String!
+  createdAt: String
+  updatedAt: String
+  currentTermStart: String
+  currentTermEnd: String
+  items: [SubscriptionShortInfoItem!]
 }
 
 input SendCustomerFeedbackIn {
@@ -2023,14 +2071,16 @@ type SubscriptionShortInfo {
   currencyCode: String!
   currentTermEnd: String
   currentTermStart: String
+  trialStart: String
+  trialEnd: String
   nextBillingAt: String
   id: String!
-  invoice: InvoiceShortInfo
+  invoices: [InvoiceShortInfo!]
   paymentStatus: PaymentStatusTypeEnum
   planChangeNotAllowed: Boolean!
   status: SubscriptionStatusEnum!
   subscriptionItems: [SubscriptionShortInfoItem!]!
-  totalAmount: Float!
+  scheduledChanges: ScheduledChanges
   billingPeriod: Int!
   billingPeriodUnit: String!
   addonToStopIds: [String!]

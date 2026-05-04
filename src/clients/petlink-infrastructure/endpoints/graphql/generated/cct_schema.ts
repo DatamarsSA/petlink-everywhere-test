@@ -250,10 +250,12 @@ export interface Device {
   lng?: Maybe<Scalars["Float"]["output"]>;
   logEnabled?: Maybe<Scalars["Boolean"]["output"]>;
   model?: Maybe<Scalars["String"]["output"]>;
+  optimizationDone?: Maybe<Scalars["Boolean"]["output"]>;
   petId?: Maybe<Scalars["String"]["output"]>;
   planProfileId?: Maybe<Scalars["String"]["output"]>;
   planProfileType?: Maybe<Scalars["String"]["output"]>;
   registrationDate?: Maybe<Scalars["String"]["output"]>;
+  sentinelMigrationDone?: Maybe<Scalars["Boolean"]["output"]>;
   serialId: Scalars["String"]["output"];
   simManufacturer?: Maybe<Scalars["String"]["output"]>;
   simStatus: SimStatusEnum;
@@ -301,6 +303,12 @@ export interface DeviceLastConnection {
   lastConnectionDate?: Maybe<Scalars["String"]["output"]>;
   model?: Maybe<Scalars["String"]["output"]>;
   serialId: Scalars["String"]["output"];
+}
+
+export interface DeviceLog {
+  __typename?: "DeviceLog";
+  creationDate: Scalars["String"]["output"];
+  id: Scalars["String"]["output"];
 }
 
 export interface DeviceMap {
@@ -407,6 +415,23 @@ export interface GetCustomersResponse {
   message: Scalars["String"]["output"];
   pagination: Pagination;
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface GetDeviceLogListResponse {
+  __typename?: "GetDeviceLogListResponse";
+  code: Scalars["String"]["output"];
+  items?: Maybe<Array<DeviceLog>>;
+  message: Scalars["String"]["output"];
+  pagination: Pagination;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface GetDeviceLogPresignedUrlResponse {
+  __typename?: "GetDeviceLogPresignedUrlResponse";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+  url?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface GetDeviceResponse {
@@ -679,6 +704,7 @@ export interface Invoice {
   __typename?: "Invoice";
   billingAddress?: Maybe<InvoiceBillingAddress>;
   businessEntityId: Scalars["String"]["output"];
+  card?: Maybe<Card>;
   chargebeeInvoiceId: Scalars["String"]["output"];
   chargebeeSubscriptionId?: Maybe<Scalars["String"]["output"]>;
   creationDate: Scalars["String"]["output"];
@@ -704,12 +730,16 @@ export interface InvoiceBillingAddress {
   firstName?: Maybe<Scalars["String"]["output"]>;
   lastName?: Maybe<Scalars["String"]["output"]>;
   phone?: Maybe<Scalars["String"]["output"]>;
+  state?: Maybe<Scalars["String"]["output"]>;
+  zip?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface InvoiceItem {
   __typename?: "InvoiceItem";
   amount: Scalars["Int"]["output"];
   chargebeeInvoiceItemId: Scalars["String"]["output"];
+  dateFrom?: Maybe<Scalars["String"]["output"]>;
+  dateTo?: Maybe<Scalars["String"]["output"]>;
   description: Scalars["String"]["output"];
   itemId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
@@ -849,8 +879,10 @@ export interface Mutation {
   createUser: CreateUserResponse;
   deleteCustomer: BaseResponse;
   deleteUser: BaseResponse;
+  forceDeviceConnection: BaseResponse;
   hidePet?: Maybe<BaseResponse>;
   logEnabled?: Maybe<BaseResponse>;
+  reactivateSubscription?: Maybe<BaseResponse>;
   refundInvoice?: Maybe<BaseResponse>;
   renewInsuranceSubscription?: Maybe<BaseResponse>;
   resetPetlinkGps: BaseResponse;
@@ -902,6 +934,10 @@ export type MutationDeleteUserArgs = {
   id: Scalars["String"]["input"];
 };
 
+export type MutationForceDeviceConnectionArgs = {
+  serialNumber: Scalars["String"]["input"];
+};
+
 export type MutationHidePetArgs = {
   hide: Scalars["Boolean"]["input"];
   petId: Scalars["String"]["input"];
@@ -910,6 +946,10 @@ export type MutationHidePetArgs = {
 export type MutationLogEnabledArgs = {
   deviceId: Scalars["String"]["input"];
   enable: Scalars["Boolean"]["input"];
+};
+
+export type MutationReactivateSubscriptionArgs = {
+  subscriptionId: Scalars["String"]["input"];
 };
 
 export type MutationRefundInvoiceArgs = {
@@ -1078,6 +1118,12 @@ export interface PaginationInput {
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
 }
 
+export enum PaymentMethodEnum {
+  Card = "CARD",
+  DirectDebit = "DIRECT_DEBIT",
+  Paypal = "PAYPAL",
+}
+
 export enum PaymentStatusTypeEnum {
   Failed = "FAILED",
   Pending = "PENDING",
@@ -1209,7 +1255,7 @@ export interface PetlinkSubscription {
   entityType: Scalars["String"]["output"];
   id: Scalars["String"]["output"];
   imei?: Maybe<Scalars["String"]["output"]>;
-  invoice?: Maybe<Invoice>;
+  invoices?: Maybe<Array<Invoice>>;
   moved?: Maybe<Scalars["String"]["output"]>;
   movedFrom?: Maybe<Scalars["String"]["output"]>;
   nextBillingAt?: Maybe<Scalars["String"]["output"]>;
@@ -1220,11 +1266,14 @@ export interface PetlinkSubscription {
   planChangeNotAllowed?: Maybe<Scalars["Boolean"]["output"]>;
   productId?: Maybe<Scalars["String"]["output"]>;
   retentionCoupon?: Maybe<RetentionDiscountItem>;
+  scheduledChanges?: Maybe<ScheduledChanges>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
   startedAt?: Maybe<Scalars["String"]["output"]>;
   status?: Maybe<SubscriptionStatusEnum>;
   subscriptionItems: Array<SubscriptionItem>;
   totalDeviceProtectionReplacements?: Maybe<Scalars["Int"]["output"]>;
+  trialEnd?: Maybe<Scalars["String"]["output"]>;
+  trialStart?: Maybe<Scalars["String"]["output"]>;
   updateDate: Scalars["String"]["output"];
   updatedAt: Scalars["String"]["output"];
   userId: Scalars["String"]["output"];
@@ -1256,6 +1305,8 @@ export interface Query {
   getCustomer: GetCustomerResponse;
   getCustomers: GetCustomersResponse;
   getDevice: GetDeviceResponse;
+  getDeviceLogList: GetDeviceLogListResponse;
+  getDeviceLogPresignedUrl: GetDeviceLogPresignedUrlResponse;
   getDeviceProtectionReplacements: ResponseGetDeviceProtectionReplacements;
   getDevices: GetDevicesResponse;
   getDevicesMap: GetDevicesMapResponse;
@@ -1320,6 +1371,16 @@ export type QueryGetCustomersArgs = {
 };
 
 export type QueryGetDeviceArgs = {
+  serialId: Scalars["String"]["input"];
+};
+
+export type QueryGetDeviceLogListArgs = {
+  pagination?: InputMaybe<PaginationInput>;
+  serialId: Scalars["String"]["input"];
+};
+
+export type QueryGetDeviceLogPresignedUrlArgs = {
+  fileId: Scalars["String"]["input"];
   serialId: Scalars["String"]["input"];
 };
 
@@ -1587,6 +1648,18 @@ export enum RoleEnum {
   Superreader = "SUPERREADER",
 }
 
+export interface ScheduledChanges {
+  __typename?: "ScheduledChanges";
+  billingPeriod: Scalars["Int"]["output"];
+  billingPeriodUnit: Scalars["String"]["output"];
+  createdAt?: Maybe<Scalars["String"]["output"]>;
+  currencyCode: Scalars["String"]["output"];
+  currentTermEnd?: Maybe<Scalars["String"]["output"]>;
+  currentTermStart?: Maybe<Scalars["String"]["output"]>;
+  items?: Maybe<Array<SubscriptionItem>>;
+  updatedAt?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface SetCouponResponse {
   __typename?: "SetCouponResponse";
   code: Scalars["String"]["output"];
@@ -1665,14 +1738,13 @@ export interface SubscriptionCancelled {
 
 export interface SubscriptionItem {
   __typename?: "SubscriptionItem";
-  amount: Scalars["Int"]["output"];
-  billingCycles?: Maybe<Scalars["Int"]["output"]>;
+  amount: Scalars["Float"]["output"];
   itemId: Scalars["String"]["output"];
   itemPriceId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
   name?: Maybe<Scalars["String"]["output"]>;
-  quantity: Scalars["Int"]["output"];
-  unitPrice: Scalars["Int"]["output"];
+  quantity: Scalars["Float"]["output"];
+  unitPrice: Scalars["Float"]["output"];
 }
 
 export enum SubscriptionStatusEnum {
@@ -1708,6 +1780,7 @@ export interface Ticket {
 }
 
 export enum TicketAction {
+  Registration = "REGISTRATION",
   Replacement = "REPLACEMENT",
   Reset = "RESET",
   Return = "RETURN",
@@ -1865,6 +1938,7 @@ export type GetCustomerQuery = {
     __typename?: "GetCustomerResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     customer?: {
       __typename?: "Customer";
       id: string;
@@ -1875,7 +1949,9 @@ export type GetCustomerQuery = {
       phone: string;
       phoneConfirmed: boolean;
       language: LanguageId;
+      registrationDate: string;
       countryCode: string;
+      chargebeeId?: string | null;
       appBrand?: string | null;
     } | null;
   };
@@ -1902,6 +1978,7 @@ export type GetCustomersQuery = {
     __typename?: "GetCustomersResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     items: Array<{
       __typename?: "Customer";
       id: string;
@@ -1933,6 +2010,7 @@ export type GetDevicesQuery = {
     __typename?: "GetDevicesResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     items: Array<{
       __typename?: "Device";
       serialId: string;
@@ -1975,6 +2053,8 @@ export type GetDevicesQuery = {
       updateFrequency?: number | null;
       country?: string | null;
       logEnabled?: boolean | null;
+      optimizationDone?: boolean | null;
+      sentinelMigrationDone?: boolean | null;
     }>;
     pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
   };
@@ -1990,6 +2070,7 @@ export type GetDeviceQuery = {
     __typename?: "GetDeviceResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     device?: {
       __typename?: "Device";
       serialId: string;
@@ -2032,6 +2113,8 @@ export type GetDeviceQuery = {
       updateFrequency?: number | null;
       country?: string | null;
       logEnabled?: boolean | null;
+      optimizationDone?: boolean | null;
+      sentinelMigrationDone?: boolean | null;
     } | null;
   };
 };
@@ -2046,6 +2129,7 @@ export type GetPetQuery = {
     __typename?: "GetPetResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     pet?: {
       __typename?: "Pet";
       id: string;
@@ -2089,44 +2173,179 @@ export type GetSubscriptionsQuery = {
     __typename?: "GetSubscriptionsResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     items?: Array<{
       __typename?: "PetlinkSubscription";
       id: string;
-      chargebeeSubscriptionId?: string | null;
+      orderId?: string | null;
       entityType: string;
+      planChangeNotAllowed?: boolean | null;
+      userId: string;
+      productId?: string | null;
+      serialNumber?: string | null;
+      chargebeeSubscriptionId?: string | null;
+      billingPeriod?: number | null;
+      billingPeriodUnit?: string | null;
       status?: SubscriptionStatusEnum | null;
       paymentStatus?: PaymentStatusTypeEnum | null;
+      nextPaymentRetryAt?: string | null;
       currencyCode: string;
       currentTermStart?: string | null;
       currentTermEnd?: string | null;
+      trialStart?: string | null;
+      trialEnd?: string | null;
+      nextBillingAt?: string | null;
       createdAt: string;
       startedAt?: string | null;
       activatedAt?: string | null;
       updatedAt: string;
       cancelledAt?: string | null;
+      cancelReason?: string | null;
+      cancelReasonCode?: CancelReasonCodeEnum | null;
+      businessEntityId: string;
       note?: string | null;
       moved?: string | null;
+      movedFrom?: string | null;
       creationDate: string;
       updateDate: string;
+      imei?: string | null;
+      addedFreePeriod?: number | null;
+      totalDeviceProtectionReplacements?: number | null;
+      availableDeviceProtectionReplacements?: number | null;
+      addonToStopIds?: Array<string> | null;
+      dunningAttempts?: Array<{
+        __typename?: "DunningAttemptsItem";
+        attempt: number;
+        createdAt: string;
+        transactionId: string;
+        status: string;
+      }> | null;
+      card?: {
+        __typename?: "Card";
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        maskedNumber?: string | null;
+        type?: string | null;
+        brand?: string | null;
+        paymentMethod: string;
+      } | null;
       subscriptionItems: Array<{
         __typename?: "SubscriptionItem";
         amount: number;
-        billingCycles?: number | null;
+        quantity: number;
         name?: string | null;
+        unitPrice: number;
+        itemType: string;
         itemPriceId: string;
         itemId: string;
-        itemType: string;
-        quantity: number;
-        unitPrice: number;
       }>;
-      invoice?: {
+      invoices?: Array<{
         __typename?: "Invoice";
+        id: string;
+        entityType: string;
+        userId: string;
+        subscriptionId?: string | null;
         status: InvoiceStatusEnum;
         businessEntityId: string;
+        chargebeeSubscriptionId?: string | null;
+        chargebeeInvoiceId: string;
+        total: number;
         currencyCode: string;
         creationDate: string;
         updateDate: string;
         notes?: string | null;
+        items: Array<{
+          __typename?: "InvoiceItem";
+          chargebeeInvoiceItemId: string;
+          amount: number;
+          description: string;
+          itemType: string;
+          itemId: string;
+          quantity: number;
+          unitPrice: number;
+          dateFrom?: string | null;
+          dateTo?: string | null;
+        }>;
+        discountItems?: Array<{
+          __typename?: "DiscoutItem";
+          chargebeeInvoiceItemId: string;
+          amount: number;
+          couponId: string;
+          discountPercentage?: number | null;
+          discountType: string;
+        }> | null;
+        billingAddress?: {
+          __typename?: "InvoiceBillingAddress";
+          city?: string | null;
+          country?: string | null;
+          email?: string | null;
+          firstName?: string | null;
+          lastName?: string | null;
+          address?: string | null;
+          phone?: string | null;
+          state?: string | null;
+          zip?: string | null;
+        } | null;
+        card?: {
+          __typename?: "Card";
+          expiryMonth?: number | null;
+          expiryYear?: number | null;
+          maskedNumber?: string | null;
+          type?: string | null;
+          brand?: string | null;
+          paymentMethod: string;
+        } | null;
+      }> | null;
+      creditNotes?: Array<{
+        __typename?: "CreditNote";
+        id: string;
+        entityType: string;
+        serialNumber?: string | null;
+        chargebeeSubscriptionId?: string | null;
+        chargebeeInvoiceId?: string | null;
+        chargebeeCreditNoteId?: string | null;
+        subscriptionId?: string | null;
+        invoiceId: string;
+        productId?: string | null;
+        refundReason?: string | null;
+        status?: CreditNoteStatusTypeEnum | null;
+        total: number;
+        refundedAt?: string | null;
+        currencyCode?: string | null;
+        customerId: string;
+        userId: string;
+        username: string;
+        creationDate: string;
+        updateDate: string;
+        refundItems?: Array<{ __typename?: "RefundItem"; amount: number; chargebeeInvoiceItemId: string }> | null;
+      }> | null;
+      retentionCoupon?: {
+        __typename?: "RetentionDiscountItem";
+        amount?: number | null;
+        couponId: string;
+        couponName: string;
+        discountPercentage?: number | null;
+        discountType: string;
+      } | null;
+      scheduledChanges?: {
+        __typename?: "ScheduledChanges";
+        billingPeriod: number;
+        billingPeriodUnit: string;
+        currencyCode: string;
+        createdAt?: string | null;
+        updatedAt?: string | null;
+        currentTermStart?: string | null;
+        currentTermEnd?: string | null;
+        items?: Array<{
+          __typename?: "SubscriptionItem";
+          amount: number;
+          quantity: number;
+          name?: string | null;
+          unitPrice: number;
+          itemType: string;
+          itemPriceId: string;
+          itemId: string;
+        }> | null;
       } | null;
     }> | null;
     pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
@@ -2233,16 +2452,19 @@ export type GetLastConnectionsQuery = {
     __typename?: "GetLastConnectionsResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     items: Array<{
       __typename?: "DeviceLastConnection";
       serialId: string;
       deviceId?: string | null;
-      lastConnectionDate?: string | null;
-      firmware?: string | null;
       imei?: string | null;
       iccid?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      lastConnectionDate?: string | null;
+      firmware?: string | null;
     }>;
-    pagination: { __typename?: "Pagination"; totalItems: number };
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
   };
 };
 
@@ -2259,16 +2481,28 @@ export type GetConnectionsHistoryQuery = {
     __typename?: "GetConnectionsHistoryResponse";
     code: string;
     message: string;
+    translationCode?: string | null;
     items: Array<{
       __typename?: "Connection";
-      serialId: string;
       deviceId?: string | null;
+      serialId: string;
       connectionDate: string;
+      fix: string;
+      device: string;
+      csq: number;
       lat: number;
       lng: number;
+      preLink?: string | null;
+      postLink?: string | null;
+      notify: Array<string | null>;
+      spareC5: Array<string | null>;
+      ephemeridi?: string | null;
+      updateFrequency: number;
       battery: number;
+      diffFromPrevious?: number | null;
+      firmware: string;
     }>;
-    pagination: { __typename?: "Pagination"; totalItems: number };
+    pagination: { __typename?: "Pagination"; pageSize: number; totalPage: number; totalItems: number; currentPage: number };
   };
 };
 
@@ -2454,7 +2688,21 @@ export type UpdateCustomerMutation = {
     code: string;
     message: string;
     translationCode?: string | null;
-    customer?: { __typename?: "Customer"; id: string; name: string; surname: string; email: string; phone: string; countryCode: string } | null;
+    customer?: {
+      __typename?: "Customer";
+      id: string;
+      name: string;
+      surname: string;
+      email: string;
+      emailConfirmed: boolean;
+      phone: string;
+      phoneConfirmed: boolean;
+      language: LanguageId;
+      registrationDate: string;
+      countryCode: string;
+      chargebeeId?: string | null;
+      appBrand?: string | null;
+    } | null;
   };
 };
 
@@ -2548,6 +2796,7 @@ export const GetCustomerDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "customer" },
@@ -2562,7 +2811,9 @@ export const GetCustomerDocument = {
                       { kind: "Field", name: { kind: "Name", value: "phone" } },
                       { kind: "Field", name: { kind: "Name", value: "phoneConfirmed" } },
                       { kind: "Field", name: { kind: "Name", value: "language" } },
+                      { kind: "Field", name: { kind: "Name", value: "registrationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeId" } },
                       { kind: "Field", name: { kind: "Name", value: "appBrand" } },
                     ],
                   },
@@ -2655,6 +2906,7 @@ export const GetCustomersDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "items" },
@@ -2741,6 +2993,7 @@ export const GetDevicesDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "items" },
@@ -2787,6 +3040,8 @@ export const GetDevicesDocument = {
                       { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                       { kind: "Field", name: { kind: "Name", value: "country" } },
                       { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                      { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                      { kind: "Field", name: { kind: "Name", value: "sentinelMigrationDone" } },
                     ],
                   },
                 },
@@ -2839,6 +3094,7 @@ export const GetDeviceDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "device" },
@@ -2885,6 +3141,8 @@ export const GetDeviceDocument = {
                       { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                       { kind: "Field", name: { kind: "Name", value: "country" } },
                       { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                      { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                      { kind: "Field", name: { kind: "Name", value: "sentinelMigrationDone" } },
                     ],
                   },
                 },
@@ -2924,6 +3182,7 @@ export const GetPetDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "pet" },
@@ -3016,6 +3275,7 @@ export const GetSubscriptionsDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "items" },
@@ -3023,18 +3283,60 @@ export const GetSubscriptionsDocument = {
                     kind: "SelectionSet",
                     selections: [
                       { kind: "Field", name: { kind: "Name", value: "id" } },
-                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "orderId" } },
                       { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "planChangeNotAllowed" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "billingPeriod" } },
+                      { kind: "Field", name: { kind: "Name", value: "billingPeriodUnit" } },
                       { kind: "Field", name: { kind: "Name", value: "status" } },
                       { kind: "Field", name: { kind: "Name", value: "paymentStatus" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "dunningAttempts" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "attempt" } },
+                            { kind: "Field", name: { kind: "Name", value: "createdAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "transactionId" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "nextPaymentRetryAt" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "card" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                            { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                            { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "type" } },
+                            { kind: "Field", name: { kind: "Name", value: "brand" } },
+                            { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                          ],
+                        },
+                      },
                       { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
                       { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
                       { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "trialStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "trialEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "nextBillingAt" } },
                       { kind: "Field", name: { kind: "Name", value: "createdAt" } },
                       { kind: "Field", name: { kind: "Name", value: "startedAt" } },
                       { kind: "Field", name: { kind: "Name", value: "activatedAt" } },
                       { kind: "Field", name: { kind: "Name", value: "updatedAt" } },
                       { kind: "Field", name: { kind: "Name", value: "cancelledAt" } },
+                      { kind: "Field", name: { kind: "Name", value: "cancelReason" } },
+                      { kind: "Field", name: { kind: "Name", value: "cancelReasonCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "businessEntityId" } },
                       {
                         kind: "Field",
                         name: { kind: "Name", value: "subscriptionItems" },
@@ -3042,35 +3344,197 @@ export const GetSubscriptionsDocument = {
                           kind: "SelectionSet",
                           selections: [
                             { kind: "Field", name: { kind: "Name", value: "amount" } },
-                            { kind: "Field", name: { kind: "Name", value: "billingCycles" } },
+                            { kind: "Field", name: { kind: "Name", value: "quantity" } },
                             { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
+                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
                             { kind: "Field", name: { kind: "Name", value: "itemPriceId" } },
                             { kind: "Field", name: { kind: "Name", value: "itemId" } },
-                            { kind: "Field", name: { kind: "Name", value: "itemType" } },
-                            { kind: "Field", name: { kind: "Name", value: "quantity" } },
-                            { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
                           ],
                         },
                       },
                       {
                         kind: "Field",
-                        name: { kind: "Name", value: "invoice" },
+                        name: { kind: "Name", value: "invoices" },
                         selectionSet: {
                           kind: "SelectionSet",
                           selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                            { kind: "Field", name: { kind: "Name", value: "userId" } },
+                            { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
                             { kind: "Field", name: { kind: "Name", value: "status" } },
                             { kind: "Field", name: { kind: "Name", value: "businessEntityId" } },
+                            { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                            { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceId" } },
+                            { kind: "Field", name: { kind: "Name", value: "total" } },
                             { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "items" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceItemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                  { kind: "Field", name: { kind: "Name", value: "description" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                                  { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
+                                  { kind: "Field", name: { kind: "Name", value: "dateFrom" } },
+                                  { kind: "Field", name: { kind: "Name", value: "dateTo" } },
+                                ],
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "discountItems" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceItemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                  { kind: "Field", name: { kind: "Name", value: "couponId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                                  { kind: "Field", name: { kind: "Name", value: "discountType" } },
+                                ],
+                              },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "billingAddress" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "city" } },
+                                  { kind: "Field", name: { kind: "Name", value: "country" } },
+                                  { kind: "Field", name: { kind: "Name", value: "email" } },
+                                  { kind: "Field", name: { kind: "Name", value: "firstName" } },
+                                  { kind: "Field", name: { kind: "Name", value: "lastName" } },
+                                  { kind: "Field", name: { kind: "Name", value: "address" } },
+                                  { kind: "Field", name: { kind: "Name", value: "phone" } },
+                                  { kind: "Field", name: { kind: "Name", value: "state" } },
+                                  { kind: "Field", name: { kind: "Name", value: "zip" } },
+                                ],
+                              },
+                            },
                             { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                             { kind: "Field", name: { kind: "Name", value: "updateDate" } },
                             { kind: "Field", name: { kind: "Name", value: "notes" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "card" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                                  { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                                  { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                                  { kind: "Field", name: { kind: "Name", value: "type" } },
+                                  { kind: "Field", name: { kind: "Name", value: "brand" } },
+                                  { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "creditNotes" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                            { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                            { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceId" } },
+                            { kind: "Field", name: { kind: "Name", value: "chargebeeCreditNoteId" } },
+                            { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
+                            { kind: "Field", name: { kind: "Name", value: "invoiceId" } },
+                            { kind: "Field", name: { kind: "Name", value: "productId" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "refundItems" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                  { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceItemId" } },
+                                ],
+                              },
+                            },
+                            { kind: "Field", name: { kind: "Name", value: "refundReason" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                            { kind: "Field", name: { kind: "Name", value: "total" } },
+                            { kind: "Field", name: { kind: "Name", value: "refundedAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "customerId" } },
+                            { kind: "Field", name: { kind: "Name", value: "userId" } },
+                            { kind: "Field", name: { kind: "Name", value: "username" } },
+                            { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                            { kind: "Field", name: { kind: "Name", value: "updateDate" } },
                           ],
                         },
                       },
                       { kind: "Field", name: { kind: "Name", value: "note" } },
                       { kind: "Field", name: { kind: "Name", value: "moved" } },
+                      { kind: "Field", name: { kind: "Name", value: "movedFrom" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "imei" } },
+                      { kind: "Field", name: { kind: "Name", value: "addedFreePeriod" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalDeviceProtectionReplacements" } },
+                      { kind: "Field", name: { kind: "Name", value: "availableDeviceProtectionReplacements" } },
+                      { kind: "Field", name: { kind: "Name", value: "addonToStopIds" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "retentionCoupon" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "amount" } },
+                            { kind: "Field", name: { kind: "Name", value: "couponId" } },
+                            { kind: "Field", name: { kind: "Name", value: "couponName" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountType" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "scheduledChanges" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "billingPeriod" } },
+                            { kind: "Field", name: { kind: "Name", value: "billingPeriodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "createdAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "updatedAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                            { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "items" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                  { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                                  { kind: "Field", name: { kind: "Name", value: "name" } },
+                                  { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemPriceId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
                     ],
                   },
                 },
@@ -3332,6 +3796,7 @@ export const GetLastConnectionsDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "items" },
@@ -3340,17 +3805,27 @@ export const GetLastConnectionsDocument = {
                     selections: [
                       { kind: "Field", name: { kind: "Name", value: "serialId" } },
                       { kind: "Field", name: { kind: "Name", value: "deviceId" } },
-                      { kind: "Field", name: { kind: "Name", value: "lastConnectionDate" } },
-                      { kind: "Field", name: { kind: "Name", value: "firmware" } },
                       { kind: "Field", name: { kind: "Name", value: "imei" } },
                       { kind: "Field", name: { kind: "Name", value: "iccid" } },
+                      { kind: "Field", name: { kind: "Name", value: "brand" } },
+                      { kind: "Field", name: { kind: "Name", value: "model" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastConnectionDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "firmware" } },
                     ],
                   },
                 },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "pagination" },
-                  selectionSet: { kind: "SelectionSet", selections: [{ kind: "Field", name: { kind: "Name", value: "totalItems" } }] },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
+                    ],
+                  },
                 },
               ],
             },
@@ -3410,25 +3885,45 @@ export const GetConnectionsHistoryDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "items" },
                   selectionSet: {
                     kind: "SelectionSet",
                     selections: [
-                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
                       { kind: "Field", name: { kind: "Name", value: "deviceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialId" } },
                       { kind: "Field", name: { kind: "Name", value: "connectionDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "fix" } },
+                      { kind: "Field", name: { kind: "Name", value: "device" } },
+                      { kind: "Field", name: { kind: "Name", value: "csq" } },
                       { kind: "Field", name: { kind: "Name", value: "lat" } },
                       { kind: "Field", name: { kind: "Name", value: "lng" } },
+                      { kind: "Field", name: { kind: "Name", value: "preLink" } },
+                      { kind: "Field", name: { kind: "Name", value: "postLink" } },
+                      { kind: "Field", name: { kind: "Name", value: "notify" } },
+                      { kind: "Field", name: { kind: "Name", value: "spareC5" } },
+                      { kind: "Field", name: { kind: "Name", value: "ephemeridi" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                       { kind: "Field", name: { kind: "Name", value: "battery" } },
+                      { kind: "Field", name: { kind: "Name", value: "diffFromPrevious" } },
+                      { kind: "Field", name: { kind: "Name", value: "firmware" } },
                     ],
                   },
                 },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "pagination" },
-                  selectionSet: { kind: "SelectionSet", selections: [{ kind: "Field", name: { kind: "Name", value: "totalItems" } }] },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "pageSize" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPage" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalItems" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentPage" } },
+                    ],
+                  },
                 },
               ],
             },
@@ -3894,8 +4389,14 @@ export const UpdateCustomerDocument = {
                       { kind: "Field", name: { kind: "Name", value: "name" } },
                       { kind: "Field", name: { kind: "Name", value: "surname" } },
                       { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "emailConfirmed" } },
                       { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "phoneConfirmed" } },
+                      { kind: "Field", name: { kind: "Name", value: "language" } },
+                      { kind: "Field", name: { kind: "Name", value: "registrationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "countryCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeId" } },
+                      { kind: "Field", name: { kind: "Name", value: "appBrand" } },
                     ],
                   },
                 },

@@ -1,10 +1,45 @@
 """This directive allows results to be deferred during execution"""
 directive @defer on FIELD
 
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
 """
 Tells the service this field/object has access authorized by an API key.
 """
 directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service which subscriptions will be published to when this mutation is
+called. This directive is deprecated use @aws_susbscribe directive instead.
+"""
+directive @aws_publish(
+  """
+  List of subscriptions which will be published to when this mutation is called.
+  """
+  subscriptions: [String]
+) on FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by a Cognito User Pools token.
@@ -18,41 +53,6 @@ directive @aws_cognito_user_pools(
 Tells the service this field/object has access authorized by sigv4 signing.
 """
 directive @aws_iam on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service which subscriptions will be published to when this mutation is
-called. This directive is deprecated use @aws_susbscribe directive instead.
-"""
-directive @aws_publish(
-  """
-  List of subscriptions which will be published to when this mutation is called.
-  """
-  subscriptions: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
-  """
-  List of mutations which will trigger this subscription when they are called.
-  """
-  mutations: [String]
-) on FIELD_DEFINITION
 
 type Activity {
   date: String!
@@ -288,6 +288,8 @@ type Device {
   updateFrequency: Float
   country: String
   logEnabled: Boolean
+  optimizationDone: Boolean
+  sentinelMigrationDone: Boolean
 }
 
 type DeviceAction {
@@ -323,6 +325,11 @@ type DeviceLastConnection {
   model: String
   lastConnectionDate: String
   firmware: String
+}
+
+type DeviceLog {
+  id: String!
+  creationDate: String!
 }
 
 type DeviceMap {
@@ -421,6 +428,21 @@ type GetCustomersResponse {
   translationCode: String
   items: [Customer!]!
   pagination: Pagination!
+}
+
+type GetDeviceLogListResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  items: [DeviceLog!]
+  pagination: Pagination!
+}
+
+type GetDeviceLogPresignedUrlResponse {
+  code: String!
+  message: String!
+  translationCode: String
+  url: String
 }
 
 type GetDeviceResponse {
@@ -687,6 +709,7 @@ type Invoice {
   creationDate: String!
   updateDate: String!
   notes: String
+  card: Card
 }
 
 type InvoiceBillingAddress {
@@ -697,6 +720,8 @@ type InvoiceBillingAddress {
   lastName: String
   address: String
   phone: String
+  state: String
+  zip: String
 }
 
 type InvoiceItem {
@@ -707,6 +732,8 @@ type InvoiceItem {
   itemId: String!
   quantity: Int!
   unitPrice: Int!
+  dateFrom: String
+  dateTo: String
 }
 
 enum InvoiceReasonCodeEnum {
@@ -838,6 +865,7 @@ enum MigrationTargets {
 }
 
 type Mutation {
+  forceDeviceConnection(serialNumber: String!): BaseResponse!
   createUser(user: CreateUserInput!): CreateUserResponse!
   deleteCustomer(id: String!): BaseResponse!
   deleteUser(id: String!): BaseResponse!
@@ -857,6 +885,7 @@ type Mutation {
   addTicketToIssue(issueId: String!, ticket: TicketInput): AddTicketToIssueResponse!
   stopRenewingSubscription(subscriptionId: String!): BaseResponse
   stopRenewingAddon(subscriptionId: String!, itemPriceIds: [String!]!): BaseResponse
+  reactivateSubscription(subscriptionId: String!): BaseResponse
   renewInsuranceSubscription(productId: String!, notes: String!): BaseResponse
   hidePet(petId: String!, hide: Boolean!): BaseResponse
   logEnabled(deviceId: String!, enable: Boolean!): BaseResponse
@@ -973,6 +1002,12 @@ input PaginationInput {
   pageNumber: Int
 }
 
+enum PaymentMethodEnum {
+  PAYPAL
+  CARD
+  DIRECT_DEBIT
+}
+
 enum PaymentStatusTypeEnum {
   SUCCEEDED
   FAILED
@@ -1019,6 +1054,8 @@ type PetlinkSubscription {
   currencyCode: String!
   currentTermStart: String
   currentTermEnd: String
+  trialStart: String
+  trialEnd: String
   nextBillingAt: String
   createdAt: String!
   startedAt: String
@@ -1029,7 +1066,7 @@ type PetlinkSubscription {
   cancelReasonCode: CancelReasonCodeEnum
   businessEntityId: String!
   subscriptionItems: [SubscriptionItem!]!
-  invoice: Invoice
+  invoices: [Invoice!]
   creditNotes: [CreditNote!]
   note: String
   moved: String
@@ -1042,6 +1079,7 @@ type PetlinkSubscription {
   availableDeviceProtectionReplacements: Int
   addonToStopIds: [String!]
   retentionCoupon: RetentionDiscountItem
+  scheduledChanges: ScheduledChanges
 }
 
 type PetProtection {
@@ -1138,6 +1176,8 @@ type Query {
   getMyInfo: GetMyInfoResponse!
   getLastConnections(filter: GetLastConnectionsInput, pagination: PaginationInput, order: OrderInput): GetLastConnectionsResponse!
   getDevices(filter: GetDevicesInput, pagination: PaginationInput, order: OrderInput): GetDevicesResponse!
+  getDeviceLogList(serialId: String!, pagination: PaginationInput): GetDeviceLogListResponse!
+  getDeviceLogPresignedUrl(fileId: String!, serialId: String!): GetDeviceLogPresignedUrlResponse!
   getDevicesMap(filter: GetDevicesMapInput, pagination: PaginationInput): GetDevicesMapResponse!
   getDevice(serialId: String!): GetDeviceResponse!
   getConnectionsHistory(serialId: String!, filter: GetConnectionsHistoryInput, pagination: PaginationInput, order: OrderInput): GetConnectionsHistoryResponse!
@@ -1295,6 +1335,17 @@ enum RoleEnum {
   L2
 }
 
+type ScheduledChanges {
+  billingPeriod: Int!
+  billingPeriodUnit: String!
+  currencyCode: String!
+  createdAt: String
+  updatedAt: String
+  currentTermStart: String
+  currentTermEnd: String
+  items: [SubscriptionItem!]
+}
+
 type SetCouponResponse {
   code: String!
   message: String!
@@ -1375,14 +1426,13 @@ type SubscriptionCancelled {
 }
 
 type SubscriptionItem {
-  amount: Int!
-  billingCycles: Int
+  amount: Float!
+  quantity: Float!
   name: String
-  itemId: String!
-  itemPriceId: String!
+  unitPrice: Float!
   itemType: String!
-  quantity: Int!
-  unitPrice: Int!
+  itemPriceId: String!
+  itemId: String!
 }
 
 enum SubscriptionStatusEnum {
@@ -1421,6 +1471,7 @@ enum TicketAction {
   RESET
   RETURN
   REPLACEMENT
+  REGISTRATION
 }
 
 enum TicketActionReason {

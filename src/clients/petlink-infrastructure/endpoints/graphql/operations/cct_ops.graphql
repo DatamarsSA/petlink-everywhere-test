@@ -3,6 +3,7 @@ query getCustomer($customerId: String!) {
     getCustomer(customerId: $customerId) {
         code
         message
+        translationCode
         customer {
             id
             name
@@ -12,7 +13,9 @@ query getCustomer($customerId: String!) {
             phone
             phoneConfirmed
             language
+            registrationDate
             countryCode
+            chargebeeId
             appBrand
         }
     }
@@ -29,6 +32,7 @@ query getCustomers($filter: GetCustomersInput, $pagination: PaginationInput, $or
     getCustomers(filter: $filter, pagination: $pagination, order: $order) {
         code
         message
+        translationCode
         items {
             id
             name
@@ -56,6 +60,7 @@ query getDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order:
     getDevices(filter: $filter, pagination: $pagination, order: $order) {
         code
         message
+        translationCode
         items {
             serialId
             deviceId
@@ -97,6 +102,8 @@ query getDevices($filter: GetDevicesInput, $pagination: PaginationInput, $order:
             updateFrequency
             country
             logEnabled
+            optimizationDone
+            sentinelMigrationDone
         }
         pagination {
             pageSize
@@ -111,6 +118,7 @@ query getDevice($serialId: String!) {
     getDevice(serialId: $serialId) {
         code
         message
+        translationCode
         device {
             serialId
             deviceId
@@ -152,6 +160,8 @@ query getDevice($serialId: String!) {
             updateFrequency
             country
             logEnabled
+            optimizationDone
+            sentinelMigrationDone
         }
     }
 }
@@ -160,6 +170,7 @@ query getPet($petId: String!) {
     getPet(petId: $petId) {
         code
         message
+        translationCode
         pet {
             id
             name
@@ -194,42 +205,170 @@ query getSubscriptions($deviceId: String!, $pagination: PaginationInput, $order:
     getSubscriptions(deviceId: $deviceId, pagination: $pagination, order: $order) {
         code
         message
+        translationCode
         items {
             id
-            chargebeeSubscriptionId
+            orderId
             entityType
+            planChangeNotAllowed
+            userId
+            productId
+            serialNumber
+            chargebeeSubscriptionId
+            billingPeriod
+            billingPeriodUnit
             status
             paymentStatus
+            dunningAttempts {
+                attempt
+                createdAt
+                transactionId
+                status
+            }
+            nextPaymentRetryAt
+            card {
+                expiryMonth
+                expiryYear
+                maskedNumber
+                type
+                brand
+                paymentMethod
+            }
             currencyCode
             currentTermStart
             currentTermEnd
+            trialStart
+            trialEnd
+            nextBillingAt
             createdAt
             startedAt
             activatedAt
             updatedAt
             cancelledAt
+            cancelReason
+            cancelReasonCode
+            businessEntityId
             subscriptionItems {
                 amount
-                billingCycles
+                quantity
                 name
+                unitPrice
+                itemType
                 itemPriceId
                 itemId
-                itemType
-                quantity
-                unitPrice
             }
-            invoice {
+            invoices {
+                id
+                entityType
+                userId
+                subscriptionId
                 status
                 businessEntityId
+                chargebeeSubscriptionId
+                chargebeeInvoiceId
+                total
                 currencyCode
+                items {
+                    chargebeeInvoiceItemId
+                    amount
+                    description
+                    itemType
+                    itemId
+                    quantity
+                    unitPrice
+                    dateFrom
+                    dateTo
+                }
+                discountItems {
+                    chargebeeInvoiceItemId
+                    amount
+                    couponId
+                    discountPercentage
+                    discountType
+                }
+                billingAddress {
+                    city
+                    country
+                    email
+                    firstName
+                    lastName
+                    address
+                    phone
+                    state
+                    zip
+                }
                 creationDate
                 updateDate
                 notes
+                card {
+                    expiryMonth
+                    expiryYear
+                    maskedNumber
+                    type
+                    brand
+                    paymentMethod
+                }
+            }
+            creditNotes {
+                id
+                entityType
+                serialNumber
+                chargebeeSubscriptionId
+                chargebeeInvoiceId
+                chargebeeCreditNoteId
+                subscriptionId
+                invoiceId
+                productId
+                refundItems {
+                    amount
+                    chargebeeInvoiceItemId
+                }
+                refundReason
+                status
+                total
+                refundedAt
+                currencyCode
+                customerId
+                userId
+                username
+                creationDate
+                updateDate
             }
             note
             moved
+            movedFrom
             creationDate
             updateDate
+            imei
+            addedFreePeriod
+            totalDeviceProtectionReplacements
+            availableDeviceProtectionReplacements
+            addonToStopIds
+            retentionCoupon {
+                amount
+                couponId
+                couponName
+                discountPercentage
+                discountType
+            }
+            scheduledChanges {
+                billingPeriod
+                billingPeriodUnit
+                currencyCode
+                createdAt
+                updatedAt
+                currentTermStart
+                currentTermEnd
+                items {
+                    amount
+                    quantity
+                    name
+                    unitPrice
+                    itemType
+                    itemPriceId
+                    itemId
+                }
+            }
         }
         pagination {
             pageSize
@@ -316,16 +455,22 @@ query getLastConnections($filter: GetLastConnectionsInput, $pagination: Paginati
     getLastConnections(filter: $filter, pagination: $pagination, order: $order) {
         code
         message
+        translationCode
         items {
             serialId
             deviceId
-            lastConnectionDate
-            firmware
             imei
             iccid
+            brand
+            model
+            lastConnectionDate
+            firmware
         }
         pagination {
+            pageSize
+            totalPage
             totalItems
+            currentPage
         }
     }
 }
@@ -334,16 +479,31 @@ query getConnectionsHistory($serialId: String!, $filter: GetConnectionsHistoryIn
     getConnectionsHistory(serialId: $serialId, filter: $filter, pagination: $pagination, order: $order) {
         code
         message
+        translationCode
         items {
-            serialId
             deviceId
+            serialId
             connectionDate
+            fix
+            device
+            csq
             lat
             lng
+            preLink
+            postLink
+            notify
+            spareC5
+            ephemeridi
+            updateFrequency
             battery
+            diffFromPrevious
+            firmware
         }
         pagination {
+            pageSize
+            totalPage
             totalItems
+            currentPage
         }
     }
 }
@@ -500,8 +660,14 @@ mutation updateCustomer($customerId: String!, $updateCustomer: UpdateCustomerInp
             name
             surname
             email
+            emailConfirmed
             phone
+            phoneConfirmed
+            language
+            registrationDate
             countryCode
+            chargebeeId
+            appBrand
         }
     }
 }

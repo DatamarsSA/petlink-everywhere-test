@@ -200,6 +200,12 @@ query getUser {
             timezone
             updateDate
             zipCode
+            appBrand
+            migrated
+            readPopupMigrated
+            forceSetPhoneNumber
+            forceSetUserData
+            arcaPlanetTerms
         }
     }
 }
@@ -219,6 +225,7 @@ query getPet($id: String!) {
         message
         pet {
             id
+            entityType
             name
             birthDate
             species
@@ -230,7 +237,12 @@ query getPet($id: String!) {
             userId
             creationDate
             updateDate
+            image {
+                id
+                url
+            }
             neutered
+            livingEnvironment
             length
             dateMarkedAsLost
             petProtectionId
@@ -244,6 +256,7 @@ query getPets {
         message
         pets {
             id
+            entityType
             name
             birthDate
             species
@@ -255,7 +268,12 @@ query getPets {
             userId
             creationDate
             updateDate
+            image {
+                id
+                url
+            }
             neutered
+            livingEnvironment
             length
             dateMarkedAsLost
             petProtectionId
@@ -308,12 +326,15 @@ query getPetlinkGps($id: String!) {
                 lng
                 alt
                 radius
+                precision
                 speed
                 positionType
                 date
+                isSkip
             }
             lastKnownStatus {
                 battery
+                charging
                 flashlight
                 sound
                 liveTracking
@@ -321,8 +342,10 @@ query getPetlinkGps($id: String!) {
                 inGeofence
                 energySavingMode
                 inEnergySavingZone
+                tourRecording
                 firmwareVersion
                 offline
+                shutdown
                 date
             }
             geofenceCoordinates {
@@ -338,10 +361,12 @@ query getPetlinkGps($id: String!) {
                 updateFrequency
                 enableGpsOnDefault
                 optimizationDone
+                sentinelMigrationDone
             }
             subscriptionId
             subscriptionIsActive
             logEnabled
+            endOfLifeDevice
         }
     }
 }
@@ -529,13 +554,9 @@ query getSubscriptions($productId: String!) {
             creationDate
             currentTermStart
             currentTermEnd
-            billingPeriod
-            billingPeriodUnit
             currencyCode
             paymentStatus
             planChangeNotAllowed
-            totalAmount
-            addonToStopIds
             card {
                 expiryMonth
                 expiryYear
@@ -551,13 +572,24 @@ query getSubscriptions($productId: String!) {
                 itemType
                 itemId
                 quantity
+                unitPrice
             }
-            invoice {
+            invoices {
                 id
                 status
                 creationDate
                 currencyCode
                 total
+                dateFrom
+                dateTo
+                card {
+                    expiryMonth
+                    expiryYear
+                    maskedNumber
+                    type
+                    brand
+                    paymentMethod
+                }
                 items {
                     itemId
                     itemType
@@ -565,6 +597,9 @@ query getSubscriptions($productId: String!) {
                     quantity
                     unitPrice
                     amount
+                    chargebeeInvoiceItemId
+                    dateFrom
+                    dateTo
                 }
                 discountItems {
                     couponId
@@ -574,6 +609,52 @@ query getSubscriptions($productId: String!) {
                     amount
                 }
             }
+            businessEntityId
+            trialStart
+            trialEnd
+            nextBillingAt
+            scheduledChanges {
+                billingPeriod
+                billingPeriodUnit
+                currencyCode
+                createdAt
+                updatedAt
+                currentTermStart
+                currentTermEnd
+                items {
+                    amount
+                    quantity
+                    name
+                    unitPrice
+                    itemType
+                    itemPriceId
+                    itemId
+                }
+            }
+            billingPeriod
+            billingPeriodUnit
+            addonToStopIds
+            retentionCoupon {
+                amount
+                couponId
+                couponName
+                discountPercentage
+                discountType
+            }
+            trialDuration
+            dunningStatus
+            dunningAttempts {
+                attempt
+                createdAt
+                transactionId
+                status
+            }
+        }
+        currentSubscription {
+            id
+            status
+            paymentStatus
+            invoiceStatus
         }
     }
 }
@@ -746,6 +827,7 @@ query getGeofences {
             userId
             creationDate
             updateDate
+            devices
         }
     }
 }
@@ -758,6 +840,7 @@ mutation sendOtpForgotPassword($contact: String!, $languageId: LanguageId, $appB
         translationCode
         message
         verificationId
+        resendAt
     }
 }
 
@@ -855,6 +938,7 @@ mutation sendOtp($phone: String!, $languageId: LanguageId) {
         translationCode
         message
         verificationId
+        resendAt
     }
 }
 mutation checkOtp($verificationId: String!, $otp: String!, $contact: String!) {
@@ -863,6 +947,7 @@ mutation checkOtp($verificationId: String!, $otp: String!, $contact: String!) {
         translationCode
         message
         verificationId
+        resendAt
     }
 }
 mutation signUpUser($user: UserIn!, $otpData: OtpInput!, $languageId: LanguageId, $appBrand: AppBrand!) {
@@ -877,6 +962,7 @@ mutation utilityIntegrationTest($input: UtilityIntegrationTestInput!) {
     utilityIntegrationTest(input: $input) {
         code
         message
+        userId
     }
 }
 
@@ -980,12 +1066,15 @@ mutation createPetlinkGps($petlinkGps: PetlinkGpsIn!, $appBrand: AppBrand!) {
                 lng
                 alt
                 radius
+                precision
                 speed
                 positionType
                 date
+                isSkip
             }
             lastKnownStatus {
                 battery
+                charging
                 flashlight
                 sound
                 liveTracking
@@ -993,8 +1082,10 @@ mutation createPetlinkGps($petlinkGps: PetlinkGpsIn!, $appBrand: AppBrand!) {
                 inGeofence
                 energySavingMode
                 inEnergySavingZone
+                tourRecording
                 firmwareVersion
                 offline
+                shutdown
                 date
             }
             geofenceCoordinates {
@@ -1010,10 +1101,12 @@ mutation createPetlinkGps($petlinkGps: PetlinkGpsIn!, $appBrand: AppBrand!) {
                 updateFrequency
                 enableGpsOnDefault
                 optimizationDone
+                sentinelMigrationDone
             }
         }
         currentTermEnd
         url
+        subscriptionPlan
     }
 }
 
@@ -1037,12 +1130,15 @@ mutation updatePetlinkGps($petlinkGps: UpdatePetlinkGpsIn!) {
                 lng
                 alt
                 radius
+                precision
                 speed
                 positionType
                 date
+                isSkip
             }
             lastKnownStatus {
                 battery
+                charging
                 flashlight
                 sound
                 liveTracking
@@ -1050,8 +1146,10 @@ mutation updatePetlinkGps($petlinkGps: UpdatePetlinkGpsIn!) {
                 inGeofence
                 energySavingMode
                 inEnergySavingZone
+                tourRecording
                 firmwareVersion
                 offline
+                shutdown
                 date
             }
             geofenceCoordinates {
@@ -1067,10 +1165,12 @@ mutation updatePetlinkGps($petlinkGps: UpdatePetlinkGpsIn!) {
                 updateFrequency
                 enableGpsOnDefault
                 optimizationDone
+                sentinelMigrationDone
             }
             subscriptionId
             subscriptionIsActive
             logEnabled
+            endOfLifeDevice
         }
     }
 }
@@ -1186,6 +1286,12 @@ mutation updateUser($user: UpdateUserIn!) {
             }
             creationDate
             updateDate
+            appBrand
+            migrated
+            readPopupMigrated
+            forceSetPhoneNumber
+            forceSetUserData
+            arcaPlanetTerms
         }
     }
 }
@@ -1226,12 +1332,15 @@ mutation sendSetting($setting: Setting!) {
                 lng
                 alt
                 radius
+                precision
                 speed
                 positionType
                 date
+                isSkip
             }
             lastKnownStatus {
                 battery
+                charging
                 flashlight
                 sound
                 liveTracking
@@ -1239,8 +1348,10 @@ mutation sendSetting($setting: Setting!) {
                 inGeofence
                 energySavingMode
                 inEnergySavingZone
+                tourRecording
                 firmwareVersion
                 offline
+                shutdown
                 date
             }
             geofenceCoordinates {
@@ -1250,6 +1361,8 @@ mutation sendSetting($setting: Setting!) {
             settings {
                 updateFrequency
                 enableGpsOnDefault
+                optimizationDone
+                sentinelMigrationDone
             }
             subscriptionId
             subscriptionIsActive
@@ -1290,6 +1403,7 @@ mutation createGeofence($geofence: GeofenceIn!) {
             userId
             creationDate
             updateDate
+            devices
         }
     }
 }
@@ -1310,6 +1424,7 @@ mutation updateGeofence($geofence: UpdateGeofenceIn!) {
             userId
             creationDate
             updateDate
+            devices
         }
     }
 }
@@ -1346,9 +1461,11 @@ subscription onGpsMessagePosition($id: String!) {
             lng
             alt
             radius
+            precision
             speed
             positionType
             date
+            isSkip
         }
     }
 }
@@ -1366,7 +1483,10 @@ subscription onGpsMessageStatus($id: String!) {
             inGeofence
             energySavingMode
             inEnergySavingZone
+            charging
+            tourRecording
             firmwareVersion
+            shutdown
             date
         }
     }

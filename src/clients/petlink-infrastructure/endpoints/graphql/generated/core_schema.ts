@@ -142,6 +142,7 @@ export interface BaseConfig {
   timeoutNoPosition90s: Scalars["Int"]["output"];
   timeoutOnlyLowPrecision5Min: Scalars["Int"]["output"];
   timeoutOnlyLowPrecision30s: Scalars["Int"]["output"];
+  timeoutOptimization: Scalars["Int"]["output"];
   timeoutWakeUp20s: Scalars["Int"]["output"];
   timeoutWakeUp60s: Scalars["Int"]["output"];
   timeoutWakeUp120s: Scalars["Int"]["output"];
@@ -577,6 +578,7 @@ export interface GpsStatus {
   offline?: Maybe<Scalars["Boolean"]["output"]>;
   shutdown?: Maybe<Scalars["Boolean"]["output"]>;
   sound: StatusState;
+  tourRecording?: Maybe<StatusState>;
 }
 
 export interface GpsStatusIn {
@@ -592,6 +594,7 @@ export interface GpsStatusIn {
   offline?: InputMaybe<Scalars["Boolean"]["input"]>;
   shutdown?: InputMaybe<Scalars["Boolean"]["input"]>;
   sound: StatusState;
+  tourRecording?: InputMaybe<StatusState>;
 }
 
 export enum HighlightEnum {
@@ -632,6 +635,8 @@ export interface InvoiceItemShortInfo {
   __typename?: "InvoiceItemShortInfo";
   amount: Scalars["Int"]["output"];
   chargebeeInvoiceItemId: Scalars["String"]["output"];
+  dateFrom?: Maybe<Scalars["String"]["output"]>;
+  dateTo?: Maybe<Scalars["String"]["output"]>;
   description: Scalars["String"]["output"];
   itemId: Scalars["String"]["output"];
   itemType: Scalars["String"]["output"];
@@ -650,8 +655,11 @@ export enum InvoiceReasonCodeEnum {
 
 export interface InvoiceShortInfo {
   __typename?: "InvoiceShortInfo";
+  card?: Maybe<Card>;
   creationDate: Scalars["String"]["output"];
   currencyCode: Scalars["String"]["output"];
+  dateFrom?: Maybe<Scalars["String"]["output"]>;
+  dateTo?: Maybe<Scalars["String"]["output"]>;
   discountItems?: Maybe<Array<DiscoutItem>>;
   id: Scalars["String"]["output"];
   items: Array<InvoiceItemShortInfo>;
@@ -781,6 +789,7 @@ export interface Mutation {
   publishOnSubscriptionStatus: SubscriptionMessageStatus;
   pushGpsMessagePositionBLE: Response;
   qrTagHasBeenScanned: Response;
+  reactivateSubscription: Response;
   /**   newsletter */
   registerToNewsletter: Response;
   removeProduct: Response;
@@ -827,6 +836,7 @@ export interface Mutation {
   updatePhoneNumberUser: ResponseUser;
   updateRegistrationDeviceFlow: ResponseUpdateRegistrationDeviceFlow;
   updateRegistrationToken: Response;
+  updateRegistrationUserFlow: ResponseUpdateRegistrationUserFlow;
   updateUser: ResponseUser;
   /**   cct */
   updateUserContact: Response;
@@ -943,6 +953,10 @@ export type MutationPushGpsMessagePositionBleArgs = {
 
 export type MutationQrTagHasBeenScannedArgs = {
   petlinkQrTag: Scalars["String"]["input"];
+};
+
+export type MutationReactivateSubscriptionArgs = {
+  subscriptionId: Scalars["String"]["input"];
 };
 
 export type MutationRegisterToNewsletterArgs = {
@@ -1118,6 +1132,11 @@ export type MutationUpdateRegistrationTokenArgs = {
   serialNumber: Scalars["String"]["input"];
 };
 
+export type MutationUpdateRegistrationUserFlowArgs = {
+  step: Scalars["String"]["input"];
+  userId: Scalars["String"]["input"];
+};
+
 export type MutationUpdateUserArgs = {
   user: UpdateUserIn;
 };
@@ -1206,6 +1225,24 @@ export interface Pagination {
 export interface PaginationInput {
   pageNumber?: InputMaybe<Scalars["Int"]["input"]>;
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
+}
+
+export enum PaymentMethodEnum {
+  ApplePay = "APPLE_PAY",
+  Card = "CARD",
+  DirectDebit = "DIRECT_DEBIT",
+  GooglePay = "GOOGLE_PAY",
+  Paypal = "PAYPAL",
+}
+
+export interface PaymentSource {
+  __typename?: "PaymentSource";
+  brand?: Maybe<Scalars["String"]["output"]>;
+  expiryMonth?: Maybe<Scalars["Int"]["output"]>;
+  expiryYear?: Maybe<Scalars["Int"]["output"]>;
+  maskedNumber?: Maybe<Scalars["String"]["output"]>;
+  paymentMethod?: Maybe<PaymentMethodEnum>;
+  type?: Maybe<Scalars["String"]["output"]>;
 }
 
 export enum PaymentSourceStatus {
@@ -1685,6 +1722,7 @@ export interface Query {
   getPurchasedServices: ResponseGetPurchasedServices;
   getRegisteredPetlinkGps: ResponseRegisteredPetlinkGps;
   getRegistrationDeviceFlow: ResponseUpdateRegistrationDeviceFlow;
+  getRegistrationUserFlow: ResponseUpdateRegistrationUserFlow;
   getS3UploadUrl: ResponseS3Upload;
   /**  sso */
   getSsoToken: ResponseSsoToken;
@@ -1898,8 +1936,8 @@ export type QueryGetPositionsHistoryDatesArgs = {
 };
 
 export type QueryGetPostsArgs = {
-  appBrand?: InputMaybe<Scalars["String"]["input"]>;
-  languageId?: InputMaybe<Scalars["String"]["input"]>;
+  appBrand?: InputMaybe<AppBrand>;
+  languageId?: InputMaybe<LanguageId>;
   pagination?: InputMaybe<PaginationInput>;
 };
 
@@ -1926,6 +1964,10 @@ export type QueryGetRegisteredPetlinkGpsArgs = {
 
 export type QueryGetRegistrationDeviceFlowArgs = {
   petId: Scalars["String"]["input"];
+};
+
+export type QueryGetRegistrationUserFlowArgs = {
+  userId: Scalars["String"]["input"];
 };
 
 export type QueryGetS3UploadUrlArgs = {
@@ -2019,6 +2061,7 @@ export interface ResponseChangeSubscriptionPlan {
   checkoutId?: Maybe<Scalars["String"]["output"]>;
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
+  translationCode?: Maybe<Scalars["String"]["output"]>;
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -2193,6 +2236,7 @@ export interface ResponseGetGpsPromotions {
 export interface ResponseGetLogUploadUrl {
   __typename?: "ResponseGetLogUploadUrl";
   code: Scalars["String"]["output"];
+  command?: Maybe<Array<Scalars["String"]["output"]>>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
   uploadData?: Maybe<UploadData>;
@@ -2210,6 +2254,7 @@ export interface ResponseGetPaymentSource {
   __typename?: "ResponseGetPaymentSource";
   code: Scalars["String"]["output"];
   message: Scalars["String"]["output"];
+  paymentSource?: Maybe<PaymentSource>;
   status?: Maybe<PaymentSourceStatus>;
 }
 
@@ -2532,6 +2577,13 @@ export interface ResponseUpdateRegistrationDeviceFlow {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseUpdateRegistrationUserFlow {
+  __typename?: "ResponseUpdateRegistrationUserFlow";
+  code: Scalars["String"]["output"];
+  step?: Maybe<Scalars["String"]["output"]>;
+  translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseUser {
   __typename?: "ResponseUser";
   code: Scalars["String"]["output"];
@@ -2554,6 +2606,18 @@ export interface RetentionDiscountItem {
   couponName: Scalars["String"]["output"];
   discountPercentage?: Maybe<Scalars["Float"]["output"]>;
   discountType: Scalars["String"]["output"];
+}
+
+export interface ScheduledChanges {
+  __typename?: "ScheduledChanges";
+  billingPeriod: Scalars["Int"]["output"];
+  billingPeriodUnit: Scalars["String"]["output"];
+  createdAt?: Maybe<Scalars["String"]["output"]>;
+  currencyCode: Scalars["String"]["output"];
+  currentTermEnd?: Maybe<Scalars["String"]["output"]>;
+  currentTermStart?: Maybe<Scalars["String"]["output"]>;
+  items?: Maybe<Array<SubscriptionShortInfoItem>>;
+  updatedAt?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface SendCustomerFeedbackIn {
@@ -2699,15 +2763,17 @@ export interface SubscriptionShortInfo {
   dunningAttempts?: Maybe<Array<DunningAttemptsItem>>;
   dunningStatus?: Maybe<Scalars["String"]["output"]>;
   id: Scalars["String"]["output"];
-  invoice?: Maybe<InvoiceShortInfo>;
+  invoices?: Maybe<Array<InvoiceShortInfo>>;
   nextBillingAt?: Maybe<Scalars["String"]["output"]>;
   paymentStatus?: Maybe<PaymentStatusTypeEnum>;
   planChangeNotAllowed: Scalars["Boolean"]["output"];
   retentionCoupon?: Maybe<RetentionDiscountItem>;
+  scheduledChanges?: Maybe<ScheduledChanges>;
   status: SubscriptionStatusEnum;
   subscriptionItems: Array<SubscriptionShortInfoItem>;
-  totalAmount: Scalars["Float"]["output"];
   trialDuration?: Maybe<Scalars["Int"]["output"]>;
+  trialEnd?: Maybe<Scalars["String"]["output"]>;
+  trialStart?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface SubscriptionShortInfoItem {
@@ -3115,6 +3181,12 @@ export type GetUserQuery = {
       timezone?: string | null;
       updateDate: string;
       zipCode?: string | null;
+      appBrand: AppBrand;
+      migrated?: boolean | null;
+      readPopupMigrated?: boolean | null;
+      forceSetPhoneNumber?: boolean | null;
+      forceSetUserData?: boolean | null;
+      arcaPlanetTerms?: boolean | null;
       contactVerified?: { __typename?: "ContactVerified"; email?: boolean | null; phone?: boolean | null } | null;
       image?: { __typename?: "Image"; id: string; url?: string | null } | null;
       mobileDevices?: Array<{ __typename?: "MobileDevice"; os: MobileOsEnum; registrationToken: string; serialNumber: string }> | null;
@@ -3155,6 +3227,7 @@ export type GetPetQuery = {
     pet?: {
       __typename?: "Pet";
       id: string;
+      entityType: EntityTypeEnum;
       name: string;
       birthDate?: string | null;
       species: string;
@@ -3167,9 +3240,11 @@ export type GetPetQuery = {
       creationDate: string;
       updateDate: string;
       neutered?: boolean | null;
+      livingEnvironment?: PetLivingEnvironment | null;
       length?: number | null;
       dateMarkedAsLost?: string | null;
       petProtectionId?: string | null;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
     } | null;
   };
 };
@@ -3185,6 +3260,7 @@ export type GetPetsQuery = {
     pets?: Array<{
       __typename?: "Pet";
       id: string;
+      entityType: EntityTypeEnum;
       name: string;
       birthDate?: string | null;
       species: string;
@@ -3197,9 +3273,11 @@ export type GetPetsQuery = {
       creationDate: string;
       updateDate: string;
       neutered?: boolean | null;
+      livingEnvironment?: PetLivingEnvironment | null;
       length?: number | null;
       dateMarkedAsLost?: string | null;
       petProtectionId?: string | null;
+      image?: { __typename?: "Image"; id: string; url?: string | null } | null;
     }> | null;
   };
 };
@@ -3261,19 +3339,23 @@ export type GetPetlinkGpsQuery = {
       subscriptionId?: string | null;
       subscriptionIsActive?: boolean | null;
       logEnabled?: boolean | null;
+      endOfLifeDevice?: boolean | null;
       lastKnownPosition?: {
         __typename?: "GpsPosition";
         lat: number;
         lng: number;
         alt?: number | null;
         radius: number;
+        precision?: PositionPrecision | null;
         speed?: number | null;
         positionType: PositionType;
         date: string;
+        isSkip?: boolean | null;
       } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
+        charging?: boolean | null;
         flashlight: StatusState;
         sound: StatusState;
         liveTracking: StatusState;
@@ -3281,8 +3363,10 @@ export type GetPetlinkGpsQuery = {
         inGeofence?: boolean | null;
         energySavingMode: StatusState;
         inEnergySavingZone?: boolean | null;
+        tourRecording?: StatusState | null;
         firmwareVersion: string;
         offline?: boolean | null;
+        shutdown?: boolean | null;
         date: string;
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
@@ -3293,6 +3377,7 @@ export type GetPetlinkGpsQuery = {
         updateFrequency: number;
         enableGpsOnDefault: boolean;
         optimizationDone?: boolean | null;
+        sentinelMigrationDone?: boolean | null;
       };
     } | null;
   };
@@ -3529,13 +3614,18 @@ export type GetSubscriptionsQuery = {
       creationDate: string;
       currentTermStart?: string | null;
       currentTermEnd?: string | null;
-      billingPeriod: number;
-      billingPeriodUnit: string;
       currencyCode: string;
       paymentStatus?: PaymentStatusTypeEnum | null;
       planChangeNotAllowed: boolean;
-      totalAmount: number;
+      businessEntityId: string;
+      trialStart?: string | null;
+      trialEnd?: string | null;
+      nextBillingAt?: string | null;
+      billingPeriod: number;
+      billingPeriodUnit: string;
       addonToStopIds?: Array<string> | null;
+      trialDuration?: number | null;
+      dunningStatus?: string | null;
       card?: {
         __typename?: "Card";
         expiryMonth?: number | null;
@@ -3553,14 +3643,26 @@ export type GetSubscriptionsQuery = {
         itemType: string;
         itemId: string;
         quantity: number;
+        unitPrice: number;
       }>;
-      invoice?: {
+      invoices?: Array<{
         __typename?: "InvoiceShortInfo";
         id: string;
         status: InvoiceStatusEnum;
         creationDate: string;
         currencyCode: string;
         total: number;
+        dateFrom?: string | null;
+        dateTo?: string | null;
+        card?: {
+          __typename?: "Card";
+          expiryMonth?: number | null;
+          expiryYear?: number | null;
+          maskedNumber?: string | null;
+          type?: string | null;
+          brand?: string | null;
+          paymentMethod: string;
+        } | null;
         items: Array<{
           __typename?: "InvoiceItemShortInfo";
           itemId: string;
@@ -3569,6 +3671,9 @@ export type GetSubscriptionsQuery = {
           quantity: number;
           unitPrice: number;
           amount: number;
+          chargebeeInvoiceItemId: string;
+          dateFrom?: string | null;
+          dateTo?: string | null;
         }>;
         discountItems?: Array<{
           __typename?: "DiscoutItem";
@@ -3578,8 +3683,50 @@ export type GetSubscriptionsQuery = {
           discountPercentage?: number | null;
           amount: number;
         }> | null;
+      }> | null;
+      scheduledChanges?: {
+        __typename?: "ScheduledChanges";
+        billingPeriod: number;
+        billingPeriodUnit: string;
+        currencyCode: string;
+        createdAt?: string | null;
+        updatedAt?: string | null;
+        currentTermStart?: string | null;
+        currentTermEnd?: string | null;
+        items?: Array<{
+          __typename?: "SubscriptionShortInfoItem";
+          amount: number;
+          quantity: number;
+          name?: string | null;
+          unitPrice: number;
+          itemType: string;
+          itemPriceId: string;
+          itemId: string;
+        }> | null;
       } | null;
+      retentionCoupon?: {
+        __typename?: "RetentionDiscountItem";
+        amount?: number | null;
+        couponId: string;
+        couponName: string;
+        discountPercentage?: number | null;
+        discountType: string;
+      } | null;
+      dunningAttempts?: Array<{
+        __typename?: "DunningAttemptsItem";
+        attempt: number;
+        createdAt: string;
+        transactionId: string;
+        status: string;
+      }> | null;
     }> | null;
+    currentSubscription?: {
+      __typename?: "CurrentSubscription";
+      id: string;
+      status: SubscriptionStatusEnum;
+      paymentStatus?: PaymentStatusTypeEnum | null;
+      invoiceStatus?: InvoiceStatusEnum | null;
+    } | null;
   };
 };
 
@@ -3776,6 +3923,7 @@ export type GetGeofencesQuery = {
       userId: string;
       creationDate: string;
       updateDate: string;
+      devices?: Array<string | null> | null;
       position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
     }> | null;
   };
@@ -3795,6 +3943,7 @@ export type SendOtpForgotPasswordMutation = {
     translationCode?: string | null;
     message: string;
     verificationId?: string | null;
+    resendAt?: number | null;
   };
 };
 
@@ -3899,7 +4048,14 @@ export type SendOtpMutationVariables = Exact<{
 
 export type SendOtpMutation = {
   __typename?: "Mutation";
-  sendOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+  sendOtp: {
+    __typename?: "ResponseOtp";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    verificationId?: string | null;
+    resendAt?: number | null;
+  };
 };
 
 export type CheckOtpMutationVariables = Exact<{
@@ -3910,7 +4066,14 @@ export type CheckOtpMutationVariables = Exact<{
 
 export type CheckOtpMutation = {
   __typename?: "Mutation";
-  checkOtp: { __typename?: "ResponseOtp"; code: string; translationCode?: string | null; message: string; verificationId?: string | null };
+  checkOtp: {
+    __typename?: "ResponseOtp";
+    code: string;
+    translationCode?: string | null;
+    message: string;
+    verificationId?: string | null;
+    resendAt?: number | null;
+  };
 };
 
 export type SignUpUserMutationVariables = Exact<{
@@ -3931,7 +4094,7 @@ export type UtilityIntegrationTestMutationVariables = Exact<{
 
 export type UtilityIntegrationTestMutation = {
   __typename?: "Mutation";
-  utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string };
+  utilityIntegrationTest: { __typename?: "ResponseUtilityIntegrationTest"; code: string; message: string; userId?: string | null };
 };
 
 export type VerifyEmailMutationVariables = Exact<{
@@ -4040,6 +4203,7 @@ export type CreatePetlinkGpsMutation = {
     message: string;
     currentTermEnd?: string | null;
     url?: string | null;
+    subscriptionPlan?: SubscriptionPlanEnum | null;
     petlinkGps?: {
       __typename?: "PetlinkGps";
       id: string;
@@ -4057,13 +4221,16 @@ export type CreatePetlinkGpsMutation = {
         lng: number;
         alt?: number | null;
         radius: number;
+        precision?: PositionPrecision | null;
         speed?: number | null;
         positionType: PositionType;
         date: string;
+        isSkip?: boolean | null;
       } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
+        charging?: boolean | null;
         flashlight: StatusState;
         sound: StatusState;
         liveTracking: StatusState;
@@ -4071,8 +4238,10 @@ export type CreatePetlinkGpsMutation = {
         inGeofence?: boolean | null;
         energySavingMode: StatusState;
         inEnergySavingZone?: boolean | null;
+        tourRecording?: StatusState | null;
         firmwareVersion: string;
         offline?: boolean | null;
+        shutdown?: boolean | null;
         date: string;
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
@@ -4083,6 +4252,7 @@ export type CreatePetlinkGpsMutation = {
         updateFrequency: number;
         enableGpsOnDefault: boolean;
         optimizationDone?: boolean | null;
+        sentinelMigrationDone?: boolean | null;
       };
     } | null;
   };
@@ -4113,19 +4283,23 @@ export type UpdatePetlinkGpsMutation = {
       subscriptionId?: string | null;
       subscriptionIsActive?: boolean | null;
       logEnabled?: boolean | null;
+      endOfLifeDevice?: boolean | null;
       lastKnownPosition?: {
         __typename?: "GpsPosition";
         lat: number;
         lng: number;
         alt?: number | null;
         radius: number;
+        precision?: PositionPrecision | null;
         speed?: number | null;
         positionType: PositionType;
         date: string;
+        isSkip?: boolean | null;
       } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
+        charging?: boolean | null;
         flashlight: StatusState;
         sound: StatusState;
         liveTracking: StatusState;
@@ -4133,8 +4307,10 @@ export type UpdatePetlinkGpsMutation = {
         inGeofence?: boolean | null;
         energySavingMode: StatusState;
         inEnergySavingZone?: boolean | null;
+        tourRecording?: StatusState | null;
         firmwareVersion: string;
         offline?: boolean | null;
+        shutdown?: boolean | null;
         date: string;
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
@@ -4145,6 +4321,7 @@ export type UpdatePetlinkGpsMutation = {
         updateFrequency: number;
         enableGpsOnDefault: boolean;
         optimizationDone?: boolean | null;
+        sentinelMigrationDone?: boolean | null;
       };
     } | null;
   };
@@ -4279,6 +4456,12 @@ export type UpdateUserMutation = {
       timezone?: string | null;
       creationDate: string;
       updateDate: string;
+      appBrand: AppBrand;
+      migrated?: boolean | null;
+      readPopupMigrated?: boolean | null;
+      forceSetPhoneNumber?: boolean | null;
+      forceSetUserData?: boolean | null;
+      arcaPlanetTerms?: boolean | null;
       image?: { __typename?: "Image"; id: string; url?: string | null } | null;
     } | null;
   };
@@ -4333,13 +4516,16 @@ export type SendSettingMutation = {
         lng: number;
         alt?: number | null;
         radius: number;
+        precision?: PositionPrecision | null;
         speed?: number | null;
         positionType: PositionType;
         date: string;
+        isSkip?: boolean | null;
       } | null;
       lastKnownStatus?: {
         __typename?: "GpsStatus";
         battery: number;
+        charging?: boolean | null;
         flashlight: StatusState;
         sound: StatusState;
         liveTracking: StatusState;
@@ -4347,12 +4533,20 @@ export type SendSettingMutation = {
         inGeofence?: boolean | null;
         energySavingMode: StatusState;
         inEnergySavingZone?: boolean | null;
+        tourRecording?: StatusState | null;
         firmwareVersion: string;
         offline?: boolean | null;
+        shutdown?: boolean | null;
         date: string;
       } | null;
       geofenceCoordinates?: Array<{ __typename?: "Coordinates"; lat: number; lng: number } | null> | null;
-      settings: { __typename?: "GpsSettings"; updateFrequency: number; enableGpsOnDefault: boolean };
+      settings: {
+        __typename?: "GpsSettings";
+        updateFrequency: number;
+        enableGpsOnDefault: boolean;
+        optimizationDone?: boolean | null;
+        sentinelMigrationDone?: boolean | null;
+      };
     } | null;
     energySavingZone?: {
       __typename?: "EnergySavingZone";
@@ -4390,6 +4584,7 @@ export type CreateGeofenceMutation = {
       userId: string;
       creationDate: string;
       updateDate: string;
+      devices?: Array<string | null> | null;
       position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
     } | null;
   };
@@ -4414,6 +4609,7 @@ export type UpdateGeofenceMutation = {
       userId: string;
       creationDate: string;
       updateDate: string;
+      devices?: Array<string | null> | null;
       position: Array<{ __typename?: "Coordinates"; lat: number; lng: number }>;
     } | null;
   };
@@ -4464,9 +4660,11 @@ export type OnGpsMessagePositionSubscription = {
       lng: number;
       alt?: number | null;
       radius: number;
+      precision?: PositionPrecision | null;
       speed?: number | null;
       positionType: PositionType;
       date: string;
+      isSkip?: boolean | null;
     };
   } | null;
 };
@@ -4491,7 +4689,10 @@ export type OnGpsMessageStatusSubscription = {
       inGeofence?: boolean | null;
       energySavingMode: StatusState;
       inEnergySavingZone?: boolean | null;
+      charging?: boolean | null;
+      tourRecording?: StatusState | null;
       firmwareVersion: string;
+      shutdown?: boolean | null;
       date: string;
     };
   } | null;
@@ -4989,6 +5190,12 @@ export const GetUserDocument = {
                       { kind: "Field", name: { kind: "Name", value: "timezone" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
                       { kind: "Field", name: { kind: "Name", value: "zipCode" } },
+                      { kind: "Field", name: { kind: "Name", value: "appBrand" } },
+                      { kind: "Field", name: { kind: "Name", value: "migrated" } },
+                      { kind: "Field", name: { kind: "Name", value: "readPopupMigrated" } },
+                      { kind: "Field", name: { kind: "Name", value: "forceSetPhoneNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "forceSetUserData" } },
+                      { kind: "Field", name: { kind: "Name", value: "arcaPlanetTerms" } },
                     ],
                   },
                 },
@@ -5087,6 +5294,7 @@ export const GetPetDocument = {
                     kind: "SelectionSet",
                     selections: [
                       { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
                       { kind: "Field", name: { kind: "Name", value: "name" } },
                       { kind: "Field", name: { kind: "Name", value: "birthDate" } },
                       { kind: "Field", name: { kind: "Name", value: "species" } },
@@ -5098,7 +5306,19 @@ export const GetPetDocument = {
                       { kind: "Field", name: { kind: "Name", value: "userId" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
                       { kind: "Field", name: { kind: "Name", value: "neutered" } },
+                      { kind: "Field", name: { kind: "Name", value: "livingEnvironment" } },
                       { kind: "Field", name: { kind: "Name", value: "length" } },
                       { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
                       { kind: "Field", name: { kind: "Name", value: "petProtectionId" } },
@@ -5138,6 +5358,7 @@ export const GetPetsDocument = {
                     kind: "SelectionSet",
                     selections: [
                       { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
                       { kind: "Field", name: { kind: "Name", value: "name" } },
                       { kind: "Field", name: { kind: "Name", value: "birthDate" } },
                       { kind: "Field", name: { kind: "Name", value: "species" } },
@@ -5149,7 +5370,19 @@ export const GetPetsDocument = {
                       { kind: "Field", name: { kind: "Name", value: "userId" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "image" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "url" } },
+                          ],
+                        },
+                      },
                       { kind: "Field", name: { kind: "Name", value: "neutered" } },
+                      { kind: "Field", name: { kind: "Name", value: "livingEnvironment" } },
                       { kind: "Field", name: { kind: "Name", value: "length" } },
                       { kind: "Field", name: { kind: "Name", value: "dateMarkedAsLost" } },
                       { kind: "Field", name: { kind: "Name", value: "petProtectionId" } },
@@ -5333,9 +5566,11 @@ export const GetPetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "lng" } },
                             { kind: "Field", name: { kind: "Name", value: "alt" } },
                             { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "precision" } },
                             { kind: "Field", name: { kind: "Name", value: "speed" } },
                             { kind: "Field", name: { kind: "Name", value: "positionType" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
+                            { kind: "Field", name: { kind: "Name", value: "isSkip" } },
                           ],
                         },
                       },
@@ -5346,6 +5581,7 @@ export const GetPetlinkGpsDocument = {
                           kind: "SelectionSet",
                           selections: [
                             { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "charging" } },
                             { kind: "Field", name: { kind: "Name", value: "flashlight" } },
                             { kind: "Field", name: { kind: "Name", value: "sound" } },
                             { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
@@ -5353,8 +5589,10 @@ export const GetPetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
                             { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
                             { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "tourRecording" } },
                             { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
                             { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "shutdown" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
                           ],
                         },
@@ -5391,12 +5629,14 @@ export const GetPetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                             { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
                             { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentinelMigrationDone" } },
                           ],
                         },
                       },
                       { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
                       { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
                       { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                      { kind: "Field", name: { kind: "Name", value: "endOfLifeDevice" } },
                     ],
                   },
                 },
@@ -5893,13 +6133,9 @@ export const GetSubscriptionsDocument = {
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
                       { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
-                      { kind: "Field", name: { kind: "Name", value: "billingPeriod" } },
-                      { kind: "Field", name: { kind: "Name", value: "billingPeriodUnit" } },
                       { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
                       { kind: "Field", name: { kind: "Name", value: "paymentStatus" } },
                       { kind: "Field", name: { kind: "Name", value: "planChangeNotAllowed" } },
-                      { kind: "Field", name: { kind: "Name", value: "totalAmount" } },
-                      { kind: "Field", name: { kind: "Name", value: "addonToStopIds" } },
                       {
                         kind: "Field",
                         name: { kind: "Name", value: "card" },
@@ -5927,12 +6163,13 @@ export const GetSubscriptionsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "itemType" } },
                             { kind: "Field", name: { kind: "Name", value: "itemId" } },
                             { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                            { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
                           ],
                         },
                       },
                       {
                         kind: "Field",
-                        name: { kind: "Name", value: "invoice" },
+                        name: { kind: "Name", value: "invoices" },
                         selectionSet: {
                           kind: "SelectionSet",
                           selections: [
@@ -5941,6 +6178,23 @@ export const GetSubscriptionsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                             { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
                             { kind: "Field", name: { kind: "Name", value: "total" } },
+                            { kind: "Field", name: { kind: "Name", value: "dateFrom" } },
+                            { kind: "Field", name: { kind: "Name", value: "dateTo" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "card" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                                  { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                                  { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                                  { kind: "Field", name: { kind: "Name", value: "type" } },
+                                  { kind: "Field", name: { kind: "Name", value: "brand" } },
+                                  { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                                ],
+                              },
+                            },
                             {
                               kind: "Field",
                               name: { kind: "Name", value: "items" },
@@ -5953,6 +6207,9 @@ export const GetSubscriptionsDocument = {
                                   { kind: "Field", name: { kind: "Name", value: "quantity" } },
                                   { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
                                   { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                  { kind: "Field", name: { kind: "Name", value: "chargebeeInvoiceItemId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "dateFrom" } },
+                                  { kind: "Field", name: { kind: "Name", value: "dateTo" } },
                                 ],
                               },
                             },
@@ -5973,6 +6230,87 @@ export const GetSubscriptionsDocument = {
                           ],
                         },
                       },
+                      { kind: "Field", name: { kind: "Name", value: "businessEntityId" } },
+                      { kind: "Field", name: { kind: "Name", value: "trialStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "trialEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "nextBillingAt" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "scheduledChanges" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "billingPeriod" } },
+                            { kind: "Field", name: { kind: "Name", value: "billingPeriodUnit" } },
+                            { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                            { kind: "Field", name: { kind: "Name", value: "createdAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "updatedAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                            { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "items" },
+                              selectionSet: {
+                                kind: "SelectionSet",
+                                selections: [
+                                  { kind: "Field", name: { kind: "Name", value: "amount" } },
+                                  { kind: "Field", name: { kind: "Name", value: "quantity" } },
+                                  { kind: "Field", name: { kind: "Name", value: "name" } },
+                                  { kind: "Field", name: { kind: "Name", value: "unitPrice" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemType" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemPriceId" } },
+                                  { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "billingPeriod" } },
+                      { kind: "Field", name: { kind: "Name", value: "billingPeriodUnit" } },
+                      { kind: "Field", name: { kind: "Name", value: "addonToStopIds" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "retentionCoupon" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "amount" } },
+                            { kind: "Field", name: { kind: "Name", value: "couponId" } },
+                            { kind: "Field", name: { kind: "Name", value: "couponName" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountPercentage" } },
+                            { kind: "Field", name: { kind: "Name", value: "discountType" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "trialDuration" } },
+                      { kind: "Field", name: { kind: "Name", value: "dunningStatus" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "dunningAttempts" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "attempt" } },
+                            { kind: "Field", name: { kind: "Name", value: "createdAt" } },
+                            { kind: "Field", name: { kind: "Name", value: "transactionId" } },
+                            { kind: "Field", name: { kind: "Name", value: "status" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "currentSubscription" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      { kind: "Field", name: { kind: "Name", value: "paymentStatus" } },
+                      { kind: "Field", name: { kind: "Name", value: "invoiceStatus" } },
                     ],
                   },
                 },
@@ -6488,6 +6826,7 @@ export const GetGeofencesDocument = {
                       { kind: "Field", name: { kind: "Name", value: "userId" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "devices" } },
                     ],
                   },
                 },
@@ -6545,6 +6884,7 @@ export const SendOtpForgotPasswordDocument = {
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
                 { kind: "Field", name: { kind: "Name", value: "verificationId" } },
+                { kind: "Field", name: { kind: "Name", value: "resendAt" } },
               ],
             },
           },
@@ -6798,6 +7138,7 @@ export const SendOtpDocument = {
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
                 { kind: "Field", name: { kind: "Name", value: "verificationId" } },
+                { kind: "Field", name: { kind: "Name", value: "resendAt" } },
               ],
             },
           },
@@ -6852,6 +7193,7 @@ export const CheckOtpDocument = {
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
                 { kind: "Field", name: { kind: "Name", value: "verificationId" } },
+                { kind: "Field", name: { kind: "Name", value: "resendAt" } },
               ],
             },
           },
@@ -6947,6 +7289,7 @@ export const UtilityIntegrationTestDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "userId" } },
               ],
             },
           },
@@ -7259,9 +7602,11 @@ export const CreatePetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "lng" } },
                             { kind: "Field", name: { kind: "Name", value: "alt" } },
                             { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "precision" } },
                             { kind: "Field", name: { kind: "Name", value: "speed" } },
                             { kind: "Field", name: { kind: "Name", value: "positionType" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
+                            { kind: "Field", name: { kind: "Name", value: "isSkip" } },
                           ],
                         },
                       },
@@ -7272,6 +7617,7 @@ export const CreatePetlinkGpsDocument = {
                           kind: "SelectionSet",
                           selections: [
                             { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "charging" } },
                             { kind: "Field", name: { kind: "Name", value: "flashlight" } },
                             { kind: "Field", name: { kind: "Name", value: "sound" } },
                             { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
@@ -7279,8 +7625,10 @@ export const CreatePetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
                             { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
                             { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "tourRecording" } },
                             { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
                             { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "shutdown" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
                           ],
                         },
@@ -7317,6 +7665,7 @@ export const CreatePetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                             { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
                             { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentinelMigrationDone" } },
                           ],
                         },
                       },
@@ -7325,6 +7674,7 @@ export const CreatePetlinkGpsDocument = {
                 },
                 { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
                 { kind: "Field", name: { kind: "Name", value: "url" } },
+                { kind: "Field", name: { kind: "Name", value: "subscriptionPlan" } },
               ],
             },
           },
@@ -7391,9 +7741,11 @@ export const UpdatePetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "lng" } },
                             { kind: "Field", name: { kind: "Name", value: "alt" } },
                             { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "precision" } },
                             { kind: "Field", name: { kind: "Name", value: "speed" } },
                             { kind: "Field", name: { kind: "Name", value: "positionType" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
+                            { kind: "Field", name: { kind: "Name", value: "isSkip" } },
                           ],
                         },
                       },
@@ -7404,6 +7756,7 @@ export const UpdatePetlinkGpsDocument = {
                           kind: "SelectionSet",
                           selections: [
                             { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "charging" } },
                             { kind: "Field", name: { kind: "Name", value: "flashlight" } },
                             { kind: "Field", name: { kind: "Name", value: "sound" } },
                             { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
@@ -7411,8 +7764,10 @@ export const UpdatePetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
                             { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
                             { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "tourRecording" } },
                             { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
                             { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "shutdown" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
                           ],
                         },
@@ -7449,12 +7804,14 @@ export const UpdatePetlinkGpsDocument = {
                             { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                             { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
                             { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentinelMigrationDone" } },
                           ],
                         },
                       },
                       { kind: "Field", name: { kind: "Name", value: "subscriptionId" } },
                       { kind: "Field", name: { kind: "Name", value: "subscriptionIsActive" } },
                       { kind: "Field", name: { kind: "Name", value: "logEnabled" } },
+                      { kind: "Field", name: { kind: "Name", value: "endOfLifeDevice" } },
                     ],
                   },
                 },
@@ -7812,6 +8169,12 @@ export const UpdateUserDocument = {
                       },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "appBrand" } },
+                      { kind: "Field", name: { kind: "Name", value: "migrated" } },
+                      { kind: "Field", name: { kind: "Name", value: "readPopupMigrated" } },
+                      { kind: "Field", name: { kind: "Name", value: "forceSetPhoneNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "forceSetUserData" } },
+                      { kind: "Field", name: { kind: "Name", value: "arcaPlanetTerms" } },
                     ],
                   },
                 },
@@ -7949,9 +8312,11 @@ export const SendSettingDocument = {
                             { kind: "Field", name: { kind: "Name", value: "lng" } },
                             { kind: "Field", name: { kind: "Name", value: "alt" } },
                             { kind: "Field", name: { kind: "Name", value: "radius" } },
+                            { kind: "Field", name: { kind: "Name", value: "precision" } },
                             { kind: "Field", name: { kind: "Name", value: "speed" } },
                             { kind: "Field", name: { kind: "Name", value: "positionType" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
+                            { kind: "Field", name: { kind: "Name", value: "isSkip" } },
                           ],
                         },
                       },
@@ -7962,6 +8327,7 @@ export const SendSettingDocument = {
                           kind: "SelectionSet",
                           selections: [
                             { kind: "Field", name: { kind: "Name", value: "battery" } },
+                            { kind: "Field", name: { kind: "Name", value: "charging" } },
                             { kind: "Field", name: { kind: "Name", value: "flashlight" } },
                             { kind: "Field", name: { kind: "Name", value: "sound" } },
                             { kind: "Field", name: { kind: "Name", value: "liveTracking" } },
@@ -7969,8 +8335,10 @@ export const SendSettingDocument = {
                             { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
                             { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
                             { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                            { kind: "Field", name: { kind: "Name", value: "tourRecording" } },
                             { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
                             { kind: "Field", name: { kind: "Name", value: "offline" } },
+                            { kind: "Field", name: { kind: "Name", value: "shutdown" } },
                             { kind: "Field", name: { kind: "Name", value: "date" } },
                           ],
                         },
@@ -7994,6 +8362,8 @@ export const SendSettingDocument = {
                           selections: [
                             { kind: "Field", name: { kind: "Name", value: "updateFrequency" } },
                             { kind: "Field", name: { kind: "Name", value: "enableGpsOnDefault" } },
+                            { kind: "Field", name: { kind: "Name", value: "optimizationDone" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentinelMigrationDone" } },
                           ],
                         },
                       },
@@ -8093,6 +8463,7 @@ export const CreateGeofenceDocument = {
                       { kind: "Field", name: { kind: "Name", value: "userId" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "devices" } },
                     ],
                   },
                 },
@@ -8156,6 +8527,7 @@ export const UpdateGeofenceDocument = {
                       { kind: "Field", name: { kind: "Name", value: "userId" } },
                       { kind: "Field", name: { kind: "Name", value: "creationDate" } },
                       { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "devices" } },
                     ],
                   },
                 },
@@ -8333,9 +8705,11 @@ export const OnGpsMessagePositionDocument = {
                       { kind: "Field", name: { kind: "Name", value: "lng" } },
                       { kind: "Field", name: { kind: "Name", value: "alt" } },
                       { kind: "Field", name: { kind: "Name", value: "radius" } },
+                      { kind: "Field", name: { kind: "Name", value: "precision" } },
                       { kind: "Field", name: { kind: "Name", value: "speed" } },
                       { kind: "Field", name: { kind: "Name", value: "positionType" } },
                       { kind: "Field", name: { kind: "Name", value: "date" } },
+                      { kind: "Field", name: { kind: "Name", value: "isSkip" } },
                     ],
                   },
                 },
@@ -8387,7 +8761,10 @@ export const OnGpsMessageStatusDocument = {
                       { kind: "Field", name: { kind: "Name", value: "inGeofence" } },
                       { kind: "Field", name: { kind: "Name", value: "energySavingMode" } },
                       { kind: "Field", name: { kind: "Name", value: "inEnergySavingZone" } },
+                      { kind: "Field", name: { kind: "Name", value: "charging" } },
+                      { kind: "Field", name: { kind: "Name", value: "tourRecording" } },
                       { kind: "Field", name: { kind: "Name", value: "firmwareVersion" } },
+                      { kind: "Field", name: { kind: "Name", value: "shutdown" } },
                       { kind: "Field", name: { kind: "Name", value: "date" } },
                     ],
                   },
