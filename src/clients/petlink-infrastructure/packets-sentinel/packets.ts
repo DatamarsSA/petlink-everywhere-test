@@ -99,32 +99,6 @@ export class SirfProtocol {
     return packet;
   }
 
-  /**
-   * Logga pacchetto SIRF in modo simmetrico (hex + parsed)
-   */
-  static logPacket(direction: "INCOMING" | "OUTGOING", rawSirfPacket: Buffer, parsedPayload?: any): void {
-    const type = rawSirfPacket[4];
-    const length = rawSirfPacket.readUInt16BE(2);
-    const typeHex = `0x${type.toString(16).padStart(2, "0").toUpperCase()}`;
-    const emoji = direction === "INCOMING" ? "📥" : "📤";
-
-    // Identifichiamo se è un pacchetto di sistema (rumore) o un comando/dato rilevante
-    const isSystem = [PacketType.PACKET_0x01, PacketType.PACKET_0x06, PacketType.PACKET_0x08, PacketType.PACKET_0x14].includes(type);
-
-    if (isSystem) {
-      // Log sintetico per Heartbeat/System per non intasare i log
-      const status = parsedPayload?.curr_status !== undefined ? ` | Status: ${parsedPayload.curr_status}` : "";
-      const gps = parsedPayload?.latitude !== undefined ? ` | GPS: ${parsedPayload.latitude},${parsedPayload.longitude}` : "";
-      logger.debug(`${emoji} [SENTINEL-RAW] ${direction} ${typeHex}${status}${gps}`);
-    } else {
-      // Log dettagliato per pacchetti di comando/configurazione
-      logger.info(
-        `${emoji} [SENTINEL-MSG] ${direction} ${typeHex}\n` +
-          `  ├─ HEX: ${rawSirfPacket.toString("hex").toUpperCase()}\n` +
-          `  └─ DATA: ${JSON.stringify(parsedPayload)}`,
-      );
-    }
-  }
 }
 
 // ================================ UTILITY FUNCTIONS ================================ //
@@ -824,7 +798,6 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
         return { type, payload: PacketSafePlacesWifi.fromBuffer(payload), raw: payload };
       default:
         const errorMessage = `Parser for packet ${type.toString(16)} not found.`;
-        logger.debug(errorMessage);
         return { type, payload: { error: errorMessage }, raw: payload };
     }
   } catch (e) {

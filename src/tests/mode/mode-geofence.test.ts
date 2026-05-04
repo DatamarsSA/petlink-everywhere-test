@@ -101,7 +101,6 @@ describe("Geofence", () => {
     const packet01 = await packet01Promise;
 
     expect(packet01, "Should receive 0x01 (Geofence activation)").toBeDefined();
-    logger.info("packet01 (Geofence activation):", packet01);
 
     // Verify geofence to be activate to device & coordinates sent from app match coordinates arrived on device
     expect(packet01.geofence_latitude_longitude).toHaveLength(6);
@@ -139,7 +138,6 @@ describe("Geofence", () => {
       },
     );
 
-    logger.info("Device INSIDE onGpsMessageStatus:", geofenceActiveEvent);
     expect(geofenceActiveEvent.onGpsMessageStatus.status.geofence).toBe(StatusState.On);
     expect(geofenceActiveEvent.onGpsMessageStatus.status.inGeofence).toBe(true);
     logger.info("✓ Inside geofence emulated, sub received true");
@@ -175,7 +173,6 @@ describe("Geofence", () => {
       },
     );
 
-    logger.info("Device EXITS onGpsMessageStatus:", geofenceExitEvent);
     expect(geofenceExitEvent.onGpsMessageStatus.status.inGeofence).toBe(false);
     expect(geofenceExitEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
 
@@ -209,8 +206,6 @@ describe("Geofence", () => {
 
     // 3. Wait packet
     const packet01 = await packet01Promise;
-    logger.info("0x01 received:", packet01);
-
     expect(packet01, "Should receive 0x01 (Deactivate Geofence)").toBeDefined();
     expect(packet01.requested_operating_status).toBe(OperatingStatus.DEFAULT);
     logger.info("✓ Geofence deactivated, packet default received");

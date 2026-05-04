@@ -90,8 +90,6 @@ describe("Energy Saving Zone", () => {
 
     expect(packet15, "Should receive 0x15 (Safe Places with zones)").toBeDefined();
     expect(packet10, "Should receive 0x10 (Evo Extra Data enable)").toBeDefined();
-    logger.info("packet15 (Safe Places with zones):", packet15);
-    logger.info("packet10 (Evo Extra Data enable)", packet10);
 
     // Assert 0x15 zones (match create payload)
     expect(packet15.zones).toHaveLength(1); // Una zona creata
@@ -161,7 +159,6 @@ describe("Energy Saving Zone", () => {
       },
     );
 
-    logger.info("onGpsMessageStatus:", eszExitEvent);
     expect(eszExitEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszExitEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
     logger.info("✓ Exit emulato, sub received false");
@@ -192,7 +189,6 @@ describe("Energy Saving Zone", () => {
 
     // 3. Wait for packet  
     const packet10 = await packet10Promise;
-    logger.info("Packet 0x10", packet10);
     expect(packet10, "Should receive 0x10 (Disable ESZ)").toBeDefined();
     expect(packet10.energy_saving_area_enabled).toBe(0); // Disabled
 

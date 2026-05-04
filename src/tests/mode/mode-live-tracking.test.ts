@@ -68,7 +68,6 @@ describe("Live Tracking", () => {
 
     // 5. App receives correct new status of device via WebSocket
     const statusEvent = await statusUpdatePromise;
-    logger.info("statusEvent:", statusEvent);
     expect(statusEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
     logger.info("✓ App received status update");
   });
@@ -102,7 +101,6 @@ describe("Live Tracking", () => {
       },
     );
 
-    logger.info("Position received:", positionEvent);
     expect(positionEvent.onGpsMessagePosition.position.lat).toBeCloseTo(positionPayload.latitude, 4);
     expect(positionEvent.onGpsMessagePosition.position.lng).toBeCloseTo(positionPayload.longitude, 4);
     logger.info("✓ Position streaming working");

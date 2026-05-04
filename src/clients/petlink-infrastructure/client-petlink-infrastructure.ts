@@ -216,6 +216,8 @@ class IamAuthProvider {
 // === Protocols ===
 
 const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
+  const logPrefix = `[Client-${config.serviceName}]`;
+
   class WSClient {
     private authType: AuthType.JWT | AuthType.API_KEY | null = null;
     private ws: WebSocket | null = null;
@@ -233,12 +235,12 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
       // Controlla se auth è cambiata
       if (this.ws && this.isConnected) {
         if (authType === this.authType) {
-          logger.debug("Reusing existing WebSocket connection");
+          logger.debug(`${logPrefix} WS: Reusing existing connection`);
           return;
         }
 
         // Auth cambiata, chiudi socket esistente
-        logger.debug("Auth type changed, reconnecting WebSocket");
+        logger.debug(`${logPrefix} WS: Auth type changed, reconnecting`);
         this.disconnect();
       }
 
@@ -267,18 +269,17 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
 
       return new Promise((resolve, reject) => {
         this.ws!.on("open", () => {
-          logger.debug("WebSocket opened, sending connection_init");
+          logger.debug(`${logPrefix} WS: Connection opened, sending connection_init`);
           this.ws!.send(JSON.stringify({ type: "connection_init" }));
         });
 
         this.ws!.on("message", (data: any) => {
           const message = JSON.parse(data.toString());
-          logger.debug("WebSocket message received", { type: message.type, id: message.id });
 
           switch (message.type) {
             case "connection_ack":
               this.isConnected = true;
-              logger.debug("WebSocket connection established");
+              logger.debug(`${logPrefix} WS: Connection established`);
               resolve();
               break;
 
@@ -295,14 +296,14 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
               const subId = message.id;
               const sub = this.subscriptions.get(subId);
               if (sub) {
-                logger.error("Subscription error", { subId, errors: message.payload?.errors });
+                logger.error(`${logPrefix} WS-SUB: Subscription error`, { subId, errors: message.payload?.errors });
                 sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
               }
               break;
             }
 
             case "connection_error":
-              logger.error("Connection error", { payload: message.payload });
+              logger.error(`${logPrefix} WS: Connection error`, { payload: message.payload });
               this.isConnected = false;
               reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
               break;
@@ -310,7 +311,7 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
             case "start_ack": {
               const subId = message.id;
               const sub = this.subscriptions.get(subId);
-              logger.debug("Subscription start acknowledged", { id: subId });
+              logger.debug(`${logPrefix} WS-SUB: Subscription acknowledged`, { id: subId });
               if (sub) {
                 sub.callbacks.ready();
               }
@@ -318,23 +319,23 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
             }
 
             case "ka":
-              logger.debug("Keep-alive received");
+              logger.debug(`${logPrefix} WS: Keep-alive received`);
               break;
 
             default:
-              logger.debug("Unknown message type", { type: message.type });
+              logger.debug(`${logPrefix} WS: Unknown message type`, { type: message.type });
               break;
           }
         });
 
         this.ws!.on("error", (error: any) => {
-          logger.error("WebSocket error", { error: error.message });
+          logger.error(`${logPrefix} WS: Error`, { error: error.message });
           this.isConnected = false;
           reject(error);
         });
 
         this.ws!.on("close", (code: number, reason: Buffer) => {
-          logger.debug("WebSocket closed", { code, reason: reason.toString() });
+          logger.debug(`${logPrefix} WS: Connection closed`, { code, reason: reason.toString() });
           this.isConnected = false;
           this.subscriptions.clear();
         });
@@ -379,12 +380,12 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
           if (this.isConnected) {
             this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
           }
-          logger.debug("Subscription auto-unsubscribed", { subId });
+          logger.debug(`${logPrefix} WS-SUB: Auto-unsubscribed`, { subId });
         };
 
         // Setup timeout (mandatory)
         timeout = setTimeout(() => {
-          logger.error("GraphQl Subscription socket timeout", { subId, timeoutMs, timeoutError });
+          logger.error(`${logPrefix} WS-SUB: Timeout`, { subId, timeoutMs, timeoutError });
           cleanup();
           reject(new Error(timeoutError));
         }, timeoutMs);
@@ -398,15 +399,11 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
               const opName = operationName || "Subscription";
 
               if (isMatch) {
-                logger.info(`✅ [GRAPHQL-SUB] ${opName} MATCHED!`);
+                logger.info(`${logPrefix} WS-EVT: ${opName} filter MATCHED! Received ${JSON.stringify(data)}`);
                 cleanup();
                 resolve(data);
               } else {
-                logger.debug(
-                  `ℹ️ [GRAPHQL-SUB] ${opName} received event but FILTER MISMATCH\n` +
-                    `  ├─ Received: ${JSON.stringify(data)}\n` +
-                    `  └─ Action: Still waiting...`,
-                );
+                logger.info(`${logPrefix} WS-EVT: ${opName} filter MISMATCH! Received ${JSON.stringify(data)}, still waiting..`);
               }
             },
             ready: async () => {
@@ -416,7 +413,7 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
                   await new Promise((resolve) => setTimeout(resolve, 2000));
                   await onReady();
                 } catch (err: any) {
-                  logger.error("Error in onReady callback", { error: err.message });
+                  logger.error(`${logPrefix} WS-SUB: Error in onReady callback`, { error: err.message });
                   cleanup();
                   reject(err);
                 }
@@ -458,7 +455,7 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
         };
 
         this.ws!.send(JSON.stringify(subscriptionPayload));
-        logger.debug("Subscription started", { subId, operationName, variables });
+        logger.debug(`${logPrefix} WS-SUB: Subscription started`, { subId, operationName, variables });
       });
     }
 
@@ -475,7 +472,7 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
         this.ws = null;
         this.isConnected = false;
 
-        logger.debug("WebSocket disconnected (all subscriptions closed)");
+        logger.debug(`${logPrefix} WS: Disconnected (all subscriptions closed)`);
       }
     }
   }
@@ -494,6 +491,7 @@ const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
 };
 
 const createGraphQlHttpClient = <TSdk extends object>(config: HttpClientConfig<TSdk>): GraphQLHttpClient<TSdk> => {
+  const logPrefix = `[Client-${config.serviceName}]`;
   const cachedSdks = new Map<string, TSdk>();
 
   const createAuthFacet = (authType: AuthType): TSdk => {
@@ -557,15 +555,15 @@ const createGraphQlHttpClient = <TSdk extends object>(config: HttpClientConfig<T
           }
 
           const startTime = performance.now();
-          logger.info(`🚀 [${config.serviceName}] CALLING ->: ${String(prop)}`, args);
+          logger.info(`${logPrefix} GRAPHQL: -> ${String(prop)}`, args);
 
           try {
             const response = await (client as any)[prop](...args);
             const duration = (performance.now() - startTime).toFixed(0);
-            logger.info(`✅ [${config.serviceName}] SUCCESS <-: ${String(prop)} (duration ${duration}ms)`, response);
+            logger.info(`${logPrefix} GRAPHQL: <- ${String(prop)} SUCCESS (duration ${duration}ms)`, response);
             return response;
           } catch (error: any) {
-            logger.error(`❌ [${config.serviceName}] ERROR <-: ${String(prop)}`, error);
+            logger.error(`${logPrefix} GRAPHQL: <- ${String(prop)} ERROR`, error);
             throw error;
           } finally {
             const duration = Math.round(performance.now() - startTime);
@@ -593,6 +591,7 @@ const createGraphQlHttpClient = <TSdk extends object>(config: HttpClientConfig<T
 // === Services ===
 
 class CoreService {
+  private readonly logPrefix = "[Client-CORE]";
   public readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CoreSdk>;
   public readonly graphqlWS: GraphQLWSClient;
@@ -638,6 +637,7 @@ class CoreService {
 }
 
 class CctService {
+  private readonly logPrefix = "[Client-CCT]";
   public readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CctSdk>;
 
@@ -669,6 +669,7 @@ class CctService {
 }
 
 class SentinelService {
+  private readonly logPrefix = "[Client-SENTINEL]";
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();
@@ -682,23 +683,23 @@ class SentinelService {
    */
   private async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      logger.debug(`→ Connecting to Sentinel at ${this.config.host}:${this.config.port}`);
+      logger.debug(`${this.logPrefix} Connecting to ${this.config.host}:${this.config.port}`);
       this.socket = createConnection(this.config);
 
       this.socket.on("connect", () => {
-        logger.debug("✓ Connected to Sentinel TCP server");
+        logger.debug(`${this.logPrefix} Connected to TCP server`);
         resolve();
       });
 
       this.socket.on("data", (data) => this.handleData(data));
 
       this.socket.on("error", (err) => {
-        logger.error(`✗ Socket error: ${err.message}`);
+        logger.error(`${this.logPrefix} Socket error: ${err.message}`);
         reject(err);
       });
 
       this.socket.on("close", () => {
-        logger.debug("✓ Connection closed");
+        logger.debug(`${this.logPrefix} Connection closed`);
       });
     });
   }
@@ -720,14 +721,15 @@ class SentinelService {
   private async sendRaw(kippyPayload: Buffer): Promise<void> {
     if (!this.socket) throw new Error("Not connected");
     const sirfPacket = SirfProtocol.encapsulate(kippyPayload);
+    const parsed = parsePacketByType(kippyPayload);
+    this.logPacket("OUTGOING", sirfPacket, parsed.payload);
     this.socket.write(sirfPacket);
   }
 
   /**
    * Logs intent and sends the encoded buffer through the socket.
    */
-  private async simulateAndSend(name: string, args: any[], buffer: Buffer): Promise<void> {
-    logger.info(`🚀 [SENTINEL] SIMULATING ->: ${name}`, args);
+  private async simulateAndSend(buffer: Buffer): Promise<void> {
     return this.sendRaw(buffer);
   }
 
@@ -735,19 +737,14 @@ class SentinelService {
    * Simulator facet: provides a high-level typed API to simulate device behavior.
    */
   public readonly simulator = {
-    welcome: (device: DeviceIdentity, data?: any) =>
-      this.simulateAndSend("welcome", [device, data], PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01)),
+    welcome: (device: DeviceIdentity, data?: any) => this.simulateAndSend(PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x01)),
 
-    heartbeat: (device: DeviceIdentity, data?: any) =>
-      this.simulateAndSend("heartbeat", [device, data], PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06)),
+    heartbeat: (device: DeviceIdentity, data?: any) => this.simulateAndSend(PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06)),
 
-    geofenceResponse: (data: typeof PacketGeofenceResponse.Data) =>
-      this.simulateAndSend("geofenceResponse", [data], PacketGeofenceResponse.toBuffer(data)),
+    geofenceResponse: (data: typeof PacketGeofenceResponse.Data) => this.simulateAndSend(PacketGeofenceResponse.toBuffer(data)),
 
     torch: (device: DeviceIdentity, duration: number) =>
       this.simulateAndSend(
-        "torch",
-        [device, duration],
         PacketEvoExtraData.toBuffer({
           evo_tasks: 0x01 | 0x10,
           torch_duration: duration,
@@ -756,8 +753,6 @@ class SentinelService {
 
     sound: (device: DeviceIdentity, duration: number) =>
       this.simulateAndSend(
-        "sound",
-        [device, duration],
         PacketEvoExtraData.toBuffer({
           evo_tasks: 0x04 | 0x10,
           sound_command: duration > 0 ? 1 : 0,
@@ -776,7 +771,6 @@ class SentinelService {
   ): Promise<PacketTypeMap[T]> {
     return new Promise((resolve, reject) => {
       const typeHex = `0x${type.toString(16).toUpperCase()}`;
-      logger.debug(`⏳ [SENTINEL-WAIT] Started waiting for ${typeHex} (timeout: ${timeoutMs}ms)`);
 
       const timer = setTimeout(() => {
         cleanup();
@@ -787,15 +781,15 @@ class SentinelService {
         if (packet.type === type) {
           const typedPacket = packet.payload as PacketTypeMap[T];
           if (!validator || validator(typedPacket)) {
-            logger.info(`✅ [SENTINEL-WAIT] Match found for ${typeHex}`);
+            // logger.info(`${this.logPrefix} INCOMING: packet ${typeHex} matched`);
             cleanup();
             resolve(typedPacket);
           } else {
-            logger.warn(
-              `⚠️ [SENTINEL-WAIT] Received ${typeHex} but VALIDATOR FAILED\n` +
-                `  ├─ Received: ${JSON.stringify(typedPacket)}\n` +
-                `  └─ Status: Still waiting...`,
-            );
+            // logger.warn(
+            //   `${this.logPrefix} INCOMING: packet ${typeHex} received but VALIDATOR FAILED\n` +
+            //     `  ├─ Received: ${JSON.stringify(typedPacket)}\n` +
+            //     `  └─ Status: Still waiting...`,
+            // );
           }
         }
       };
@@ -807,6 +801,24 @@ class SentinelService {
 
       this.events.on("packet", onPacket);
     });
+  }
+
+  private logPacket(direction: "INCOMING" | "OUTGOING", rawSirfPacket: Buffer, parsedPayload?: any): void {
+    // Packet types that are too verbose to log (e.g., frequent heartbeats)
+    const VERBOSE_PACKETS = [
+      PacketType.PACKET_0x06, // Heartbeat - comment to enable logging
+      PacketType.PACKET_0x02, // Auto-ack
+      PacketType.PACKET_0x08, // Ephemeris
+      PacketType.PACKET_0x14, // Ephemeris
+    ];
+
+    const type = rawSirfPacket[4];
+    const typeHex = `0x${type.toString(16).padStart(2, "0").toUpperCase()}`;
+
+    // Skip verbose packets (e.g., frequent heartbeats)
+    if (!VERBOSE_PACKETS.includes(type)) {
+      logger.info(`${this.logPrefix} ${direction} ${typeHex}: ${JSON.stringify(parsedPayload)}`);
+    }
   }
 
   /**
@@ -857,15 +869,14 @@ class SentinelService {
       // --- AUTO-ACK LOGIC ---
       // Se ricevo un comando dal server (0x01=Config, 0x10=ExtraData, 0x15=SafePlaces), rispondo subito con ACK (0x02)
       if ([PacketType.PACKET_0x01, PacketType.PACKET_0x10, PacketType.PACKET_0x15].includes(parsed.type)) {
-        logger.debug(`[SENTINEL-CLIENT] Auto-ACKing packet 0x${parsed.type.toString(16).toUpperCase()}`);
         const ackBuffer = PacketWelcomeAck.toBuffer(PacketWelcomeAck.ALL_OK);
         this.sendRaw(ackBuffer).catch((err) => {
-          logger.error(`[SENTINEL-CLIENT] Failed to send auto-ACK: ${err.message}`);
+          logger.error(`${this.logPrefix} Failed to send auto-ACK: ${err.message}`);
         });
       }
 
       // LOG INCOMING (Symmetric with simulator OUTGOING)
-      SirfProtocol.logPacket("INCOMING", rawPacket, parsed.payload);
+      this.logPacket("INCOMING", rawPacket, parsed.payload);
 
       this.events.emit("packet", parsed);
 
@@ -885,7 +896,7 @@ class SentinelService {
 
     await this.simulator.welcome(device);
     await handshakePromise;
-    logger.debug("✓ Handshake completed: Device registered in Sentinel");
+    logger.debug(`${this.logPrefix} Handshake completed: device registered`);
   }
 }
 
