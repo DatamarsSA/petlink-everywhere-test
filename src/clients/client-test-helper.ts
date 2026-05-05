@@ -11,13 +11,12 @@ import {
   OnSubscriptionStatusDocument,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
-import { FilterEnum, UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import { UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
-import { waitFor } from "../helpers/utils.js";
 import { existsSync, mkdirSync } from "fs";
 import { unlinkSync } from "node:fs";
 
@@ -179,55 +178,27 @@ class TestSetupBuilder {
 
     await Promise.all(devicePromises);
 
-    // --- ENRICHMENT: Fetch full technical data from CCT in a single call ---
-    if (this.setup.user && (coreDogStandard || coreDogEvo || coreCatStandard)) {
-      logger.debug(`→ Starting strict enrichment for user ${this.setup.user.id}`);
+    // --- ENRICHMENT: Use hardware data from fixtures (no API calls) ---
+    if (coreDogStandard || coreDogEvo || coreCatStandard) {
+      logger.debug(`→ Enriching devices with hardware data from fixtures`);
 
-      // We wait until Sentinel (async) has populated the firmware version
-      const items = await waitFor(
-        async () => {
-          const res = await petlink.cct.graphqlHttp.authJwt.getDevices({
-            filter: {
-              filterType: FilterEnum.And,
-              customerId: this.setup.user!.id,
-            },
-          });
-          return res.getDevices.items || [];
-        },
-        {
-          timeoutError: "[Setup - getDevices()] CCT enrichment Hardware Data (imei,iccid,firmware) failed: firmware data not ready (Sentinel lag?)",
-          isReady: (currentItems) => {
-            const devicesToEnrich = [coreDogStandard, coreDogEvo, coreCatStandard].filter((d): d is PetlinkGps => !!d);
-
-            // Check if ALL devices have valid firmware (not "N/A")
-            return devicesToEnrich.every((coreDevice) => {
-              const cctData = currentItems.find((i) => i?.deviceId === coreDevice.id);
-              // Firmware is "N/A" initially until Sentinel updates lastKnownStatus
-              return cctData && cctData.imei && cctData.iccid && cctData.firmware && cctData.firmware !== "N/A";
-            });
-          },
-        },
-      );
-
-      // Enrich Core devices with hardware data from CCT
-      const enrich = (coreDevice: PetlinkGps): EnrichedDevice => {
-        const cctData = items.find((i) => i?.deviceId === coreDevice.id);
-
-        if (!cctData || !cctData.imei || !cctData.iccid || !cctData.firmware) {
-          throw new Error(`[Setup] CRITICAL: Device ${coreDevice.serialNumber} missing technical data in CCT`);
+      const enrich = (coreDevice: PetlinkGps, deviceType: 'DOG' | 'CAT' | 'EVO'): EnrichedDevice => {
+        const fixture = (fxt.current.devices as any)[deviceType];
+        if (!fixture || !fixture.imei || !fixture.iccid || !fixture.firmware) {
+          throw new Error(`[Setup] CRITICAL: Missing hardware data in fixtures for device type ${deviceType}`);
         }
 
         return {
           ...coreDevice,
-          imei: cctData.imei,
-          iccid: cctData.iccid,
-          firmware: cctData.firmware,
+          imei: fixture.imei,
+          iccid: fixture.iccid,
+          firmware: fixture.firmware,
         };
       };
 
-      if (coreDogStandard) this.setup.devices.dogStandard = enrich(coreDogStandard);
-      if (coreDogEvo) this.setup.devices.dogEvo = enrich(coreDogEvo);
-      if (coreCatStandard) this.setup.devices.catStandard = enrich(coreCatStandard);
+      if (coreDogStandard) this.setup.devices.dogStandard = enrich(coreDogStandard, 'DOG');
+      if (coreDogEvo) this.setup.devices.dogEvo = enrich(coreDogEvo, 'EVO');
+      if (coreCatStandard) this.setup.devices.catStandard = enrich(coreCatStandard, 'CAT');
     }
 
     // Acquista subscription se richiesto
