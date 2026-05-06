@@ -214,7 +214,6 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to view Device Subscriptions", async () => {
-      // GetSubscriptions - usando endpoint CCT
       const subResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
         deviceId: device.id,
       });

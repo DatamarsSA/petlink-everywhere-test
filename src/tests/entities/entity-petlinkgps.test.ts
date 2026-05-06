@@ -18,7 +18,6 @@ import {
   TicketStatus,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { logger } from "../../config/logger.js";
-import { PacketType } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 
 describe("PetlinkGPS", () => {
   describe("Registration", () => {
@@ -356,7 +355,8 @@ describe("PetlinkGPS", () => {
         productId: oldDevice.id,
       });
       expect(initialHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
-      expect(initialHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(0);
+      const initialReplacementRecord = initialHistory.getReplacementPetlinkGpsHistory.items!.find((item) => item.typeAction === TicketAction.Replacement);
+      expect(initialReplacementRecord).toBeUndefined();
 
       logger.info("→ STEP 2: Simuliamo che l'utente ha comprato un nuovo device esternamente");
       // Il nuovo device serial number deve essere un device disponibile nell'inventario
@@ -376,9 +376,7 @@ describe("PetlinkGPS", () => {
         productId: oldDevice.id,
       });
       expect(finalHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
-      expect(finalHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(1);
-
-      const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items![0];
+      const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items!.find((item) => item.typeAction === TicketAction.Replacement)!;
       expect(replacementRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
       expect(replacementRecord.newSerialNumber).toBe(newSerialNumber);
       expect(replacementRecord.productId).toBe(oldDevice.id);
@@ -407,7 +405,10 @@ describe("PetlinkGPS", () => {
         productId: oldDevice.id,
       });
       expect(initialHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
-      expect(initialHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(0);
+      const initialReplacementRecord = initialHistory.getReplacementPetlinkGpsHistory.items!.find(
+        (item) => item.typeAction === TicketAction.Replacement,
+      );
+      expect(initialReplacementRecord).toBeUndefined();
 
       logger.info("→ STEP 2: CCT operator opens replacement ticket");
       const createIssueResponse = await petlink.cct.graphqlHttp.authJwt.createIssue({
@@ -437,8 +438,7 @@ describe("PetlinkGPS", () => {
         productId: oldDevice.id,
       });
       expect(pendingHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
-      expect(pendingHistory.getReplacementPetlinkGpsHistory.items!.length).toBe(1);
-      const pendingRecord = pendingHistory.getReplacementPetlinkGpsHistory.items![0];
+      const pendingRecord = pendingHistory.getReplacementPetlinkGpsHistory.items!.find((item) => item.typeAction === TicketAction.Replacement)!;
       expect(pendingRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
       expect(pendingRecord.newSerialNumber).toBeNull();
       expect(pendingRecord.petId).toBe(pet.id);
@@ -451,7 +451,7 @@ describe("PetlinkGPS", () => {
         order: { field: "creationDate", order: OrderEnum.Desc },
       });
       expect(issuesResponse.getIssues.code).toBe("200");
-      expect(issuesResponse.getIssues.items?.length || 0).toBeGreaterThanOrEqual(1);
+      expect(issuesResponse.getIssues.items!.length).toBeGreaterThanOrEqual(1);
       const createdIssue = issuesResponse.getIssues.items?.find((issue) => issue?.id === createIssueResponse.createIssue.issue?.id);
       expect(createdIssue).toBeDefined();
 
@@ -470,8 +470,7 @@ describe("PetlinkGPS", () => {
         productId: oldDevice.id,
       });
       expect(finalHistory.getReplacementPetlinkGpsHistory.code).toBe("200");
-      expect(finalHistory.getReplacementPetlinkGpsHistory.items?.length || 0).toBe(1);
-      const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items![0];
+      const replacementRecord = finalHistory.getReplacementPetlinkGpsHistory.items!.find((item) => item.typeAction === TicketAction.Replacement)!;
       expect(replacementRecord.oldSerialNumber).toBe(oldDevice.serialNumber);
       expect(replacementRecord.newSerialNumber).toBe(newSerialNumber);
       expect(replacementRecord.userId).toBe(user.id);
