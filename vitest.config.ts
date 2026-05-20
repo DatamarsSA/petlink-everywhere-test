@@ -14,7 +14,10 @@ export default defineConfig(() => {
       hookTimeout: 180000, // beforeAll/afterAll/beforeEach/afterEach - in milliseconds
 
       // 1) Eseguito PRIMA di ogni file di test
-      setupFiles: ["./src/config/setup-teardown/setup-once-per-file.ts"],
+      setupFiles: [
+        "./src/config/setup-teardown/setup-once-per-file.ts",
+        "./src/config/setup-teardown/custom-matchers.ts",
+      ],
       // 2) Eseguito UNA VOLTA all’inizio; ritorna il teardown UNA VOLTA alla fine
       globalSetup: ["./src/config/setup-teardown/setup-once-per-suite.ts"],
 
