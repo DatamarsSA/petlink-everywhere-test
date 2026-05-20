@@ -47,15 +47,6 @@ type WsClientConfig = {
   jwtProvider: JwtAuthProvider;
 };
 
-type HttpClientConfig<TSdk extends object> = {
-  serviceName: ServiceType;
-  endpoint: string;
-  apiKey: string;
-  jwtProvider: JwtAuthProvider;
-  iamProvider: IamAuthProvider;
-  createSdk: (client: GraphQLClient) => TSdk;
-};
-
 type WsSubscribeFn = <T = any>(
   query: DocumentNode,
   variables: Record<string, any>,
@@ -75,7 +66,6 @@ type GraphQLHttpClient<TSdk extends object> = {
   authJwt: TSdk;
   authIam: TSdk;
   public: TSdk;
-  clearCache: () => void;
 };
 
 enum ServiceType {
@@ -215,377 +205,296 @@ class IamAuthProvider {
 
 // === Protocols ===
 
-const createGraphQlWSClient = (config: WsClientConfig): GraphQLWSClient => {
-  const logPrefix = `[Client-${config.serviceName}]`;
-
-  class WSClient {
-    private authType: AuthType.JWT | AuthType.API_KEY | null = null;
-    private ws: WebSocket | null = null;
-    private isConnected = false;
-    private subscriptions = new Map<
-      string,
-      {
-        callbacks: { next: (data: any) => void; ready: () => Promise<void>; error: (err: any) => void };
-        timeout: NodeJS.Timeout | null;
-      }
-    >();
-    private subscriptionCounter = 0;
-
-    private async ensureConnected(authType: AuthType.JWT | AuthType.API_KEY): Promise<void> {
-      // Controlla se auth è cambiata
-      if (this.ws && this.isConnected) {
-        if (authType === this.authType) {
-          logger.debug(`${logPrefix} WS: Reusing existing connection`);
-          return;
-        }
-
-        // Auth cambiata, chiudi socket esistente
-        logger.debug(`${logPrefix} WS: Auth type changed, reconnecting`);
-        this.disconnect();
-      }
-
-      this.authType = authType;
-
-      const host = new URL(config.endpoint).host;
-      const wsUrl = config.endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
-
-      let tokenOrKey = "";
-      if (authType === AuthType.JWT) {
-        tokenOrKey = config.jwtProvider.getToken();
-      } else {
-        tokenOrKey = config.apiKey;
-      }
-
-      const connectionHeaders =
-        authType === AuthType.JWT
-          ? { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.AUTHORIZATION]: tokenOrKey }
-          : { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.API_KEY]: tokenOrKey };
-
-      const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
-      const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
-      const connectionUrl = `${wsUrl}?header=${headerString}&payload=${payloadString}`;
-
-      this.ws = new WebSocket(connectionUrl, "graphql-ws");
-
-      return new Promise((resolve, reject) => {
-        this.ws!.on("open", () => {
-          logger.debug(`${logPrefix} WS: Connection opened, sending connection_init`);
-          this.ws!.send(JSON.stringify({ type: "connection_init" }));
-        });
-
-        this.ws!.on("message", (data: any) => {
-          const message = JSON.parse(data.toString());
-
-          switch (message.type) {
-            case "connection_ack":
-              this.isConnected = true;
-              logger.debug(`${logPrefix} WS: Connection established`);
-              resolve();
-              break;
-
-            case "data": {
-              const subId = message.id;
-              const sub = this.subscriptions.get(subId);
-              if (sub && message.payload?.data) {
-                sub.callbacks.next({ data: message.payload.data });
-              }
-              break;
-            }
-
-            case "error": {
-              const subId = message.id;
-              const sub = this.subscriptions.get(subId);
-              if (sub) {
-                logger.error(`${logPrefix} WS-SUB: Subscription error`, { subId, errors: message.payload?.errors });
-                sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
-              }
-              break;
-            }
-
-            case "connection_error":
-              logger.error(`${logPrefix} WS: Connection error`, { payload: message.payload });
-              this.isConnected = false;
-              reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
-              break;
-
-            case "start_ack": {
-              const subId = message.id;
-              const sub = this.subscriptions.get(subId);
-              logger.debug(`${logPrefix} WS-SUB: Subscription acknowledged`, { id: subId });
-              if (sub) {
-                sub.callbacks.ready();
-              }
-              break;
-            }
-
-            case "ka":
-              logger.debug(`${logPrefix} WS: Keep-alive received`);
-              break;
-
-            default:
-              logger.debug(`${logPrefix} WS: Unknown message type`, { type: message.type });
-              break;
-          }
-        });
-
-        this.ws!.on("error", (error: any) => {
-          logger.error(`${logPrefix} WS: Error`, { error: error.message });
-          this.isConnected = false;
-          reject(error);
-        });
-
-        this.ws!.on("close", (code: number, reason: Buffer) => {
-          logger.debug(`${logPrefix} WS: Connection closed`, { code, reason: reason.toString() });
-          this.isConnected = false;
-          this.subscriptions.clear();
-        });
-      });
+class WSClient {
+  private authType: AuthType.JWT | AuthType.API_KEY | null = null;
+  private ws: WebSocket | null = null;
+  private isConnected = false;
+  private subscriptions = new Map<
+    string,
+    {
+      callbacks: { next: (data: any) => void; ready: () => Promise<void>; error: (err: any) => void };
+      timeout: NodeJS.Timeout | null;
     }
+  >();
+  private subscriptionCounter = 0;
+  private readonly logPrefix: string;
 
-    async subscribeUntil<T = any>(
-      authType: AuthType.JWT | AuthType.API_KEY,
-      query: DocumentNode,
-      variables: Record<string, any>,
-      timeoutError: string,
-      filter?: (data: any) => boolean,
-      onReady?: () => Promise<void>,
-      timeoutMs: number = fxt.socket.timeoutMs,
-    ): Promise<T> {
-      return new Promise<T>(async (resolve, reject) => {
-        await this.ensureConnected(authType);
-
-        const subId = (++this.subscriptionCounter).toString();
-        const queryString = print(query);
-        const operationDefinition = query.definitions.find(
-          (def): def is any => def.kind === "OperationDefinition" && def.operation === "subscription",
-        );
-        const operationName = operationDefinition?.name?.value || "unknown";
-
-        const host = new URL(config.endpoint).host;
-
-        let timeout: NodeJS.Timeout | null = null;
-        let isCleanedUp = false;
-
-        // Cleanup function
-        const cleanup = () => {
-          if (isCleanedUp) return;
-          isCleanedUp = true;
-
-          if (timeout) {
-            clearTimeout(timeout);
-            timeout = null;
-          }
-          this.subscriptions.delete(subId);
-
-          if (this.isConnected) {
-            this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
-          }
-          logger.debug(`${logPrefix} WS-SUB: Auto-unsubscribed`, { subId });
-        };
-
-        // Setup timeout (mandatory)
-        timeout = setTimeout(() => {
-          logger.error(`${logPrefix} WS-SUB: Timeout`, { subId, timeoutMs, timeoutError });
-          cleanup();
-          reject(new Error(timeoutError));
-        }, timeoutMs);
-
-        // Setup callbacks
-        this.subscriptions.set(subId, {
-          callbacks: {
-            next: (event: any) => {
-              const data = event.data;
-              const isMatch = filter ? filter(data) : true;
-              const opName = operationName || "Subscription";
-
-              if (isMatch) {
-                logger.info(`${logPrefix} WS-EVT: ${opName} filter MATCHED! Received ${JSON.stringify(data)}`);
-                cleanup();
-                resolve(data);
-              } else {
-                logger.info(`${logPrefix} WS-EVT: ${opName} filter MISMATCH! Received ${JSON.stringify(data)}, still waiting..`);
-              }
-            },
-            ready: async () => {
-              if (onReady) {
-                try {
-                  // Delay for AppSync in pipeline (stabilization Realtime Gateway & GraphQL Runner)
-                  await new Promise((resolve) => setTimeout(resolve, 2000));
-                  await onReady();
-                } catch (err: any) {
-                  logger.error(`${logPrefix} WS-SUB: Error in onReady callback`, { error: err.message });
-                  cleanup();
-                  reject(err);
-                }
-              }
-            },
-            error: (err: any) => {
-              cleanup();
-              reject(err);
-            },
-          },
-          timeout,
-        });
-
-        // Send subscription payload
-        const authPayload =
-          authType === AuthType.JWT
-            ? {
-                [HTTP_HEADERS.HOST]: host,
-                [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-                  operationName,
-                  variables,
-                  authToken: config.jwtProvider.getToken(),
-                }),
-              }
-            : {
-                [HTTP_HEADERS.HOST]: host,
-                [HTTP_HEADERS.API_KEY]: config.apiKey,
-              };
-
-        const subscriptionPayload = {
-          id: subId,
-          type: "start",
-          payload: {
-            data: JSON.stringify({ query: queryString, variables }),
-            extensions: {
-              authorization: authPayload,
-            },
-          },
-        };
-
-        this.ws!.send(JSON.stringify(subscriptionPayload));
-        logger.debug(`${logPrefix} WS-SUB: Subscription started`, { subId, operationName, variables });
-      });
-    }
-
-    disconnect(): void {
-      if (this.ws) {
-        this.subscriptions.forEach((sub) => {
-          if (sub.timeout) {
-            clearTimeout(sub.timeout);
-          }
-        });
-        this.subscriptions.clear();
-
-        this.ws.close();
-        this.ws = null;
-        this.isConnected = false;
-
-        logger.debug(`${logPrefix} WS: Disconnected (all subscriptions closed)`);
-      }
-    }
+  constructor(private readonly config: WsClientConfig) {
+    this.logPrefix = `[Client-${config.serviceName}]`;
   }
 
-  const client = new WSClient();
+  private async ensureConnected(authType: AuthType.JWT | AuthType.API_KEY): Promise<void> {
+    // Controlla se auth è cambiata
+    if (this.ws && this.isConnected) {
+      if (authType === this.authType) {
+        logger.debug(`${this.logPrefix} WS: Reusing existing connection`);
+        return;
+      }
 
-  const makeSubscriber = (authType: AuthType.JWT | AuthType.API_KEY) => ({
-    subscribeUntil: <T = any>(...args: Parameters<WsSubscribeFn>) => client.subscribeUntil<T>(authType, ...args),
+      // Auth cambiata, chiudi socket esistente
+      logger.debug(`${this.logPrefix} WS: Auth type changed, reconnecting`);
+      this.disconnect();
+    }
+
+    this.authType = authType;
+
+    const host = new URL(this.config.endpoint).host;
+    const wsUrl = this.config.endpoint.replace("https://", "wss://").replace("appsync-api", "appsync-realtime-api");
+
+    let tokenOrKey = "";
+    if (authType === AuthType.JWT) {
+      tokenOrKey = this.config.jwtProvider.getToken();
+    } else {
+      tokenOrKey = this.config.apiKey;
+    }
+
+    const connectionHeaders =
+      authType === AuthType.JWT
+        ? { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.AUTHORIZATION]: tokenOrKey }
+        : { [HTTP_HEADERS.HOST]: host, [HTTP_HEADERS.API_KEY]: tokenOrKey };
+
+    const headerString = Buffer.from(JSON.stringify(connectionHeaders)).toString("base64");
+    const payloadString = Buffer.from(JSON.stringify({})).toString("base64");
+    const connectionUrl = `${wsUrl}?header=${headerString}&payload=${payloadString}`;
+
+    this.ws = new WebSocket(connectionUrl, "graphql-ws");
+
+    return new Promise((resolve, reject) => {
+      this.ws!.on("open", () => {
+        logger.debug(`${this.logPrefix} WS: Connection opened, sending connection_init`);
+        this.ws!.send(JSON.stringify({ type: "connection_init" }));
+      });
+
+      this.ws!.on("message", (data: any) => {
+        const message = JSON.parse(data.toString());
+
+        switch (message.type) {
+          case "connection_ack":
+            this.isConnected = true;
+            logger.debug(`${this.logPrefix} WS: Connection established`);
+            resolve();
+            break;
+
+          case "data": {
+            const subId = message.id;
+            const sub = this.subscriptions.get(subId);
+            if (sub && message.payload?.data) {
+              sub.callbacks.next({ data: message.payload.data });
+            }
+            break;
+          }
+
+          case "error": {
+            const subId = message.id;
+            const sub = this.subscriptions.get(subId);
+            if (sub) {
+              logger.error(`${this.logPrefix} WS-SUB: Subscription error`, { subId, errors: message.payload?.errors });
+              sub.callbacks.error(new Error(message.payload?.errors?.[0]?.message || "Unknown subscription error"));
+            }
+            break;
+          }
+
+          case "connection_error":
+            logger.error(`${this.logPrefix} WS: Connection error`, { payload: message.payload });
+            this.isConnected = false;
+            reject(new Error(`Connection error: ${JSON.stringify(message.payload)}`));
+            break;
+
+          case "start_ack": {
+            const subId = message.id;
+            const sub = this.subscriptions.get(subId);
+            logger.debug(`${this.logPrefix} WS-SUB: Subscription acknowledged`, { id: subId });
+            if (sub) {
+              sub.callbacks.ready();
+            }
+            break;
+          }
+
+          case "ka":
+            logger.debug(`${this.logPrefix} WS: Keep-alive received`);
+            break;
+
+          default:
+            logger.debug(`${this.logPrefix} WS: Unknown message type`, { type: message.type });
+            break;
+        }
+      });
+
+      this.ws!.on("error", (error: any) => {
+        logger.error(`${this.logPrefix} WS: Error`, { error: error.message });
+        this.isConnected = false;
+        reject(error);
+      });
+
+      this.ws!.on("close", (code: number, reason: Buffer) => {
+        logger.debug(`${this.logPrefix} WS: Connection closed`, { code, reason: reason.toString() });
+        this.isConnected = false;
+        this.subscriptions.clear();
+      });
+    });
+  }
+
+  async subscribeUntil<T = any>(
+    authType: AuthType.JWT | AuthType.API_KEY,
+    query: DocumentNode,
+    variables: Record<string, any>,
+    timeoutError: string,
+    filter?: (data: any) => boolean,
+    onReady?: () => Promise<void>,
+    timeoutMs: number = fxt.socket.timeoutMs,
+  ): Promise<T> {
+    await this.ensureConnected(authType);
+
+    return new Promise<T>((resolve, reject) => {
+      const subId = (++this.subscriptionCounter).toString();
+      const queryString = print(query);
+      const operationDefinition = query.definitions.find(
+        (def): def is any => def.kind === "OperationDefinition" && def.operation === "subscription",
+      );
+      const operationName = operationDefinition?.name?.value || "unknown";
+
+      const host = new URL(this.config.endpoint).host;
+
+      let timeout: NodeJS.Timeout | null = null;
+      let isCleanedUp = false;
+
+      // Cleanup function
+      const cleanup = () => {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
+
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        this.subscriptions.delete(subId);
+
+        if (this.isConnected) {
+          this.ws!.send(JSON.stringify({ type: "stop", id: subId }));
+        }
+        logger.debug(`${this.logPrefix} WS-SUB: Auto-unsubscribed`, { subId });
+      };
+
+      // Setup timeout (mandatory)
+      timeout = setTimeout(() => {
+        logger.error(`${this.logPrefix} WS-SUB: Timeout`, { subId, timeoutMs, timeoutError });
+        cleanup();
+        reject(new Error(timeoutError));
+      }, timeoutMs);
+
+      // Setup callbacks
+      this.subscriptions.set(subId, {
+        callbacks: {
+          next: (event: any) => {
+            const data = event.data;
+            const isMatch = filter ? filter(data) : true;
+            const opName = operationName || "Subscription";
+
+            if (isMatch) {
+              logger.info(`${this.logPrefix} WS-EVT: ${opName} filter MATCHED! Received ${JSON.stringify(data)}`);
+              cleanup();
+              resolve(data);
+            } else {
+              logger.info(`${this.logPrefix} WS-EVT: ${opName} filter MISMATCH! Received ${JSON.stringify(data)}, still waiting..`);
+            }
+          },
+          ready: async () => {
+            if (onReady) {
+              try {
+                // Delay for AppSync in pipeline (stabilization Realtime Gateway & GraphQL Runner)
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                await onReady();
+              } catch (err: any) {
+                logger.error(`${this.logPrefix} WS-SUB: Error in onReady callback`, { error: err.message });
+                cleanup();
+                reject(err);
+              }
+            }
+          },
+          error: (err: any) => {
+            cleanup();
+            reject(err);
+          },
+        },
+        timeout,
+      });
+
+      // Send subscription payload
+      const authPayload =
+        authType === AuthType.JWT
+          ? {
+              [HTTP_HEADERS.HOST]: host,
+              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+                operationName,
+                variables,
+                authToken: this.config.jwtProvider.getToken(),
+              }),
+            }
+          : {
+              [HTTP_HEADERS.HOST]: host,
+              [HTTP_HEADERS.API_KEY]: this.config.apiKey,
+            };
+
+      const subscriptionPayload = {
+        id: subId,
+        type: "start",
+        payload: {
+          data: JSON.stringify({ query: queryString, variables }),
+          extensions: {
+            authorization: authPayload,
+          },
+        },
+      };
+
+      this.ws!.send(JSON.stringify(subscriptionPayload));
+      logger.debug(`${this.logPrefix} WS-SUB: Subscription started`, { subId, operationName, variables });
+    });
+  }
+
+  disconnect(): void {
+    if (this.ws) {
+      this.subscriptions.forEach((sub) => {
+        if (sub.timeout) {
+          clearTimeout(sub.timeout);
+        }
+      });
+      this.subscriptions.clear();
+
+      this.ws.close();
+      this.ws = null;
+      this.isConnected = false;
+
+      logger.debug(`${this.logPrefix} WS: Disconnected (all subscriptions closed)`);
+    }
+  }
+}
+
+const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, authType: AuthType): TSdk => {
+  const logPrefix = `[Client-${serviceName}]`;
+  return new Proxy(sdk, {
+    get: (target, prop: string | symbol) => async (...args: any[]) => {
+      const startTime = performance.now();
+      logger.info(`${logPrefix} GRAPHQL: -> ${String(prop)}`, args);
+      try {
+        const response = await (target as any)[prop](...args);
+        const duration = (performance.now() - startTime).toFixed(0);
+        logger.info(`${logPrefix} GRAPHQL: <- ${String(prop)} SUCCESS (duration ${duration}ms)`, response);
+        return response;
+      } catch (error: any) {
+        logger.error(`${logPrefix} GRAPHQL: <- ${String(prop)} ERROR`, error);
+        throw error;
+      } finally {
+        const duration = Math.round(performance.now() - startTime);
+        performanceTracker.recordPerformance({
+          service: serviceName,
+          protocol: "graphql",
+          authType,
+          operation: String(prop),
+          duration,
+        });
+      }
+    },
   });
-
-  return {
-    authJwt: makeSubscriber(AuthType.JWT),
-    authApiKey: makeSubscriber(AuthType.API_KEY),
-    disconnect: () => client.disconnect(),
-  };
-};
-
-const createGraphQlHttpClient = <TSdk extends object>(config: HttpClientConfig<TSdk>): GraphQLHttpClient<TSdk> => {
-  const logPrefix = `[Client-${config.serviceName}]`;
-  const cachedSdks = new Map<string, TSdk>();
-
-  const createAuthFacet = (authType: AuthType): TSdk => {
-    return new Proxy({} as TSdk, {
-      get: (_target, prop: string | symbol) => {
-        return async (...args: any[]) => {
-          let client: TSdk;
-
-          switch (authType) {
-            case AuthType.IAM: {
-              const cacheKey = `${config.serviceName}:iam:static`;
-              if (!cachedSdks.has(cacheKey)) {
-                const httpClient = new GraphQLClient(config.endpoint, {
-                  requestMiddleware: async (request) => {
-                    const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
-                    const signedHeaders = await config.iamProvider.signRequest(config.endpoint, body);
-                    return {
-                      ...request,
-                      headers: { ...request.headers, ...signedHeaders },
-                    };
-                  },
-                });
-                cachedSdks.set(cacheKey, config.createSdk(httpClient));
-              }
-              client = cachedSdks.get(cacheKey)!;
-              break;
-            }
-            case AuthType.JWT: {
-              const cacheKey = `${config.serviceName}:jwt`;
-              if (!cachedSdks.has(cacheKey)) {
-                const httpClient = new GraphQLClient(config.endpoint, {
-                  requestMiddleware: async (request) => ({
-                    ...request,
-                    headers: {
-                      ...request.headers,
-                      [HTTP_HEADERS.AUTHORIZATION]: config.jwtProvider.getToken(),
-                    },
-                  }),
-                });
-                cachedSdks.set(cacheKey, config.createSdk(httpClient));
-              }
-              client = cachedSdks.get(cacheKey)!;
-              break;
-            }
-            case AuthType.API_KEY: {
-              if (!config.apiKey) {
-                throw new Error(`[${config.serviceName}] API Key not found`);
-              }
-              const token = config.apiKey;
-              const cacheKey = `${config.serviceName}:apiKey:${token}`;
-
-              if (!cachedSdks.has(cacheKey)) {
-                const httpClient = new GraphQLClient(config.endpoint, {
-                  headers: { [HTTP_HEADERS.API_KEY]: token },
-                });
-                cachedSdks.set(cacheKey, config.createSdk(httpClient));
-              }
-              client = cachedSdks.get(cacheKey)!;
-              break;
-            }
-          }
-
-          const startTime = performance.now();
-          logger.info(`${logPrefix} GRAPHQL: -> ${String(prop)}`, args);
-
-          try {
-            const response = await (client as any)[prop](...args);
-            const duration = (performance.now() - startTime).toFixed(0);
-            logger.info(`${logPrefix} GRAPHQL: <- ${String(prop)} SUCCESS (duration ${duration}ms)`, response);
-            return response;
-          } catch (error: any) {
-            logger.error(`${logPrefix} GRAPHQL: <- ${String(prop)} ERROR`, error);
-            throw error;
-          } finally {
-            const duration = Math.round(performance.now() - startTime);
-            performanceTracker.recordPerformance({
-              service: config.serviceName,
-              protocol: "graphql",
-              authType,
-              operation: String(prop),
-              duration,
-            });
-          }
-        };
-      },
-    }) as TSdk;
-  };
-
-  return {
-    authJwt: createAuthFacet(AuthType.JWT),
-    authIam: createAuthFacet(AuthType.IAM),
-    public: createAuthFacet(AuthType.API_KEY),
-    clearCache: () => cachedSdks.clear(),
-  };
 };
 
 // === Services ===
@@ -599,25 +508,52 @@ class CoreService {
   constructor() {
     const endpoint = process.env.CORE_GRAPHQL_API_URL!;
     const apiKey = process.env.CORE_GRAPHQL_API_KEY!;
+    const service = ServiceType.CORE;
 
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CORE, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
+    this.jwtProvider = new JwtAuthProvider(service, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
     const iamProvider = new IamAuthProvider(process.env.AWS_CORE_ACCESS_KEY_ID!, process.env.AWS_CORE_SECRET_ACCESS_KEY!);
 
-    this.graphqlHttp = createGraphQlHttpClient<CoreSdk>({
-      serviceName: ServiceType.CORE,
-      endpoint,
-      apiKey,
-      jwtProvider: this.jwtProvider,
-      iamProvider,
-      createSdk: getCoreSdk,
+    // HTTP: 3 GraphQL clients pre-built, one per auth type. Each owns its auth wiring; logging is added on top.
+    const jwtClient = new GraphQLClient(endpoint, {
+      requestMiddleware: async (request) => ({
+        ...request,
+        headers: {
+          ...request.headers,
+          [HTTP_HEADERS.AUTHORIZATION]: this.jwtProvider.getToken(),
+        },
+      }),
+    });
+    const iamClient = new GraphQLClient(endpoint, {
+      requestMiddleware: async (request) => {
+        const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+        const signedHeaders = await iamProvider.signRequest(endpoint, body);
+        return {
+          ...request,
+          headers: { ...request.headers, ...signedHeaders },
+        };
+      },
+    });
+    const apiKeyClient = new GraphQLClient(endpoint, {
+      headers: { [HTTP_HEADERS.API_KEY]: apiKey },
     });
 
-    this.graphqlWS = createGraphQlWSClient({
-      serviceName: ServiceType.CORE,
-      endpoint,
-      apiKey,
-      jwtProvider: this.jwtProvider,
-    });
+    this.graphqlHttp = {
+      authJwt: withLogging(getCoreSdk(jwtClient), service, AuthType.JWT),
+      authIam: withLogging(getCoreSdk(iamClient), service, AuthType.IAM),
+      public: withLogging(getCoreSdk(apiKeyClient), service, AuthType.API_KEY),
+    };
+
+    // WebSocket: single connection, per-auth facets that just bind authType
+    const ws = new WSClient({ serviceName: service, endpoint, apiKey, jwtProvider: this.jwtProvider });
+    this.graphqlWS = {
+      authJwt: {
+        subscribeUntil: <T = any>(...args: Parameters<WsSubscribeFn>) => ws.subscribeUntil<T>(AuthType.JWT, ...args),
+      },
+      authApiKey: {
+        subscribeUntil: <T = any>(...args: Parameters<WsSubscribeFn>) => ws.subscribeUntil<T>(AuthType.API_KEY, ...args),
+      },
+      disconnect: () => ws.disconnect(),
+    };
   }
 
   // Login methods
@@ -629,10 +565,10 @@ class CoreService {
     return this.jwtProvider.authenticate(phone, password, "phone_number");
   }
 
-  // Cache cleanup
+  // Cache cleanup: clears the JWT in memory. The next request via authJwt will throw
+  // until a new login fills the token. IAM / API_KEY clients use static creds and are unaffected.
   clearCache() {
     this.jwtProvider.clear();
-    this.graphqlHttp.clearCache();
   }
 }
 
@@ -644,18 +580,40 @@ class CctService {
   constructor() {
     const endpoint = process.env.CCT_GRAPHQL_API_URL!;
     const apiKey = process.env.CCT_GRAPHQL_API_KEY!;
+    const service = ServiceType.CCT;
 
-    this.jwtProvider = new JwtAuthProvider(ServiceType.CCT, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
+    this.jwtProvider = new JwtAuthProvider(service, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_FE_CCT!);
     const iamProvider = new IamAuthProvider(process.env.AWS_CCT_ACCESS_KEY_ID!, process.env.AWS_CCT_SECRET_ACCESS_KEY!);
 
-    this.graphqlHttp = createGraphQlHttpClient<CctSdk>({
-      serviceName: ServiceType.CCT,
-      endpoint,
-      apiKey,
-      jwtProvider: this.jwtProvider,
-      iamProvider,
-      createSdk: getCctSdk,
+    // HTTP: 3 GraphQL clients pre-built, one per auth type. Each owns its auth wiring; logging is added on top.
+    const jwtClient = new GraphQLClient(endpoint, {
+      requestMiddleware: async (request) => ({
+        ...request,
+        headers: {
+          ...request.headers,
+          [HTTP_HEADERS.AUTHORIZATION]: this.jwtProvider.getToken(),
+        },
+      }),
     });
+    const iamClient = new GraphQLClient(endpoint, {
+      requestMiddleware: async (request) => {
+        const body = typeof request.body === "string" ? request.body : JSON.stringify(request.body) || "";
+        const signedHeaders = await iamProvider.signRequest(endpoint, body);
+        return {
+          ...request,
+          headers: { ...request.headers, ...signedHeaders },
+        };
+      },
+    });
+    const apiKeyClient = new GraphQLClient(endpoint, {
+      headers: { [HTTP_HEADERS.API_KEY]: apiKey },
+    });
+
+    this.graphqlHttp = {
+      authJwt: withLogging(getCctSdk(jwtClient), service, AuthType.JWT),
+      authIam: withLogging(getCctSdk(iamClient), service, AuthType.IAM),
+      public: withLogging(getCctSdk(apiKeyClient), service, AuthType.API_KEY),
+    };
   }
 
   loginWithEmail(email: string, password: string) {
@@ -664,7 +622,6 @@ class CctService {
 
   clearCache() {
     this.jwtProvider.clear();
-    this.graphqlHttp.clearCache();
   }
 }
 
