@@ -2,15 +2,16 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import { fxt } from "../../fixtures/fixtures.js";
-import { assertDatesWithinTolerance, expectPetProtBoughtMatchesPetProtToBuy, verifySubscriptionMatchesPurchasedPlan } from "../../helpers/vitest.js";
 import { logger } from "../../config/logger.js";
 import {
   UtilityTestTypeEnum,
   LanguageId,
   CancelReasonCodeEnum,
   OnSubscriptionStatusDocument,
+  SubscriptionStatusEnum,
+  PaymentStatusTypeEnum,
+  PetProtectionStatus,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { SubscriptionStatusEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { waitFor } from "../../helpers/utils.js";
 
 describe("DEFAULT", () => {
@@ -258,9 +259,21 @@ describe("DEFAULT", () => {
         paymentStatus: subscription.paymentStatus,
       });
 
-      verifySubscriptionMatchesPurchasedPlan(subscription, choosenPlan, {
-        expectedStatus: "active",
-        expectedPaymentStatus: "SUCCEEDED",
+      expect(subscription, "Subscription should match purchased plan").toMatchObject({
+        currencyCode: choosenPlan.currencyCode,
+        billingPeriod: choosenPlan.period,
+        billingPeriodUnit: choosenPlan.periodUnit,
+        status: SubscriptionStatusEnum.Active,
+        paymentStatus: PaymentStatusTypeEnum.Succeeded,
+      });
+      expect(subscription.subscriptionItems, "Should have 1 subscription item").toHaveLength(1);
+      const planItem = subscription.subscriptionItems.find((i: any) => i.itemType === "plan");
+      expect(planItem, "Plan item should match purchased pricing").toMatchObject({
+        itemPriceId: choosenPlan.id,
+        itemId: choosenPlan.itemId,
+        amount: choosenPlan.price,
+        itemType: "plan",
+        quantity: 1,
       });
     });
 
@@ -294,7 +307,7 @@ describe("DEFAULT", () => {
         {
           isReady: (result) => {
             const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
           },
           timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" in ${fxt.polling.timeoutMs}ms`,
         },
@@ -308,10 +321,29 @@ describe("DEFAULT", () => {
       });
 
       // Verify subscription with addon matches the purchased plan
-      verifySubscriptionMatchesPurchasedPlan(subscription, chosenPlan, {
-        expectedStatus: "active",
-        expectedPaymentStatus: "SUCCEEDED",
-        addonToBuy: chosenPlan.addon,
+      expect(subscription, "Subscription should match purchased plan").toMatchObject({
+        currencyCode: chosenPlan.currencyCode,
+        billingPeriod: chosenPlan.period,
+        billingPeriodUnit: chosenPlan.periodUnit,
+        status: SubscriptionStatusEnum.Active,
+        paymentStatus: PaymentStatusTypeEnum.Succeeded,
+      });
+      expect(subscription.subscriptionItems, "Should have 2 subscription items (plan + addon)").toHaveLength(2);
+      const planItem = subscription.subscriptionItems.find((i: any) => i.itemType === "plan");
+      expect(planItem, "Plan item should match purchased pricing").toMatchObject({
+        itemPriceId: chosenPlan.id,
+        itemId: chosenPlan.itemId,
+        amount: chosenPlan.price,
+        itemType: "plan",
+        quantity: 1,
+      });
+      const addonItem = subscription.subscriptionItems.find((i: any) => i.itemType === "addon");
+      expect(addonItem, "Addon item should match purchased addon pricing").toMatchObject({
+        itemPriceId: chosenPlan.addon.id,
+        itemId: chosenPlan.addon.itemId,
+        amount: chosenPlan.addon.price,
+        itemType: "addon",
+        quantity: 1,
       });
     });
 
@@ -334,9 +366,9 @@ describe("DEFAULT", () => {
         waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
           isReady: (result) => {
             const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
           },
-          timeoutError: `Timeout: Subscription status did not change to "active"`,
+          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}"`,
         }),
         waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.pets.dog!.id! }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
@@ -356,16 +388,134 @@ describe("DEFAULT", () => {
       ).toBe("200");
 
       // Verify subscription matches plan
-      verifySubscriptionMatchesPurchasedPlan(sub, chosenPlan, {
-        expectedStatus: "active",
-        expectedPaymentStatus: "SUCCEEDED",
+      expect(sub, "Subscription should match purchased plan").toMatchObject({
+        currencyCode: chosenPlan.currencyCode,
+        billingPeriod: chosenPlan.period,
+        billingPeriodUnit: chosenPlan.periodUnit,
+        status: SubscriptionStatusEnum.Active,
+        paymentStatus: PaymentStatusTypeEnum.Succeeded,
+      });
+      expect(sub.subscriptionItems, "Should have 1 subscription item").toHaveLength(1);
+      const planItem = sub.subscriptionItems.find((i: any) => i.itemType === "plan");
+      expect(planItem, "Plan item should match purchased pricing").toMatchObject({
+        itemPriceId: chosenPlan.id,
+        itemId: chosenPlan.itemId,
+        amount: chosenPlan.price,
+        itemType: "plan",
+        quantity: 1,
       });
 
       // Verify pet protection matches plan
-      expectPetProtBoughtMatchesPetProtToBuy(petProtection, chosenPetProtection, {
-        expectedPetId: pet.id,
-        expectedUserId: setup.user!.id,
-        expectedStatus: "OPEN",
+      expect(petProtection, "Pet protection should match purchased plan").toMatchObject({
+        name: chosenPetProtection.externalName,
+        price: chosenPetProtection.price,
+        currencyCode: chosenPetProtection.currencyCode,
+        period: chosenPetProtection.period,
+        periodUnit: chosenPetProtection.periodUnit,
+        petId: pet.id,
+        userId: setup.user!.id,
+        status: PetProtectionStatus.Open,
+      });
+    });
+
+    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY sub + DEVICE-protection + PET-protection", async () => {
+      // select plan with device addon
+      const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
+      expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
+
+      // select a pet protection plan for the pet
+      const chosenPetProtection = availablePetProtectionForThisPet?.[0]?.pricings?.[0];
+      expect(chosenPetProtection, "Should find a pet protection pricing for this pet").toBeDefined();
+
+      logger.info("Testing subscription purchase with device addon + pet protection", {
+        planId: chosenPlan.id,
+        addonId: chosenPlan.addon.id,
+        petProtectionId: chosenPetProtection.id,
+        planPrice: chosenPlan.price,
+        addonPrice: chosenPlan.addon.price,
+        petProtectionPrice: chosenPetProtection.price,
+      });
+
+      // Purchase: plan + addon + pet protection (price ids array)
+      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+          phone: setup.user!.phone,
+          productId: setup.devices.dogStandard!.id,
+          priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
+          card: fxt.current.card.valid,
+        },
+      });
+
+      expect(
+        purchaseResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+      ).toBe("200");
+
+      // Wait for both subscription active and petProtection assignment
+      const [subscriptionResult, petProtectionResult] = await Promise.all([
+        waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
+          isReady: (result) => {
+            const sub = result.getSubscriptionByProductId.subscription;
+            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
+          },
+          timeoutError: `Timeout: Subscription not active with ${PaymentStatusTypeEnum.Succeeded} payment`,
+        }),
+        waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.pets.dog!.id! }), {
+          isReady: (result) => result.getPet.pet!.petProtectionId != null,
+          timeoutError: `Timeout: petProtectionId not assigned to pet`,
+        }),
+      ]);
+
+      const subscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+      const pet = petProtectionResult.getPet.pet!;
+
+      logger.info("Combined subscription + pet protection activated", {
+        subscriptionId: subscription.id,
+        itemsCount: subscription.subscriptionItems.length,
+        petProtectionId: pet.petProtectionId,
+      });
+
+      // Verify subscription with addon matches plan
+      expect(subscription, "Subscription should match purchased plan").toMatchObject({
+        currencyCode: chosenPlan.currencyCode,
+        billingPeriod: chosenPlan.period,
+        billingPeriodUnit: chosenPlan.periodUnit,
+        status: SubscriptionStatusEnum.Active,
+        paymentStatus: PaymentStatusTypeEnum.Succeeded,
+      });
+      expect(subscription.subscriptionItems, "Should have 2 subscription items (plan + addon)").toHaveLength(2);
+      const planItem = subscription.subscriptionItems.find((i: any) => i.itemType === "plan");
+      expect(planItem, "Plan item should match purchased pricing").toMatchObject({
+        itemPriceId: chosenPlan.id,
+        itemId: chosenPlan.itemId,
+        amount: chosenPlan.price,
+        itemType: "plan",
+        quantity: 1,
+      });
+      const addonItem = subscription.subscriptionItems.find((i: any) => i.itemType === "addon");
+      expect(addonItem, "Addon item should match purchased addon pricing").toMatchObject({
+        itemPriceId: chosenPlan.addon.id,
+        itemId: chosenPlan.addon.itemId,
+        amount: chosenPlan.addon.price,
+        itemType: "addon",
+        quantity: 1,
+      });
+
+      // Verify pet protection assigned and matches plan
+      expect(pet.petProtectionId, "Pet should have a petProtectionId assigned").toBeDefined();
+      const petProtectionResponse = await petlink.core.graphqlHttp.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
+      const petProtection = petProtectionResponse.getPetProtection.petProtection!;
+
+      expect(petProtection, "Pet protection should match purchased plan").toMatchObject({
+        name: chosenPetProtection.externalName,
+        price: chosenPetProtection.price,
+        currencyCode: chosenPetProtection.currencyCode,
+        period: chosenPetProtection.period,
+        periodUnit: chosenPetProtection.periodUnit,
+        petId: pet.id,
+        userId: setup.user!.id,
+        status: PetProtectionStatus.Open,
       });
     });
 
@@ -396,15 +546,15 @@ describe("DEFAULT", () => {
         {
           isReady: (result) => {
             const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
           },
-          timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
+          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" with ${PaymentStatusTypeEnum.Succeeded} payment`,
         },
       );
 
       const activeSub = activeSubscription.getSubscriptionByProductId.subscription!;
-      expect(activeSub.status, "Subscription should be active before purchasing pet protection").toBe("active");
-      expect(activeSub.paymentStatus, "Payment status should be SUCCEEDED before purchasing pet protection").toBe("SUCCEEDED");
+      expect(activeSub.status, "Subscription should be active before purchasing pet protection").toBe(SubscriptionStatusEnum.Active);
+      expect(activeSub.paymentStatus, "Payment status should be SUCCEEDED before purchasing pet protection").toBe(PaymentStatusTypeEnum.Succeeded);
 
       // STEP 4: Purchase pet protection alone
       logger.info(`bought PET-PROTECTION for device ${setup.devices.dogStandard!.id}, start to wait to become active`);
@@ -476,10 +626,15 @@ describe("DEFAULT", () => {
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
 
       // Verify pet protection matches plan
-      expectPetProtBoughtMatchesPetProtToBuy(petProtection, petProtectionPlan, {
-        expectedPetId: pet.id,
-        expectedUserId: setup.user!.id,
-        expectedStatus: "OPEN",
+      expect(petProtection, "Pet protection should match purchased plan").toMatchObject({
+        name: petProtectionPlan.externalName,
+        price: petProtectionPlan.price,
+        currencyCode: petProtectionPlan.currencyCode,
+        period: petProtectionPlan.period,
+        periodUnit: petProtectionPlan.periodUnit,
+        petId: pet.id,
+        userId: setup.user!.id,
+        status: PetProtectionStatus.Open,
       });
 
       // Owner & Pet match
@@ -487,82 +642,6 @@ describe("DEFAULT", () => {
       expect(petProtection.pet, "Pet data should match").toEqual(petProtectionPet);
     });
 
-    it.runIf(fxt.isKippyRun && fxt.current.user.languageId == LanguageId.It)("BUY sub + DEVICE-protection + PET-protection", async () => {
-      // select plan with device addon
-      const chosenPlan = testHelper.findPlanWithAddonDeviceprotection(availablePlansForThisDevice);
-      expect(chosenPlan, "Should find a plan with addon device protection").toBeDefined();
-
-      // select a pet protection plan for the pet
-      const chosenPetProtection = availablePetProtectionForThisPet?.[0]?.pricings?.[0];
-      expect(chosenPetProtection, "Should find a pet protection pricing for this pet").toBeDefined();
-
-      logger.info("Testing subscription purchase with device addon + pet protection", {
-        planId: chosenPlan.id,
-        addonId: chosenPlan.addon.id,
-        petProtectionId: chosenPetProtection.id,
-        planPrice: chosenPlan.price,
-        addonPrice: chosenPlan.addon.price,
-        petProtectionPrice: chosenPetProtection.price,
-      });
-
-      // Purchase: plan + addon + pet protection (price ids array)
-      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.devices.dogStandard!.id,
-          priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
-          card: fxt.current.card.valid,
-        },
-      });
-
-      expect(
-        purchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-
-      // Wait for both subscription active and petProtection assignment
-      const [subscriptionResult, petProtectionResult] = await Promise.all([
-        waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }), {
-          isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
-          },
-          timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
-        }),
-        waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.pets.dog!.id! }), {
-          isReady: (result) => result.getPet.pet!.petProtectionId != null,
-          timeoutError: `Timeout: petProtectionId not assigned to pet`,
-        }),
-      ]);
-
-      const subscription = subscriptionResult.getSubscriptionByProductId.subscription!;
-      const pet = petProtectionResult.getPet.pet!;
-
-      logger.info("Combined subscription + pet protection activated", {
-        subscriptionId: subscription.id,
-        itemsCount: subscription.subscriptionItems.length,
-        petProtectionId: pet.petProtectionId,
-      });
-
-      // Verify subscription with addon matches plan
-      verifySubscriptionMatchesPurchasedPlan(subscription, chosenPlan, {
-        expectedStatus: "active",
-        expectedPaymentStatus: "SUCCEEDED",
-        addonToBuy: chosenPlan.addon,
-      });
-
-      // Verify pet protection assigned and matches plan
-      expect(pet.petProtectionId, "Pet should have a petProtectionId assigned").toBeDefined();
-      const petProtectionResponse = await petlink.core.graphqlHttp.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
-      const petProtection = petProtectionResponse.getPetProtection.petProtection!;
-
-      expectPetProtBoughtMatchesPetProtToBuy(petProtection, chosenPetProtection, {
-        expectedPetId: pet.id,
-        expectedUserId: setup.user!.id,
-        expectedStatus: "OPEN",
-      });
-    });
   });
 
   describe("CHANGE (upgrade/downgrade)", () => {
@@ -620,9 +699,9 @@ describe("DEFAULT", () => {
         {
           isReady: (result) => {
             const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === "active" && sub?.paymentStatus === "SUCCEEDED";
+            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
           },
-          timeoutError: `Timeout: Subscription status did not change to "active" with SUCCEEDED payment`,
+          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" with ${PaymentStatusTypeEnum.Succeeded} payment`,
         },
       );
 
@@ -635,8 +714,8 @@ describe("DEFAULT", () => {
       });
 
       // Validazione che la subscription sia pronta
-      expect(currentSubscription.status, "Subscription should be active before each test").toBe("active");
-      expect(currentSubscription.paymentStatus, "Payment should be SUCCEEDED before each test").toBe("SUCCEEDED");
+      expect(currentSubscription.status, "Subscription should be active before each test").toBe(SubscriptionStatusEnum.Active);
+      expect(currentSubscription.paymentStatus, "Payment should be SUCCEEDED before each test").toBe(PaymentStatusTypeEnum.Succeeded);
     });
 
     it("CHANGE sub: Buy MONTHLY → Buy YEARLY (creates schedule change)", async () => {
@@ -690,8 +769,8 @@ describe("DEFAULT", () => {
           isReady: (result) => {
             const subs = result.getSubscriptions.subscriptions!;
             if (subs.length !== 2) return false;
-            const futureSub = subs.find((sub) => sub.status === "future");
-            return futureSub?.paymentStatus === "SUCCEEDED";
+            const futureSub = subs.find((sub) => sub.status === SubscriptionStatusEnum.Future);
+            return futureSub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
           },
           timeoutError: `Timeout: New subscription just purchased not found in ${fxt.polling.timeoutMs} `,
         },
@@ -723,10 +802,10 @@ describe("DEFAULT", () => {
       });
 
       // STEP 6: Find current (active) and future subscriptions
-      let statusActualSubAfterBoughtFuture = fxt.isKippyRun ? "active" : "non_renewing";
+      const statusActualSubAfterBoughtFuture = fxt.isKippyRun ? SubscriptionStatusEnum.Active : SubscriptionStatusEnum.NonRenewing;
       //TODO: after FT merged, ask Lorenzo if kippy & petlink status are still disaligned after renewing
       const currentSub = allSubscriptions!.find((sub) => sub.status === statusActualSubAfterBoughtFuture);
-      const futureSub = allSubscriptions!.find((sub) => sub.status === "future");
+      const futureSub = allSubscriptions!.find((sub) => sub.status === SubscriptionStatusEnum.Future);
       expect(currentSub, "Should have current active subscription").toBeDefined();
       expect(futureSub, "Should have future subscription").toBeDefined();
 
@@ -746,9 +825,21 @@ describe("DEFAULT", () => {
       });
 
       // STEP 7: Verify future subscription matches purchased yearly plan
-      verifySubscriptionMatchesPurchasedPlan(futureSub!, yearlyPlan!, {
-        expectedStatus: "future",
-        expectedPaymentStatus: "SUCCEEDED",
+      expect(futureSub, "Future subscription should match purchased yearly plan").toMatchObject({
+        currencyCode: yearlyPlan!.currencyCode,
+        billingPeriod: yearlyPlan!.period,
+        billingPeriodUnit: yearlyPlan!.periodUnit,
+        status: SubscriptionStatusEnum.Future,
+        paymentStatus: PaymentStatusTypeEnum.Succeeded,
+      });
+      expect(futureSub!.subscriptionItems, "Future sub should have 1 subscription item").toHaveLength(1);
+      const futurePlanItem = futureSub!.subscriptionItems.find((i: any) => i.itemType === "plan");
+      expect(futurePlanItem, "Future plan item should match yearly plan pricing").toMatchObject({
+        itemPriceId: yearlyPlan!.id,
+        itemId: yearlyPlan!.itemId,
+        amount: yearlyPlan!.price,
+        itemType: "plan",
+        quantity: 1,
       });
 
       // Verify future subscription starts when current ends
