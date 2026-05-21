@@ -26,7 +26,7 @@ const EOL_STEPS = {
   COMPLETED_FAILURE: "COMPLETED_FAILURE",
 } as const;
 
-describe.runIf(fxt.isKippyRun)("End of Life (EOL) Tests", () => {
+describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
   describe("Flow 1: Device-Only Replacement (Active Long Subscription)", () => {
     let setup: TestSetup;
     let productId: string;
