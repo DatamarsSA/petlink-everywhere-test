@@ -215,31 +215,6 @@ class TestSetupBuilder {
 class TestHelper {
   constructor() {}
 
-  cleanTestReports(): void {
-    const reportsDir = "./test-reports";
-
-    // Assicurati che la directory esista
-    if (!existsSync(reportsDir)) {
-      mkdirSync(reportsDir, { recursive: true });
-      logger.debug("📁 Created test-reports/ directory");
-      return;
-    }
-
-    // Pulisci solo i file di performance (NON junit.xml/results.json)
-    const filesToClean = [`${reportsDir}/performance-records.jsonl`, `${reportsDir}/performance-report.txt`];
-
-    filesToClean.forEach((file) => {
-      if (existsSync(file)) {
-        try {
-          unlinkSync(file);
-          logger.debug(`🧹 Cleaned ${file}`);
-        } catch (error) {
-          logger.debug(`⚠️ Could not clean ${file}: ${error}`);
-        }
-      }
-    });
-  }
-
   async cleanupAll(): Promise<void> {
     logger.debug("→ Starting cleanup operations");
 

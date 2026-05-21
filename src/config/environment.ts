@@ -39,7 +39,6 @@ export const environmentSchema = z.object({
   APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
   // log level console
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
-  ENABLE_PERFORMANCE_TRACKER: z.enum(["true", "false"]).default("false"),
   // Sentinel socket tcp
   SENTINEL_HOST: z.string().min(1, "SENTINEL_HOST è richiesto"),
   SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),
@@ -68,6 +67,5 @@ export function getEnvs(): Environment {
   console.log(`Running in environment: ${nodeEnv}`);
   console.log("APP_BRAND: ", result.data.APP_BRAND);
   console.log("LOG_LEVEL: ", result.data.LOG_LEVEL);
-  console.log("ENABLE_PERFORMANCE_TRACKER: ", result.data.ENABLE_PERFORMANCE_TRACKER);
   return result.data;
 }

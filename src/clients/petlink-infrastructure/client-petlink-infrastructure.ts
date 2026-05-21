@@ -8,7 +8,6 @@ import { HttpRequest } from "@aws-sdk/protocol-http";
 import { logger } from "../../config/logger.js";
 import { fxt } from "../../fixtures/fixtures.js";
 import WebSocket from "ws";
-import { performanceTracker } from "../../helpers/helper-performance-tracker.js";
 import { createConnection, Socket } from "net";
 import { EventEmitter } from "events";
 import {
@@ -473,25 +472,14 @@ const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, a
   const logPrefix = `[Client-${serviceName}]`;
   return new Proxy(sdk, {
     get: (target, prop: string | symbol) => async (...args: any[]) => {
-      const startTime = performance.now();
       logger.info(`${logPrefix} GRAPHQL: -> ${String(prop)}`, args);
       try {
         const response = await (target as any)[prop](...args);
-        const duration = (performance.now() - startTime).toFixed(0);
-        logger.info(`${logPrefix} GRAPHQL: <- ${String(prop)} SUCCESS (duration ${duration}ms)`, response);
+        logger.info(`${logPrefix} GRAPHQL: <- ${String(prop)} SUCCESS`, response);
         return response;
       } catch (error: any) {
         logger.error(`${logPrefix} GRAPHQL: <- ${String(prop)} ERROR`, error);
         throw error;
-      } finally {
-        const duration = Math.round(performance.now() - startTime);
-        performanceTracker.recordPerformance({
-          service: serviceName,
-          protocol: "graphql",
-          authType,
-          operation: String(prop),
-          duration,
-        });
       }
     },
   });

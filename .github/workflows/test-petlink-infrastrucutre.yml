@@ -142,8 +142,6 @@ jobs:
       SENTINEL_MONGO_USER: ${{ secrets.SENTINEL_MONGO_USER }}
       SENTINEL_MONGO_PASSWORD: ${{ secrets.SENTINEL_MONGO_PASSWORD }}
       SENTINEL_MONGO_DATABASE: ${{ secrets.SENTINEL_MONGO_DATABASE }}
-      # Enable performance tracker
-      ENABLE_PERFORMANCE_TRACKER: ${{ secrets.ENABLE_PERFORMANCE_TRACKER }}
 
     strategy:
       fail-fast: false
@@ -208,7 +206,6 @@ jobs:
             -e SENTINEL_MONGO_PASSWORD \
             -e SENTINEL_MONGO_DATABASE \
             -e ENV \
-            -e ENABLE_PERFORMANCE_TRACKER \
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
             ${{ env.DOCKER_IMAGE_NAME }} yarn pipeline:$ENV
 
@@ -228,19 +225,6 @@ jobs:
           group_suite: true
           # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
 
-      - name: Add Performance Report to Summary
-        if: always()
-        run: |
-          if [ -f "test-reports-${{ matrix.app_brand }}/performance-report.txt" ]; then
-            echo "## 🚀 Performance Report (${{ matrix.app_brand }})" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat test-reports-${{ matrix.app_brand }}/performance-report.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Performance report not available, set secret ENABLE_PERFORMANCE_TRACKER=true to record it." >> $GITHUB_STEP_SUMMARY
-          fi
-  
 
 
   notify-discord:
