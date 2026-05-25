@@ -6,13 +6,16 @@ import { logger } from "../../config/logger.js";
 import {
   UtilityTestTypeEnum,
   LanguageId,
-  CancelReasonCodeEnum,
   OnSubscriptionStatusDocument,
   SubscriptionStatusEnum,
   PaymentStatusTypeEnum,
   PetProtectionStatus,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { waitFor } from "../../helpers/utils.js";
+import {
+  AddFreePeriod,
+  InvoiceStatusEnum,
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 
 describe("DEFAULT", () => {
   describe("SETUP & PREREQUISITES", () => {
@@ -864,7 +867,264 @@ describe.skip("PAID_EXTERNALLY (Axa,Europass)", () => {});
 describe.skip("PREPAID (purchase on external store)", () => {});
 
 
-describe.skip("NOT_PAYING", () => {});
+describe("NOT_PAYING", () => {
+  let setup: TestSetup = {} as TestSetup;
+
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+  });
+
+  it("Add Free period on device WITHOUT sub should creates sub with addedFreePeriod", async () => {
+    const device = setup.devices.dogStandard!;
+    const freePeriod = AddFreePeriod.Add_30Days;
+    const daysOfFreePeriod = 30;
+
+    logger.info("Testing addFreePeriod on device without subscription", {
+      serialNumber: device.serialNumber,
+      freePeriod,
+    });
+
+    // Call CCT addFreePeriod
+    const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
+      freePeriod,
+      productId: device.id,
+      serialNumber: device.serialNumber,
+    });
+
+    expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
+      "200",
+    );
+
+    // Assert by CORE
+    const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      isReady: (result) => result.getSubscriptionByProductId.subscription != null,
+      timeoutError: `Timeout: Subscription not created after addFreePeriod in ${fxt.polling.timeoutMs}ms`,
+    });
+    const coreSubscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+    expect(coreSubscription).toMatchObject({
+      status: SubscriptionStatusEnum.InTrial,
+      billingPeriod: daysOfFreePeriod,
+      billingPeriodUnit: "days",
+    });
+    expect({ start: coreSubscription.currentTermStart!, end: coreSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
+
+    // Assert by CCT
+    const cctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
+      deviceId: device.id,
+    });
+    expect(cctSubscriptionsResponse.getSubscriptions.code).toBe("200");
+    const cctSubscription = cctSubscriptionsResponse.getSubscriptions.items![0];
+    expect(cctSubscription).toMatchObject({
+      userId: setup.user!.id,
+      productId: device.id,
+      serialNumber: device.serialNumber,
+      status: SubscriptionStatusEnum.InTrial,
+      addedFreePeriod: daysOfFreePeriod,
+      billingPeriod: daysOfFreePeriod,
+      billingPeriodUnit: "days",
+      businessEntityId: "DATAMARS",
+    });
+    expect({ start: cctSubscription.currentTermStart!, end: cctSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
+
+  });
+
+  it("Add Free period on device WITH active sub should extends nextBillingAt", async () => {
+    const device = setup.devices.dogStandard!;
+    const daysOfFreePeriod = 14;
+    const freePeriod = AddFreePeriod.Add_14Days;
+
+    // STEP 1: Buy a normal subscription using helper (handles billing info update)
+    await testHelper.purchaseSubscription(setup.user!, device);
+
+    // Wait for subscription to become active
+    const initialSubResult = await waitFor(
+      async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
+      {
+        isReady: (result) => {
+          const sub = result.getSubscriptionByProductId.subscription;
+          return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
+        },
+        timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
+      },
+    );
+
+    const initialSubscription = initialSubResult.getSubscriptionByProductId.subscription!;
+    const originalNextBillingAt = initialSubscription.nextBillingAt;
+    const originalItemPriceId = initialSubscription.subscriptionItems[0].itemPriceId;
+
+    // Get initial addedFreePeriod from CCT
+    const initialCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
+      deviceId: device.id,
+    });
+    const originalAddedFreePeriod = initialCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod || 0;
+
+    logger.info("Initial subscription active", {
+      subscriptionId: initialSubscription.id,
+      nextBillingAt: originalNextBillingAt,
+      itemPriceId: originalItemPriceId,
+      addedFreePeriod: originalAddedFreePeriod,
+    });
+
+    // STEP 2: Add free period to existing subscription
+    const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
+      freePeriod,
+      productId: device.id,
+      serialNumber: device.serialNumber,
+    });
+
+    expect(
+      addFreePeriodResponse.addFreePeriod.code,
+      `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`,
+    ).toBe("200");
+
+    // STEP 3: Poll for nextBillingAt to move forward
+    const updatedSubResult = await waitFor(
+      async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
+      {
+        isReady: (result) => {
+          const sub = result.getSubscriptionByProductId.subscription;
+          const newNextBillingAt = sub?.nextBillingAt;
+          return newNextBillingAt && new Date(newNextBillingAt).getTime() > new Date(originalNextBillingAt!).getTime();
+        },
+        timeoutError: `Timeout: nextBillingAt did not move forward after addFreePeriod`,
+      },
+    );
+
+    const updatedSubscription = updatedSubResult.getSubscriptionByProductId.subscription!;
+    const newItemPriceId = updatedSubscription.subscriptionItems[0].itemPriceId;
+
+    // Get updated addedFreePeriod from CCT
+    const updatedCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
+      deviceId: device.id,
+    });
+    const newAddedFreePeriod = updatedCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod;
+
+    logger.info("Subscription updated with free period", {
+      subscriptionId: updatedSubscription.id,
+      originalNextBillingAt,
+      newNextBillingAt: updatedSubscription.nextBillingAt,
+      originalItemPriceId,
+      newItemPriceId,
+      originalAddedFreePeriod,
+      newAddedFreePeriod,
+    });
+
+    // Assert subscription type unchanged (Core)
+    expect(newItemPriceId, "Subscription type should not change").toBe(originalItemPriceId);
+
+    // Assert nextBillingAt moved forward (Core)
+    expect(new Date(updatedSubscription.nextBillingAt!).getTime(), "nextBillingAt should move forward").toBeGreaterThan(
+      new Date(originalNextBillingAt!).getTime(),
+    );
+
+    // Assert addedFreePeriod accumulated (CCT)
+    expect(newAddedFreePeriod, "addedFreePeriod should accumulate").toBe(originalAddedFreePeriod + 14); // ADD_14_DAYS = 14 days
+  });
+});
 
 
-describe.skip("COUPON", () => {});
+describe("COUPON", () => {
+  let setup: TestSetup = {} as TestSetup;
+
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+  });
+
+  it("Coupon pre-assigned to device applies discount on purchase", async () => {
+    const device = setup.devices.dogStandard!;
+
+    // STEP 1: Get available coupons
+    const couponsResponse = await petlink.cct.graphqlHttp.authJwt.getCoupons();
+
+    expect(
+      couponsResponse.getCoupons.code,
+      `getCoupons should succeed - Error: ${couponsResponse.getCoupons.message}`,
+    ).toBe("200");
+
+    const availableCoupons = couponsResponse.getCoupons.coupons;
+    expect(availableCoupons, "Should have at least one coupon available").toBeDefined();
+    expect(availableCoupons!.length, "Coupons array should not be empty").toBeGreaterThan(0);
+
+    const coupon = availableCoupons![0];
+    logger.info("Selected coupon for test", { couponId: coupon.id, couponName: coupon.name });
+
+    // STEP 2: Assign coupon to device
+    const setCouponResponse = await petlink.cct.graphqlHttp.authJwt.setCoupon({
+      serialNumbers: [device.serialNumber],
+      couponId: coupon.id,
+      setMode: "apply",
+    });
+
+    expect(
+      setCouponResponse.setCoupon.code,
+      `setCoupon should succeed - Error: ${setCouponResponse.setCoupon.message}`,
+    ).toBe("200");
+
+    logger.info("Coupon assigned to device", {
+      serialNumber: device.serialNumber,
+      couponId: coupon.id,
+      failureList: setCouponResponse.setCoupon.failureList,
+    });
+
+    // STEP 3: Buy subscription
+    const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+      productId: device.id,
+      countryCode: device.countryCode,
+      serialNumber: device.serialNumber,
+    });
+    const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
+
+    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+        phone: setup.user!.phone,
+        productId: device.id,
+        priceIds: [chosenPlan.id],
+        card: fxt.current.card.valid,
+      },
+    });
+
+    expect(
+      purchaseResponse.utilityIntegrationTest.code,
+      `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
+    ).toBe("200");
+
+    // STEP 4: Wait for subscription to become active
+    const subscriptionResult = await waitFor(
+      async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
+      {
+        isReady: (result) => {
+          const sub = result.getSubscriptionByProductId.subscription;
+          return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
+        },
+        timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
+      },
+    );
+
+    const subscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+
+    logger.info("Subscription purchased with coupon", {
+      subscriptionId: subscription.id,
+      invoicesCount: subscription.invoices?.length,
+    });
+
+    // STEP 5: Verify discount in invoice
+    expect(subscription.invoices, "Subscription should have invoices").toBeDefined();
+    expect(subscription.invoices!.length, "Should have at least one invoice").toBeGreaterThan(0);
+
+    const firstInvoice = subscription.invoices![0];
+    expect(firstInvoice.discountItems, "Invoice should have discount items").toBeDefined();
+    expect(firstInvoice.discountItems!.length, "Should have at least one discount item").toBeGreaterThan(0);
+
+    const discountItem = firstInvoice.discountItems![0];
+    expect(discountItem.couponId, "Discount should be from the assigned coupon").toBe(coupon.id);
+    expect(discountItem.amount, "Discount amount should be positive").toBeGreaterThan(0);
+
+    logger.info("Coupon discount verified", {
+      couponId: discountItem.couponId,
+      discountAmount: discountItem.amount,
+    });
+  });
+});

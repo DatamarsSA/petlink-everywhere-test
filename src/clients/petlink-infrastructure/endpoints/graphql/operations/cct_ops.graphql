@@ -595,7 +595,34 @@ query getIssues($deviceId: String!, $pagination: PaginationInput, $order: OrderI
     }
 }
 
+query getCoupons {
+    getCoupons {
+        code
+        message
+        coupons {
+            id
+            name
+            discountType
+            discountPercentage
+            discountAmount
+            currencyCode
+            status
+        }
+    }
+}
 
+query getPlanProfiles {
+    getPlanProfiles {
+        code
+        message
+        planProfiles {
+            id
+            name
+            type
+            trialDuration
+        }
+    }
+}
 
 ###################### MUTATION ######################
 mutation createUser($user: CreateUserInput!) {
@@ -717,5 +744,38 @@ mutation createIssue($issue: IssueInput!) {
                 productId
             }
         }
+    }
+}
+
+mutation addFreePeriod($freePeriod: AddFreePeriod!, $productId: String, $serialNumber: String) {
+    addFreePeriod(freePeriod: $freePeriod, productId: $productId, serialNumber: $serialNumber) {
+        code
+        message
+    }
+}
+
+mutation setCoupon($serialNumbers: [String!]!, $couponId: String!, $setMode: CouponSetMode) {
+    setCoupon(serialNumbers: $serialNumbers, couponId: $couponId, setMode: $setMode) {
+        code
+        message
+        translationCode
+        warningList
+        failureList
+    }
+}
+
+mutation setPlanProfiles($serialNumbers: [String!]!, $planProfileId: String!) {
+    setPlanProfiles(serialNumbers: $serialNumbers, planProfileId: $planProfileId) {
+        code
+        message
+        translationCode
+        invalidSerialNumbers
+    }
+}
+
+mutation renewInsuranceSubscription($productId: String!, $notes: String) {
+    renewInsuranceSubscription(productId: $productId, notes: $notes) {
+        code
+        message
     }
 }
