@@ -599,14 +599,10 @@ query getCoupons {
     getCoupons {
         code
         message
+        translationCode
         coupons {
             id
             name
-            discountType
-            discountPercentage
-            discountAmount
-            currencyCode
-            status
         }
     }
 }
@@ -615,11 +611,11 @@ query getPlanProfiles {
     getPlanProfiles {
         code
         message
+        translationCode
         planProfiles {
             id
-            name
-            type
             trialDuration
+            brands
         }
     }
 }
@@ -751,6 +747,7 @@ mutation addFreePeriod($freePeriod: AddFreePeriod!, $productId: String, $serialN
     addFreePeriod(freePeriod: $freePeriod, productId: $productId, serialNumber: $serialNumber) {
         code
         message
+        translationCode
     }
 }
 
@@ -773,9 +770,10 @@ mutation setPlanProfiles($serialNumbers: [String!]!, $planProfileId: String!) {
     }
 }
 
-mutation renewInsuranceSubscription($productId: String!, $notes: String) {
+mutation renewInsuranceSubscription($productId: String!, $notes: String!) {
     renewInsuranceSubscription(productId: $productId, notes: $notes) {
         code
         message
+        translationCode
     }
 }

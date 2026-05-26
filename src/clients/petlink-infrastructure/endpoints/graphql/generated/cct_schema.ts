@@ -2609,6 +2609,32 @@ export type GetIssuesQuery = {
   };
 };
 
+export type GetCouponsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetCouponsQuery = {
+  __typename?: "Query";
+  getCoupons: {
+    __typename?: "GetCouponsResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    coupons: Array<{ __typename?: "Coupon"; id: string; name: string }>;
+  };
+};
+
+export type GetPlanProfilesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetPlanProfilesQuery = {
+  __typename?: "Query";
+  getPlanProfiles: {
+    __typename?: "GetPlanProfilesResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    planProfiles: Array<{ __typename?: "PlanProfiles"; id: string; trialDuration: number; brands?: Array<string> | null }>;
+  };
+};
+
 export type CreateUserMutationVariables = Exact<{
   user: CreateUserInput;
 }>;
@@ -2762,6 +2788,61 @@ export type CreateIssueMutation = {
       }>;
     } | null;
   };
+};
+
+export type AddFreePeriodMutationVariables = Exact<{
+  freePeriod: AddFreePeriod;
+  productId?: InputMaybe<Scalars["String"]["input"]>;
+  serialNumber?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type AddFreePeriodMutation = {
+  __typename?: "Mutation";
+  addFreePeriod: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null };
+};
+
+export type SetCouponMutationVariables = Exact<{
+  serialNumbers: Array<Scalars["String"]["input"]> | Scalars["String"]["input"];
+  couponId: Scalars["String"]["input"];
+  setMode?: InputMaybe<CouponSetMode>;
+}>;
+
+export type SetCouponMutation = {
+  __typename?: "Mutation";
+  setCoupon: {
+    __typename?: "SetCouponResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    warningList: Array<string>;
+    failureList: Array<string>;
+  };
+};
+
+export type SetPlanProfilesMutationVariables = Exact<{
+  serialNumbers: Array<Scalars["String"]["input"]> | Scalars["String"]["input"];
+  planProfileId: Scalars["String"]["input"];
+}>;
+
+export type SetPlanProfilesMutation = {
+  __typename?: "Mutation";
+  setPlanProfiles: {
+    __typename?: "setPlanProfilesResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    invalidSerialNumbers?: Array<string> | null;
+  };
+};
+
+export type RenewInsuranceSubscriptionMutationVariables = Exact<{
+  productId: Scalars["String"]["input"];
+  notes: Scalars["String"]["input"];
+}>;
+
+export type RenewInsuranceSubscriptionMutation = {
+  __typename?: "Mutation";
+  renewInsuranceSubscription?: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null } | null;
 };
 
 export const GetCustomerDocument = {
@@ -4185,6 +4266,83 @@ export const GetIssuesDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetCouponsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getCoupons" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getCoupons" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "coupons" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetPlanProfilesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getPlanProfiles" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPlanProfiles" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "planProfiles" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "trialDuration" } },
+                      { kind: "Field", name: { kind: "Name", value: "brands" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const CreateUserDocument = {
   kind: "Document",
   definitions: [
@@ -4553,6 +4711,227 @@ export const CreateIssueDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const AddFreePeriodDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "addFreePeriod" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "freePeriod" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AddFreePeriod" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "addFreePeriod" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "freePeriod" },
+                value: { kind: "Variable", name: { kind: "Name", value: "freePeriod" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "serialNumber" },
+                value: { kind: "Variable", name: { kind: "Name", value: "serialNumber" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SetCouponDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "setCoupon" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialNumbers" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "ListType", type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } } },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "couponId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "setMode" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "CouponSetMode" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "setCoupon" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "serialNumbers" },
+                value: { kind: "Variable", name: { kind: "Name", value: "serialNumbers" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "couponId" }, value: { kind: "Variable", name: { kind: "Name", value: "couponId" } } },
+              { kind: "Argument", name: { kind: "Name", value: "setMode" }, value: { kind: "Variable", name: { kind: "Name", value: "setMode" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "warningList" } },
+                { kind: "Field", name: { kind: "Name", value: "failureList" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const SetPlanProfilesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "setPlanProfiles" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "serialNumbers" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "ListType", type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } } },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "planProfileId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "setPlanProfiles" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "serialNumbers" },
+                value: { kind: "Variable", name: { kind: "Name", value: "serialNumbers" } },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "planProfileId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "planProfileId" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "invalidSerialNumbers" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const RenewInsuranceSubscriptionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "renewInsuranceSubscription" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "notes" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "renewInsuranceSubscription" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "productId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "productId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "notes" }, value: { kind: "Variable", name: { kind: "Name", value: "notes" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -4827,6 +5206,42 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    getCoupons(
+      variables?: GetCouponsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCouponsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCouponsQuery>({
+            document: GetCouponsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getCoupons",
+        "query",
+        variables,
+      );
+    },
+    getPlanProfiles(
+      variables?: GetPlanProfilesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPlanProfilesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPlanProfilesQuery>({
+            document: GetPlanProfilesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getPlanProfiles",
+        "query",
+        variables,
+      );
+    },
     createUser(
       variables: CreateUserMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -4949,6 +5364,78 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "createIssue",
+        "mutation",
+        variables,
+      );
+    },
+    addFreePeriod(
+      variables: AddFreePeriodMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<AddFreePeriodMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AddFreePeriodMutation>({
+            document: AddFreePeriodDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "addFreePeriod",
+        "mutation",
+        variables,
+      );
+    },
+    setCoupon(
+      variables: SetCouponMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SetCouponMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SetCouponMutation>({
+            document: SetCouponDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "setCoupon",
+        "mutation",
+        variables,
+      );
+    },
+    setPlanProfiles(
+      variables: SetPlanProfilesMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<SetPlanProfilesMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<SetPlanProfilesMutation>({
+            document: SetPlanProfilesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "setPlanProfiles",
+        "mutation",
+        variables,
+      );
+    },
+    renewInsuranceSubscription(
+      variables: RenewInsuranceSubscriptionMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<RenewInsuranceSubscriptionMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<RenewInsuranceSubscriptionMutation>({
+            document: RenewInsuranceSubscriptionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "renewInsuranceSubscription",
         "mutation",
         variables,
       );

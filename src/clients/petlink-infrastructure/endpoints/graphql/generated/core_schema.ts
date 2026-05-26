@@ -177,6 +177,12 @@ export interface BluetoothAddress {
   remoteUuid?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface BrazeNotification {
+  __typename?: "BrazeNotification";
+  body: Scalars["String"]["output"];
+  title: Scalars["String"]["output"];
+}
+
 export interface Breed {
   __typename?: "Breed";
   breedName: Scalars["String"]["output"];
@@ -1305,6 +1311,7 @@ export interface PetHistoryEvent {
 export enum PetHistoryEventTypeEnum {
   ActiveSubscription = "ACTIVE_SUBSCRIPTION",
   ActiveSubscriptionTrial = "ACTIVE_SUBSCRIPTION_TRIAL",
+  BrazeCampaign = "BRAZE_CAMPAIGN",
   DeviceAssociate = "DEVICE_ASSOCIATE",
   DeviceBattery = "DEVICE_BATTERY",
   DeviceBattery_10 = "DEVICE_BATTERY_10",
@@ -1345,6 +1352,7 @@ export enum PetHistoryEventTypeEnum {
 export interface PetHistoryExtra {
   __typename?: "PetHistoryExtra";
   address?: Maybe<Scalars["String"]["output"]>;
+  brazeNotification?: Maybe<BrazeNotification>;
   contentMessage?: Maybe<ContentMessage>;
   newSerialNumber?: Maybe<Scalars["String"]["output"]>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
@@ -2965,9 +2973,11 @@ export interface UtilityIntegrationTestInput {
   card?: InputMaybe<UtilityIntegrationTestCardInput>;
   currencyCode?: InputMaybe<Scalars["String"]["input"]>;
   isOnlyProtection?: InputMaybe<Scalars["Boolean"]["input"]>;
+  nextBillingDate?: InputMaybe<Scalars["String"]["input"]>;
   phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
+  subscriptionId?: InputMaybe<Scalars["String"]["input"]>;
   userIn?: InputMaybe<UserIn>;
   utilityType: UtilityTestTypeEnum;
 }
@@ -2976,6 +2986,7 @@ export enum UtilityTestTypeEnum {
   BuyNewSubscription = "BUY_NEW_SUBSCRIPTION",
   CleanUpUser = "CLEAN_UP_USER",
   SignUp = "SIGN_UP",
+  UpdateSubscriptionNextBillingDate = "UPDATE_SUBSCRIPTION_NEXT_BILLING_DATE",
 }
 
 export enum ValidationStatusEnum {

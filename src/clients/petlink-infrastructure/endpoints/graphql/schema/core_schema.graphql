@@ -2,19 +2,9 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""
 Tells the service this field/object has access authorized by sigv4 signing.
 """
 directive @aws_iam on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by a Cognito User Pools token.
@@ -53,6 +43,16 @@ directive @aws_publish(
   """
   subscriptions: [String]
 ) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -206,6 +206,11 @@ input BillingInfoInput {
 type BluetoothAddress {
   macAddress: String
   remoteUuid: String
+}
+
+type BrazeNotification {
+  title: String!
+  body: String!
 }
 
 type Breed {
@@ -1026,6 +1031,7 @@ enum PetHistoryEventTypeEnum {
   QR_TAG_SCANNED
   REPLACEMENT
   DEVICE_OFFLINE
+  BRAZE_CAMPAIGN
 }
 
 type PetHistoryExtra {
@@ -1033,6 +1039,7 @@ type PetHistoryExtra {
   contentMessage: ContentMessage
   serialNumber: String
   newSerialNumber: String
+  brazeNotification: BrazeNotification
 }
 
 input PetIn {
