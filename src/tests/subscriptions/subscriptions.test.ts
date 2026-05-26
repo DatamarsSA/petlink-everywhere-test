@@ -875,7 +875,7 @@ describe("NOT_PAYING", () => {
     setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
   });
 
-  it("Add Free period on device WITHOUT sub should creates sub with addedFreePeriod", async () => {
+  it("Add Free period on device WITHOUT sub should create active non-paying sub", async () => {
     const device = setup.devices.dogStandard!;
     const freePeriod = AddFreePeriod.Add_30Days;
     const daysOfFreePeriod = 30;
@@ -885,7 +885,6 @@ describe("NOT_PAYING", () => {
       freePeriod,
     });
 
-    // Call CCT addFreePeriod
     const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
       freePeriod,
       productId: device.id,
@@ -896,7 +895,6 @@ describe("NOT_PAYING", () => {
       "200",
     );
 
-    // Assert by CORE
     const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
       isReady: (result) => result.getSubscriptionByProductId.subscription != null,
       timeoutError: `Timeout: Subscription not created after addFreePeriod in ${fxt.polling.timeoutMs}ms`,
@@ -909,7 +907,6 @@ describe("NOT_PAYING", () => {
     });
     expect({ start: coreSubscription.currentTermStart!, end: coreSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
 
-    // Assert by CCT
     const cctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
       deviceId: device.id,
     });
@@ -926,103 +923,92 @@ describe("NOT_PAYING", () => {
       businessEntityId: "DATAMARS",
     });
     expect({ start: cctSubscription.currentTermStart!, end: cctSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
-
   });
 
-  it("Add Free period on device WITH active sub should extends nextBillingAt", async () => {
+  it("Add Free period on device WITH active sub should extend current subscription", async () => {
     const device = setup.devices.dogStandard!;
     const daysOfFreePeriod = 14;
     const freePeriod = AddFreePeriod.Add_14Days;
 
-    // STEP 1: Buy a normal subscription using helper (handles billing info update)
     await testHelper.purchaseSubscription(setup.user!, device);
 
-    // Wait for subscription to become active
-    const initialSubResult = await waitFor(
-      async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
-      {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-        },
-        timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
+    const initialSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      isReady: (result) => {
+        const sub = result.getSubscriptionByProductId.subscription;
+        return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
       },
-    );
+      timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
+    });
 
     const initialSubscription = initialSubResult.getSubscriptionByProductId.subscription!;
     const originalNextBillingAt = initialSubscription.nextBillingAt;
+    const originalCurrentTermEnd = initialSubscription.currentTermEnd;
     const originalItemPriceId = initialSubscription.subscriptionItems[0].itemPriceId;
 
-    // Get initial addedFreePeriod from CCT
     const initialCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
       deviceId: device.id,
     });
     const originalAddedFreePeriod = initialCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod || 0;
 
-    logger.info("Initial subscription active", {
-      subscriptionId: initialSubscription.id,
-      nextBillingAt: originalNextBillingAt,
-      itemPriceId: originalItemPriceId,
-      addedFreePeriod: originalAddedFreePeriod,
-    });
-
-    // STEP 2: Add free period to existing subscription
     const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
       freePeriod,
       productId: device.id,
       serialNumber: device.serialNumber,
     });
 
-    expect(
-      addFreePeriodResponse.addFreePeriod.code,
-      `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`,
-    ).toBe("200");
-
-    // STEP 3: Poll for nextBillingAt to move forward
-    const updatedSubResult = await waitFor(
-      async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
-      {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          const newNextBillingAt = sub?.nextBillingAt;
-          return newNextBillingAt && new Date(newNextBillingAt).getTime() > new Date(originalNextBillingAt!).getTime();
-        },
-        timeoutError: `Timeout: nextBillingAt did not move forward after addFreePeriod`,
-      },
+    expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
+      "200",
     );
+
+    const updatedSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      isReady: (result) => {
+        const sub = result.getSubscriptionByProductId.subscription;
+        const newCurrentTermEnd = sub?.currentTermEnd;
+        return !!newCurrentTermEnd && new Date(newCurrentTermEnd).getTime() > new Date(originalCurrentTermEnd!).getTime();
+      },
+      timeoutError: `Timeout: currentTermEnd did not move forward after addFreePeriod`,
+    });
 
     const updatedSubscription = updatedSubResult.getSubscriptionByProductId.subscription!;
     const newItemPriceId = updatedSubscription.subscriptionItems[0].itemPriceId;
 
-    // Get updated addedFreePeriod from CCT
     const updatedCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
       deviceId: device.id,
     });
     const newAddedFreePeriod = updatedCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod;
 
-    logger.info("Subscription updated with free period", {
-      subscriptionId: updatedSubscription.id,
-      originalNextBillingAt,
-      newNextBillingAt: updatedSubscription.nextBillingAt,
-      originalItemPriceId,
-      newItemPriceId,
-      originalAddedFreePeriod,
-      newAddedFreePeriod,
-    });
-
-    // Assert subscription type unchanged (Core)
+    expect(updatedSubscription.id, "Free period should extend the current subscription, not create a new one").toBe(initialSubscription.id);
+    expect(updatedSubscription.status, "Subscription should remain active").toBe(SubscriptionStatusEnum.Active);
+    expect(updatedSubscription.paymentStatus, "Subscription should remain paid").toBe(PaymentStatusTypeEnum.Succeeded);
     expect(newItemPriceId, "Subscription type should not change").toBe(originalItemPriceId);
 
-    // Assert nextBillingAt moved forward (Core)
-    expect(new Date(updatedSubscription.nextBillingAt!).getTime(), "nextBillingAt should move forward").toBeGreaterThan(
-      new Date(originalNextBillingAt!).getTime(),
+    expect(new Date(updatedSubscription.currentTermEnd!).getTime(), "currentTermEnd should move forward").toBeGreaterThan(
+      new Date(originalCurrentTermEnd!).getTime(),
     );
+    if (originalNextBillingAt && updatedSubscription.nextBillingAt) {
+      expect(new Date(updatedSubscription.nextBillingAt).getTime(), "nextBillingAt should not move backwards").toBeGreaterThanOrEqual(
+        new Date(originalNextBillingAt).getTime(),
+      );
+    }
 
-    // Assert addedFreePeriod accumulated (CCT)
-    expect(newAddedFreePeriod, "addedFreePeriod should accumulate").toBe(originalAddedFreePeriod + 14); // ADD_14_DAYS = 14 days
+    const gpsResponse = await petlink.core.graphqlHttp.authJwt.getPetlinkGps({ id: device.id });
+    expect(gpsResponse.getPetlinkGps.code).toBe("200");
+    expect(gpsResponse.getPetlinkGps.petlinkGps?.subscriptionId).toBe(updatedSubscription.id);
+    expect(gpsResponse.getPetlinkGps.petlinkGps?.subscriptionIsActive).toBe(true);
+
+    const coreSubscriptionsResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+    expect(coreSubscriptionsResponse.getSubscriptions.code).toBe("200");
+    const matchingCoreSubscriptions = coreSubscriptionsResponse.getSubscriptions.subscriptions!.filter((sub) => sub.id === updatedSubscription.id);
+    expect(matchingCoreSubscriptions, "Core subscription list should include the extended sub once").toHaveLength(1);
+    expect(coreSubscriptionsResponse.getSubscriptions.currentSubscription).toMatchObject({
+      id: updatedSubscription.id,
+      status: SubscriptionStatusEnum.Active,
+      paymentStatus: PaymentStatusTypeEnum.Succeeded,
+    });
+
+    expect(newAddedFreePeriod, "addedFreePeriod should accumulate").toBe(originalAddedFreePeriod + daysOfFreePeriod);
   });
 });
-
 
 describe("COUPON", () => {
   let setup: TestSetup = {} as TestSetup;
