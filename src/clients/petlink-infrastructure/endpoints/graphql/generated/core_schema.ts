@@ -2978,14 +2978,17 @@ export interface UtilityIntegrationTestInput {
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
   subscriptionId?: InputMaybe<Scalars["String"]["input"]>;
+  userId?: InputMaybe<Scalars["String"]["input"]>;
   userIn?: InputMaybe<UserIn>;
   utilityType: UtilityTestTypeEnum;
 }
 
 export enum UtilityTestTypeEnum {
   BuyNewSubscription = "BUY_NEW_SUBSCRIPTION",
+  ChangeSubscriptionPlan = "CHANGE_SUBSCRIPTION_PLAN",
   CleanUpUser = "CLEAN_UP_USER",
   SignUp = "SIGN_UP",
+  UpdatePaymentMethod = "UPDATE_PAYMENT_METHOD",
   UpdateSubscriptionNextBillingDate = "UPDATE_SUBSCRIPTION_NEXT_BILLING_DATE",
 }
 
@@ -4435,6 +4438,15 @@ export type StopRenewingSubscriptionMutationVariables = Exact<{
 export type StopRenewingSubscriptionMutation = {
   __typename?: "Mutation";
   stopRenewingSubscription?: { __typename?: "Response"; code: string; translationCode?: string | null; message: string } | null;
+};
+
+export type ReactivateSubscriptionMutationVariables = Exact<{
+  subscriptionId: Scalars["String"]["input"];
+}>;
+
+export type ReactivateSubscriptionMutation = {
+  __typename?: "Mutation";
+  reactivateSubscription: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
 export type UpdateUserMutationVariables = Exact<{
@@ -8117,6 +8129,47 @@ export const StopRenewingSubscriptionDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const ReactivateSubscriptionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "reactivateSubscription" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "reactivateSubscription" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "subscriptionId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "subscriptionId" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const UpdateUserDocument = {
   kind: "Document",
   definitions: [
@@ -9567,6 +9620,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "stopRenewingSubscription",
+        "mutation",
+        variables,
+      );
+    },
+    reactivateSubscription(
+      variables: ReactivateSubscriptionMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ReactivateSubscriptionMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ReactivateSubscriptionMutation>({
+            document: ReactivateSubscriptionDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "reactivateSubscription",
         "mutation",
         variables,
       );

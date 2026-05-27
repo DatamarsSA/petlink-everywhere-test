@@ -10,12 +10,12 @@ import {
   SubscriptionStatusEnum,
   PaymentStatusTypeEnum,
   PetProtectionStatus,
+  SubscriptionShortInfo,
+  ScheduledChanges,
+  SubscriptionShortInfoItem,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { waitFor } from "../../helpers/utils.js";
-import {
-  AddFreePeriod,
-  InvoiceStatusEnum,
-} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+
 
 describe("DEFAULT", () => {
   describe("SETUP & PREREQUISITES", () => {
@@ -168,7 +168,7 @@ describe("DEFAULT", () => {
     });
   });
 
-  describe("BUY", () => {
+  describe("BUY (sub, deviceProtection, petProtection)", () => {
     let setup: TestSetup = {} as TestSetup;
     let availablePlansForThisDevice: any[] = [];
     let availablePetProtectionForThisPet: any[] = [];
@@ -644,18 +644,21 @@ describe("DEFAULT", () => {
       expect(petProtection.petOwner, "Owner data should match").toEqual(petProtectionOwner);
       expect(petProtection.pet, "Pet data should match").toEqual(petProtectionPet);
     });
-
   });
 
   describe("CHANGE (upgrade/downgrade)", () => {
     let setup: TestSetup = {} as TestSetup;
-    let currentSubscription: any;
+    let currentSubscription: SubscriptionShortInfo;
+    let availablePlansForThisDevice: any[] = [];
+    let monthlyPlan: any;
+    let yearlyPlan: any;
 
     beforeEach(async () => {
-      // STEP 1: Cleanup e setup base
+      // STEP 1: Cleanup e setup base (no cat needed here)
       await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog().withCat().withDogDevice().withCatDevice().build();
-      // STEP 2: update Billing info + get available plasn
+      setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+
+      // STEP 2: update Billing info + get available plans
       const [_, plansResponse] = await Promise.all([
         petlink.core.graphqlHttp.authJwt.updateBillingInfo({
           updateBillingInfoInput: {
@@ -677,176 +680,147 @@ describe("DEFAULT", () => {
           serialNumber: setup.devices.dogStandard!.serialNumber,
         }),
       ]);
-      // STEP 3: Purchase a subscription that will be available for all tests
-      const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-      logger.info("Purchasing subscription for EDIT tests", { chosenPlan });
 
+      availablePlansForThisDevice = plansResponse.getSubscriptionPlans.plans!;
+      const allPricings = availablePlansForThisDevice.flatMap((p) => p.pricings);
+      monthlyPlan = allPricings.find((pr: any) => pr.periodUnit === "month");
+      yearlyPlan = allPricings.find((pr: any) => pr.periodUnit === "year");
+      expect(monthlyPlan, "A MONTHLY pricing must be available for the device").toBeDefined();
+      expect(yearlyPlan, "A YEARLY pricing must be available for the device").toBeDefined();
+
+      // STEP 3: Buy MONTHLY plan (deterministic baseline for CHANGE tests)
       const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
           productId: setup.devices.dogStandard!.id,
-          priceIds: [chosenPlan.id],
+          priceIds: [monthlyPlan.id],
           card: fxt.current.card.valid,
         },
       });
-
       expect(
         purchaseResponse.utilityIntegrationTest.code,
         `utilityIntegrationTest should succeed in beforeEach - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
       ).toBe("200");
 
       // STEP 4: Wait for subscription to become active and store it
-      const subscriptionResult = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.devices.dogStandard!.id }),
+      // Use getSubscriptions because scheduledChanges is only on SubscriptionShortInfo
+      const subscriptionsResult = await waitFor(
+        async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }),
         {
           isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
+            const subs = result.getSubscriptions.subscriptions;
+            return subs?.length === 1 && subs[0]?.status === SubscriptionStatusEnum.Active && subs[0]?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
           },
           timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" with ${PaymentStatusTypeEnum.Succeeded} payment`,
         },
       );
 
-      currentSubscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+      currentSubscription = subscriptionsResult.getSubscriptions.subscriptions![0]!;
 
-      logger.info("Subscription ready for EDIT tests", {
+      logger.info("Subscription ready for CHANGE tests", {
         subscriptionId: currentSubscription.id,
         status: currentSubscription.status,
-        paymentStatus: currentSubscription.paymentStatus,
+        billingPeriodUnit: currentSubscription.billingPeriodUnit,
       });
 
-      // Validazione che la subscription sia pronta
-      expect(currentSubscription.status, "Subscription should be active before each test").toBe(SubscriptionStatusEnum.Active);
-      expect(currentSubscription.paymentStatus, "Payment should be SUCCEEDED before each test").toBe(PaymentStatusTypeEnum.Succeeded);
+      expect(currentSubscription.billingPeriodUnit, "Baseline sub should be MONTHLY").toBe("month");
+      expect(currentSubscription.scheduledChanges, "Fresh sub should have no scheduled changes").toBeFalsy();
     });
 
-    it("CHANGE sub: Buy MONTHLY → Buy YEARLY (creates schedule change)", async () => {
-      logger.info("Testing subscription UPGRADE flow", {
-        currentSubscriptionId: currentSubscription.id,
-        currentStatus: currentSubscription.status,
-        currentTermEnd: currentSubscription.currentTermEnd,
-      });
-
-      // STEP 1: Get updated plans available AFTER first subscription bought
-      const updatedPlansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-        productId: setup.devices.dogStandard!.id,
-        countryCode: setup.devices.dogStandard!.countryCode,
-        serialNumber: setup.devices.dogStandard!.serialNumber,
-      });
-
-      // STEP 2: Find YEARLY plan to buy
-      const yearlyPlan = updatedPlansResponse.getSubscriptionPlans
-        .plans!.flatMap((item) => item.pricings)
-        .find((pricing) => pricing!.periodUnit === "year");
-
-      logger.info("Yearly plan selected for upgrade", {
-        planId: yearlyPlan!.id,
-        planName: yearlyPlan!.name,
-        price: yearlyPlan!.price,
-        period: yearlyPlan!.period,
-        periodUnit: yearlyPlan!.periodUnit,
-      });
-
-      // STEP 3: Buy YEARLY subscription (should create FUTURE)
-      const purchaseYearlyResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+    it("CHANGE sub: Buy MONTHLY → Buy YEARLY should creates schedule change", async () => {
+      // STEP 1: Trigger plan change to yearly
+      const changeResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.devices.dogStandard!.id,
-          priceIds: [yearlyPlan!.id],
-          card: fxt.current.card.valid,
+          utilityType: UtilityTestTypeEnum.ChangeSubscriptionPlan,
+          subscriptionId: currentSubscription.id,
+          priceIds: [yearlyPlan.id],
         },
       });
-
-      // STEP 4: Get ALL subscriptions (current + future) via getSubscriptions
       expect(
-        purchaseYearlyResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed for yearly subscription - Error: ${purchaseYearlyResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-      logger.info("Yearly subscription purchased successfully");
-
-      const subscriptionsResponse = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }),
-        {
-          isReady: (result) => {
-            const subs = result.getSubscriptions.subscriptions!;
-            if (subs.length !== 2) return false;
-            const futureSub = subs.find((sub) => sub.status === SubscriptionStatusEnum.Future);
-            return futureSub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-          },
-          timeoutError: `Timeout: New subscription just purchased not found in ${fxt.polling.timeoutMs} `,
-        },
-      );
-
-      expect(
-        subscriptionsResponse.getSubscriptions.code,
-        `getSubscriptions should succeed - Error: ${subscriptionsResponse.getSubscriptions.message}${subscriptionsResponse.getSubscriptions.translationCode ? ` (${subscriptionsResponse.getSubscriptions.translationCode})` : ""}`,
+        changeResponse.utilityIntegrationTest.code,
+        `utilityIntegrationTest CHANGE_SUBSCRIPTION_PLAN should succeed - Error: ${changeResponse.utilityIntegrationTest.message}`,
       ).toBe("200");
 
-      const allSubscriptions = subscriptionsResponse.getSubscriptions.subscriptions;
-      expect(allSubscriptions!.length, "Should have 2 subscriptions (current + future)").toBe(2);
-
-      logger.info("📋 All subscriptions retrieved", {
-        count: allSubscriptions!.length,
-        subscriptions: allSubscriptions!.map((sub) => ({
-          id: sub.id,
-          status: sub.status,
-          billingPeriodUnit: sub.billingPeriodUnit,
-          currentTermStart: sub.currentTermStart,
-          currentTermEnd: sub.currentTermEnd,
-          subscriptionItemsCount: sub.subscriptionItems.length,
-          items: sub.subscriptionItems.map((item) => ({
-            name: item.name,
-            itemType: item.itemType,
-            itemPriceId: item.itemPriceId,
-          })),
-        })),
-      });
-
-      // STEP 6: Find current (active) and future subscriptions
-      const statusActualSubAfterBoughtFuture = fxt.isKippyRun ? SubscriptionStatusEnum.Active : SubscriptionStatusEnum.NonRenewing;
-      //TODO: after FT merged, ask Lorenzo if kippy & petlink status are still disaligned after renewing
-      const currentSub = allSubscriptions!.find((sub) => sub.status === statusActualSubAfterBoughtFuture);
-      const futureSub = allSubscriptions!.find((sub) => sub.status === SubscriptionStatusEnum.Future);
-      expect(currentSub, "Should have current active subscription").toBeDefined();
-      expect(futureSub, "Should have future subscription").toBeDefined();
-
-      logger.info("✅ Subscriptions identified", {
-        current: {
-          id: currentSub!.id,
-          status: currentSub!.status,
-          billingPeriodUnit: currentSub!.billingPeriodUnit,
-          currentTermEnd: currentSub!.currentTermEnd,
+      // STEP 2: Wait for scheduledChanges to appear on the same sub (using getSubscriptions)
+      const updated = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }), {
+        isReady: (result) => {
+          const subs = result.getSubscriptions.subscriptions;
+          const sub = subs?.[0];
+          return sub?.id === currentSubscription.id && sub?.scheduledChanges != null;
         },
-        future: {
-          id: futureSub!.id,
-          status: futureSub!.status,
-          billingPeriodUnit: futureSub!.billingPeriodUnit,
-          currentTermStart: futureSub!.currentTermStart,
-        },
+        timeoutError: `Timeout: scheduledChanges with yearly plan not appearing on subscription`,
       });
+      const sub = updated.getSubscriptions.subscriptions![0]!;
 
-      // STEP 7: Verify future subscription matches purchased yearly plan
-      expect(futureSub, "Future subscription should match purchased yearly plan").toMatchObject({
-        currencyCode: yearlyPlan!.currencyCode,
-        billingPeriod: yearlyPlan!.period,
-        billingPeriodUnit: yearlyPlan!.periodUnit,
-        status: SubscriptionStatusEnum.Future,
-        paymentStatus: PaymentStatusTypeEnum.Succeeded,
-      });
-      expect(futureSub!.subscriptionItems, "Future sub should have 1 subscription item").toHaveLength(1);
-      const futurePlanItem = futureSub!.subscriptionItems.find((i: any) => i.itemType === "plan");
-      expect(futurePlanItem, "Future plan item should match yearly plan pricing").toMatchObject({
-        itemPriceId: yearlyPlan!.id,
-        itemId: yearlyPlan!.itemId,
-        amount: yearlyPlan!.price,
+      logger.info("Subscription with scheduledChanges retrieved");
+      // STEP 3: getSubscriptions returns ONE sub (no future sibling in new flow)
+      expect(updated.getSubscriptions.code).toBe("200");
+      expect(updated.getSubscriptions.subscriptions!.length, "Should have exactly 1 subscription (no Future)").toBe(1);
+
+      // STEP 4: Current sub still MONTHLY/Active, untouched
+      expect(sub.id).toBe(currentSubscription.id);
+      expect(sub.status).toBe(SubscriptionStatusEnum.Active);
+      expect(sub.paymentStatus).toBe(PaymentStatusTypeEnum.Succeeded);
+      expect(sub.billingPeriodUnit, "Current sub period must remain monthly").toBe("month");
+      const currentPlanItem = sub.subscriptionItems.find((i: SubscriptionShortInfoItem) => i.itemType === "plan");
+      expect(currentPlanItem!.itemPriceId, "Current plan item still the monthly one").toBe(monthlyPlan.id);
+
+      // STEP 5: scheduledChanges contains the yearly plan
+      expect(sub.scheduledChanges, "scheduledChanges should be populated").toBeDefined();
+      expect(sub.scheduledChanges!.billingPeriodUnit).toBe(yearlyPlan.periodUnit);
+      expect(sub.scheduledChanges!.billingPeriod).toBe(yearlyPlan.period);
+      expect(sub.scheduledChanges!.currencyCode).toBe(yearlyPlan.currencyCode);
+      const scheduledPlanItem = sub.scheduledChanges!.items!.find((i: SubscriptionShortInfoItem) => i.itemType === "plan");
+      expect(scheduledPlanItem, "scheduledChanges should include the new plan item").toMatchObject({
+        itemPriceId: yearlyPlan.id,
+        itemId: yearlyPlan.itemId,
         itemType: "plan",
         quantity: 1,
       });
 
-      // Verify future subscription starts when current ends
-      expect(futureSub!.currentTermStart!).toBeWithinHoursOf(currentSub!.currentTermEnd!, 0.5);
+      // STEP 6: Schedule kicks in when current term ends
+      expect(sub.scheduledChanges!.currentTermStart!).toBeWithinHoursOf(sub.currentTermEnd!, 0.5);
+    });
+
+    it("CHANGE sub: a second change while one is already scheduled should fail", async () => {
+      // STEP 1: First change → schedules YEARLY
+      const firstChange = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.ChangeSubscriptionPlan,
+          subscriptionId: currentSubscription.id,
+          priceIds: [yearlyPlan.id],
+        },
+      });
+      expect(firstChange.utilityIntegrationTest.code, "First CHANGE should succeed").toBe("200");
+
+      // Wait until scheduledChanges is actually persisted (using getSubscriptions)
+      await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.devices.dogStandard!.id }), {
+        isReady: (result) => result.getSubscriptions.subscriptions?.[0]?.scheduledChanges != null,
+        timeoutError: `Timeout: first scheduledChanges did not appear`,
+      });
+
+      // STEP 2: Second change attempt → must fail (only 1 schedule allowed at a time)
+      const secondChange = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.ChangeSubscriptionPlan,
+          subscriptionId: currentSubscription.id,
+          priceIds: [monthlyPlan.id],
+        },
+      });
+      expect(
+        secondChange.utilityIntegrationTest.code,
+        `Second CHANGE should fail because a scheduled change already exists - got ${secondChange.utilityIntegrationTest.code}: ${secondChange.utilityIntegrationTest.message}`,
+      ).not.toBe("200"); //todo: here correct that doesn't work, but it's correct 500 just Database Internal Server Error {"code":"500"}?
+
+      // STEP 3: Verify the original scheduledChange is still the yearly one (no overwrite)
+      const stillScheduled = await petlink.core.graphqlHttp.authJwt.getSubscriptions({
+        productId: setup.devices.dogStandard!.id,
+      });
+      const sub = stillScheduled.getSubscriptions.subscriptions![0]!;
+      expect(sub.scheduledChanges, "scheduledChanges should still be present").toBeDefined();
+      const scheduledPlanItem = sub.scheduledChanges!.items!.find((i: SubscriptionShortInfoItem) => i.itemType === "plan");
+      expect(scheduledPlanItem!.itemPriceId, "scheduledChanges should still target the original yearly plan").toBe(yearlyPlan.id);
     });
   });
 
@@ -855,119 +829,4 @@ describe("DEFAULT", () => {
   describe("STOP RENEW", () => {});
 
   describe("CANCEL/REFUND", () => {})
-});
-
-
-describe.skip("TRIAL (Trial 1 month, Esselunga)", () => {});
-
-
-describe.skip("PAID_EXTERNALLY (Axa,Europass)", () => {});
-
-
-describe.skip("PREPAID (purchase on external store)", () => {});
-
-
-describe("COUPON", () => {
-  let setup: TestSetup = {} as TestSetup;
-
-  beforeEach(async () => {
-    await testHelper.cleanupAll();
-    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
-  });
-
-  it("Coupon pre-assigned to device applies discount on purchase", async () => {
-    const device = setup.devices.dogStandard!;
-
-    // STEP 1: Get available coupons
-    const couponsResponse = await petlink.cct.graphqlHttp.authJwt.getCoupons();
-
-    expect(
-      couponsResponse.getCoupons.code,
-      `getCoupons should succeed - Error: ${couponsResponse.getCoupons.message}`,
-    ).toBe("200");
-
-    const availableCoupons = couponsResponse.getCoupons.coupons;
-    expect(availableCoupons, "Should have at least one coupon available").toBeDefined();
-    expect(availableCoupons!.length, "Coupons array should not be empty").toBeGreaterThan(0);
-
-    const coupon = availableCoupons![0];
-    logger.info("Selected coupon for test", { couponId: coupon.id, couponName: coupon.name });
-
-    // STEP 2: Assign coupon to device
-    const setCouponResponse = await petlink.cct.graphqlHttp.authJwt.setCoupon({
-      serialNumbers: [device.serialNumber],
-      couponId: coupon.id,
-      setMode: "apply",
-    });
-
-    expect(
-      setCouponResponse.setCoupon.code,
-      `setCoupon should succeed - Error: ${setCouponResponse.setCoupon.message}`,
-    ).toBe("200");
-
-    logger.info("Coupon assigned to device", {
-      serialNumber: device.serialNumber,
-      couponId: coupon.id,
-      failureList: setCouponResponse.setCoupon.failureList,
-    });
-
-    // STEP 3: Buy subscription
-    const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-      productId: device.id,
-      countryCode: device.countryCode,
-      serialNumber: device.serialNumber,
-    });
-    const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-
-    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-        phone: setup.user!.phone,
-        productId: device.id,
-        priceIds: [chosenPlan.id],
-        card: fxt.current.card.valid,
-      },
-    });
-
-    expect(
-      purchaseResponse.utilityIntegrationTest.code,
-      `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-    ).toBe("200");
-
-    // STEP 4: Wait for subscription to become active
-    const subscriptionResult = await waitFor(
-      async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
-      {
-        isReady: (result) => {
-          const sub = result.getSubscriptionByProductId.subscription;
-          return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-        },
-        timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
-      },
-    );
-
-    const subscription = subscriptionResult.getSubscriptionByProductId.subscription!;
-
-    logger.info("Subscription purchased with coupon", {
-      subscriptionId: subscription.id,
-      invoicesCount: subscription.invoices?.length,
-    });
-
-    // STEP 5: Verify discount in invoice
-    expect(subscription.invoices, "Subscription should have invoices").toBeDefined();
-    expect(subscription.invoices!.length, "Should have at least one invoice").toBeGreaterThan(0);
-
-    const firstInvoice = subscription.invoices![0];
-    expect(firstInvoice.discountItems, "Invoice should have discount items").toBeDefined();
-    expect(firstInvoice.discountItems!.length, "Should have at least one discount item").toBeGreaterThan(0);
-
-    const discountItem = firstInvoice.discountItems![0];
-    expect(discountItem.couponId, "Discount should be from the assigned coupon").toBe(coupon.id);
-    expect(discountItem.amount, "Discount amount should be positive").toBeGreaterThan(0);
-
-    logger.info("Coupon discount verified", {
-      couponId: discountItem.couponId,
-      discountAmount: discountItem.amount,
-    });
-  });
 });

@@ -127,4 +127,5 @@ describe("NOT_PAYING", () => {
       originalAddedFreePeriod + daysOfFreePeriod,
     );
   });
+
 });

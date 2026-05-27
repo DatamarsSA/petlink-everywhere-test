@@ -777,3 +777,11 @@ mutation renewInsuranceSubscription($productId: String!, $notes: String!) {
         translationCode
     }
 }
+
+mutation refundInvoice($invoiceId: String!, $reason: String!, $refunds: [RefundItemInput!]!) {
+    refundInvoice(invoiceId: $invoiceId, reason: $reason, refunds: $refunds) {
+        code
+        message
+        translationCode
+    }
+}

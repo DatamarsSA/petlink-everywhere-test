@@ -1259,6 +1259,14 @@ mutation stopRenewingSubscription($subscriptionId: String!, $appBrand: AppBrand!
     }
 }
 
+mutation reactivateSubscription($subscriptionId: String!) {
+    reactivateSubscription(subscriptionId: $subscriptionId) {
+        code
+        translationCode
+        message
+    }
+}
+
 mutation updateUser($user: UpdateUserIn!) {
     updateUser(user: $user) {
         code

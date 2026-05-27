@@ -12,7 +12,7 @@ ADDON lives with sub:
 If schedule change for sub, change also addonId (new Id)
 
 
-## DEFAULT
+## [] DEFAULT
 -BUY
 - buy normal sub -> return 200
 - if KIPPY, I have to can buy DEVICE protection
@@ -43,32 +43,32 @@ NOTE: if dunning for 25 days, and I recharge and pya at 25day, we move nextBilli
 *se CANCEL -> no pay penale
 
 
-## TRIAL (Esselunga or Trial 1 month)
+## [] TRIAL (Esselunga or Trial 1 month)
 - When user enter in app -> insert card and select plan for renewal at the end of the trial -> and sub should be available
   - if profile 1 month -> you can choose any plan for the expiration of the trial
   - if profile esselunga (1 year) -> you can choose only 1 year for the expiration of the trial
 
 
-## PAID_EXTERNALLY (Axa, Europass)
+## [] PAID_EXTERNALLY (Axa, Europass)
 - When user enter in app -> sub should be available
   - if EUROPASS -> 52 weeks available
   - if AXA -> 12 years available
 - There is not automatic renewal, user pay insurance, insurance call us and cct add another sub on cct (not paying flow)
 
 
-## PREPAID
+## [] PREPAID
 - user buy device on external store (shopify or other)
 - after purchase user opne ours hostedpage to buy sub
 - when user enter on app should can see active sub for that device
 //Con VLADIMIR eravamo rimasti qua
 
 
-## NOT_PAYING (no CB solo su ns db, create da CCT - addfreeperiod)
-- Assign free period for device with no subscription - sub should create on our db
-- Assign free period for device with subscription in CB - should add days to existing active sub (move nextBillingDate ahead?)
+## [x] NOT_PAYING 
+- Assign free period for device with no subscription -> sub should create on our db
+- Assign free period for device with subscription in CB -> should add days to existing active sub
 
 
-## COUPON
+## [] COUPON
 - Buy a subscription with a coupon already assigned
 - Buy a subscription with a coupon to assign during purchase flow (inside hosted page)
 compro sub -> provo ad andarmene (da retention page, qui pingpong fe-chargebee, stacca coupon chrgebee o magento, chiedi daniele)

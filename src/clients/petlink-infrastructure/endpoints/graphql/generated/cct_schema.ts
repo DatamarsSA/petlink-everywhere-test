@@ -2845,6 +2845,17 @@ export type RenewInsuranceSubscriptionMutation = {
   renewInsuranceSubscription?: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null } | null;
 };
 
+export type RefundInvoiceMutationVariables = Exact<{
+  invoiceId: Scalars["String"]["input"];
+  reason: Scalars["String"]["input"];
+  refunds: Array<RefundItemInput> | RefundItemInput;
+}>;
+
+export type RefundInvoiceMutation = {
+  __typename?: "Mutation";
+  refundInvoice?: { __typename?: "BaseResponse"; code: string; message: string; translationCode?: string | null } | null;
+};
+
 export const GetCustomerDocument = {
   kind: "Document",
   definitions: [
@@ -4932,6 +4943,62 @@ export const RenewInsuranceSubscriptionDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const RefundInvoiceDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "refundInvoice" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "invoiceId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "reason" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "refunds" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "ListType", type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "RefundItemInput" } } } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "refundInvoice" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "invoiceId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "invoiceId" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "reason" }, value: { kind: "Variable", name: { kind: "Name", value: "reason" } } },
+              { kind: "Argument", name: { kind: "Name", value: "refunds" }, value: { kind: "Variable", name: { kind: "Name", value: "refunds" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 
 export type SdkFunctionWrapper = <T>(
   action: (requestHeaders?: Record<string, string>) => Promise<T>,
@@ -5436,6 +5503,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "renewInsuranceSubscription",
+        "mutation",
+        variables,
+      );
+    },
+    refundInvoice(
+      variables: RefundInvoiceMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<RefundInvoiceMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<RefundInvoiceMutation>({
+            document: RefundInvoiceDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "refundInvoice",
         "mutation",
         variables,
       );
