@@ -26,8 +26,12 @@ describe("Energy Saving Zone", () => {
 
   beforeAll(async () => {
     await testHelper.cleanupAll();
-    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
+    setup = await testHelper
+      .setupBuilder()
+      .withUser()
+      .withDog({ withDevice: true, withSubscription: true })
+      .build();
+    await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
   });
 
   afterAll(() => {
@@ -44,7 +48,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Create,
         settingType: SettingTypeEnum.EnergySavingZone,
         createObject: JSON.stringify(createZonePayload),
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.dog!.device!.id,
       },
     });
 
@@ -76,7 +80,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Activate,
         settingType: SettingTypeEnum.EnergySavingZone,
         id: eszId,
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.dog!.device!.id,
       },
     });
 
@@ -109,7 +113,7 @@ describe("Energy Saving Zone", () => {
   it("Device DETECT wifi (emula enter sending 0x01) -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device enters ESZ (WiFi detect)");
 
-    const device = setup.devices.dogStandard!;
+    const device = setup.dog!.device!;
     const eszEnterPayload = {
       latitude: 44.5024,
       longitude: 11.3463,
@@ -120,7 +124,7 @@ describe("Energy Saving Zone", () => {
     // Start listening for ESZ enter event with onReady callback
     const eszEnterEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.dog!.device!.id },
       "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
       async () => {
@@ -139,7 +143,7 @@ describe("Energy Saving Zone", () => {
   it("Device LEAVES wifi (emula exit sending 0x01) -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device leaves ESZ (WiFi lost)");
 
-    const device = setup.devices.dogStandard!;
+    const device = setup.dog!.device!;
     const eszExitPayload = {
       latitude: 44.5024,
       longitude: 11.3463,
@@ -150,7 +154,7 @@ describe("Energy Saving Zone", () => {
     // Start listening for ESZ exit event with onReady callback
     const eszExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.dog!.device!.id },
       "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
       async () => {
@@ -178,7 +182,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Deactivate,
         settingType: SettingTypeEnum.EnergySavingZone,
         id: eszId,
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.dog!.device!.id,
       },
     });
 
@@ -194,12 +198,12 @@ describe("Energy Saving Zone", () => {
 
     const statusOffEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
-      { id: setup.devices.dogStandard!.id },
+      { id: setup.dog!.device!.id },
       "Device should notify energySavingMode=OFF after ESZ deactivation",
       (data) => data?.onGpsMessageStatus?.status?.energySavingMode === StatusState.Off,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat after ESZ disable...");
-        await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!, {
+        await petlink.sentinel.simulator.heartbeat(setup.dog!.device!, {
           curr_status: OperatingStatus.DEFAULT,
           spare_c5: 0x00,
         });
@@ -228,7 +232,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Update,
         settingType: SettingTypeEnum.EnergySavingZone,
         updateObject: JSON.stringify(updatePayload),
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.dog!.device!.id,
       },
     });
 
@@ -273,7 +277,7 @@ describe("Energy Saving Zone", () => {
         operationType: SettingOperationEnum.Delete,
         settingType: SettingTypeEnum.EnergySavingZone,
         id: eszId,
-        deviceId: setup.devices.dogStandard!.id,
+        deviceId: setup.dog!.device!.id,
       },
     });
 

@@ -8,7 +8,8 @@ import {
   SpeciesEnum,
   DeviceTypeEnum,
   UtilityTestTypeEnum as CoreUtilityTestTypeEnum,
-  OnSubscriptionStatusDocument,
+  SubscriptionStatusEnum,
+  PaymentStatusTypeEnum,
 } from "./petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 
 import { UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
@@ -17,6 +18,7 @@ import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
+import { waitFor } from "../helpers/utils.js";
 import { existsSync, mkdirSync } from "fs";
 import { unlinkSync } from "node:fs";
 
@@ -28,37 +30,41 @@ export type EnrichedDevice = PetlinkGps & {
   firmware: string;
 };
 
-export interface TestSetup {
-  user?: User;
-  pets: {
-    dog?: Pet;
-    dogForEvo?: Pet;
-    cat?: Pet;
-  };
-  devices: {
-    dogStandard?: EnrichedDevice;
-    dogEvo?: EnrichedDevice;
-    catStandard?: EnrichedDevice;
-  };
-}
-
-export type SubscriptionOptions = {
-  priceId?: string;
-  waitForActivation?: boolean;
+export type DeviceSetup = EnrichedDevice & {
+  subscriptions?: any[];
+  availablePlans?: any[];
+  availablePetProtectionPlans?: any[];
 };
 
+export type PetSetup = Pet & {
+  device?: DeviceSetup;
+};
+
+export interface TestSetup {
+  user?: User;
+  dog?: PetSetup;
+  cat?: PetSetup;
+  dogForEvo?: PetSetup;
+}
+
+export interface SubscriptionConfig {
+  priceIds?: string[];
+}
+
+export interface PetConfig {
+  withDevice?: boolean;
+  withSubscription?: SubscriptionConfig | true;
+}
+
 class TestSetupBuilder {
-  private setup: TestSetup = { pets: {}, devices: {} };
+  private setup: TestSetup = {};
   private includeUser = false;
   private userOptions: UserOptions = {};
-  private includeDog = false;
-  private includeDogForEvo = false;
-  private includeCat = false;
-  private includeDogDevice = false;
-  private includeDogEvoDevice = false;
-  private includeCatDevice = false;
-  private includeSubscription = false;
-  private subscriptionOptions: SubscriptionOptions = {};
+  private petConfigs: {
+    dog?: PetConfig;
+    cat?: PetConfig;
+    dogForEvo?: PetConfig;
+  } = {};
 
   constructor(private helper: TestHelper) {}
 
@@ -68,144 +74,167 @@ class TestSetupBuilder {
     return this;
   }
 
-  withDog(): this {
-    this.includeDog = true;
+  withDog(config: PetConfig = {}): this {
+    this.petConfigs.dog = config;
     return this;
   }
 
-  withDogForEvo(): this {
-    this.includeDogForEvo = true;
-    return this;
-  }
-
-  withCat(): this {
-    this.includeCat = true;
-    return this;
-  }
-
-  withDogDevice(): this {
-    this.includeDogDevice = true;
-    return this;
-  }
-
-  withDogEvoDevice(): this {
+  withDogForEvo(config: PetConfig = {}): this {
     if (!fxt.isKippyRun) {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
-    this.includeDogEvoDevice = true;
+    this.petConfigs.dogForEvo = config;
     return this;
   }
 
-  withCatDevice(): this {
-    this.includeCatDevice = true;
+  withCat(config: PetConfig = {}): this {
+    this.petConfigs.cat = config;
     return this;
   }
 
-  /**
-   * Acquista una subscription per il device
-   * Prerequisiti: withUser(), withDogDevice()/withDogEvoDevice() devono essere chiamati prima
-   * Internamente: aggiorna billing info + acquista subscription
-   */
-  withSubscription(options: SubscriptionOptions = {}): this {
-    this.includeSubscription = true;
-    this.subscriptionOptions = options;
-    return this;
-  }
-
-  async build(): Promise<TestSetup> {
-    //create USER
+  async build(options?: { waitForSubscriptions?: boolean }): Promise<TestSetup> {
+    // 1. Create user
     if (this.includeUser) {
       this.setup.user = await this.helper.createUser(this.userOptions);
     }
 
-    //create PETS
+    // 2. Create pets in parallel
     const petPromises: Promise<void>[] = [];
-    if (this.includeDog) {
-      petPromises.push(
-        this.helper.createPet(SpeciesEnum.Dog).then((dog) => {
-          this.setup.pets.dog = dog;
-        }),
-      );
+
+    const createPetEntry = async (species: SpeciesEnum, key: 'dog' | 'cat' | 'dogForEvo') => {
+      const pet = await this.helper.createPet(species);
+      this.setup[key] = pet as PetSetup;
+    };
+
+    if (this.petConfigs.dog) {
+      petPromises.push(createPetEntry(SpeciesEnum.Dog, 'dog'));
     }
 
-    if (this.includeDogForEvo) {
-      petPromises.push(
-        this.helper.createPet(SpeciesEnum.Dog).then((dogForEvo) => {
-          this.setup.pets.dogForEvo = dogForEvo;
-        }),
-      );
+    if (this.petConfigs.cat) {
+      petPromises.push(createPetEntry(SpeciesEnum.Cat, 'cat'));
     }
 
-    if (this.includeCat) {
-      petPromises.push(
-        this.helper.createPet(SpeciesEnum.Cat).then((cat) => {
-          this.setup.pets.cat = cat;
-        }),
-      );
+    if (this.petConfigs.dogForEvo) {
+      petPromises.push(createPetEntry(SpeciesEnum.Dog, 'dogForEvo'));
     }
 
     await Promise.all(petPromises);
 
-    //create DEVICES
+    // 3. Create devices in parallel
     const devicePromises: Promise<void>[] = [];
-    let coreDogStandard: PetlinkGps | undefined;
-    let coreDogEvo: PetlinkGps | undefined;
-    let coreCatStandard: PetlinkGps | undefined;
 
-    if (this.includeDogDevice && this.setup.pets.dog) {
-      devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dog, DeviceTypeEnum.Dog).then((device) => {
-          coreDogStandard = device;
-        }),
-      );
+    const createDeviceEntry = async (key: 'dog' | 'cat' | 'dogForEvo', deviceType: DeviceTypeEnum) => {
+      const pet = this.setup[key]!;
+      const device = await this.helper.createDeviceForPet(pet, deviceType);
+      this.setup[key]!.device = device;
+    };
+
+    if (this.petConfigs.dog?.withDevice) {
+      devicePromises.push(createDeviceEntry('dog', DeviceTypeEnum.Dog));
     }
 
-    if (this.includeDogEvoDevice && this.setup.pets.dogForEvo) {
-      devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.dogForEvo, DeviceTypeEnum.Evo).then((device) => {
-          coreDogEvo = device;
-        }),
-      );
+    if (this.petConfigs.cat?.withDevice) {
+      devicePromises.push(createDeviceEntry('cat', DeviceTypeEnum.Cat));
     }
 
-    if (this.includeCatDevice && this.setup.pets.cat) {
-      devicePromises.push(
-        this.helper.createDeviceForPet(this.setup.pets.cat, DeviceTypeEnum.Cat).then((device) => {
-          coreCatStandard = device;
-        }),
-      );
+    if (this.petConfigs.dogForEvo?.withDevice) {
+      devicePromises.push(createDeviceEntry('dogForEvo', DeviceTypeEnum.Evo));
     }
 
     await Promise.all(devicePromises);
 
-    // --- ENRICHMENT: Use hardware data from fixtures (no API calls) ---
-    if (coreDogStandard || coreDogEvo || coreCatStandard) {
-      logger.debug(`→ Enriching devices with hardware data from fixtures`);
+    // 4. Fetch subscription plans + update billing info in parallel
+    const billingPromise = this.setup.user
+      ? petlink.core.graphqlHttp.authJwt.updateBillingInfo({
+          updateBillingInfoInput: {
+            billingInfo: {
+              address: this.setup.user.streetAddress!,
+              city: this.setup.user.city!,
+              country: this.setup.user.countryCode!,
+              zip: this.setup.user.zipCode!,
+            },
+            email: this.setup.user.email!,
+            firstName: this.setup.user.name!,
+            lastName: this.setup.user.surname!,
+            phone: this.setup.user.phone!,
+          },
+        })
+      : Promise.resolve();
 
-      const enrich = (coreDevice: PetlinkGps, deviceType: 'DOG' | 'CAT' | 'EVO'): EnrichedDevice => {
-        const fixture = (fxt.current.devices as any)[deviceType];
-        if (!fixture || !fixture.imei || !fixture.iccid || !fixture.firmware) {
-          throw new Error(`[Setup] CRITICAL: Missing hardware data in fixtures for device type ${deviceType}`);
-        }
+    const planPromises: Promise<void>[] = [];
 
-        return {
-          ...coreDevice,
-          imei: fixture.imei,
-          iccid: fixture.iccid,
-          firmware: fixture.firmware,
-        };
-      };
+    const fetchPlansForDevice = async (key: 'dog' | 'cat' | 'dogForEvo') => {
+      const device = this.setup[key]!.device!;
+      const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+        productId: device.id,
+        countryCode: device.countryCode,
+        serialNumber: device.serialNumber,
+      });
+      this.setup[key]!.device!.availablePlans = plansResponse.getSubscriptionPlans.plans ?? [];
+      this.setup[key]!.device!.availablePetProtectionPlans = plansResponse.getSubscriptionPlans.careProtectionPlans ?? [];
+    };
 
-      if (coreDogStandard) this.setup.devices.dogStandard = enrich(coreDogStandard, 'DOG');
-      if (coreDogEvo) this.setup.devices.dogEvo = enrich(coreDogEvo, 'EVO');
-      if (coreCatStandard) this.setup.devices.catStandard = enrich(coreCatStandard, 'CAT');
+    if (this.setup.dog?.device) {
+      planPromises.push(fetchPlansForDevice('dog'));
+    }
+    if (this.setup.cat?.device) {
+      planPromises.push(fetchPlansForDevice('cat'));
+    }
+    if (this.setup.dogForEvo?.device) {
+      planPromises.push(fetchPlansForDevice('dogForEvo'));
     }
 
-    // Acquista subscription se richiesto
-    const deviceToSubscribe = this.setup.devices.dogEvo || this.setup.devices.dogStandard || this.setup.devices.catStandard;
+    await Promise.all([billingPromise, ...planPromises]);
 
-    if (this.includeSubscription && this.setup.user && deviceToSubscribe) {
-      await this.helper.purchaseSubscription(this.setup.user, deviceToSubscribe, this.subscriptionOptions);
+    // 5. Collect subscription targets
+    const subscriptionTargets: Array<{ key: 'dog' | 'cat' | 'dogForEvo'; priceIds: string[] }> = [];
+
+    for (const [key, config] of Object.entries(this.petConfigs) as Array<['dog' | 'cat' | 'dogForEvo', PetConfig]>) {
+      if (config.withSubscription && this.setup[key]?.device) {
+        let priceIds: string[];
+        if (config.withSubscription === true || !config.withSubscription.priceIds || config.withSubscription.priceIds.length === 0) {
+          const firstPlan = this.setup[key]!.device!.availablePlans?.[0]?.pricings?.[0];
+          if (!firstPlan) {
+            throw new Error(`[Setup] No available plans found for ${key}. Cannot auto-purchase subscription.`);
+          }
+          priceIds = [firstPlan.id];
+        } else {
+          priceIds = config.withSubscription.priceIds;
+        }
+        subscriptionTargets.push({ key, priceIds });
+      }
+    }
+
+    // 6. Purchase subscriptions
+    if (subscriptionTargets.length > 0) {
+      if (!this.setup.user) {
+        throw new Error("[Setup] User is required for subscription purchase");
+      }
+
+      await Promise.all(
+        subscriptionTargets.map(({ key, priceIds }) =>
+          this.helper.purchaseSubscription(this.setup.user!, this.setup[key]!.device!, priceIds),
+        ),
+      );
+    }
+
+    // 6. Wait for subscriptions if requested
+    if (options?.waitForSubscriptions && subscriptionTargets.length > 0) {
+      await Promise.all(
+        subscriptionTargets.map(async ({ key }) => {
+          const device = this.setup[key]!.device!;
+          const result = await waitFor(
+            async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
+            {
+              isReady: (result) =>
+                result.getSubscriptionByProductId.subscription?.status === SubscriptionStatusEnum.Active &&
+                result.getSubscriptionByProductId.subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
+              timeoutError: `Timeout: Subscription for ${key} did not become active`,
+            },
+          );
+          this.setup[key]!.device!.subscriptions = [result.getSubscriptionByProductId.subscription!];
+        }),
+      );
     }
 
     return this.setup;
@@ -388,7 +417,7 @@ class TestHelper {
     return response.createPet.pet!;
   }
 
-  async createDeviceForPet(pet: Pet, deviceType: DeviceTypeEnum): Promise<PetlinkGps> {
+  async createDeviceForPet(pet: Pet, deviceType: DeviceTypeEnum): Promise<EnrichedDevice> {
     const deviceFixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : (fxt.current.devices as any)[deviceType];
 
     if (!deviceFixture) {
@@ -420,14 +449,27 @@ class TestHelper {
       );
     }
 
+    const coreDevice = response.createPetlinkGps.petlinkGps!;
+
     logger.debug("✓ Assigned Device", {
-      serialNumber: response.createPetlinkGps.petlinkGps!.serialNumber,
+      serialNumber: coreDevice.serialNumber,
       deviceType,
       petId: pet.id,
-      id: response.createPetlinkGps.petlinkGps!.id,
+      id: coreDevice.id,
     });
 
-    return response.createPetlinkGps.petlinkGps!;
+    // Enrich with hardware data from fixtures
+    const fixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : (fxt.current.devices as any)[deviceType];
+    if (!fixture || !fixture.imei || !fixture.iccid || !fixture.firmware) {
+      throw new Error(`[Setup] CRITICAL: Missing hardware data in fixtures for device type ${deviceType}`);
+    }
+
+    return {
+      ...coreDevice,
+      imei: fixture.imei,
+      iccid: fixture.iccid,
+      firmware: fixture.firmware,
+    };
   }
 
   /**
@@ -449,95 +491,27 @@ class TestHelper {
   }
 
   /**
-   * Acquista una subscription per il device
-   * Internamente:
-   *   1. Aggiorna billing info dell'utente
-   *   2. Ottiene i piani disponibili
-   *   3. Acquista il primo piano disponibile
+   * Acquista una subscription per il device.
+   * Billing info deve essere già aggiornata dal caller.
    */
-  async purchaseSubscription(user: User, device: PetlinkGps, options: SubscriptionOptions = {}): Promise<void> {
-    const waitForActivation = options.waitForActivation ?? false;
-    logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceId: options.priceId, waitForActivation });
+  async purchaseSubscription(user: User, device: EnrichedDevice, priceIds: string[]): Promise<void> {
+    logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceIds });
 
-    // STEP 1 & 2: Aggiorna billing info + ottieni piani
-    const [_, plansResponse] = await Promise.all([
-      // Aggiorna billing info
-      petlink.core.graphqlHttp.authJwt.updateBillingInfo({
-        updateBillingInfoInput: {
-          billingInfo: {
-            address: user.streetAddress!,
-            city: user.city!,
-            country: user.countryCode!,
-            zip: user.zipCode!,
-          },
-          email: user.email!,
-          firstName: user.name!,
-          lastName: user.surname!,
-          phone: user.phone!,
-        },
-      }),
-
-      // Ottieni i piani disponibili (sempre necessario per fallback o log)
-      petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: CoreUtilityTestTypeEnum.BuyNewSubscription,
+        phone: user.phone,
         productId: device.id,
-        countryCode: user.countryCode!,
-        serialNumber: device.serialNumber,
-      }),
-    ]);
-
-    if (plansResponse.getSubscriptionPlans.code !== "200") {
-      throw new Error(`Failed to get subscription plans: ${plansResponse.getSubscriptionPlans.message}`);
-    }
-
-    // STEP 3: Seleziona il priceId
-    let chosenPriceId = options.priceId;
-
-    if (!chosenPriceId) {
-      const allPricings = plansResponse.getSubscriptionPlans.plans?.flatMap((p) => p.pricings) || [];
-      if (allPricings.length === 0) {
-        throw new Error("No subscription plans available and no specific priceId provided");
-      }
-      chosenPriceId = allPricings[0]!.id;
-    }
-
-    logger.debug("✓ Billing info updated and priceId identified", { priceId: chosenPriceId });
-
-    const executePurchase = async () => {
-      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: CoreUtilityTestTypeEnum.BuyNewSubscription,
-          phone: user.phone,
-          productId: device.id,
-          priceIds: [chosenPriceId],
-          card: fxt.current.card.valid,
-        },
-      });
-
-      if (purchaseResponse.utilityIntegrationTest.code !== "200") {
-        throw new Error(`Failed to purchase subscription: ${purchaseResponse.utilityIntegrationTest.message}`);
-      }
-    };
-
-    if (!waitForActivation) {
-      // Flusso VELOCE: Compra e non aspettare l'evento
-      await executePurchase();
-      logger.debug("✓ Subscription purchased (fast mode, no wait)");
-      return;
-    }
-
-    // Flusso COMPLETO: Apri socket -> aspetta connessione (onReady) -> compra -> aspetta evento
-    const subStatusUpdated = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      OnSubscriptionStatusDocument,
-      { id: user.id },
-      "Subscription should become active after purchase",
-      (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
-      executePurchase,
-    );
-
-    logger.debug("✓ Subscription purchased and activated successfully", {
-      subscriptionId: subStatusUpdated?.onSubscriptionStatus?.id,
-      productId: subStatusUpdated?.onSubscriptionStatus?.status?.productId,
+        priceIds,
+        card: fxt.current.card.valid,
+      },
     });
+
+    if (purchaseResponse.utilityIntegrationTest.code !== "200") {
+      throw new Error(`Failed to purchase subscription: ${purchaseResponse.utilityIntegrationTest.message}`);
+    }
+
+    logger.debug("✓ Subscription purchased", { deviceId: device.id, priceIds });
   }
 
   setupBuilder(): TestSetupBuilder {

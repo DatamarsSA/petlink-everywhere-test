@@ -20,10 +20,10 @@ describe("CCT Tool", () => {
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
       user = setup.user!;
-      pet = setup.pets.dog!;
-      device = setup.devices.dogStandard!;
+      pet = setup.dog!;
+      device = setup.dog!.device!;
 
       logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: device.id });
     });
@@ -149,10 +149,10 @@ describe("CCT Tool", () => {
       await testHelper.cleanupAll();
 
       // 1. Setup: Create User + Pet + Device via Core
-      const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
       user = setup.user!;
-      pet = setup.pets.dog!;
-      device = setup.devices.dogStandard!;
+      pet = setup.dog!;
+      device = setup.dog!.device!;
 
       logger.info("Setup Device complete", {
         userId: user.id,
@@ -227,8 +227,8 @@ describe("CCT Tool", () => {
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
-      await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
+      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+      await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
     });
 
     afterAll(async () => {
@@ -236,7 +236,7 @@ describe("CCT Tool", () => {
     });
 
     it("should show updated device connection timestamp in CCT list AFTER heartbeat is sent", async () => {
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       const user = setup.user!;
 
       // --- FASE 1: STATO INIZIALE ---
@@ -293,7 +293,7 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to retrieve Connections History", async () => {
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       const response = await petlink.cct.graphqlHttp.authJwt.getConnectionsHistory({
         serialId: device.serialNumber,
         filter: { filterType: FilterEnum.And },
@@ -307,7 +307,7 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to retrieve Last Connections via specific query", async () => {
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       const response = await petlink.cct.graphqlHttp.authJwt.getLastConnections({
         filter: {
           filterType: FilterEnum.And,

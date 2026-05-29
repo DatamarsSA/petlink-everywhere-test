@@ -73,14 +73,14 @@ describe("PetlinkGPS", () => {
         serialNumber: fxt.current.devices.DOG.serialNumber,
         countryCode: fxt.current.devices.DOG.countryCode,
         timezone: fxt.current.devices.DOG.timezone,
-        petId: setup.pets.dog!.id,
+        petId: setup.dog!.id,
       } as PetlinkGpsIn;
 
       const catDevicePayload = {
         serialNumber: fxt.current.devices.CAT.serialNumber,
         countryCode: fxt.current.devices.CAT.countryCode,
         timezone: fxt.current.devices.CAT.timezone,
-        petId: setup.pets.cat!.id,
+        petId: setup.cat!.id,
       } as PetlinkGpsIn;
 
       const [dogResponse, catResponse] = await Promise.all([
@@ -132,19 +132,19 @@ describe("PetlinkGPS", () => {
         serialNumber: fxt.KIPPY.devices.VITA.serialNumber,
         countryCode: fxt.KIPPY.devices.VITA.countryCode,
         timezone: fxt.KIPPY.devices.VITA.timezone,
-        petId: setup.pets.dog!.id,
+        petId: setup.dog!.id,
       } as PetlinkGpsIn;
       const finderDevicePayload = {
         serialNumber: fxt.KIPPY.devices.FINDER.serialNumber,
         countryCode: fxt.KIPPY.devices.FINDER.countryCode,
         timezone: fxt.KIPPY.devices.FINDER.timezone,
-        petId: setup.pets.cat!.id,
+        petId: setup.cat!.id,
       } as PetlinkGpsIn;
       const evo6DevicePayload = {
         serialNumber: fxt.KIPPY.devices.EVO6.serialNumber,
         countryCode: fxt.KIPPY.devices.EVO6.countryCode,
         timezone: fxt.KIPPY.devices.EVO6.timezone,
-        petId: setup.pets.cat!.id,
+        petId: setup.cat!.id,
       } as PetlinkGpsIn;
 
       const [vitaResponse, finderResponse, evo6Response] = await Promise.all([
@@ -187,7 +187,7 @@ describe("PetlinkGPS", () => {
         serialNumber: fxt.KIPPY.devices.EVO.serialNumber,
         countryCode: fxt.KIPPY.devices.EVO.countryCode,
         timezone: fxt.KIPPY.devices.EVO.timezone,
-        petId: setup.pets.dogForEvo!.id,
+        petId: setup.dogForEvo!.id,
       } as PetlinkGpsIn;
 
       const evoResponse = await petlink.core.graphqlHttp.authJwt.createPetlinkGps({
@@ -219,14 +219,14 @@ describe("PetlinkGPS", () => {
         serialNumber: fxt.current.devices.DOG.serialNumber,
         countryCode: fxt.current.devices.DOG.countryCode,
         timezone: fxt.current.devices.DOG.timezone,
-        petId: setup.pets.dog!.id,
+        petId: setup.dog!.id,
       } as PetlinkGpsIn;
 
       const catDevicePayload = {
         serialNumber: fxt.current.devices.CAT.serialNumber,
         countryCode: fxt.current.devices.CAT.countryCode,
         timezone: fxt.current.devices.CAT.timezone,
-        petId: setup.pets.cat!.id,
+        petId: setup.cat!.id,
       } as PetlinkGpsIn;
 
       const [dogResponse, catResponse] = await Promise.all([
@@ -286,11 +286,9 @@ describe("PetlinkGPS", () => {
       let setup = await testHelper
         .setupBuilder()
         .withUser()
-        .withDog()
-        .withDogDevice()
-        .withSubscription({ waitForActivation: true }) // <-- crea subscription attiva
-        .build();
-      const device = setup.devices.dogStandard!;
+        .withDog({ withDevice: true, withSubscription: true })
+        .build({ waitForSubscriptions: true });
+      const device = setup.dog!.device!;
 
       logger.info("Testing reset with active subscription...");
       // Chiama reset su CCT (che poi chiama Core)
@@ -313,11 +311,9 @@ describe("PetlinkGPS", () => {
       let setup = await testHelper
         .setupBuilder()
         .withUser()
-        .withDog()
-        .withDogDevice()
-        // NOTA: NON chiamare .withSubscription()
+        .withDog({ withDevice: true })
         .build();
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
 
       logger.info("Testing reset without active subscription...");
       // Call reset on CCT
@@ -345,10 +341,10 @@ describe("PetlinkGPS", () => {
 
     it("flow user buy another device and replace old", async () => {
       // SETUP: Creiamo utente + pet + device esistente (vecchio device)
-      const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
-      const oldDevice = setup.devices.dogStandard!;
+      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+      const oldDevice = setup.dog!.device!;
       const user = setup.user!;
-      const pet = setup.pets.dog!;
+      const pet = setup.dog!;
 
       logger.info("→ STEP 1: Verifica che non ci siano replacement history iniziali");
       const initialHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
@@ -395,10 +391,10 @@ describe("PetlinkGPS", () => {
     });
 
     it("flow user open ticket cct to replacement", async () => {
-      const setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().build();
+      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
       const user = setup.user!;
-      const pet = setup.pets.dog!;
-      const oldDevice = setup.devices.dogStandard!;
+      const pet = setup.dog!;
+      const oldDevice = setup.dog!.device!;
 
       logger.info("→ STEP 1: History must be empty before opening ticket");
       const initialHistory = await petlink.cct.graphqlHttp.authJwt.getReplacementPetlinkGpsHistory({
@@ -489,9 +485,9 @@ describe("PetlinkGPS", () => {
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
+      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true, withSubscription: true }).build();
 
-      await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
+      await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
     });
 
     afterAll(() => {
@@ -507,7 +503,7 @@ describe("PetlinkGPS", () => {
         setting: {
           operationType: SettingOperationEnum.Update,
           settingType: SettingTypeEnum.UpdateFrequency,
-          deviceId: setup.devices.dogStandard!.id,
+          deviceId: setup.dog!.device!.id,
           updateObject: JSON.stringify({
             updateFrequency: targetFrequency,
             enableGpsOnDefault: targetEnableGpsOnDefault,
@@ -524,7 +520,7 @@ describe("PetlinkGPS", () => {
       //NOTE: here should assert packet on device but for device socekt_alway_on (mine of test) arrive alway 90 so we not assert on it
       // // 2) Listen lato device e triggera heartbeat per forzare risposta 0x01 aggiornata
       // const packet01Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, (p) => p.update_frequency === targetFrequency);
-      // await petlink.sentinel.simulator.heartbeat(setup.devices.dogStandard!);
+      // await petlink.sentinel.simulator.heartbeat(setup.dog!.device!);
       // // 3) Check lato device (packet ricevuto da sentinel)
       // const packet01 = await packet01Promise;
       // expect(packet01).toBeDefined();
@@ -532,7 +528,7 @@ describe("PetlinkGPS", () => {
 
       // 4) Check lato DB/API (getPetlinkGps aggiornato)
       const getPetlinkGpsResponse = await petlink.core.graphqlHttp.authJwt.getPetlinkGps({
-        id: setup.devices.dogStandard!.id,
+        id: setup.dog!.device!.id,
       });
 
       expect(getPetlinkGpsResponse.getPetlinkGps.code).toBe("200");

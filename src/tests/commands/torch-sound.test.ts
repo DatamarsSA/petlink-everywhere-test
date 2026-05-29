@@ -15,8 +15,12 @@ describe("Torch & Sound Commands", () => {
 
   beforeAll(async () => {
     await testHelper.cleanupAll();
-    setup = await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
-    await petlink.sentinel.connectAndHandshake(setup.devices.dogStandard!);
+    setup = await testHelper
+      .setupBuilder()
+      .withUser()
+      .withDog({ withDevice: true, withSubscription: true })
+      .build();
+    await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
   });
 
   afterAll(() => {
@@ -28,7 +32,7 @@ describe("Torch & Sound Commands", () => {
     it("User ACTIVATE Torch (sendCommand duration=60) -> packet 0x10 should arrive to device AND app receives Torch Status ON", async () => {
       logger.info("🔦 User activates Torch");
 
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       let torchDurationSentByApp = 60;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
 
@@ -84,7 +88,7 @@ describe("Torch & Sound Commands", () => {
     it("User DEACTIVATE Torch (sendCommand duration=0) -> packet 0x10 should arrive to device", async () => {
       logger.info("🔦 User deactivates Torch");
 
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       let torchDurationSentByApp = 0;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
 
@@ -122,7 +126,7 @@ describe("Torch & Sound Commands", () => {
     it("User ACTIVATE Sound (sendCommand duration=30) -> packet 0x10 should arrive to device AND app receives Sound Status ON", async () => {
       logger.info("🔊 User activates Sound");
 
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       let soundDurationSentByApp = 30;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 
@@ -179,7 +183,7 @@ describe("Torch & Sound Commands", () => {
     it("User MUTE Sound (sendCommand duration=0) -> packet 0x10 should arrive to device with sound_command=0", async () => {
       logger.info("🔊 User mutes Sound");
 
-      const device = setup.devices.dogStandard!;
+      const device = setup.dog!.device!;
       let soundDurationSentByApp = 0;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 

@@ -45,11 +45,10 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
           countryCode: "FR",
           languageId: LanguageId.Fr,
         })
-        .withDogForEvo()
-        .withDogEvoDevice()
+        .withDogForEvo({ withDevice: true })
         .build();
 
-      productId = setup.devices.dogEvo!.id;
+      productId = setup.dogForEvo!.device!.id;
       testUser = setup.user!;
 
       // 2. Scoperta dinamica del piano tramite getPlansEOL
@@ -72,9 +71,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
       }
 
       // 3. Acquisto mirato tramite utility usando il priceId scoperto
-      await testHelper.purchaseSubscription(setup.user!, setup.devices.dogEvo!, {
-        priceId: longPricing.id,
-      });
+      await testHelper.purchaseSubscription(setup.user!, setup.dogForEvo!.device!, [longPricing.id]);
 
       // 4. Attendiamo che il BE processi la subscription e getPlansEOL torni vuoto (Flow 1)
       await waitFor(
@@ -111,7 +108,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.SHIPPING_INFO_FROM_ONLY_DEVICE,
           devicePriceId: selectedDevicePrice.id,
         },
@@ -151,7 +148,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.SHIPPING_INFO_DEFINED_BEFORE_EXTERNAL_PAGE,
           devicePriceId: selectedDevicePrice.id,
           shippingInfo,
@@ -184,7 +181,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.EXTERNAL_PAGE,
           shopUrl,
         },
@@ -212,7 +209,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.COMPLETED_SUCCESS,
         },
       });
@@ -251,11 +248,10 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
           countryCode: "FR",
           languageId: LanguageId.Fr,
         })
-        .withDogForEvo()
-        .withDogEvoDevice()
+        .withDogForEvo({ withDevice: true })
         .build();
 
-      productId = setup.devices.dogEvo!.id;
+      productId = setup.dogForEvo!.device!.id;
       testUser = setup.user!;
     });
 
@@ -284,7 +280,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.SHIPPING_INFO_FROM_PLAN,
           devicePriceId: selectedDevice.id,
           priceId: selectedPricing.id,
@@ -325,7 +321,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.PLAN_SUMMARY_PAGE,
           devicePriceId: selectedDevice.id,
           priceId: selectedPricing.id,
@@ -367,9 +363,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
 
     it("Step 5: Purchase Subscription (Simulated)", async () => {
       // Emulazione acquisto tramite utility
-      await testHelper.purchaseSubscription(testUser, setup.devices.dogEvo!, {
-        priceId: selectedPricing.id,
-      });
+      await testHelper.purchaseSubscription(testUser, setup.dogForEvo!.device!, [selectedPricing.id]);
     });
 
     it("Step 6: Acknowledge Checkout (Optional Fast Track)", async () => {
@@ -393,7 +387,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.WAITING_PLAN_PURCHASE,
         },
       });
@@ -439,7 +433,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.EXTERNAL_PAGE,
           shopUrl,
         },
@@ -465,7 +459,7 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         input: {
           productId,
           userId: testUser.id,
-          serialNumber: setup.devices.dogEvo!.serialNumber,
+          serialNumber: setup.dogForEvo!.device!.serialNumber,
           step: EOL_STEPS.COMPLETED_SUCCESS,
         },
       });
