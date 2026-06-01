@@ -501,7 +501,6 @@ describe("DEFAULT", () => {
   describe("CHANGE (upgrade/downgrade)", () => {
     let setup: TestSetup = {} as TestSetup;
     let currentSubscription: SubscriptionShortInfo;
-    let availablePlansForThisDevice: any[] = [];
     let monthlyPlan: any;
     let yearlyPlan: any;
 
@@ -515,32 +514,25 @@ describe("DEFAULT", () => {
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         await testHelper.cleanupAll();
-        // Piccola pausa per dare tempo agli eventi in-flight di Chargebee di "sbattere"
-        // contro un utente cancellato e morire prima della nuova registrazione
-        await new Promise((r) => setTimeout(r, 500));
-
         const built = await testHelper.setupBuilder()
           .withUser()
           .withDog({ withDevice: true })
           .build();
 
         const device = built.dog!.device!;
-        const allPricings = device.availablePlans!.flatMap((p: any) => p.pricings);
 
+        // --- RILEVAZIONE PREPAID ORPHAN SUBSCRIPTION ---
+        const hasPrepaidHint = (device as any).subscriptionPlan === "prepaid";
+        if (hasPrepaidHint) {
+          logger.warn(`Stray subscription detected on ${device.serialNumber} (attempt ${attempt}/${maxRetries}), retrying cleanup...`);
+          continue;
+        }
+
+        const allPricings = device.availablePlans!.flatMap((p: any) => p.pricings);
         const m = allPricings.find((pr: any) => pr.periodUnit === "month");
         const y = allPricings.find((pr: any) => pr.periodUnit === "year");
         expect(m, "A MONTHLY pricing must be available").toBeDefined();
         expect(y, "A YEARLY pricing must be available").toBeDefined();
-
-        // --- RILEVAZIONE STRAY SUBSCRIPTION ---
-        // 1) Check se device linkato a sub orfana (mean chargebee event arrived post cleanUp and recreated record)
-        const hasPrepaidHint = (device as any).subscriptionPlan === "prepaid";
-
-
-        if (hasPrepaidHint) {
-          logger.warn(`Stray subscription detected on ${device.serialNumber} (attempt ${attempt}/${maxRetries}), retrying cleanup...`);
-          continue; // rifà tutto da capo
-        }
 
         // --- ACQUISTA MONTHLY ---
         const sub = await testHelper.purchaseSubscription(built.user!, device, [m.id], { waitForActive: true });
@@ -656,6 +648,7 @@ describe("DEFAULT", () => {
       const scheduledPlanItem = sub.scheduledChanges!.items!.find((i: SubscriptionShortInfoItem) => i.itemType === "plan");
       expect(scheduledPlanItem!.itemPriceId, "scheduledChanges should still target the original yearly plan").toBe(yearlyPlan.id);
     });
+
   });
 
   describe("AUTOMATIC RENEW (Done & Dunning)", () => {})

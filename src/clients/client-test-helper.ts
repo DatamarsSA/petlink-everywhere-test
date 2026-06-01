@@ -28,6 +28,7 @@ export type EnrichedDevice = PetlinkGps & {
   imei: string;
   iccid: string;
   firmware: string;
+  subscriptionPlan?: string;
 };
 
 export type DeviceSetup = EnrichedDevice & {
@@ -461,6 +462,7 @@ class TestHelper {
       imei: fixture.imei,
       iccid: fixture.iccid,
       firmware: fixture.firmware,
+      subscriptionPlan: (response as any).createPetlinkGps?.subscriptionPlan,
     };
   }
 

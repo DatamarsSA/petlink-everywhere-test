@@ -14,15 +14,15 @@ If schedule change for sub, change also addonId (new Id)
 
 ## [] DEFAULT
 -BUY
-- buy normal sub -> return 200
-- if KIPPY, I have to can buy DEVICE protection
-- If KIPPY & IT, I have to can buy both PET & DEVICE protection
+~~- buy normal sub -> return 200~~
+~~- if KIPPY, I have to can buy DEVICE protection~~
+~~- If KIPPY & IT, I have to can buy both PET & DEVICE protection~~
 
 
--CHANGE (upgrade/downgrade)
-- bought 2 years -> return 200
-- after 1 purchase -> bought 1 year -> return 200 -> & assert add 1 schedule change
-- after first schedule change -> try to change one more time -> should fail (only 1 schedule change at time is allowed)
+~~-CHANGE (monthly than yearly)~~
+~~- bought 2 years -> return 200~~
+~~- after 1 purchase -> bought 1 year -> return 200 -> & assert add 1 schedule change~~
+~~- after first schedule change -> try to change one more time -> should fail (only 1 schedule change at time is allowed)~~
 - I could be able to change toghether at sub also the addon
 
 -AUTOMATIC_RENEW
