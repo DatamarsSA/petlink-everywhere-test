@@ -223,32 +223,12 @@ describe("DEFAULT", () => {
         addonPrice: chosenPlan.addon.price,
       });
 
-      const purchasePlanWithAddonResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.dog!.device!.id,
-          priceIds: [chosenPlan.id, chosenPlan.addon.id],
-          card: fxt.current.card.valid,
-        },
-      });
-      expect(
-        purchasePlanWithAddonResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed - Error: ${purchasePlanWithAddonResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-
-      const purchasedSubscriptions = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.dog!.device!.id }),
-        {
-          isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-          },
-          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" in ${fxt.polling.timeoutMs}ms`,
-        },
+      const subscription = await testHelper.purchaseSubscription(
+        setup.user!,
+        setup.dog!.device!,
+        [chosenPlan.id, chosenPlan.addon.id],
+        { waitForActive: true },
       );
-
-      const subscription = purchasedSubscriptions.getSubscriptionByProductId.subscription!;
 
       logger.info("Subscription with addon activated successfully", {
         subscriptionId: subscription.id,
@@ -287,40 +267,22 @@ describe("DEFAULT", () => {
       const chosenPetProtection = availablePetProtectionForThisPet![0].pricings[0]!;
       logger.info("Chosen plans for test", { chosenPlan, chosenPetProtection });
 
-      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.dog!.device!.id,
-          priceIds: [chosenPlan.id, chosenPetProtection.id],
-          card: fxt.current.card.valid,
-        },
-      });
-
-      const [subscription, petProtectionResult] = await Promise.all([
-        waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.dog!.device!.id }), {
-          isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-          },
-          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}"`,
-        }),
+      const [sub, petProtectionResult] = await Promise.all([
+        testHelper.purchaseSubscription(
+          setup.user!,
+          setup.dog!.device!,
+          [chosenPlan.id, chosenPetProtection.id],
+          { waitForActive: true },
+        ),
         waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.dog!.id }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
           timeoutError: `Timeout: petProtectionId not assigned to pet`,
         }),
       ]);
 
-      const sub = subscription.getSubscriptionByProductId.subscription!;
       const pet = petProtectionResult.getPet.pet!;
       const petProtectionResponse = await petlink.core.graphqlHttp.authJwt.getPetProtection({ petProtectionId: pet.petProtectionId! });
       const petProtection = petProtectionResponse.getPetProtection.petProtection!;
-
-      // Purchase response
-      expect(
-        purchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
 
       // Verify subscription matches plan
       expect(sub, "Subscription should match purchased plan").toMatchObject({
@@ -371,38 +333,20 @@ describe("DEFAULT", () => {
         petProtectionPrice: chosenPetProtection.price,
       });
 
-      // Purchase: plan + addon + pet protection (price ids array)
-      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.dog!.device!.id,
-          priceIds: [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
-          card: fxt.current.card.valid,
-        },
-      });
-
-      expect(
-        purchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-
       // Wait for both subscription active and petProtection assignment
-      const [subscriptionResult, petProtectionResult] = await Promise.all([
-        waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.dog!.device!.id }), {
-          isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-          },
-          timeoutError: `Timeout: Subscription not active with ${PaymentStatusTypeEnum.Succeeded} payment`,
-        }),
+      const [subscription, petProtectionResult] = await Promise.all([
+        testHelper.purchaseSubscription(
+          setup.user!,
+          setup.dog!.device!,
+          [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id],
+          { waitForActive: true },
+        ),
         waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.dog!.id }), {
           isReady: (result) => result.getPet.pet!.petProtectionId != null,
           timeoutError: `Timeout: petProtectionId not assigned to pet`,
         }),
       ]);
 
-      const subscription = subscriptionResult.getSubscriptionByProductId.subscription!;
       const pet = petProtectionResult.getPet.pet!;
 
       logger.info("Combined subscription + pet protection activated", {
@@ -459,37 +403,13 @@ describe("DEFAULT", () => {
       const petProtectionPlan = availablePetProtectionForThisPet![0].pricings[0]!;
       const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
 
-      // STEP 2: Purchase a regular subscription first
-      const subPurchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.dog!.device!.id,
-          priceIds: [regularPlan.id],
-          card: fxt.current.card.valid,
-        },
-      });
-      expect(
-        subPurchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed for regular subscription - Error: ${subPurchaseResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-
-      // STEP 3: Wait for the subscription to become active with SUCCEEDED payment status
-      logger.info(`bought SUB for device ${setup.dog!.device!.id}, start to wait to become active`);
-      const activeSubscription = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: setup.dog!.device!.id }),
-        {
-          isReady: (result) => {
-            const sub = result.getSubscriptionByProductId.subscription;
-            return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-          },
-          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" with ${PaymentStatusTypeEnum.Succeeded} payment`,
-        },
+      // STEP 2: Purchase a regular subscription first and wait for active
+      const activeSub = await testHelper.purchaseSubscription(
+        setup.user!,
+        setup.dog!.device!,
+        [regularPlan.id],
+        { waitForActive: true },
       );
-
-      const activeSub = activeSubscription.getSubscriptionByProductId.subscription!;
-      expect(activeSub.status, "Subscription should be active before purchasing pet protection").toBe(SubscriptionStatusEnum.Active);
-      expect(activeSub.paymentStatus, "Payment status should be SUCCEEDED before purchasing pet protection").toBe(PaymentStatusTypeEnum.Succeeded);
 
       // STEP 4: Purchase pet protection alone
       logger.info(`bought PET-PROTECTION for device ${setup.dog!.device!.id}, start to wait to become active`);
@@ -585,67 +505,62 @@ describe("DEFAULT", () => {
     let monthlyPlan: any;
     let yearlyPlan: any;
 
+    async function setupCleanMonthlySub(): Promise<{
+      setup: TestSetup;
+      monthlyPlan: any;
+      yearlyPlan: any;
+      currentSubscription: SubscriptionShortInfo;
+    }> {
+      const maxRetries = 5;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        await testHelper.cleanupAll();
+        // Piccola pausa per dare tempo agli eventi in-flight di Chargebee di "sbattere"
+        // contro un utente cancellato e morire prima della nuova registrazione
+        await new Promise((r) => setTimeout(r, 500));
+
+        const built = await testHelper.setupBuilder()
+          .withUser()
+          .withDog({ withDevice: true })
+          .build();
+
+        const device = built.dog!.device!;
+        const allPricings = device.availablePlans!.flatMap((p: any) => p.pricings);
+
+        const m = allPricings.find((pr: any) => pr.periodUnit === "month");
+        const y = allPricings.find((pr: any) => pr.periodUnit === "year");
+        expect(m, "A MONTHLY pricing must be available").toBeDefined();
+        expect(y, "A YEARLY pricing must be available").toBeDefined();
+
+        // --- RILEVAZIONE STRAY SUBSCRIPTION ---
+        // 1) Check se device linkato a sub orfana (mean chargebee event arrived post cleanUp and recreated record)
+        const hasPrepaidHint = (device as any).subscriptionPlan === "prepaid";
+
+
+        if (hasPrepaidHint) {
+          logger.warn(`Stray subscription detected on ${device.serialNumber} (attempt ${attempt}/${maxRetries}), retrying cleanup...`);
+          continue; // rifà tutto da capo
+        }
+
+        // --- ACQUISTA MONTHLY ---
+        const sub = await testHelper.purchaseSubscription(built.user!, device, [m.id], { waitForActive: true });
+        expect(sub.billingPeriodUnit, "Baseline sub should be MONTHLY").toBe("month");
+        expect(sub.scheduledChanges, "Fresh sub should have no scheduled changes").toBeFalsy();
+
+        return { setup: built, monthlyPlan: m, yearlyPlan: y, currentSubscription: sub };
+      }
+
+      throw new Error(`Unable to get a clean device after ${maxRetries} cleanup attempts`);
+    }
+
     beforeEach(async () => {
-      // STEP 1: Cleanup e setup base (no cat needed here)
-      await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder()
-        .withUser()
-        .withDog({ withDevice: true })
-        .build();
-
-      // STEP 2: Get available plans from builder
-      availablePlansForThisDevice = setup.dog!.device!.availablePlans!;
-      const allPricings = availablePlansForThisDevice.flatMap((p) => p.pricings);
-      monthlyPlan = allPricings.find((pr: any) => pr.periodUnit === "month");
-      yearlyPlan = allPricings.find((pr: any) => pr.periodUnit === "year");
-      expect(monthlyPlan, "A MONTHLY pricing must be available for the device").toBeDefined();
-      expect(yearlyPlan, "A YEARLY pricing must be available for the device").toBeDefined();
-
-      // STEP 3: Buy MONTHLY plan (deterministic baseline for CHANGE tests)
-      const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-        input: {
-          utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-          phone: setup.user!.phone,
-          productId: setup.dog!.device!.id,
-          priceIds: [monthlyPlan.id],
-          card: fxt.current.card.valid,
-        },
-      });
-      expect(
-        purchaseResponse.utilityIntegrationTest.code,
-        `utilityIntegrationTest should succeed in beforeEach - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-      ).toBe("200");
-
-      // STEP 4: Wait for subscription to become active and store it
-      // Use getSubscriptions because scheduledChanges is only on SubscriptionShortInfo
-      // const subStatusUpdated = await petlink.core.graphqlWS.authJwt.subscribeUntil(
-      //   OnSubscriptionStatusDocument,
-      //   { id: setup.user?.id },
-      //   "Subscription should become active after purchase",
-      //   (data) => data?.onSubscriptionStatus?.status?.subscriptionIsActive === true,
-      // );
-      const subscriptionsResult = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.dog!.device!.id }),
-        {
-          isReady: (result) => {
-            const subs = result.getSubscriptions.subscriptions;
-            return subs?.length === 1 && subs[0]?.status === SubscriptionStatusEnum.Active && subs[0]?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-          },
-          timeoutError: `Timeout: Subscription status did not change to "${SubscriptionStatusEnum.Active}" with ${PaymentStatusTypeEnum.Succeeded} payment`,
-        },
-      );
-
-      currentSubscription = subscriptionsResult.getSubscriptions.subscriptions![0]!;
-
-      logger.info("Subscription ready for CHANGE tests", {
-        subscriptionId: currentSubscription.id,
-        status: currentSubscription.status,
-        billingPeriodUnit: currentSubscription.billingPeriodUnit,
-      });
-
-      expect(currentSubscription.billingPeriodUnit, "Baseline sub should be MONTHLY").toBe("month");
-      expect(currentSubscription.scheduledChanges, "Fresh sub should have no scheduled changes").toBeFalsy();
+      const state = await setupCleanMonthlySub();
+      setup = state.setup;
+      monthlyPlan = state.monthlyPlan;
+      yearlyPlan = state.yearlyPlan;
+      currentSubscription = state.currentSubscription;
     });
+
 
     it("CHANGE sub: Buy MONTHLY → Buy YEARLY should creates schedule change", async () => {
       // STEP 1: Trigger plan change to yearly
@@ -819,17 +734,12 @@ describe("NOT_PAYING", () => {
     const daysOfFreePeriod = 14;
     const freePeriod = AddFreePeriod.Add_14Days;
 
-    await testHelper.purchaseSubscription(setup.user!, device, [device.availablePlans![0].pricings[0].id]);
-
-    const initialSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
-      isReady: (result) => {
-        const sub = result.getSubscriptionByProductId.subscription;
-        return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-      },
-      timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
-    });
-
-    const initialSubscription = initialSubResult.getSubscriptionByProductId.subscription!;
+    const initialSubscription = await testHelper.purchaseSubscription(
+      setup.user!,
+      device,
+      [device.availablePlans![0].pricings[0].id],
+      { waitForActive: true },
+    );
     const originalCurrentTermEnd = initialSubscription.currentTermEnd;
 
     const initialCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
@@ -921,31 +831,13 @@ describe.skip("COUPON", () => {
     });
     const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
-    const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-        phone: setup.user!.phone,
-        productId: device.id,
-        priceIds: [chosenPlan.id],
-        card: fxt.current.card.valid,
-      },
-    });
-
-    expect(
-      purchaseResponse.utilityIntegrationTest.code,
-      `utilityIntegrationTest should succeed - Error: ${purchaseResponse.utilityIntegrationTest.message}`,
-    ).toBe("200");
-
-    // STEP 4: Wait for subscription to become active
-    const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
-      isReady: (result) => {
-        const sub = result.getSubscriptionByProductId.subscription;
-        return sub?.status === SubscriptionStatusEnum.Active && sub?.paymentStatus === PaymentStatusTypeEnum.Succeeded;
-      },
-      timeoutError: `Timeout: Subscription not active with SUCCEEDED payment`,
-    });
-
-    const subscription = subscriptionResult.getSubscriptionByProductId.subscription! as any;
+    // STEP 4: Purchase and wait for subscription to become active
+    const subscription = await testHelper.purchaseSubscription(
+      setup.user!,
+      device,
+      [chosenPlan.id],
+      { waitForActive: true },
+    ) as any;
 
     logger.info("Subscription purchased with coupon", {
       subscriptionId: subscription.id,

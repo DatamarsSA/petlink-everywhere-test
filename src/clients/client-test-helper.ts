@@ -205,36 +205,28 @@ class TestSetupBuilder {
       }
     }
 
-    // 6. Purchase subscriptions
+    // 6. Purchase subscriptions (and optionally wait for active)
     if (subscriptionTargets.length > 0) {
       if (!this.setup.user) {
         throw new Error("[Setup] User is required for subscription purchase");
       }
 
-      await Promise.all(
+      const subs = await Promise.all(
         subscriptionTargets.map(({ key, priceIds }) =>
-          this.helper.purchaseSubscription(this.setup.user!, this.setup[key]!.device!, priceIds),
+          this.helper.purchaseSubscription(
+            this.setup.user!,
+            this.setup[key]!.device!,
+            priceIds,
+            options?.waitForSubscriptions ? { waitForActive: true } : undefined,
+          ),
         ),
       );
-    }
 
-    // 6. Wait for subscriptions if requested
-    if (options?.waitForSubscriptions && subscriptionTargets.length > 0) {
-      await Promise.all(
-        subscriptionTargets.map(async ({ key }) => {
-          const device = this.setup[key]!.device!;
-          const result = await waitFor(
-            async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
-            {
-              isReady: (result) =>
-                result.getSubscriptionByProductId.subscription?.status === SubscriptionStatusEnum.Active &&
-                result.getSubscriptionByProductId.subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
-              timeoutError: `Timeout: Subscription for ${key} did not become active`,
-            },
-          );
-          this.setup[key]!.device!.subscriptions = [result.getSubscriptionByProductId.subscription!];
-        }),
-      );
+      if (options?.waitForSubscriptions) {
+        subscriptionTargets.forEach(({ key }, i) => {
+          this.setup[key]!.device!.subscriptions = [subs[i]!];
+        });
+      }
     }
 
     return this.setup;
@@ -493,8 +485,14 @@ class TestHelper {
   /**
    * Acquista una subscription per il device.
    * Billing info deve essere già aggiornata dal caller.
+   * Se waitForActive è true, attende che la sub diventi Active e la ritorna.
    */
-  async purchaseSubscription(user: User, device: EnrichedDevice, priceIds: string[]): Promise<void> {
+  async purchaseSubscription(
+    user: User,
+    device: EnrichedDevice,
+    priceIds: string[],
+    options?: { waitForActive?: boolean },
+  ): Promise<any> {
     logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceIds });
 
     const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
@@ -512,6 +510,19 @@ class TestHelper {
     }
 
     logger.debug("✓ Subscription purchased", { deviceId: device.id, priceIds });
+
+    if (options?.waitForActive) {
+      const result = await waitFor(
+        async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
+        {
+          isReady: (result) =>
+            result.getSubscriptionByProductId.subscription?.status === SubscriptionStatusEnum.Active &&
+            result.getSubscriptionByProductId.subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
+          timeoutError: `Timeout: Subscription did not become active for device ${device.id}`,
+        },
+      );
+      return result.getSubscriptionByProductId.subscription!;
+    }
   }
 
   setupBuilder(): TestSetupBuilder {
