@@ -28,8 +28,8 @@ If schedule change for sub, change also addonId (new Id)
 -AUTOMATIC_RENEW
 - buy sub
 - at nextBillingDate on CB -> if card with money -> normal renew (1more invoice with status payment_succeeded)
-- at nextBillingDate on CB -> if card without money -> DUNNING, chargebee riprova renew fino a max 28gg -> se ancora senza soldi entri 28gg -> cancel sub (1more invoice with status payment_due)
-NOTE: if dunning for 25 days, and I recharge and pya at 25day, we move nextBillingDate after 25days
+- at nextBillingDate on CB -> if card without money -> DUNNING, chargebee retries renew until max 28gg -> if you still no have money after 28gg -> cancel sub (1more invoice with status payment_due)
+NOTE: if dunning for 25 days, and I recharged and pay at 25day, we move nextBillingDate after 25days
 ~~NOTE: other payment method: paypal, google pay e apple pay?~~  are not testable
 
 -STOP renewal

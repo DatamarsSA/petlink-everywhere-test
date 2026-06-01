@@ -13,6 +13,7 @@ import {
   SubscriptionShortInfo,
   ScheduledChanges,
   SubscriptionShortInfoItem,
+  InvoiceStatusEnum,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { AddFreePeriod, CouponSetMode } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { waitFor } from "../../helpers/utils.js";
@@ -651,7 +652,108 @@ describe("DEFAULT", () => {
 
   });
 
-  describe("AUTOMATIC RENEW (Done & Dunning)", () => {})
+  describe("AUTOMATIC_RENEW", () => {
+    let setup: TestSetup = {} as TestSetup;
+
+    beforeEach(async () => {
+      await testHelper.cleanupAll();
+      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+    });
+
+    // buy & wait active -> Force renew by moving nextBillingDate to now ->poll until (?)-> assert
+    it("Succeeded - should renew subscription and create a paid invoice", async () => {
+      const device = setup.dog!.device!;
+      const plan = device.availablePlans![0].pricings[0];
+
+      // 1. Buy and wait active
+      const subBefore = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+      const originalTermEnd = subBefore.currentTermEnd!;
+
+      const initialSubsResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptions({
+        productId: device.id,
+      });
+      const originalInvoicesCount = initialSubsResponse.getSubscriptions.subscriptions![0].invoices?.length ?? 0;
+
+      // 2. Force renew by moving nextBillingDate to now
+      const travelResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.UpdateSubscriptionNextBillingDate,
+          subscriptionId: subBefore.id,
+          nextBillingDate: new Date().toISOString(),
+        },
+      });
+      expect(travelResponse.utilityIntegrationTest.code).toBe("200");
+
+      // 3. Poll until term shifts (renew is async)
+      const renewedResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        isReady: (res) => {
+          const sub = res.getSubscriptions.subscriptions?.[0];
+          if (!sub?.currentTermEnd) return false;
+          return new Date(sub.currentTermEnd).getTime() > new Date(originalTermEnd).getTime();
+        },
+        timeoutError: "Timeout: subscription did not renew after time travel",
+      });
+      const subAfter = renewedResult.getSubscriptions.subscriptions![0]!;
+
+      // 4. Assert dates, status and payment
+      expect(subAfter.status).toBe(SubscriptionStatusEnum.Active);
+      expect(subAfter.paymentStatus).toBe(PaymentStatusTypeEnum.Succeeded);
+      expect(new Date(subAfter.currentTermStart!).getTime()).toBeGreaterThanOrEqual(new Date(originalTermEnd).getTime());
+
+      // 5. Assert invoice
+      expect(subAfter.invoices?.length).toBeGreaterThan(originalInvoicesCount);
+      const newInvoice = subAfter.invoices!.find((inv) => new Date(inv.creationDate).getTime() > Date.now() - 120_000);
+      expect(newInvoice).toBeDefined();
+      expect(newInvoice!.status).toBe(InvoiceStatusEnum.Paid as any);
+    });
+
+    //here: UtilityTestTypeEnum.UpdateSubscriptionNextBillingDate
+    it("Dunning - should fail payment and enter dunning when card has no funds", async () => {
+      const device = setup.dog!.device!;
+      const plan = device.availablePlans![0].pricings[0];
+
+      // 1. Buy with valid card
+      const subBefore = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+
+      // 2. Swap to no-funds card (assuming utilityIntegrationTest supports this)
+      const updateCardResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.UpdatePaymentMethod,
+          subscriptionId: subBefore.id,
+          card: fxt.current.card.insufficientFunds,
+        },
+      });
+      expect(updateCardResponse.utilityIntegrationTest.code).toBe("200");
+
+      // 3. Force renew
+      const travelResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+        input: {
+          utilityType: UtilityTestTypeEnum.UpdateSubscriptionNextBillingDate,
+          subscriptionId: subBefore.id,
+          nextBillingDate: new Date().toISOString(),
+        },
+      });
+      expect(travelResponse.utilityIntegrationTest.code).toBe("200");
+
+      // 4. Poll until dunning appears
+      const dunningResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        isReady: (res) => {
+          const sub = res.getSubscriptions.subscriptions?.[0];
+          return !!sub?.dunningStatus || (sub?.dunningAttempts && sub.dunningAttempts.length > 0);
+        },
+        timeoutError: "Timeout: dunning did not start after failed renew",
+      });
+      const subAfter = dunningResult.getSubscriptions.subscriptions![0]!;
+
+      // 5. Assert dunning state
+      expect(subAfter.paymentStatus).toBe(PaymentStatusTypeEnum.Failed);
+      expect(subAfter.dunningStatus).toBeTruthy();
+      expect(subAfter.dunningAttempts!.length).toBeGreaterThan(0);
+
+      // Term should NOT shift on failed renew
+      expect(new Date(subAfter.currentTermEnd!).getTime()).toBe(new Date(subBefore.currentTermEnd!).getTime());
+    });
+  });
 
   describe("STOP RENEW", () => {});
 
