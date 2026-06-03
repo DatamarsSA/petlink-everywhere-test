@@ -44,15 +44,18 @@ NOTE: if dunning for 25 days, and I recharged and pay at 25day, we move nextBill
 
 
 ## [] TRIAL (Esselunga or Trial 1 month)
+legate a planProfile, 1 device -> legato a quel planProfile
 - When user enter in app -> insert card and select plan for renewal at the end of the trial -> and sub should be available
   - if profile 1 month -> you can choose any plan for the expiration of the trial
   - if profile esselunga (1 year) -> you can choose only 1 year for the expiration of the trial
 
 
 ## [] PAID_EXTERNALLY (Axa, Europass)
+legate a planProfile, 1 device -> legato a quel planProfile
 - When user enter in app -> sub should be available
-  - if EUROPASS -> 52 weeks available
-  - if AXA -> 12 years available
+  - if EUROPASS -> 52 weeks available -> after 52week, user cct add freePeriod of other 52 weeks 
+    - in fase di registrazione 54, e in fase di rinnovo sempre 52
+  - if AXA -> 12 years available -> after 12year, user cct add freePeriod of other 52 weeks
 - There is not automatic renewal, user pay insurance, insurance call us and cct add another sub on cct (not paying flow)
 
 
@@ -68,9 +71,15 @@ NOTE: if dunning for 25 days, and I recharged and pay at 25day, we move nextBill
 - Assign free period for device with subscription in CB -> should add days to existing active sub
 
 
-## [] COUPON
-- Buy a subscription with a coupon already assigned
-- Buy a subscription with a coupon to assign during purchase flow (inside hosted page)
-compro sub -> provo ad andarmene (da retention page, qui pingpong fe-chargebee, stacca coupon chrgebee o magento, chiedi daniele)
+## [x] COUPON
+Se ho un coupon quello deve scontare la sub
+- User buy a subscription with a coupon already assigned (before, by cct user)
+~~- User buy a subscription with a coupon to assign during purchase flow~~ (mai passato coupon lato frontend)
+
+
+
+PAID_EXTERNALLY (Axa, Europass) & TRIAL (Esselunga or Trial 1 month)
+Entrambi basta associare un serialNUmber a 1 planProfile lato be ed è fatto
+
 
 

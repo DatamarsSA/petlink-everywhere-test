@@ -11,7 +11,6 @@ import {
   PaymentStatusTypeEnum,
   PetProtectionStatus,
   SubscriptionShortInfo,
-  ScheduledChanges,
   SubscriptionShortInfoItem,
   InvoiceStatusEnum,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
@@ -19,7 +18,6 @@ import { AddFreePeriod, CouponSetMode } from "../../clients/petlink-infrastructu
 import { waitFor } from "../../helpers/utils.js";
 
 describe("DEFAULT", () => {
-
 
   describe("SETUP & PREREQUISITES", () => {
     let setup: TestSetup = {} as TestSetup;
@@ -669,10 +667,7 @@ describe("DEFAULT", () => {
       const subBefore = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
       const originalTermEnd = subBefore.currentTermEnd!;
 
-      const initialSubsResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptions({
-        productId: device.id,
-      });
-      const originalInvoicesCount = initialSubsResponse.getSubscriptions.subscriptions![0].invoices?.length ?? 0;
+      const originalInvoicesCount = subBefore.invoices.length;
 
       // 2. Force renew by moving nextBillingDate to now
       const travelResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
@@ -719,7 +714,7 @@ describe("DEFAULT", () => {
       const updateCardResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
         input: {
           utilityType: UtilityTestTypeEnum.UpdatePaymentMethod,
-          subscriptionId: subBefore.id,
+          userId: setup.user!.id,
           card: fxt.current.card.insufficientFunds,
         },
       });
@@ -739,7 +734,7 @@ describe("DEFAULT", () => {
       const dunningResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
         isReady: (res) => {
           const sub = res.getSubscriptions.subscriptions?.[0];
-          return !!sub?.dunningStatus || (sub?.dunningAttempts && sub.dunningAttempts.length > 0);
+          return !!sub?.dunningStatus || !!(sub?.dunningAttempts && sub.dunningAttempts.length > 0);
         },
         timeoutError: "Timeout: dunning did not start after failed renew",
       });
@@ -880,7 +875,10 @@ describe("NOT_PAYING", () => {
   });
 });
 
-describe.skip("COUPON", () => {
+describe("COUPON", () => {
+  /*
+  For test we use a precreate coupons TEST available forever, with 20% of discount from every prices
+   */
   let setup: TestSetup = {} as TestSetup;
 
   beforeEach(async () => {
@@ -893,14 +891,13 @@ describe.skip("COUPON", () => {
 
     // STEP 1: Get available coupons
     const couponsResponse = await petlink.cct.graphqlHttp.authJwt.getCoupons();
-
     expect(couponsResponse.getCoupons.code, `getCoupons should succeed - Error: ${couponsResponse.getCoupons.message}`).toBe("200");
 
     const availableCoupons = couponsResponse.getCoupons.coupons;
     expect(availableCoupons, "Should have at least one coupon available").toBeDefined();
-    expect(availableCoupons!.length, "Coupons array should not be empty").toBeGreaterThan(0);
+    expect(availableCoupons!.length, "Coupons array should not be empty (should have at least our coupon forever 20% for test suite)").toBeGreaterThan(0);
 
-    const coupon = availableCoupons![0];
+    const coupon = availableCoupons.find((coupon) => coupon.id === fxt.current.coupon.test20Percent.id)!;
     logger.info("Selected coupon for test", { couponId: coupon.id, couponName: coupon.name });
 
     // STEP 2: Assign coupon to device
@@ -927,12 +924,7 @@ describe.skip("COUPON", () => {
     const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
     // STEP 4: Purchase and wait for subscription to become active
-    const subscription = await testHelper.purchaseSubscription(
-      setup.user!,
-      device,
-      [chosenPlan.id],
-      { waitForActive: true },
-    ) as any;
+    const subscription = (await testHelper.purchaseSubscription(setup.user!, device, [chosenPlan.id], { waitForActive: true }));
 
     logger.info("Subscription purchased with coupon", {
       subscriptionId: subscription.id,
@@ -949,12 +941,14 @@ describe.skip("COUPON", () => {
 
     const discountItem = firstInvoice.discountItems![0];
     expect(discountItem.couponId, "Discount should be from the assigned coupon").toBe(coupon.id);
+    expect(discountItem.discountPercentage, "Discount percentage should be 20%").toBe(20);
     expect(discountItem.amount, "Discount amount should be positive").toBeGreaterThan(0);
 
-    logger.info("Coupon discount verified", {
-      couponId: discountItem.couponId,
-      discountAmount: discountItem.amount,
-    });
+    // Verify invoice math: total = plan amount - discount (±10 cents tolerance)
+    const planItem = firstInvoice.items.find((i) => i.itemType === "plan_item_price")!;
+    const expectedDiscount = planItem.amount * 0.2;
+    expect(Math.abs(discountItem.amount - expectedDiscount), "Discount within 10 cents of 20%").toBeLessThanOrEqual(10);
+    expect(firstInvoice.total, "Invoice total should equal plan amount minus discount").toBe(planItem.amount - discountItem.amount);
   });
 });
 

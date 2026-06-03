@@ -76,6 +76,12 @@ const commonCard = {
   },
 };
 
+const commonCoupon = {
+  test20Percent: {
+    id: "TEST",
+  },
+};
+
 const cctAdmin = {
   email: process.env.OPERATOR_CCT_EMAIL,
   password: process.env.OPERATOR_CCT_PASSWORD,
@@ -104,6 +110,7 @@ const baseFixtures = {
       EVO6: { serialNumber: "EVO0006", countryCode: "IT", timezone: "Europe/Rome", imei: "8988EVO6", iccid: "8988EVO6", firmware: "7.1.15" },
     },
     card: commonCard,
+    coupon: commonCoupon,
   },
   PETLINK: {
     appBrand: AppBrand.Petlink,
@@ -121,6 +128,7 @@ const baseFixtures = {
       DOG: { serialNumber: "UTEST05", countryCode: "US", timezone: "America/New_York", imei: "000000000000005", iccid: "89010000000000000002", firmware: "10.4.88" },
     },
     card: commonCard,
+    coupon: commonCoupon,
   },
 };
 

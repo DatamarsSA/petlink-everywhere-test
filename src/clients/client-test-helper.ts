@@ -515,15 +515,19 @@ class TestHelper {
 
     if (options?.waitForActive) {
       const result = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }),
+        async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }),
         {
-          isReady: (result) =>
-            result.getSubscriptionByProductId.subscription?.status === SubscriptionStatusEnum.Active &&
-            result.getSubscriptionByProductId.subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
+          isReady: (result) => {
+            const subscription = result.getSubscriptions.subscriptions?.[0];
+            return (
+              subscription?.status === SubscriptionStatusEnum.Active &&
+              subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded
+            );
+          },
           timeoutError: `Timeout: Subscription did not become active for device ${device.id}`,
         },
       );
-      return result.getSubscriptionByProductId.subscription!;
+      return result.getSubscriptions.subscriptions![0]!;
     }
   }
 
