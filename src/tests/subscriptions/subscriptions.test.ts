@@ -13,6 +13,7 @@ import {
   SubscriptionShortInfo,
   SubscriptionShortInfoItem,
   InvoiceStatusEnum,
+  SubscriptionPlanEnum,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { AddFreePeriod, CouponSetMode } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { waitFor } from "../../helpers/utils.js";
@@ -731,29 +732,12 @@ describe("All Subscription Test", () => {
       });
     });
 
-    describe("STOP RENEW", () => {});
+    describe("STOP RENEW", () => { });
 
-    describe("CANCEL/REFUND", () => {});
+    describe("CANCEL/REFUND", () => { });
   });
 
-  describe.skip("TRIAL (Trial 1 month, Esselunga)", () => {
-    /*
-      ## [] TRIAL (Esselunga or Trial 1 month)
-    legate a planProfile, 1 device -> legato a quel planProfile
-    - When user enter in app -> insert card and select plan for renewal at the end of the trial -> and sub should be available
-      - if profile 1 month -> you can choose any plan for the expiration of the trial
-      - if profile esselunga (1 year) -> you can choose only 1 year for the expiration of the trial
-        setPlanProfiles(serialNumbers: [String!]!, planProfileId: String!): setPlanProfilesResponse!
-     */
-    beforeAll(async () => {
-      await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
-    });
-  });
-
-  describe.skip("PAID_EXTERNALLY (Axa,Europass)", () => {});
-
-  describe.skip("PREPAID (purchase on external store)", () => {});
+  describe.skip("PREPAID (purchase on external store)", () => { });
 
   describe("NOT_PAYING", () => {
     let setup: TestSetup = {} as TestSetup;
@@ -945,6 +929,152 @@ describe("All Subscription Test", () => {
       expect(firstInvoice.total, "Invoice total should equal plan amount minus discount").toBe(planItem.amount - discountItem.amount);
     });
   });
+
+  describe.runIf(fxt.isKippyRun)("TRIAL & PAID_EXTERNALLY", () => {
+    const kippyDog = {
+      serialNumber: "UTESTGENERAL",
+      brand: "KIPPY",
+      entityType: "PETLINK_GPS",
+      firmwareVersion: "10.4.88",
+      groupName: "kippyDog",
+      idccd: "89880000000000000009",
+      imei: "000000000000009",
+      model: "DOG",
+      planProfileId: "DEFAULT",
+      simRequestedStatus: "suspended",
+      simStatus: "live",
+      subscriptionActive: false,
+    };
+
+    enum PLanProfile {
+      //TRIAL
+      TRIAL_1_MONTH = "TRIAL_1_MONTH",
+      ESSELUNGA = "ESSELUNGA",
+      //PAID_EXTERNALLY
+      AXA_12_YEARS = "AXA_12_YEARS", //trialDuration: 0,
+      EuropAss = "EuropAss",
+    }
+
+    const planProfiles = [
+      {
+        id: "AXA_12_YEARS",
+        trialDuration: 0,
+        brands: ["KIPPY"],
+      },
+      {
+        id: "ESSELUNGA",
+        trialDuration: 365,
+        brands: ["KIPPY"],
+      },
+      {
+        id: "EuropAss",
+        trialDuration: 0,
+        brands: ["KIPPY"],
+      },
+      {
+        id: "TRIAL_1_MONTH",
+        trialDuration: 30,
+        brands: ["KIPPY", "PETLINK"],
+      },
+    ];
+
+    describe("TRIAL (Esselunga or Trial_1_month)", () => {
+      beforeEach(async () => {
+        await testHelper.cleanupAll();
+        await petlink.cct.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!);
+      });
+
+      it("Esselunga", async () => {
+        await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+          serialNumbers: [kippyDog.serialNumber],
+          planProfileId: PLanProfile.ESSELUNGA,
+        });
+        const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        const device = setup.dog!.device!;
+
+        // 4. Verifica: NON c'è sub dopo registration
+        const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+        expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
+
+        // 5. Simula checkout su Chargebee (bypass hosted page)
+        await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+          input: {
+            utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+            phone: setup.user!.phone,
+            productId: device.id,
+            priceIds: [chosenPlan.id], // per ESSELUNGA: solo yearly
+          },
+        });
+
+        // 6. Aspetta webhook / stato
+        await waitFor(
+          () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }),
+          (data) => {
+            const sub = data.getSubscriptions.subscriptions[0];
+            return sub?.status === "in_trial" && sub?.trialEnd != null;
+          },
+        );
+      });
+
+      it("Trial_1_month", async () => {
+
+      });
+    });
+
+    describe("PAID_EXTERNALLY (Axa, Europass) -> should create subs only on our db", () => {
+      beforeEach(async () => {
+        await testHelper.cleanupAll();
+        await petlink.cct.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!);
+      });
+
+      it("Axa", async () => {
+        const serialNumber = fxt.current.devices.DOG.serialNumber;
+
+        await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+          serialNumbers: [serialNumber],
+          planProfileId: PLanProfile.AXA_12_YEARS,
+        });
+
+        const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        const device = setup.dog!.device!;
+        expect(device.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
+
+        const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+        const subscriptions = subsRes.getSubscriptions.subscriptions!;
+        expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
+
+        const sub = subscriptions[0];
+        // expect(sub.status).toBe(SubscriptionStatusEnum.InTrial); FIXME: why InTrial and not PaidExternally
+        expect(sub.invoices![0].status).toBe(InvoiceStatusEnum.PaidExternally);
+        expect(sub.businessEntityId).toBe("DATAMARS");
+        expect(sub.billingPeriod).toBe(12);
+        expect(sub.billingPeriodUnit).toBe("years");
+      });
+
+      it("Europass", async () => {
+        const serialNumber = fxt.current.devices.DOG.serialNumber;
+
+        await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+          serialNumbers: [serialNumber],
+          planProfileId: PLanProfile.EuropAss,
+        });
+
+        const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        const device = setup.dog!.device!;
+        expect(device.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
+
+        const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+        const subscriptions = subsRes.getSubscriptions.subscriptions!;
+        expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
+
+        const sub = subscriptions[0];
+        // expect(sub.status).toBe(SubscriptionStatusEnum.InTrial); FIXME: why InTrial and not PaidExternally
+        expect(sub.invoices![0].status).toBe(InvoiceStatusEnum.PaidExternally);
+        expect(sub.businessEntityId).toBe("DATAMARS");
+        expect(sub.billingPeriod).toBe(54);
+        expect(sub.billingPeriodUnit).toBe("weeks");
+      });
+    });
+  });
+
 })
-
-

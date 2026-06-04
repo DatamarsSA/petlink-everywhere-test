@@ -44,19 +44,16 @@ NOTE: if dunning for 25 days, and I recharged and pay at 25day, we move nextBill
 
 
 ## [] TRIAL (Esselunga or Trial 1 month)
-legate a planProfile, 1 device -> legato a quel planProfile
 - When user enter in app -> insert card and select plan for renewal at the end of the trial -> and sub should be available
   - if profile 1 month -> you can choose any plan for the expiration of the trial
   - if profile esselunga (1 year) -> you can choose only 1 year for the expiration of the trial
 
-
 ## [] PAID_EXTERNALLY (Axa, Europass)
-legate a planProfile, 1 device -> legato a quel planProfile
+- There is not automatic renewal, user pay insurance, insurance call us and cct add another sub on cct (not paying flow)
 - When user enter in app -> sub should be available
   - if EUROPASS -> 52 weeks available -> after 52week, user cct add freePeriod of other 52 weeks 
-    - in fase di registrazione 54, e in fase di rinnovo sempre 52
   - if AXA -> 12 years available -> after 12year, user cct add freePeriod of other 52 weeks
-- There is not automatic renewal, user pay insurance, insurance call us and cct add another sub on cct (not paying flow)
+  *EUROPASS in fase di registrazione 54, e in fase di rinnovo sempre 52
 
 
 ## [] PREPAID
