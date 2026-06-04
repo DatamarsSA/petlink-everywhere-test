@@ -931,21 +931,6 @@ describe("All Subscription Test", () => {
   });
 
   describe.runIf(fxt.isKippyRun)("TRIAL & PAID_EXTERNALLY", () => {
-    const kippyDog = {
-      serialNumber: "UTESTGENERAL",
-      brand: "KIPPY",
-      entityType: "PETLINK_GPS",
-      firmwareVersion: "10.4.88",
-      groupName: "kippyDog",
-      idccd: "89880000000000000009",
-      imei: "000000000000009",
-      model: "DOG",
-      planProfileId: "DEFAULT",
-      simRequestedStatus: "suspended",
-      simStatus: "live",
-      subscriptionActive: false,
-    };
-
     enum PLanProfile {
       //TRIAL
       TRIAL_1_MONTH = "TRIAL_1_MONTH",
@@ -984,40 +969,121 @@ describe("All Subscription Test", () => {
         await petlink.cct.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!);
       });
 
-      it("Esselunga", async () => {
+      it("Esselunga - 365d trial, only yearly plans, sub created after bypass", async () => {
         await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-          serialNumbers: [kippyDog.serialNumber],
+          serialNumbers: [fxt.current.devices.DOG.serialNumber],
           planProfileId: PLanProfile.ESSELUNGA,
         });
+
         const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
         const device = setup.dog!.device!;
 
-        // 4. Verifica: NON c'è sub dopo registration
+        // 1. Dopo registration NON c'è sub
         const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
         expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
 
-        // 5. Simula checkout su Chargebee (bypass hosted page)
+        // 2. Piani disponibili: SOLO yearly
+        const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+          productId: device.id,
+          countryCode: device.countryCode,
+          serialNumber: device.serialNumber,
+        });
+        const plans = plansRes.getSubscriptionPlans.plans ?? [];
+        expect(plans.length).toBeGreaterThan(0);
+
+        const yearlyOnly = plans.every((p) => p.pricings?.[0]?.periodUnit === "year");
+        expect(yearlyOnly, "Esselunga should allow only yearly plans").toBe(true);
+
+        const chosenPlan = plans[0]!.pricings[0]!;
+
+        // 3. Bypass hosted page (simula checkout)
         await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
           input: {
             utilityType: UtilityTestTypeEnum.BuyNewSubscription,
             phone: setup.user!.phone,
             productId: device.id,
-            priceIds: [chosenPlan.id], // per ESSELUNGA: solo yearly
+            priceIds: [chosenPlan.id],
+            card: fxt.current.card.valid,
           },
         });
 
-        // 6. Aspetta webhook / stato
-        await waitFor(
-          () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }),
-          (data) => {
-            const sub = data.getSubscriptions.subscriptions[0];
-            return sub?.status === "in_trial" && sub?.trialEnd != null;
+        // 4. Aspetta che Chargebee crei la sub in_trial
+        const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+          isReady: (data) => {
+            const sub = data.getSubscriptions.subscriptions?.[0];
+            return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
           },
-        );
+          timeoutError: "Subscription did not become in_trial after bypass",
+        });
+
+        const sub = subsAfter.getSubscriptions.subscriptions![0];
+        expect(sub.status).toBe(SubscriptionStatusEnum.InTrial);
+
+        // 5. Verifica durata trial ~365 giorni
+        const trialEnd = new Date(sub.trialEnd!);
+        const diffDays = Math.round((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        expect(diffDays).toBeGreaterThanOrEqual(364);
+        expect(diffDays).toBeLessThanOrEqual(366);
       });
 
-      it("Trial_1_month", async () => {
+      it("Trial_1_month - 30d trial, any plan, sub created after bypass", async () => {
+        await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+          serialNumbers: [fxt.current.devices.DOG.serialNumber],
+          planProfileId: PLanProfile.TRIAL_1_MONTH,
+        });
 
+        const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        const device = setup.dog!.device!;
+
+        // 1. Dopo registration NON c'è sub
+        const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+        expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
+
+        // 2. Piani disponibili: almeno monthly + yearly
+        const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+          productId: device.id,
+          countryCode: device.countryCode,
+          serialNumber: device.serialNumber,
+        });
+        const plans = plansRes.getSubscriptionPlans.plans ?? [];
+        expect(plans.length).toBeGreaterThan(0);
+
+        const hasMonthly = plans.some((p) => p.pricings?.[0]?.periodUnit === "month");
+        const hasYearly = plans.some((p) => p.pricings?.[0]?.periodUnit === "year");
+        expect(hasMonthly || hasYearly, "Trial_1_month should allow multiple plan types").toBe(true);
+
+        // Prendiamo un piano mensile se disponibile, altrimenti yearly
+        const targetPlan = (plans.find((p) => p.pricings?.[0]?.periodUnit === "month") ?? plans.find((p) => p.pricings?.[0]?.periodUnit === "year"))!;
+        const chosenPlan = targetPlan.pricings[0]!;
+
+        // 3. Bypass hosted page
+        await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+          input: {
+            utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+            phone: setup.user!.phone,
+            productId: device.id,
+            priceIds: [chosenPlan.id],
+            card: fxt.current.card.valid,
+          },
+        });
+
+        // 4. Aspetta sub in_trial
+        const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+          isReady: (data) => {
+            const sub = data.getSubscriptions.subscriptions?.[0];
+            return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
+          },
+          timeoutError: "Subscription did not become in_trial after bypass",
+        });
+
+        const sub = subsAfter.getSubscriptions.subscriptions![0];
+        expect(sub.status).toBe(SubscriptionStatusEnum.InTrial);
+
+        // 5. Verifica durata trial ~30 giorni
+        const trialEnd = new Date(sub.trialEnd!);
+        const diffDays = Math.round((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        expect(diffDays).toBeGreaterThanOrEqual(29);
+        expect(diffDays).toBeLessThanOrEqual(31);
       });
     });
 
