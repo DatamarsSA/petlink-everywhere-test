@@ -219,7 +219,7 @@ class WSClient {
   private readonly logPrefix: string;
 
   constructor(private readonly config: WsClientConfig) {
-    this.logPrefix = `[Client-${config.serviceName}]`;
+    this.logPrefix = `[${config.serviceName}]`;
   }
 
   private async ensureConnected(authType: AuthType.JWT | AuthType.API_KEY): Promise<void> {
@@ -469,16 +469,16 @@ class WSClient {
 }
 
 const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, authType: AuthType): TSdk => {
-  const logPrefix = `[Client-${serviceName}]`;
+  const logPrefix = `[${serviceName}]`;
   return new Proxy(sdk, {
     get: (target, prop: string | symbol) => async (...args: any[]) => {
-      logger.info(`${logPrefix} GRAPHQL: -> ${String(prop)}`, args);
+      logger.info(`${logPrefix} GQL → ${String(prop)}`, args);
       try {
         const response = await (target as any)[prop](...args);
-        logger.info(`${logPrefix} GRAPHQL: <- ${String(prop)} SUCCESS`, response);
+        logger.info(`${logPrefix} GQL ← ${String(prop)}`, response);
         return response;
       } catch (error: any) {
-        logger.error(`${logPrefix} GRAPHQL: <- ${String(prop)} ERROR`, error);
+        logger.error(`${logPrefix} GQL ← ${String(prop)}`, error);
         throw error;
       }
     },
@@ -488,7 +488,6 @@ const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, a
 // === Services ===
 
 class CoreService {
-  private readonly logPrefix = "[Client-CORE]";
   public readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CoreSdk>;
   public readonly graphqlWS: GraphQLWSClient;
@@ -561,7 +560,6 @@ class CoreService {
 }
 
 class CctService {
-  private readonly logPrefix = "[Client-CCT]";
   public readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CctSdk>;
 
@@ -575,13 +573,16 @@ class CctService {
 
     // HTTP: 3 GraphQL clients pre-built, one per auth type. Each owns its auth wiring; logging is added on top.
     const jwtClient = new GraphQLClient(endpoint, {
-      requestMiddleware: async (request) => ({
-        ...request,
-        headers: {
-          ...request.headers,
-          [HTTP_HEADERS.AUTHORIZATION]: this.jwtProvider.getToken(),
-        },
-      }),
+      requestMiddleware: async (request) => {
+        const token = await this.ensureJwt();
+        return {
+          ...request,
+          headers: {
+            ...request.headers,
+            [HTTP_HEADERS.AUTHORIZATION]: token,
+          },
+        };
+      },
     });
     const iamClient = new GraphQLClient(endpoint, {
       requestMiddleware: async (request) => {
@@ -604,6 +605,14 @@ class CctService {
     };
   }
 
+  private async ensureJwt(): Promise<string> {
+    if (this.jwtProvider.hasValidToken()) {
+      return this.jwtProvider.getToken();
+    }
+    await this.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!);
+    return this.jwtProvider.getToken();
+  }
+
   loginWithEmail(email: string, password: string) {
     return this.jwtProvider.authenticate(email, password, "email");
   }
@@ -614,7 +623,7 @@ class CctService {
 }
 
 class SentinelService {
-  private readonly logPrefix = "[Client-SENTINEL]";
+  private readonly logPrefix = "[SENTINEL]";
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private events = new EventEmitter();

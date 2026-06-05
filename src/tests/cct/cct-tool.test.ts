@@ -340,7 +340,6 @@ describe("CCT Tool", () => {
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      await petlink.cct.loginWithEmail(fxt.cctAdmin.email!, fxt.cctAdmin.password!);
     });
 
     afterAll(async () => {
