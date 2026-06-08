@@ -824,7 +824,7 @@ describe("PREPAID (purchase on external store)", () => {
     const buyRes = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
       input: {
         utilityType: "BUY_PREPAID_SUBSCRIPTION" as UtilityTestTypeEnum, // TODO: drop cast after BE adds enum + SDK regen
-        orderId,
+        orderId: orderId,
         serialNumber: device.serialNumber,
         priceIds: [priceId],
         card: fxt.current.card.valid,
