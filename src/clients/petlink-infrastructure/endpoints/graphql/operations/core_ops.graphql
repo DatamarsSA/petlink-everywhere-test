@@ -505,6 +505,30 @@ query getSubscriptionPlanPricing($planPriceId: String!, $careProtectionPlanId: S
     }
 }
 
+query getOrder($orderId: String!) {
+    getOrder(orderId: $orderId) {
+        code
+        message
+        translationCode
+        order {
+            id
+            firstName
+            lastName
+            phone
+            email
+            country
+            state
+            devices {
+                itemId
+                serialNumber
+                deviceType
+                activated
+                appBrand
+            }
+        }
+    }
+}
+
 query getSubscriptionByProductId($productId: String!) {
     getSubscriptionByProductId(productId: $productId) {
         code

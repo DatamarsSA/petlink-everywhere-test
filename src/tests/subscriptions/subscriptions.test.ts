@@ -747,7 +747,68 @@ describe("DEFAULT", () => {
   describe("CANCEL/REFUND", () => {});
 });
 
-describe.skip("PREPAID (purchase on external store)", () => {});
+describe("PREPAID (purchase on external store)", () => {
+  let setup: TestSetup = {} as TestSetup;
+
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+    setup = await testHelper.setupBuilder().withUser().build();
+  });
+
+  it("Full prepaid flow: order → tracking → buy → register → sub active", async () => {
+    const fixtureDevice = fxt.current.devices.DOG;
+    const externalOrderId = Date.now();
+
+    // ===================== STEP 1: Create order =====================
+    logger.info("STEP 1: Create prepaid order", { externalOrderId });
+    const orderResult = await testHelper.createPrepaidOrder(externalOrderId, setup.user!);
+
+    expect(orderResult.status).toBe("ok");
+    expect(orderResult.kippy_order_id).toBeDefined();
+    expect(orderResult.line_items.length).toBe(1);
+
+    const kippyOrderId = orderResult.kippy_order_id;
+    const kippyItemId = orderResult.line_items[0].kippy_item_id;
+    const orderId = orderResult.orderId;
+
+    // Assert via getOrder: serial = PREPAID-... and activated = false
+    const orderBeforeTracking = await petlink.core.graphqlHttp.public.getOrder({ orderId });
+    expect(orderBeforeTracking.getOrder.code).toBe("200");
+    expect(orderBeforeTracking.getOrder.order!.devices.length).toBe(1);
+    expect(orderBeforeTracking.getOrder.order!.devices[0].serialNumber).toMatch(/^PREPAID-/);
+    expect(orderBeforeTracking.getOrder.order!.devices[0].activated).toBe(false);
+    expect(orderBeforeTracking.getOrder.order!.devices[0].appBrand).toBe(fxt.current.appBrand);
+
+    // ===================== STEP 2: Order tracking =====================
+    logger.info("STEP 2: Order tracking with real IMEI", { kippyOrderId, kippyItemId, imei: fixtureDevice.imei });
+    const trackingResult = await testHelper.trackPrepaidOrder(kippyOrderId, kippyItemId, fixtureDevice.imei);
+    expect(trackingResult.status).toBe("success");
+
+    // Assert via getOrder: serial updated to real serial
+    const orderAfterTracking = await petlink.core.graphqlHttp.public.getOrder({ orderId });
+    expect(orderAfterTracking.getOrder.code).toBe("200");
+    expect(orderAfterTracking.getOrder.order!.devices[0].serialNumber).toBe(fixtureDevice.serialNumber);
+    expect(orderAfterTracking.getOrder.order!.devices[0].activated).toBe(false);
+
+    // ===================== STEP 3: Buy subscription (BYPASS hosted page) =====================
+    // TODO: requires BE to add BUY_PREPAID_SUBSCRIPTION to UtilityTestTypeEnum.
+    // This step is skipped until the utility is available.
+    // When implemented, it should call:
+    //   utilityIntegrationTest({ utilityType: BUY_PREPAID_SUBSCRIPTION, orderId, priceIds, card })
+    // and then poll until Subscription record is created with isPrepaid:true and paymentStatus:SUCCEEDED.
+    logger.info("STEP 3: Buy subscription - SKIPPED (waiting for BUY_PREPAID_SUBSCRIPTION utility)");
+
+    // ===================== STEP 4: Register device =====================
+    // TODO: requires step 3 to be completed so a prepaid subscription exists.
+    // Then createPetlinkGps with real serialNumber → should link to prepaid sub.
+    logger.info("STEP 4: Register device - SKIPPED (needs step 3)");
+
+    // ===================== STEP 5: Assert subscription active =====================
+    // TODO: after device registration, assert via getSubscriptionByProductId(deviceId)
+    // that subscription is active, isPrepaid === true, paymentStatus === SUCCEEDED.
+    logger.info("STEP 5: Assert sub active - SKIPPED (needs step 3-4)");
+  });
+});
 
 describe("NOT_PAYING", () => {
   let setup: TestSetup = {} as TestSetup;

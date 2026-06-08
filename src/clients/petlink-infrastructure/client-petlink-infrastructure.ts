@@ -1,5 +1,6 @@
 import { GraphQLClient } from "graphql-request";
 import { getSdk as getCoreSdk, Sdk as CoreSdk } from "./endpoints/graphql/generated/core_schema.js";
+import { OrderRestClient } from "./endpoints/rest/order-rest-client.js";
 import { getSdk as getCctSdk, Sdk as CctSdk } from "./endpoints/graphql/generated/cct_schema.js";
 import { CognitoIdentityProviderClient, InitiateAuthCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
@@ -491,11 +492,18 @@ class CoreService {
   public readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CoreSdk>;
   public readonly graphqlWS: GraphQLWSClient;
+  public readonly rest: OrderRestClient;
 
   constructor() {
     const endpoint = process.env.CORE_GRAPHQL_API_URL!;
     const apiKey = process.env.CORE_GRAPHQL_API_KEY!;
     const service = ServiceType.CORE;
+
+    this.rest = new OrderRestClient(
+      process.env.CORE_REST_API_URL!,
+      process.env.CORE_REST_BASIC_AUTH_USERNAME!,
+      process.env.CORE_REST_BASIC_AUTH_PASSWORD!
+    );
 
     this.jwtProvider = new JwtAuthProvider(service, process.env.AWS_REGION!, process.env.COGNITO_CLIENT_ID_APP_USER!);
     const iamProvider = new IamAuthProvider(process.env.AWS_CORE_ACCESS_KEY_ID!, process.env.AWS_CORE_SECRET_ACCESS_KEY!);

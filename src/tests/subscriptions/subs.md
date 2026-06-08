@@ -43,10 +43,10 @@ NOTE: if dunning for 25 days, and I recharged and pay at 25day, we move nextBill
 *se CANCEL -> no pay penale
 
 
-## [] TRIAL (Esselunga or Trial 1 month)
-- When user enter in app -> insert card and select plan for renewal at the end of the trial -> and sub should be available
-  - if profile 1 month -> you can choose any plan for the expiration of the trial
-  - if profile esselunga (1 year) -> you can choose only 1 year for the expiration of the trial
+~~## [] TRIAL (Esselunga or Trial 1 month)~~
+~~- When user enter in app -> insert card and select plan for renewal at the end of the trial -> and sub should be available~~
+  ~~- if profile 1 month -> you can choose any plan for the expiration of the trial~~
+  ~~- if profile esselunga (1 year) -> you can choose only 1 year for the expiration of the trial~~
 
 ## [] PAID_EXTERNALLY (Axa, Europass)
 - There is not automatic renewal, user pay insurance, insurance call us and cct add another sub on cct (not paying flow)

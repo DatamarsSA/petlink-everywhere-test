@@ -3563,6 +3563,38 @@ export type GetSubscriptionPlanPricingQuery = {
   };
 };
 
+export type GetOrderQueryVariables = Exact<{
+  orderId: Scalars["String"]["input"];
+}>;
+
+export type GetOrderQuery = {
+  __typename?: "Query";
+  getOrder?: {
+    __typename?: "ResponseGetOrder";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    order?: {
+      __typename?: "Order";
+      id: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      email: string;
+      country: string;
+      state?: string | null;
+      devices: Array<{
+        __typename?: "Device";
+        itemId: string;
+        serialNumber: string;
+        deviceType: DeviceTypeEnum;
+        activated: boolean;
+        appBrand: string;
+      }>;
+    } | null;
+  } | null;
+};
+
 export type GetSubscriptionByProductIdQueryVariables = Exact<{
   productId: Scalars["String"]["input"];
 }>;
@@ -6009,6 +6041,73 @@ export const GetSubscriptionPlanPricingDocument = {
                       { kind: "Field", name: { kind: "Name", value: "discountAmount" } },
                       { kind: "Field", name: { kind: "Name", value: "discountQuantity" } },
                       { kind: "Field", name: { kind: "Name", value: "currencyCode" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetOrderDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getOrder" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "orderId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getOrder" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "orderId" }, value: { kind: "Variable", name: { kind: "Name", value: "orderId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "order" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "firstName" } },
+                      { kind: "Field", name: { kind: "Name", value: "lastName" } },
+                      { kind: "Field", name: { kind: "Name", value: "phone" } },
+                      { kind: "Field", name: { kind: "Name", value: "email" } },
+                      { kind: "Field", name: { kind: "Name", value: "country" } },
+                      { kind: "Field", name: { kind: "Name", value: "state" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "devices" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "itemId" } },
+                            { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "deviceType" } },
+                            { kind: "Field", name: { kind: "Name", value: "activated" } },
+                            { kind: "Field", name: { kind: "Name", value: "appBrand" } },
+                          ],
+                        },
+                      },
                     ],
                   },
                 },
@@ -9134,6 +9233,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "getSubscriptionPlanPricing",
+        "query",
+        variables,
+      );
+    },
+    getOrder(
+      variables: GetOrderQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetOrderQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetOrderQuery>({
+            document: GetOrderDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getOrder",
         "query",
         variables,
       );

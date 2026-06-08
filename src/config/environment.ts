@@ -23,6 +23,10 @@ export const environmentSchema = z.object({
   // CORE API
   CORE_GRAPHQL_API_URL: z.url("CORE_GRAPHQL_API_URL deve essere un URL valido"),
   CORE_GRAPHQL_API_KEY: z.string().min(1, "CORE_GRAPHQL_API_KEY è richiesta"),
+  // CORE REST API (order manager)
+  CORE_REST_API_URL: z.url("CORE_REST_API_URL deve essere un URL valido"),
+  CORE_REST_BASIC_AUTH_USERNAME: z.string().min(1, "CORE_REST_BASIC_AUTH_USERNAME è richiesta"),
+  CORE_REST_BASIC_AUTH_PASSWORD: z.string().min(1, "CORE_REST_BASIC_AUTH_PASSWORD è richiesta"),
   // CCT API
   CCT_GRAPHQL_API_URL: z.url("CCT_GRAPHQL_API_URL deve essere un URL valido"),
   CCT_GRAPHQL_API_KEY: z.string().min(1, "CCT_GRAPHQL_API_KEY è richiesta"),
