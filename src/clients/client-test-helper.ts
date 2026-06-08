@@ -14,19 +14,11 @@ import {
 
 import { UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
-import {
-  OrderRequestInput,
-  OrderTrackingRequestInput,
-  OrderResponse,
-  OrderTrackingResponse,
-} from "./petlink-infrastructure/endpoints/rest/order-rest-client.js";
 import { gmailClient } from "./gmail/client-gmail.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { waitFor } from "../helpers/utils.js";
-import { existsSync, mkdirSync } from "fs";
-import { unlinkSync } from "node:fs";
 
 type UserOptions = Partial<UserIn>;
 
@@ -532,67 +524,6 @@ class TestHelper {
       );
       return result.getSubscriptions.subscriptions![0]!;
     }
-  }
-
-  /**
-   * Create a prepaid order via REST.
-   * Returns the REST response + parsed orderId (from subscription_url).
-   */
-  async createPrepaidOrder(externalOrderId: number, user?: User): Promise<OrderResponse & { orderId: string }> {
-    const p = fxt.current.prepaidOrder;
-    const u = user ?? fxt.current.user;
-
-    const payload: OrderRequestInput = {
-      order_source: p.orderSource,
-      external_order_id: externalOrderId,
-      external_order_name: `${p.externalOrderName}_${externalOrderId}`,
-      status: p.status,
-      customer: {
-        first_name: u.name!,
-        last_name: u.surname!,
-        email: u.email!,
-        phone_prefix: "+",
-        phone: u.phone!,
-      },
-      total: p.total,
-      currency: p.currency,
-      payment_method: p.paymentMethod,
-      ip: p.ip,
-      shipping_address: p.address,
-      billing_address: p.address,
-      line_items: [p.lineItem],
-    };
-
-    const response = await petlink.core.rest.createOrder(p.restCountry, payload);
-
-    const orderId = this.extractOrderIdFromSubscriptionUrl(response.subscription_url);
-    logger.debug("✓ Prepaid order created", { externalOrderId, kippyOrderId: response.kippy_order_id, orderId });
-
-    return { ...response, orderId };
-  }
-
-  /**
-   * Update order tracking with real IMEI/serial.
-   */
-  async trackPrepaidOrder(kippyOrderId: number, kippyItemId: number, imei: string): Promise<OrderTrackingResponse> {
-    const p = fxt.current.prepaidOrder;
-    const payload: OrderTrackingRequestInput = {
-      kippy_order_id: kippyOrderId,
-      tracking_service: "DHL",
-      tracking_code: `TRACK-${kippyOrderId}`,
-      tracking_url: "https://dhl.com/track",
-      line_items: [{ kippy_item_id: kippyItemId, imei }],
-    };
-
-    return petlink.core.rest.trackOrder(p.restCountry, payload);
-  }
-
-  extractOrderIdFromSubscriptionUrl(url: string): string {
-    const match = url.match(/\/activate-order\/([^?]+)/);
-    if (!match?.[1]) {
-      throw new Error(`Cannot extract orderId from subscription_url: ${url}`);
-    }
-    return match[1];
   }
 
   setupBuilder(): TestSetupBuilder {
