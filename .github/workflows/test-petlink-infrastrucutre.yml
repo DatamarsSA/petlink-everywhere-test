@@ -102,6 +102,10 @@ jobs:
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
+      # Core REST API (order manager)
+      CORE_REST_API_URL: ${{ secrets.CORE_REST_API_URL }}
+      CORE_REST_BASIC_AUTH_USERNAME: ${{ secrets.CORE_REST_BASIC_AUTH_USERNAME }}
+      CORE_REST_BASIC_AUTH_PASSWORD: ${{ secrets.CORE_REST_BASIC_AUTH_PASSWORD }}
       # CCT API
       CCT_GRAPHQL_API_URL: ${{ secrets.CCT_GRAPHQL_API_URL }}
       CCT_GRAPHQL_API_KEY: ${{ secrets.CCT_GRAPHQL_API_KEY }}
@@ -156,7 +160,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Docker image artifact
         uses: actions/download-artifact@v6
@@ -175,6 +179,9 @@ jobs:
           docker run \
             -e CORE_GRAPHQL_API_URL \
             -e CORE_GRAPHQL_API_KEY \
+            -e CORE_REST_API_URL \
+            -e CORE_REST_BASIC_AUTH_USERNAME \
+            -e CORE_REST_BASIC_AUTH_PASSWORD \
             -e CCT_GRAPHQL_API_URL \
             -e CCT_GRAPHQL_API_KEY \
             -e COGNITO_REGION \
@@ -211,7 +218,7 @@ jobs:
 
       # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@v6
         if: always()
         with:
           report_paths: "test-reports-${{ matrix.app_brand }}/junit.xml"

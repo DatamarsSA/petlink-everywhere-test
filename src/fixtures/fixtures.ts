@@ -186,6 +186,7 @@ const baseFixtures = {
 // SINGLE EXPORTED FIXTURE OBJECT
 // ============================================
 
+
 export const fxt = {
   ...baseFixtures,
   cctAdmin,
