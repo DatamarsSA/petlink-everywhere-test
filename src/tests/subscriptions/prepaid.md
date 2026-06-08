@@ -1,313 +1,223 @@
-# Prepaid Subscription Flow - Complete Documentation
+# Prepaid Subscription Flow
 
-## Executive Summary
-
-The prepaid subscription flow enables users who purchase devices from external stores to buy subscriptions in advance. The system uses a temporary serial number (`PREPAID-{itemId}`) as a placeholder until the real device serial number is known during order tracking. When the device is registered, the system checks for prepaid subscriptions and links them appropriately. If the person who bought the device differs from the person who registers it, the subscription can be transferred via the customer changed webhook handler.
-
----
-
-## Phase 1: External Store Purchase (Order Creation)
-
-### API Endpoint
-- `POST /api/us/v1/order` (Petlink US)
-- `POST /api/eu/v1/order` (Kippy EU)
-
-
-### Process
-1. External store calls Core's order API
-2. Core creates:
-   - **Order** record with customer info, addresses, line items
-   - **OrderLineItem** records with **temporary serial**: `PREPAID-{itemId}`
-   - User in Chargebee via subscriptions-manager (`sdkSSM.createUser`)
-3. Core returns response with:
-   - `subscription_url`: `${WEBAPP_URL}/activate-order/{orderId}?&lang={lang}`
-
-
-### Database Records Created
-- **Order**: `{ entityType: 'ORDER', customer: {...}, lineItems: [itemId1, itemId2] }`
-- **OrderLineItem**: `{ entityType: 'ORDER_ITEM', serialNumber: 'PREPAID-{itemId}', activated: false }`
+> **TL;DR**  
+> The user buys a device in a physical store. The device serial is unknown at purchase time, so the system uses a temporary serial (`PREPAID-{itemId}`) on the order item. When Datamars ships the real device, tracking resolves the true serial from the IMEI. Depending on whether the user buys the subscription **before** or **after** tracking, the system handles serial reconciliation differently. Device registration (`createPetlinkGps`) always links by the real serial.
 
 ---
 
-## Phase 2: Order Tracking (Device Shipment)
-
-### API Endpoint
-- `POST /api/us/v1/order-tracking`
-- `POST /api/eu/v1/order-tracking`
-
-### Process
-1. Order tracking API is called with IMEI and tracking information
-2. Core:
-   - Updates Order with tracking info (`trackingService`, `trackingCode`, `trackingUrl`)
-   - For each line item:
-     - Finds device in inventory by IMEI → gets **real serialNumber**
-     - Updates OrderLineItem with real serialNumber
-     - Looks for subscription with `serialNumber: PREPAID-{itemId}`
-     - If found, calls `sdkSSM.updateDMSerialNumber()` to update serial in Chargebee
-
-
-### Database Records Updated
-- **Order**: `{ trackingService, trackingCode, trackingUrl }`
-- **OrderLineItem**: `{ serialNumber: 'REAL_SERIAL_123', imei: 'IMEI_456' }`
-- **Subscription** (in Chargebee): serialNumber updated from `PREPAID-{itemId}` to real serial
-
----
-
-## Phase 3: User Purchases Subscription (Hosted Page)
-
-### Web Flow
-1. User navigates to `/activate-order/{orderId}`
-2. Web app (`ActivateOrderPage.tsx`) calls `getOrder` GraphQL query
-3. User selects device (shows temporary serial `PREPAID-{itemId}`)
-4. User selects plan → redirected to Chargebee hosted page
-5. Chargebee creates subscription with `serialNumber = PREPAID-{itemId}`
-
-### Chargebee Webhooks to Core
-1. **subscription_created**:
-   - Creates Subscription record with `isPrepaid: true` when `productId` is `undefined`
-   
-2. **payment_succeeded**:
-   - Updates `paymentStatus: SUCCEEDED`
-
-
-### Database Records Created
-- **Subscription**: `{ entityType: 'SUBSCRIPTION', isPrepaid: true, productId: null, serialNumber: 'PREPAID-{itemId}' }`
-
----
-
-## Phase 4: Device Registration
-
-### API Endpoint
-- `Mutation.createPetlinkGps`
-
-### Process
-1. User registers device via app using **real serialNumber**
-2. App calls `createPetlinkGps` mutation with real serial
-3. Core:
-   - Checks for prepaid subscription by querying subscriptions with matching serialNumber
-   - Looks for: `isPrepaid: true` OR `isInsurance: true` OR trial with free period
-   - If found:
-     - Sends `REGISTERED_GPS_PREPAID` notification (email + push)
-     - Includes `currentTermEndDate` in notification
-   - Sets OrderItem `activated: true`
-
-
-### Database Records Updated
-- **OrderLineItem**: `{ activated: true }`
-- **PetlinkGps**: Device record created (subscription linking happens later)
-
----
-
-## Phase 5: Subscription Transfer
-
-### Trigger
-Chargebee sends `customer_changed` webhook when payment method is updated.
-
-### Process
-1. Core's `customerChangedHandler` detects mismatch:
-   - Compares Chargebee subscription's userId with user's chargebeeId
-   - If different, subscription needs transfer
-2. Core:
-   - Calls `sdkSSM.cloneSubscription()` to create new subscription for correct user
-   - Stops old subscription (immediately if payment failed, otherwise at term end)
-   - Updates old subscription with `moved: newSubscriptionId`
-   - Creates new subscription with `movedFrom: oldSubscriptionId`
-   - Links new subscription to device
-   - Transfers invoices and credit notes to new subscription
-
-
-### Database Records Updated
-- **Subscription** (old): `{ moved: 'newSubscriptionId' }`
-- **Subscription** (new): `{ movedFrom: 'oldSubscriptionId', userId: 'newUserId' }`
-- **Invoice/CreditNote**: `subscriptionId` updated to new subscription ID
-
----
-
-## Phase 6: Prepaid Keep-Alive
-
-### Scheduled Lambda
-- `keepAlivePrepaid` - Runs periodically
-
-### Purpose
-Finds prepaid subscriptions with `currentTermEnd` within next 7 days and extends `currentTermEnd` by 1 month via `sdkSSM.changeTermEnd()`.
-
-### Process
-1. Finds prepaid subscriptions:
-   - `status: active`
-   - `paymentStatus: SUCCEEDED`
-   - `productId: undefined` (prepaid indicator)
-   - `currentTermEnd` within next 7 days
-2. For each subscription:
-   - Extends `currentTermEnd` by 1 month
-   - Calls `sdkSSM.changeTermEnd()` to update in Chargebee
-
-
----
-
-## Data Flow Diagram
+## The Core Problem
 
 ```
-┌─────────────────┐
-│ External Store  │
-└────────┬────────┘
-         │ POST /api/us/v1/order
-         ↓
-┌─────────────────────────────────┐
-│ Core: Order Manager Service      │
-│ - Create Order                   │
-│ - Create OrderLineItem           │
-│   serialNumber: PREPAID-{itemId} │
-│ - Create Chargebee User          │
-└────────┬────────────────────────┘
-         │ Return subscription_url
-         ↓
-[PARALLEL FLOWS - ORDER NOT DEFINED IN CODE]
-
-┌─────────────────────────────────┐     ┌─────────────────────────────────┐
-│ Order Tracking API               │     │ Web App: ActivateOrderPage       │
-│ POST /api/us/v1/order-tracking   │     │ - GET /activate-order/{orderId}  │
-│ - Provide IMEI and real serial   │     │ - Call getOrder GraphQL          │
-└────────┬────────────────────────┘     │ - Show devices with PREPAID serial│
-         │                               │ - User selects plan               │
-         ↓                               └────────┬────────────────────────┘
-┌─────────────────────────────────┐              │
-│ Core: Order Tracking Handler     │             │ Redirect to Chargebee
-│ - Update OrderItem with real     │             ↓
-│   serialNumber                   │   ┌─────────────────────────────────┐
-│ - Find subscription with         │   │ Chargebee Hosted Page            │
-│   PREPAID-{itemId}               │   │ - Create subscription            │
-│ - Call updateDMSerialNumber()    │   │   serialNumber: PREPAID-{itemId} │
-│   to update Chargebee            │   └────────┬────────────────────────┘
-└─────────────────────────────────┘            │
-                                               │ Webhooks to Core
-                                               ↓
-                                        ┌─────────────────────────────────┐
-                                        │ Core: Webhook Consumer          │
-                                        │ - subscription_created webhook   │
-                                        │ - Create Subscription record     │
-                                        │   isPrepaid: true                │
-                                        │   productId: null                │
-                                        │ - payment_succeeded webhook      │
-                                        │   paymentStatus: SUCCEEDED       │
-                                        └─────────────────────────────────┘
-         ↓
-┌─────────────────────────────────┐
-│ Mobile App: Device Registration  │
-│ Mutation.createPetlinkGps        │
-│ - Provide real serialNumber      │
-└────────┬────────────────────────┘
-         │
-         ↓
-┌─────────────────────────────────┐
-│ Core: createPetlinkGps Handler    │
-│ - Find prepaid subscription by   │
-│   serialNumber                   │
-│ - Send REGISTERED_GPS_PREPAID    │
-│   notification                   │
-│ - Set OrderItem activated: true  │
-└────────┬────────────────────────┘
-         │ If payment method changes
-         ↓
-┌─────────────────────────────────┐
-│ Chargebee: customer_changed      │
-│ webhook                          │
-└────────┬────────────────────────┘
-         │
-         ↓
-┌─────────────────────────────────┐
-│ Core: customerChangedHandler     │
-│ - Detect userId mismatch         │
-│ - Clone subscription to new user │
-│ - Stop old subscription          │
-│ - Link new subscription to device│
-│ - Transfer invoices              │
-└─────────────────────────────────┘
+Order created          Tracking ships           Buy subscription           Register device
+      │                    │                        │                         │
+      ▼                    ▼                        ▼                         ▼
+  serial = ???        serial = REAL           serial = ???              serial = REAL
+  (placeholder)       (resolved by IMEI)       (whatever the order       (user types it in)
+                                                 item has at that time)
 ```
+
+The subscription in Chargebee is created with **the serial present on the order item at the moment of purchase**. 
+- If tracking has already happened, it's the real serial. 
+- If tracking hasn't happened yet, it's the placeholder.
+
+The key mechanic that makes everything work: **`serialNumber` is the lookup key**. The system always links the device to the subscription by matching the real serial.
 
 ---
 
-## Database Schema Summary
+## Data Model (the 4 entities that matter)
 
-### Order
-```typescript
-{
-  id: string,
-  entityType: 'ORDER',
-  kippyId: number,
-  externalOrderId: number,
-  customer: {
-    email: string,
-    chargebeeId: string,
-    // ...
-  },
-  lineItems: string[],  // Array of OrderLineItem IDs
-  trackingService: string,
-  trackingCode: string,
-  trackingUrl: string,
-  // ...
-}
+```
+┌─────────────┐     lineItems      ┌─────────────────┐
+│   Order     │────────────────────│  OrderLineItem  │
+│             │                    │ serialNumber    │──┐
+│ customer.   │                    │ activated       │  │
+│ chargebeeId │                    │ imei            │  │
+└─────────────┘                    └─────────────────┘  │
+         │                                            │
+         │ userId                                      │
+         ▼                                            │
+┌─────────────────┐         productId (null → linked) │
+│   Subscription  │◄──────────────────────────────────┘
+│   (orphan)      │         serialNumber (key for lookup)
+│ isPrepaid: true │
+│ serialNumber    │────────────────────┐
+│ productId: null │                    │
+└─────────────────┘                    │
+         ▲                             │
+         │                             │
+         │ subscriptionId              │
+         │                             │
+    ┌────┴────┐                        │
+    │PetlinkGps│◄──────────────────────┘
+    │ (device) │   serialNumber (real)
+    └─────────┘
 ```
 
-### OrderLineItem
-```typescript
-{
-  id: string,
-  entityType: 'ORDER_ITEM',
-  orderId: string,
-  serialNumber: string,  // PREPAID-{itemId} → real serial
-  imei: string,
-  activated: boolean,  // Set to true on device registration
-  kippySku: string,
-  model: 'DOG' | 'CAT',
-  appBrand: 'PETLINK' | 'KIPPY',
-  // ...
-}
-```
-
-### Subscription
-```typescript
-{
-  id: string,
-  entityType: 'SUBSCRIPTION',
-  userId: string,
-  productId: string | null,  // null for prepaid
-  serialNumber: string,  // PREPAID-{itemId} → real serial
-  chargebeeSubscriptionId: string,
-  isPrepaid: boolean | null,  // true for prepaid
-  isInsurance: boolean | null,
-  status: 'active' | 'in_trial' | 'future' | ...,
-  paymentStatus: 'SUCCEEDED' | 'FAILED' | 'PENDING',
-  currentTermStart: string,
-  currentTermEnd: string,
-  moved: string | null,  // Set when transferred
-  movedFrom: string | null,  // References old subscription
-  // ...
-}
-```
-
-### PetlinkGps (Device)
-```typescript
-{
-  id: string,
-  entityType: 'PETLINK_GPS',
-  serialNumber: string,
-  userId: string,
-  petId: string,
-  subscriptionId: string | null,  // Linked subscription
-  // ...
-}
-```
+- **Order** → holds `chargebeeId` of the buyer (created during `POST /order`)
+- **OrderLineItem** → holds the serial, starts as `PREPAID-{itemId}`, becomes real after tracking
+- **Subscription** → created by Chargebee webhook. Starts **orphan** (`productId: null`, `isPrepaid: true`). Gets linked to the device during registration.
+- **PetlinkGps** → the real device record, created only when the user registers. Links back to the subscription via `subscriptionId`.
 
 ---
 
-## Testing Considerations
+## The Two Possible Orderings
 
-### Key Assertions
-Based on code analysis:
-- Order created with `PREPAID-{itemId}` serial in OrderLineItem
-- OrderLineItem `activated` becomes `true` after device registration
-- Subscription has `isPrepaid: true` when `productId` is `null`
-- Subscription serial updates from `PREPAID-{itemId}` to real serial after order tracking (via `updateDMSerialNumber`)
-- Subscription transfers when `customer_changed` webhook is triggered (payment method change)
-- Keep-Alive extends subscription `currentTermEnd` by 1 month when within 7 days of expiration
+There are two realistic sequences of events. They exercise **different code branches** and must both be tested.
+
+### Flow A: `order → tracking → buy → register`
+*(Device ships before the user buys the subscription. More deterministic.)*
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Ext as External Store
+    participant OM as Order Manager REST
+    participant Inv as GPS Inventory
+    participant CB as Chargebee
+    participant WH as Webhook Consumer
+    participant App as Mobile App
+    participant Core as createPetlinkGps
+
+    Ext->>OM: POST /order (creates order)
+    OM->>OM: OrderLineItem serial = PREPAID-{itemId}
+    OM-->>Ext: orderId, subscription_url
+
+    Note over Ext,OM: Days later — device ships
+    Ext->>OM: POST /order-tracking (IMEI)
+    OM->>Inv: lookup IMEI → real serial
+    OM->>OM: update OrderLineItem serial = REAL
+    OM->>OM: find sub PREPAID-{itemId}? → NOT FOUND (normal)
+    Note right of OM: Branch: "subscription doesn't exist yet"
+
+    Note over Ext,OM: User opens app and buys
+    App->>CB: checkout with serial = REAL
+    CB->>WH: subscription_created (serial = REAL)
+    WH->>WH: create Subscription { productId: null, isPrepaid: true, serialNumber: REAL }
+
+    Note over App,Core: User registers device
+    App->>Core: createPetlinkGps(serial = REAL)
+    Core->>Core: find sub by serial = REAL, productId = null
+    Core->>Core: link: PetlinkGps.subscriptionId = sub.id
+    Core->>Core: sub.productId = device.id
+```
+
+**What makes Flow A work:** the subscription is created **directly with the real serial** because tracking already updated the order item. No serial realignment is needed.
+
+---
+
+### Flow B: `order → buy → tracking → register`
+*(User buys before the device ships. More common in real life.)*
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Ext as External Store
+    participant OM as Order Manager REST
+    participant Inv as GPS Inventory
+    participant CB as Chargebee
+    participant SM as Subscriptions Manager
+    participant WH as Webhook Consumer
+    participant App as Mobile App
+    participant Core as createPetlinkGps
+
+    Ext->>OM: POST /order (creates order)
+    OM->>OM: OrderLineItem serial = PREPAID-{itemId}
+    OM-->>Ext: orderId, subscription_url
+
+    Note over Ext,OM: User buys BEFORE device ships
+    App->>CB: checkout with serial = PREPAID-{itemId}
+    CB->>WH: subscription_created (serial = PREPAID-{itemId})
+    WH->>WH: create Subscription { productId: null, isPrepaid: true, serialNumber: PREPAID-... }
+
+    Note over Ext,OM: Days later — device ships
+    Ext->>OM: POST /order-tracking (IMEI)
+    OM->>Inv: lookup IMEI → real serial
+    OM->>OM: update OrderLineItem serial = REAL
+    OM->>OM: find sub PREPAID-{itemId}? → FOUND!
+    OM->>SM: updateDMSerialNumber(subId, serial = REAL)
+    SM->>CB: update cf_DM_Serial_Number = REAL
+    CB->>WH: subscription_changed (serial = REAL)
+    WH->>WH: update Mongo Subscription.serialNumber = REAL
+
+    Note over App,Core: User registers device
+    App->>Core: createPetlinkGps(serial = REAL)
+    Core->>Core: find sub by serial = REAL, productId = null
+    Core->>Core: link: PetlinkGps.subscriptionId = sub.id
+    Core->>Core: sub.productId = device.id
+```
+
+**What makes Flow B work:** the tracking handler finds an **existing** subscription with the `PREPAID-{itemId}` serial and calls `updateDMSerialNumber` on Chargebee. Chargebee emits a `subscription_changed` webhook, which the Core webhook consumer uses to rewrite `serialNumber` on the Mongo subscription document. Only after this async realignment can `createPetlinkGps` find the subscription by the real serial and link it.
+
+---
+
+## Flow A vs Flow B — Side by Side
+
+| | Flow A | Flow B |
+|---|---|---|
+| **Typical scenario** | Device ships, then user buys | User buys, then device ships |
+| **Serial at buy time** | Real serial (tracking already updated the order) | Placeholder `PREPAID-{itemId}` |
+| **Tracking branch** | `else` — "subscription doesn't exist" | `if (subscription)` — calls `updateDMSerialNumber` |
+| **Mongo sub after buy** | `serialNumber = REAL`, `productId = null` | `serialNumber = PREPAID-{itemId}`, `productId = null` |
+| **Realignment needed?** | No | Yes: `subscription_changed` webhook updates Mongo serial |
+| **Registration timing** | Safe to register immediately after buy | Must wait for async serial realignment before registering |
+| **Code paths exercised** | `subscriptionCreateddHandler` → `handlerNewSubscription` | Same + `subscriptionChangedHandler:109` |
+
+---
+
+## Backend Linking Logic — Does It Change for the Test Utility?
+
+**No. It stays exactly the same.**
+
+The `BUY_PREPAID_SUBSCRIPTION` test utility is just a **bypass** around the Chargebee hosted page. In production, the user lands on the hosted page, pays, and Chargebee creates the subscription. In tests, the utility directly creates the subscription in Chargebee using the same Chargebee API (`subscription.createWithItems`) that the hosted page would have used.
+
+```
+Production path:
+  User → ActivateOrderPage → checkoutPrepaid → Chargebee hosted page → pays →
+  Chargebee creates sub → webhook subscription_created → Core saves orphan sub
+
+Test bypass:
+  Test utility BUY_PREPAID_SUBSCRIPTION →
+  Core resolves chargebeeId from order → calls SM utilityIntegrationTest(BUY_NEW_SUBSCRIPTION) →
+  SM creates sub in Chargebee → webhook subscription_created → Core saves orphan sub
+```
+
+After the subscription exists in Chargebee, the rest of the flow is **identical**:
+- `subscription_created` webhook → `subscriptionCreateddHandler` → `handlerNewSubscription` → orphan sub in Mongo
+- `payment_succeeded` webhook → updates `paymentStatus: SUCCEEDED`
+- `orderTracking` REST → updates order item serial, calls `updateDMSerialNumber` if sub found
+- `subscription_changed` webhook → realigns Mongo serial
+- `createPetlinkGps` → `checkDeviceSubscription` → `handlePrepaidSubscription` → links sub to device by real serial
+
+The only backend change needed is a new case in `utilityIntegrationTest` (Core) that:
+1. Reads the order by `orderId`
+2. Resolves `chargebeeId` from `order.customer.chargebeeId`
+3. Resolves `businessEntity` from `appBrand`
+4. Forwards to the SM's existing `BUY_NEW_SUBSCRIPTION` utility with `userId`, `serialNumber`, `priceIds`, `businessEntity`, `card`
+
+No changes are needed in:
+- `subscriptionsWebhookConsumer`
+- `subscriptionCreateddHandler` / `subscriptionChangedHandler`
+- `handlePrepaidSubscription`
+- `createPetlinkGps`
+- `orderTracking`
+
+---
+
+## What to Verify in Tests
+
+### Flow A assertions
+- Order created with `PREPAID-{itemId}` serial
+- After tracking: `OrderLineItem.serialNumber = REAL`
+- After buy: Mongo `Subscription` exists with `serialNumber = REAL`, `productId = null`, `isPrepaid = true`
+- After registration: `PetlinkGps.subscriptionId = sub.id`, `sub.productId = device.id`, `OrderLineItem.activated = true`
+
+### Flow B assertions
+- Order created with `PREPAID-{itemId}` serial
+- After buy (before tracking): Mongo `Subscription` exists with `serialNumber = PREPAID-{itemId}`, `productId = null`
+- After tracking: `OrderLineItem.serialNumber = REAL`
+- **Critical async step**: wait for Mongo `Subscription.serialNumber` to change from `PREPAID-...` to `REAL` (via `subscription_changed` webhook)
+- After registration: same final state as Flow A
+
+### Risk in Flow B
+`orderTracking.ts:167` matches the existing subscription with `status: active` only. If the subscription is `in_trial` at the moment of tracking, the `if (subscription)` branch does **not** fire, `updateDMSerialNumber` is never called, and the serial realignment never happens. Confirm with the backend team whether prepaid subscriptions are always `active` when tracking occurs.
 

@@ -2161,6 +2161,36 @@ export type GetPetQuery = {
   };
 };
 
+export type GetSubscriptionsPrepaidQueryVariables = Exact<{
+  filter?: InputMaybe<GetSubscriptionsPrepaidInput>;
+  pagination?: InputMaybe<PaginationInput>;
+  order?: InputMaybe<OrderInput>;
+}>;
+
+export type GetSubscriptionsPrepaidQuery = {
+  __typename?: "Query";
+  getSubscriptionsPrepaid?: {
+    __typename?: "GetSubscriptionsResponse";
+    code: string;
+    message: string;
+    translationCode?: string | null;
+    items?: Array<{
+      __typename?: "PetlinkSubscription";
+      id: string;
+      orderId?: string | null;
+      userId: string;
+      productId?: string | null;
+      serialNumber?: string | null;
+      chargebeeSubscriptionId?: string | null;
+      status?: SubscriptionStatusEnum | null;
+      paymentStatus?: PaymentStatusTypeEnum | null;
+      currentTermStart?: string | null;
+      currentTermEnd?: string | null;
+      businessEntityId: string;
+    }> | null;
+  } | null;
+};
+
 export type GetSubscriptionsQueryVariables = Exact<{
   deviceId: Scalars["String"]["input"];
   pagination?: InputMaybe<PaginationInput>;
@@ -3312,6 +3342,79 @@ export const GetPetDocument = {
                           ],
                         },
                       },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetSubscriptionsPrepaidDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getSubscriptionsPrepaid" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "filter" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "GetSubscriptionsPrepaidInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "PaginationInput" } },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "order" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "OrderInput" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getSubscriptionsPrepaid" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "filter" }, value: { kind: "Variable", name: { kind: "Name", value: "filter" } } },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "pagination" },
+                value: { kind: "Variable", name: { kind: "Name", value: "pagination" } },
+              },
+              { kind: "Argument", name: { kind: "Name", value: "order" }, value: { kind: "Variable", name: { kind: "Name", value: "order" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "translationCode" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "items" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "orderId" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "productId" } },
+                      { kind: "Field", name: { kind: "Name", value: "serialNumber" } },
+                      { kind: "Field", name: { kind: "Name", value: "chargebeeSubscriptionId" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      { kind: "Field", name: { kind: "Name", value: "paymentStatus" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermStart" } },
+                      { kind: "Field", name: { kind: "Name", value: "currentTermEnd" } },
+                      { kind: "Field", name: { kind: "Name", value: "businessEntityId" } },
                     ],
                   },
                 },
@@ -5111,6 +5214,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "getPet",
+        "query",
+        variables,
+      );
+    },
+    getSubscriptionsPrepaid(
+      variables?: GetSubscriptionsPrepaidQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetSubscriptionsPrepaidQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetSubscriptionsPrepaidQuery>({
+            document: GetSubscriptionsPrepaidDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getSubscriptionsPrepaid",
         "query",
         variables,
       );

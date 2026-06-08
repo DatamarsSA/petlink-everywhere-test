@@ -17,7 +17,12 @@ import {
   SpeciesEnum,
   DeviceTypeEnum,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { AddFreePeriod, CouponSetMode } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
+import {
+  AddFreePeriod,
+  CancelReasonCodeEnum,
+  CouponSetMode,
+  FilterEnum,
+} from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { waitFor } from "../../helpers/utils.js";
 
 //FIXME: on cct set "planProfileId" as a Enum and not as a string, then we can use that codegn generated enum
@@ -744,9 +749,37 @@ describe("DEFAULT", () => {
     });
   });
 
-  describe("STOP RENEW", () => {});
+  describe("STOP RENEW", () => {
+    let setup: TestSetup = {} as TestSetup;
+    beforeEach(async () => {
+      await testHelper.cleanupAll();
+      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+    });
 
-  describe("CANCEL/REFUND", () => {});
+    it("stop renew -> non_renewing, term end invariato (no penale su sub fresca)", async () => {
+      const device = setup.dog!.device!;
+      const plan = device.availablePlans![0].pricings[0];
+      const sub = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+
+      const res = await petlink.core.graphqlHttp.authJwt.stopRenewingSubscription({
+        subscriptionId: sub.id,
+        appBrand: fxt.current.appBrand,
+        cancelReason: "test",
+        cancelReasonCode: CancelReasonCodeEnum.DoNotUse,
+      });
+      expect(res.stopRenewingSubscription?.code).toBe("200");
+
+      const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        isReady: (r) => r.getSubscriptions.subscriptions?.[0]?.status === SubscriptionStatusEnum.NonRenewing,
+        timeoutError: "Timeout: sub did not become non_renewing",
+      });
+      const s = after.getSubscriptions.subscriptions![0]!;
+      expect(s.status).toBe(SubscriptionStatusEnum.NonRenewing);
+      expect(s.paymentStatus).toBe(PaymentStatusTypeEnum.Succeeded);
+      expect(new Date(s.currentTermEnd!).getTime()).toBe(new Date(sub.currentTermEnd!).getTime());
+    });
+  });
+
 });
 
 describe("PREPAID (purchase on external store)", () => {
@@ -760,13 +793,15 @@ describe("PREPAID (purchase on external store)", () => {
     setup = await testHelper.setupBuilder().withUser().build();
   });
 
-  it("Full prepaid flow: order → tracking → buy → register → sub active", async () => {
+
+  type CreatedOrder = { orderId: string; kippyOrderId: number; kippyItemId: number; prepaidSerial: string };
+
+  /** STEP order: external store creates the order via REST (Basic Auth). Returns ids + the PREPAID-<itemId> serial. */
+  async function createPrepaidOrder(): Promise<CreatedOrder> {
     const order = fxt.current.prepaidOrder; // brand-specific static order data (country, currency, address, sku)
-    const device = fxt.current.devices.DOG; // the physical device we will "ship": real serial + imei
     const user = setup.user!;
     const externalOrderId = Date.now();
 
-    // ===================== STEP 1: External store creates the order (REST, Basic Auth) =====================
     const createRes = await petlink.core.rest.createOrder(order.restCountry, {
       order_source: order.orderSource,
       external_order_id: externalOrderId,
@@ -784,8 +819,6 @@ describe("PREPAID (purchase on external store)", () => {
     expect(createRes.status).toBe("ok");
     expect(createRes.line_items).toHaveLength(1);
 
-    const kippyOrderId = createRes.kippy_order_id;
-    const kippyItemId = createRes.line_items[0].kippy_item_id;
     const orderId = createRes.subscription_url.match(/\/activate-order\/([^?]+)/)![1]; // UUID lives only in the redirect URL
 
     // Core created the order with a TEMPORARY serial (PREPAID-<itemId>), device not yet activated
@@ -794,67 +827,150 @@ describe("PREPAID (purchase on external store)", () => {
     expect(orderCreated.devices[0].activated).toBe(false);
     expect(orderCreated.devices[0].appBrand).toBe(fxt.current.appBrand);
 
-    // ===================== STEP 2: Shipping tracking assigns the REAL serial (matched by IMEI) =====================
-    const trackRes = await petlink.core.rest.trackOrder(order.restCountry, {
-      kippy_order_id: kippyOrderId,
+    return {
+      orderId,
+      kippyOrderId: createRes.kippy_order_id,
+      kippyItemId: createRes.line_items[0].kippy_item_id,
+      prepaidSerial: orderCreated.devices[0].serialNumber,
+    };
+  }
+
+  /** STEP shipping: Datamars ships the device; tracking matches IMEI → real serial and updates the order item. */
+  async function trackPrepaidOrder(o: CreatedOrder, imei: string): Promise<void> {
+    const trackRes = await petlink.core.rest.trackOrder(fxt.current.prepaidOrder.restCountry, {
+      kippy_order_id: o.kippyOrderId,
       tracking_service: "DHL",
-      tracking_code: `TRACK-${kippyOrderId}`,
+      tracking_code: `TRACK-${o.kippyOrderId}`,
       tracking_url: "https://dhl.com/track",
-      line_items: [{ kippy_item_id: kippyItemId, imei: device.imei }],
+      line_items: [{ kippy_item_id: o.kippyItemId, imei }],
     });
     expect(trackRes.status).toBe("success");
+  }
 
-    // Core core logic: PREPAID- placeholder is replaced by the real inventory serial resolved from the IMEI
-    const orderTracked = (await petlink.core.graphqlHttp.public.getOrder({ orderId })).getOrder!.order!;
-    expect(orderTracked.devices[0].serialNumber).toBe(device.serialNumber);
-    expect(orderTracked.devices[0].activated).toBe(false);
+  /** STEP buy: bypass the Chargebee hosted page with the test utility. `serialNumber` mirrors the order state at buy time. */
+  async function buyPrepaidSubscription(orderId: string, serialNumber: string, priceIds: string[]): Promise<void> {
 
-    // Steps 3-5 require the BE utility BUY_PREPAID_SUBSCRIPTION (not yet available).
-    if (!BUY_PREPAID_SUBSCRIPTION_READY) {
-      logger.warn("STEP 3-5 skipped: enable BUY_PREPAID_SUBSCRIPTION_READY after BE adds the utility + SDK regen");
-      return;
-    }
-
-    // ===================== STEP 3: Buy the prepaid subscription (bypass Chargebee hosted page) =====================
-    // Plans are resolved by serial (no device/productId exists yet at this stage).
-    const plans = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({ serialNumber: device.serialNumber });
-    const priceId = plans.getSubscriptionPlans.plans![0].pricings[0].id;
-
-    // In prod the user pays on the hosted page from checkoutPrepaid; here we bypass it with a test card.
     const buyRes = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
       input: {
         utilityType: "BUY_PREPAID_SUBSCRIPTION" as UtilityTestTypeEnum, // TODO: drop cast after BE adds enum + SDK regen
         orderId: orderId,
-        serialNumber: device.serialNumber,
-        priceIds: [priceId],
+        serialNumber: serialNumber,
+        priceIds: priceIds,
         card: fxt.current.card.valid,
         appBrand: fxt.current.appBrand,
       } as any,
     });
-    expect(buyRes.utilityIntegrationTest.code).toBe("200");
 
-    // ===================== STEP 4: User registers the physical device (real serial) =====================
+    expect(buyRes.utilityIntegrationTest.code).toBe("200");
+  }
+
+  /** Reads the orphan prepaid subscription (productId still null) created by the subscription_created webhook. */
+  async function getPrepaidSubByOrder(orderId: string) {
+    const res = await petlink.cct.graphqlHttp.authJwt.getSubscriptionsPrepaid({ filter: { orderId, filterType: FilterEnum.And } });
+    return res.getSubscriptionsPrepaid?.items?.[0];
+  }
+
+  /** Resolves the price ids of the first available plan. priceIds are plan-scoped, so the real serial is fine in both flows. */
+  async function resolvePriceIds(realSerial: string): Promise<string[]> {
+    const plans = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({ serialNumber: realSerial });
+    return [plans.getSubscriptionPlans.plans![0].pricings[0].id];
+  }
+
+  /** STEP register + activate: user registers the physical device, prepaid sub links and becomes active. */
+  async function registerDeviceAndAssertActive(orderId: string, realSerial: string) {
     const pet = await testHelper.createPet(SpeciesEnum.Dog);
     const registered = await testHelper.createDeviceForPet(pet, DeviceTypeEnum.Dog);
-    expect(registered.serialNumber).toBe(device.serialNumber);
+    expect(registered.serialNumber).toBe(realSerial);
 
-    // ===================== STEP 5: Subscription is active and linked to the registered device =====================
-    const subRes = await waitFor(
-      () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: registered.id }),
-      {
-        isReady: (r) =>
-          r.getSubscriptionByProductId.subscription?.status === SubscriptionStatusEnum.Active &&
-          r.getSubscriptionByProductId.subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
-        timeoutError: `prepaid subscription did not become active for device ${registered.id}`,
-      },
-    );
+    const subRes = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: registered.id }), {
+      isReady: (r) =>
+        r.getSubscriptionByProductId.subscription?.status === SubscriptionStatusEnum.Active &&
+        r.getSubscriptionByProductId.subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
+      timeoutError: `prepaid subscription did not become active for device ${registered.id}`,
+    });
     const sub = subRes.getSubscriptionByProductId.subscription!;
     expect(sub.status).toBe(SubscriptionStatusEnum.Active);
     expect(sub.paymentStatus).toBe(PaymentStatusTypeEnum.Succeeded);
+    expect(sub.serialNumber).toBe(realSerial);
+    expect(sub.productId).toBe(registered.id);
 
     // Registering the device against an existing prepaid sub must activate the order device
     const orderActivated = (await petlink.core.graphqlHttp.public.getOrder({ orderId })).getOrder!.order!;
+    expect(orderActivated.devices[0].serialNumber).toBe(realSerial);
     expect(orderActivated.devices[0].activated).toBe(true);
+  }
+
+  // --------------------------------------------------------------------------------------------
+  // FLOW A: order → tracking → buy → register
+  // The device is shipped BEFORE purchase: the subscription is created directly with the real serial,
+  // so the order-tracking "subscription doesn't exist yet" branch is exercised and no realignment is needed.
+  // --------------------------------------------------------------------------------------------
+  it("Flow A: order → tracking → buy → register → sub active", async () => {
+    const device = fxt.current.devices.DOG; // the physical device we will "ship": real serial + imei
+
+    // STEP 1: external store creates the order (temporary PREPAID-<itemId> serial)
+    const order = await createPrepaidOrder();
+
+    // STEP 2: shipping tracking replaces the placeholder with the real inventory serial (matched by IMEI)
+    await trackPrepaidOrder(order, device.imei);
+    const orderTracked = (await petlink.core.graphqlHttp.public.getOrder({ orderId: order.orderId })).getOrder!.order!;
+    expect(orderTracked.devices[0].serialNumber).toBe(device.serialNumber);
+    expect(orderTracked.devices[0].activated).toBe(false);
+
+    if (!BUY_PREPAID_SUBSCRIPTION_READY) {
+      logger.warn("Flow A buy/register skipped: enable BUY_PREPAID_SUBSCRIPTION_READY after BE adds the utility + SDK regen");
+      return;
+    }
+
+    // STEP 3: buy with the REAL serial (the order already holds it after tracking)
+    const priceIds = await resolvePriceIds(device.serialNumber);
+    await buyPrepaidSubscription(order.orderId, orderTracked.devices[0].serialNumber, priceIds);
+
+    // STEP 4-5: register the device, sub links and becomes active
+    await registerDeviceAndAssertActive(order.orderId, device.serialNumber);
+  });
+
+  // --------------------------------------------------------------------------------------------
+  // FLOW B: order → buy → tracking → register  (the most likely real-world ordering)
+  // The user buys BEFORE the device is shipped: the subscription is created with the PREPAID-<itemId> serial,
+  // then tracking calls updateDMSerialNumber → Chargebee → subscription_changed webhook realigns the Mongo
+  // serial to the real one. Registration can only link AFTER that async realignment completes.
+  // --------------------------------------------------------------------------------------------
+  it("Flow B: order → buy → tracking → register → sub active", async () => {
+    const device = fxt.current.devices.DOG;
+
+    // STEP 1: external store creates the order (temporary PREPAID-<itemId> serial)
+    const order = await createPrepaidOrder();
+
+    if (!BUY_PREPAID_SUBSCRIPTION_READY) {
+      logger.warn("Flow B buy/tracking/register skipped: enable BUY_PREPAID_SUBSCRIPTION_READY after BE adds the utility + SDK regen");
+      return;
+    }
+
+    // STEP 2: buy BEFORE tracking → subscription is created against the PREPAID placeholder serial
+    const priceIds = await resolvePriceIds(device.serialNumber);
+    await buyPrepaidSubscription(order.orderId, order.prepaidSerial, priceIds);
+
+    // The subscription_created webhook persists an orphan prepaid sub (productId null) with the PREPAID serial
+    const orphan = await waitFor(() => getPrepaidSubByOrder(order.orderId), {
+      isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === order.prepaidSerial,
+      timeoutError: `prepaid orphan subscription not created for order ${order.orderId}`,
+    });
+    expect(orphan!.productId).toBeNull();
+    expect(orphan!.serialNumber).toBe(order.prepaidSerial);
+
+    // STEP 3: shipping tracking now updates the order item AND triggers the Chargebee serial realignment
+    await trackPrepaidOrder(order, device.imei);
+
+    // KEY ASSERTION: the subscription_changed webhook must realign the Mongo serial from PREPAID-<itemId> to the real one.
+    // This is async (CB → SM queue → Core queue); registration must not happen before it completes or the link silently fails.
+    await waitFor(() => getPrepaidSubByOrder(order.orderId), {
+      isReady: (s) => s?.serialNumber === device.serialNumber,
+      timeoutError: `prepaid subscription serial not realigned to ${device.serialNumber} for order ${order.orderId}`,
+    });
+
+    // STEP 4-5: register the device, the (now real-serial) orphan sub links and becomes active
+    await registerDeviceAndAssertActive(order.orderId, device.serialNumber);
   });
 });
 

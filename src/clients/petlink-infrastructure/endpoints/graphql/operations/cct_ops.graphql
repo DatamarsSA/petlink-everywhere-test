@@ -201,6 +201,27 @@ query getPet($petId: String!) {
 }
 
 
+query getSubscriptionsPrepaid($filter: GetSubscriptionsPrepaidInput, $pagination: PaginationInput, $order: OrderInput) {
+    getSubscriptionsPrepaid(filter: $filter, pagination: $pagination, order: $order) {
+        code
+        message
+        translationCode
+        items {
+            id
+            orderId
+            userId
+            productId
+            serialNumber
+            chargebeeSubscriptionId
+            status
+            paymentStatus
+            currentTermStart
+            currentTermEnd
+            businessEntityId
+        }
+    }
+}
+
 query getSubscriptions($deviceId: String!, $pagination: PaginationInput, $order: OrderInput) {
     getSubscriptions(deviceId: $deviceId, pagination: $pagination, order: $order) {
         code
