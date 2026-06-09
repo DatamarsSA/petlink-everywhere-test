@@ -112,6 +112,29 @@ export interface ActivityValueCat {
   value: Scalars["Float"]["output"];
 }
 
+export interface AddJournalEntryInput {
+  behaviourIds: Array<Scalars["String"]["input"]>;
+  connectionIds: Array<Scalars["String"]["input"]>;
+  moodId: Scalars["String"]["input"];
+  note?: InputMaybe<Scalars["String"]["input"]>;
+  petId: Scalars["String"]["input"];
+  routineCheckIds: Array<Scalars["String"]["input"]>;
+}
+
+export interface AddJournalEventTypeInput {
+  eventType: JournalEventTypeEnum;
+  name: Scalars["String"]["input"];
+  petId: Scalars["String"]["input"];
+  sentimentType: EventSentimentEnum;
+}
+
+export interface AddUserCardResponse {
+  __typename?: "AddUserCardResponse";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentSourceId?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface AddonPricing {
   __typename?: "AddonPricing";
   currencyCode: Scalars["String"]["output"];
@@ -142,7 +165,6 @@ export interface BaseConfig {
   timeoutNoPosition90s: Scalars["Int"]["output"];
   timeoutOnlyLowPrecision5Min: Scalars["Int"]["output"];
   timeoutOnlyLowPrecision30s: Scalars["Int"]["output"];
-  timeoutOptimization: Scalars["Int"]["output"];
   timeoutWakeUp20s: Scalars["Int"]["output"];
   timeoutWakeUp60s: Scalars["Int"]["output"];
   timeoutWakeUp120s: Scalars["Int"]["output"];
@@ -177,12 +199,6 @@ export interface BluetoothAddress {
   remoteUuid?: Maybe<Scalars["String"]["output"]>;
 }
 
-export interface BrazeNotification {
-  __typename?: "BrazeNotification";
-  body: Scalars["String"]["output"];
-  title: Scalars["String"]["output"];
-}
-
 export interface Breed {
   __typename?: "Breed";
   breedName: Scalars["String"]["output"];
@@ -210,8 +226,12 @@ export interface Card {
   brand?: Maybe<Scalars["String"]["output"]>;
   expiryMonth?: Maybe<Scalars["Int"]["output"]>;
   expiryYear?: Maybe<Scalars["Int"]["output"]>;
+  isPrimaryPaymentSource?: Maybe<Scalars["Boolean"]["output"]>;
   maskedNumber?: Maybe<Scalars["String"]["output"]>;
   paymentMethod: Scalars["String"]["output"];
+  paymentSourceId?: Maybe<Scalars["String"]["output"]>;
+  referenceId?: Maybe<Scalars["String"]["output"]>;
+  status?: Maybe<Scalars["String"]["output"]>;
   type?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -321,6 +341,10 @@ export interface CurrentSubscription {
   invoiceStatus?: Maybe<InvoiceStatusEnum>;
   paymentStatus?: Maybe<PaymentStatusTypeEnum>;
   status: SubscriptionStatusEnum;
+}
+
+export interface DeleteJournalEventTypeInput {
+  id: Scalars["String"]["input"];
 }
 
 export interface Device {
@@ -448,6 +472,12 @@ export interface EszNotificationsInput {
   push: Scalars["Boolean"]["input"];
 }
 
+export enum EventSentimentEnum {
+  Negative = "NEGATIVE",
+  Neutral = "NEUTRAL",
+  Positive = "POSITIVE",
+}
+
 export enum Gender {
   Female = "FEMALE",
   Male = "MALE",
@@ -468,6 +498,12 @@ export interface Geofence {
 export interface GeofenceIn {
   name: Scalars["String"]["input"];
   position: Array<CoordinatesIn>;
+}
+
+export interface GetJournalEntriesInput {
+  from: Scalars["String"]["input"];
+  petId: Scalars["String"]["input"];
+  to: Scalars["String"]["input"];
 }
 
 export interface GoalRange {
@@ -558,8 +594,6 @@ export interface GpsSettings {
   __typename?: "GpsSettings";
   activityProfile?: Maybe<ActivityProfileEnum>;
   enableGpsOnDefault: Scalars["Boolean"]["output"];
-  lastOptimizationAttempt?: Maybe<Scalars["String"]["output"]>;
-  migrationWaitingForConnection?: Maybe<Scalars["Boolean"]["output"]>;
   optimizationDone?: Maybe<Scalars["Boolean"]["output"]>;
   sentinelMigrationDone?: Maybe<Scalars["Boolean"]["output"]>;
   updateFrequency: Scalars["Int"]["output"];
@@ -686,6 +720,60 @@ export enum InvoiceStatusEnum {
   Voided = "voided",
 }
 
+export enum JournalEntityTypeEnum {
+  JournalCustomEventType = "JOURNAL_CUSTOM_EVENT_TYPE",
+  JournalEntry = "JOURNAL_ENTRY",
+  JournalEventType = "JOURNAL_EVENT_TYPE",
+}
+
+export interface JournalEntry {
+  __typename?: "JournalEntry";
+  behaviour: Array<JournalEventType>;
+  behaviourPoints: Scalars["Int"]["output"];
+  connection: Array<JournalEventType>;
+  connectionPoints: Scalars["Int"]["output"];
+  creationDate: Scalars["String"]["output"];
+  entityType: JournalEntityTypeEnum;
+  id: Scalars["String"]["output"];
+  mood: JournalEventType;
+  moodPoints: Scalars["Int"]["output"];
+  note?: Maybe<Scalars["String"]["output"]>;
+  petId: Scalars["String"]["output"];
+  routineCheck: Array<JournalEventType>;
+  routineCheckPoints: Scalars["Int"]["output"];
+  totalPoints: Scalars["Int"]["output"];
+  updateDate: Scalars["String"]["output"];
+  userId: Scalars["String"]["output"];
+}
+
+export interface JournalEventType {
+  __typename?: "JournalEventType";
+  creationDate: Scalars["String"]["output"];
+  entityType: JournalEntityTypeEnum;
+  eventType: JournalEventTypeEnum;
+  icon?: Maybe<Scalars["String"]["output"]>;
+  id: Scalars["String"]["output"];
+  name?: Maybe<Scalars["String"]["output"]>;
+  points: Scalars["Int"]["output"];
+  sentimentType: EventSentimentEnum;
+  translationKey?: Maybe<Scalars["String"]["output"]>;
+  updateDate: Scalars["String"]["output"];
+  userId?: Maybe<Scalars["String"]["output"]>;
+}
+
+export enum JournalEventTypeEnum {
+  Behaviours = "BEHAVIOURS",
+  Connection = "CONNECTION",
+  Mood = "MOOD",
+  RoutineCheck = "ROUTINE_CHECK",
+}
+
+export interface JournalNotificationExtra {
+  __typename?: "JournalNotificationExtra";
+  translationKey: Scalars["String"]["output"];
+  type: Scalars["String"]["output"];
+}
+
 export enum LanguageId {
   De = "DE",
   En = "EN",
@@ -766,10 +854,15 @@ export interface Mutation {
    */
   activateDeviceInOrder?: Maybe<Response>;
   addGpsPromotion?: Maybe<Response>;
+  addJournalEntry: ResponseJournalEntry;
+  /**   journal */
+  addJournalEventType: ResponseJournalEventTypes;
+  addUserCard: AddUserCardResponse;
   appKeepAlive: Response;
   changeForgotPassword: Response;
   changePassword: Response;
   checkOtp: ResponseOtp;
+  checkoutNewSubscriptionV2: ResponseCheckoutNewSubscriptionV2;
   /**
    *   createEnergySavingZone(energySavingZone: EnergySavingZoneIn!):
    * ResponseEnergySavingZone! @aws_cognito_user_pools @aws_iam
@@ -779,12 +872,14 @@ export interface Mutation {
    *  isActiveEnergySavingZone(id: String!, isActive: Boolean!): Response! @aws_cognito_user_pools @aws_iam
    */
   createGeofence: ResponseGeofence;
-  createOptimizationAttempt: Response;
+  createPaymentIntent: ResponseCreatePaymentIntent;
   createPet: ResponsePet;
   createPetlinkGps: ResponseCreatePetlinkGps;
   createPetlinkMicrochip: ResponsePetlinkMicrochip;
   createPetlinkQrTag: ResponsePetlinkQrTag;
   deleteGeofence: Response;
+  deleteJournalEventType: Response;
+  deletePaymentSource: Response;
   deletePet: Response;
   deleteRegistrationToken: Response;
   deleteUser: Response;
@@ -820,6 +915,7 @@ export interface Mutation {
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
+  setPrimaryPaymentSource: Response;
   setReadPetHistory: Response;
   setReadPopupMigratedUser: Response;
   setSafetyTermsCat: Response;
@@ -837,6 +933,7 @@ export interface Mutation {
   updateEndOfLife: ResponseUpdateEndOfLife;
   updateGeofence: ResponseGeofence;
   updateNotificationSettings: ResponseNotificationSettings;
+  updatePaymentIntent: ResponseUpdatePaymentIntent;
   updatePaymentSources: ResponseManagePaymentSources;
   updatePet: ResponsePet;
   updatePetProtectionData?: Maybe<ResponseUpdatePetProtectionData>;
@@ -867,6 +964,18 @@ export type MutationAddGpsPromotionArgs = {
   promotion: PromotionInput;
 };
 
+export type MutationAddJournalEntryArgs = {
+  input: AddJournalEntryInput;
+};
+
+export type MutationAddJournalEventTypeArgs = {
+  input: AddJournalEventTypeInput;
+};
+
+export type MutationAddUserCardArgs = {
+  paymentIntentId: Scalars["String"]["input"];
+};
+
 export type MutationAppKeepAliveArgs = {
   productIds: Array<Scalars["String"]["input"]>;
 };
@@ -888,14 +997,22 @@ export type MutationCheckOtpArgs = {
   verificationId: Scalars["String"]["input"];
 };
 
+export type MutationCheckoutNewSubscriptionV2Args = {
+  paymentIntentId?: InputMaybe<Scalars["String"]["input"]>;
+  paymentSourceId?: InputMaybe<Scalars["String"]["input"]>;
+  priceIds: Array<Scalars["String"]["input"]>;
+  productId: Scalars["String"]["input"];
+};
+
 export type MutationCreateGeofenceArgs = {
   geofence: GeofenceIn;
 };
 
-export type MutationCreateOptimizationAttemptArgs = {
-  failureReason?: InputMaybe<Scalars["String"]["input"]>;
-  productId: Scalars["String"]["input"];
-  status: OptimizationAttemptStatus;
+export type MutationCreatePaymentIntentArgs = {
+  couponIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  currencyCode: Scalars["String"]["input"];
+  paymentMethodType: PaymentMethodTypeEnum;
+  priceIds: Array<Scalars["String"]["input"]>;
 };
 
 export type MutationCreatePetArgs = {
@@ -917,6 +1034,14 @@ export type MutationCreatePetlinkQrTagArgs = {
 
 export type MutationDeleteGeofenceArgs = {
   id: Scalars["String"]["input"];
+};
+
+export type MutationDeleteJournalEventTypeArgs = {
+  input: DeleteJournalEventTypeInput;
+};
+
+export type MutationDeletePaymentSourceArgs = {
+  paymentSourceId: Scalars["String"]["input"];
 };
 
 export type MutationDeletePetArgs = {
@@ -1052,6 +1177,10 @@ export type MutationSetPetIsLostArgs = {
   petId: Scalars["String"]["input"];
 };
 
+export type MutationSetPrimaryPaymentSourceArgs = {
+  paymentSourceId: Scalars["String"]["input"];
+};
+
 export type MutationSetReadPetHistoryArgs = {
   notificationId: Array<InputMaybe<Scalars["String"]["input"]>>;
 };
@@ -1113,6 +1242,11 @@ export type MutationUpdateGeofenceArgs = {
 
 export type MutationUpdateNotificationSettingsArgs = {
   notificationSettings: UpdateNotificationSettingsInput;
+};
+
+export type MutationUpdatePaymentIntentArgs = {
+  input: UpdatePaymentIntentInput;
+  paymentIntentId: Scalars["String"]["input"];
 };
 
 export type MutationUpdatePetArgs = {
@@ -1203,12 +1337,8 @@ export interface NotificationSettings {
 }
 
 export interface NotificationSettingsIn {
-  energySavingZone: EszNotificationPreferencesIn;
-}
-
-export enum OptimizationAttemptStatus {
-  Fail = "FAIL",
-  Success = "SUCCESS",
+  energySavingZone?: InputMaybe<EszNotificationPreferencesIn>;
+  push?: InputMaybe<Scalars["Boolean"]["input"]>;
 }
 
 export interface Order {
@@ -1247,12 +1377,40 @@ export interface PaginationInput {
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
 }
 
+export interface PaymentIntent {
+  __typename?: "PaymentIntent";
+  amount: Scalars["Int"]["output"];
+  businessEntityId?: Maybe<Scalars["String"]["output"]>;
+  createdAt: Scalars["Int"]["output"];
+  currencyCode?: Maybe<Scalars["String"]["output"]>;
+  customerId: Scalars["String"]["output"];
+  expiresAt: Scalars["Int"]["output"];
+  failureUrl?: Maybe<Scalars["String"]["output"]>;
+  gateway?: Maybe<Scalars["String"]["output"]>;
+  gatewayAccountId: Scalars["String"]["output"];
+  id: Scalars["String"]["output"];
+  modifiedAt: Scalars["Int"]["output"];
+  paymentMethodType?: Maybe<Scalars["String"]["output"]>;
+  referenceId?: Maybe<Scalars["String"]["output"]>;
+  resourceVersion?: Maybe<Scalars["Float"]["output"]>;
+  status: Scalars["String"]["output"];
+  successUrl?: Maybe<Scalars["String"]["output"]>;
+  updatedAt?: Maybe<Scalars["Int"]["output"]>;
+}
+
 export enum PaymentMethodEnum {
   ApplePay = "APPLE_PAY",
   Card = "CARD",
   DirectDebit = "DIRECT_DEBIT",
   GooglePay = "GOOGLE_PAY",
   Paypal = "PAYPAL",
+}
+
+export enum PaymentMethodTypeEnum {
+  ApplePay = "apple_pay",
+  Card = "card",
+  GooglePay = "google_pay",
+  PaypalExpressCheckout = "paypal_express_checkout",
 }
 
 export interface PaymentSource {
@@ -1325,7 +1483,6 @@ export interface PetHistoryEvent {
 export enum PetHistoryEventTypeEnum {
   ActiveSubscription = "ACTIVE_SUBSCRIPTION",
   ActiveSubscriptionTrial = "ACTIVE_SUBSCRIPTION_TRIAL",
-  BrazeCampaign = "BRAZE_CAMPAIGN",
   DeviceAssociate = "DEVICE_ASSOCIATE",
   DeviceBattery = "DEVICE_BATTERY",
   DeviceBattery_10 = "DEVICE_BATTERY_10",
@@ -1343,6 +1500,7 @@ export enum PetHistoryEventTypeEnum {
   GeofenceOut = "GEOFENCE_OUT",
   GeofenceTimeout = "GEOFENCE_TIMEOUT",
   HighTemperature = "HIGH_TEMPERATURE",
+  JournalNotification = "JOURNAL_NOTIFICATION",
   LowTemperature = "LOW_TEMPERATURE",
   NoGpsSignal = "NO_GPS_SIGNAL",
   OffSubscription = "OFF_SUBSCRIPTION",
@@ -1367,8 +1525,8 @@ export enum PetHistoryEventTypeEnum {
 export interface PetHistoryExtra {
   __typename?: "PetHistoryExtra";
   address?: Maybe<Scalars["String"]["output"]>;
-  brazeNotification?: Maybe<BrazeNotification>;
   contentMessage?: Maybe<ContentMessage>;
+  journal?: Maybe<Array<Maybe<JournalNotificationExtra>>>;
   newSerialNumber?: Maybe<Scalars["String"]["output"]>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
 }
@@ -1713,6 +1871,7 @@ export interface Query {
   getBreed: ResponseGetBreed;
   getColors: ResponseGetColors;
   getCountryState: ResponseGetCountryState;
+  getCoupon: ResponseGetCoupon;
   getDictionary: ResponseGetDictionary;
   /**   end of life */
   getEndOfLifeStep: ResponseGetEndOfLifeStep;
@@ -1721,6 +1880,10 @@ export interface Query {
   /**   getGeofence(id: String!): ResponseGeofence! @aws_cognito_user_pools @aws_iam */
   getGeofences: ResponseGeofences;
   getGpsPromotions: ResponseGetGpsPromotions;
+  getJournalEntries: ResponseJournalEntries;
+  getJournalEntry: ResponseJournalEntry;
+  /**  journal */
+  getJournalEventTypes: ResponseJournalEventTypes;
   getLogUploadUrl: ResponseGetLogUploadUrl;
   getNotificationsHistory: ResponseNotificationsHistory;
   getOrder?: Maybe<ResponseGetOrder>;
@@ -1754,6 +1917,7 @@ export interface Query {
   getSubscriptionPlans: ResponseSubscriptionPlans;
   getSubscriptions: ResponseGetSubscriptions;
   getUser: ResponseUser;
+  getUserCards: ResponseGetUserCards;
 }
 
 export type QueryChangeSubscriptionPlanArgs = {
@@ -1877,6 +2041,10 @@ export type QueryGetCountryStateArgs = {
   languageId?: InputMaybe<LanguageId>;
 };
 
+export type QueryGetCouponArgs = {
+  couponId: Scalars["String"]["input"];
+};
+
 export type QueryGetDictionaryArgs = {
   appBrand: AppBrand;
   languageId?: InputMaybe<LanguageId>;
@@ -1893,6 +2061,18 @@ export type QueryGetEnergySavingZoneArgs = {
 
 export type QueryGetGpsPromotionsArgs = {
   productId: Scalars["String"]["input"];
+};
+
+export type QueryGetJournalEntriesArgs = {
+  input: GetJournalEntriesInput;
+};
+
+export type QueryGetJournalEntryArgs = {
+  journalId: Scalars["String"]["input"];
+};
+
+export type QueryGetJournalEventTypesArgs = {
+  petId: Scalars["String"]["input"];
 };
 
 export type QueryGetLogUploadUrlArgs = {
@@ -1959,8 +2139,7 @@ export type QueryGetPositionsHistoryDatesArgs = {
 };
 
 export type QueryGetPostsArgs = {
-  appBrand?: InputMaybe<AppBrand>;
-  languageId?: InputMaybe<LanguageId>;
+  languageId?: InputMaybe<Scalars["String"]["input"]>;
   pagination?: InputMaybe<PaginationInput>;
 };
 
@@ -2142,6 +2321,13 @@ export interface ResponseCheckoutNewSubscription {
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseCheckoutNewSubscriptionV2 {
+  __typename?: "ResponseCheckoutNewSubscriptionV2";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  subscriptionId?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseChurnDeflection {
   __typename?: "ResponseChurnDeflection";
   code: Scalars["String"]["output"];
@@ -2155,6 +2341,13 @@ export interface ResponseCountPetHistoryUnread {
   countPetHistoryUnread?: Maybe<Scalars["Int"]["output"]>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseCreatePaymentIntent {
+  __typename?: "ResponseCreatePaymentIntent";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentIntent?: Maybe<PaymentIntent>;
 }
 
 export interface ResponseCreatePetlinkGps {
@@ -2232,6 +2425,13 @@ export interface ResponseGetCountryState {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseGetCoupon {
+  __typename?: "ResponseGetCoupon";
+  code: Scalars["String"]["output"];
+  coupon?: Maybe<Coupon>;
+  message: Scalars["String"]["output"];
+}
+
 export interface ResponseGetDictionary {
   __typename?: "ResponseGetDictionary";
   code: Scalars["String"]["output"];
@@ -2259,7 +2459,6 @@ export interface ResponseGetGpsPromotions {
 export interface ResponseGetLogUploadUrl {
   __typename?: "ResponseGetLogUploadUrl";
   code: Scalars["String"]["output"];
-  command?: Maybe<Array<Scalars["String"]["output"]>>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
   uploadData?: Maybe<UploadData>;
@@ -2339,6 +2538,35 @@ export interface ResponseGetSubscriptions {
   message: Scalars["String"]["output"];
   subscriptions?: Maybe<Array<SubscriptionShortInfo>>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetUserCards {
+  __typename?: "ResponseGetUserCards";
+  cards?: Maybe<Array<Card>>;
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+}
+
+export interface ResponseJournalEntries {
+  __typename?: "ResponseJournalEntries";
+  code: Scalars["String"]["output"];
+  entries?: Maybe<Array<JournalEntry>>;
+  message: Scalars["String"]["output"];
+}
+
+export interface ResponseJournalEntry {
+  __typename?: "ResponseJournalEntry";
+  code: Scalars["String"]["output"];
+  journalEntry?: Maybe<JournalEntry>;
+  message: Scalars["String"]["output"];
+  notifications?: Maybe<Array<JournalNotificationExtra>>;
+}
+
+export interface ResponseJournalEventTypes {
+  __typename?: "ResponseJournalEventTypes";
+  code: Scalars["String"]["output"];
+  eventTypes?: Maybe<Array<JournalEventType>>;
+  message: Scalars["String"]["output"];
 }
 
 export interface ResponseManagePaymentSources {
@@ -2578,6 +2806,13 @@ export interface ResponseUpdateEndOfLife {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseUpdatePaymentIntent {
+  __typename?: "ResponseUpdatePaymentIntent";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentIntent?: Maybe<PaymentIntent>;
+}
+
 export interface ResponseUpdatePaymentSources {
   __typename?: "ResponseUpdatePaymentSources";
   code: Scalars["String"]["output"];
@@ -2683,6 +2918,7 @@ export enum SettingOperationEnum {
 export enum SettingTypeEnum {
   EnergySavingZone = "ENERGY_SAVING_ZONE",
   Geofence = "GEOFENCE",
+  TourRecording = "TOUR_RECORDING",
   UpdateFrequency = "UPDATE_FREQUENCY",
 }
 
@@ -2865,6 +3101,18 @@ export interface UpdateNotificationSettingsInput {
   energySavingZone: EszNotificationsInput;
 }
 
+export enum UpdatePaymentIntentEnum {
+  NewCard = "NEW_CARD",
+  SavedCard = "SAVED_CARD",
+}
+
+export interface UpdatePaymentIntentInput {
+  cardholderName?: InputMaybe<Scalars["String"]["input"]>;
+  paymentSourceId?: InputMaybe<Scalars["String"]["input"]>;
+  tmpToken?: InputMaybe<Scalars["String"]["input"]>;
+  type: UpdatePaymentIntentEnum;
+}
+
 export interface UpdatePetIn {
   birthDate?: InputMaybe<Scalars["String"]["input"]>;
   breedType?: InputMaybe<BreedTypeEnum>;
@@ -2988,28 +3236,17 @@ export interface UtilityIntegrationTestInput {
   card?: InputMaybe<UtilityIntegrationTestCardInput>;
   currencyCode?: InputMaybe<Scalars["String"]["input"]>;
   isOnlyProtection?: InputMaybe<Scalars["Boolean"]["input"]>;
-  nextBillingDate?: InputMaybe<Scalars["String"]["input"]>;
-  orderId?: InputMaybe<Scalars["String"]["input"]>;
-  orderItemId?: InputMaybe<Scalars["String"]["input"]>;
   phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
-  serialNumbers?: InputMaybe<Array<Scalars["String"]["input"]>>;
-  subscriptionId?: InputMaybe<Scalars["String"]["input"]>;
-  userId?: InputMaybe<Scalars["String"]["input"]>;
   userIn?: InputMaybe<UserIn>;
   utilityType: UtilityTestTypeEnum;
 }
 
 export enum UtilityTestTypeEnum {
   BuyNewSubscription = "BUY_NEW_SUBSCRIPTION",
-  BuyNewSubscriptionPrepaid = "BUY_NEW_SUBSCRIPTION_PREPAID",
-  ChangeSubscriptionPlan = "CHANGE_SUBSCRIPTION_PLAN",
-  CleanUpCoupons = "CLEAN_UP_COUPONS",
   CleanUpUser = "CLEAN_UP_USER",
   SignUp = "SIGN_UP",
-  UpdatePaymentMethod = "UPDATE_PAYMENT_METHOD",
-  UpdateSubscriptionNextBillingDate = "UPDATE_SUBSCRIPTION_NEXT_BILLING_DATE",
 }
 
 export enum ValidationStatusEnum {
@@ -4024,6 +4261,170 @@ export type ChangeForgotPasswordMutation = {
   changeForgotPassword: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
 };
 
+export type GetJournalEventTypesQueryVariables = Exact<{
+  petId: Scalars["String"]["input"];
+}>;
+
+export type GetJournalEventTypesQuery = {
+  __typename?: "Query";
+  getJournalEventTypes: {
+    __typename?: "ResponseJournalEventTypes";
+    code: string;
+    message: string;
+    eventTypes?: Array<{
+      __typename?: "JournalEventType";
+      id: string;
+      entityType: JournalEntityTypeEnum;
+      creationDate: string;
+      updateDate: string;
+      eventType: JournalEventTypeEnum;
+      points: number;
+      translationKey?: string | null;
+      sentimentType: EventSentimentEnum;
+      name?: string | null;
+      userId?: string | null;
+      icon?: string | null;
+    }> | null;
+  };
+};
+
+export type GetJournalEntryQueryVariables = Exact<{
+  journalId: Scalars["String"]["input"];
+}>;
+
+export type GetJournalEntryQuery = {
+  __typename?: "Query";
+  getJournalEntry: {
+    __typename?: "ResponseJournalEntry";
+    code: string;
+    message: string;
+    journalEntry?: {
+      __typename?: "JournalEntry";
+      id: string;
+      entityType: JournalEntityTypeEnum;
+      creationDate: string;
+      updateDate: string;
+      userId: string;
+      petId: string;
+      connectionPoints: number;
+      behaviourPoints: number;
+      routineCheckPoints: number;
+      moodPoints: number;
+      totalPoints: number;
+      note?: string | null;
+      connection: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      behaviour: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      routineCheck: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      mood: {
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      };
+    } | null;
+    notifications?: Array<{ __typename?: "JournalNotificationExtra"; type: string; translationKey: string }> | null;
+  };
+};
+
+export type GetJournalEntriesQueryVariables = Exact<{
+  input: GetJournalEntriesInput;
+}>;
+
+export type GetJournalEntriesQuery = {
+  __typename?: "Query";
+  getJournalEntries: {
+    __typename?: "ResponseJournalEntries";
+    code: string;
+    message: string;
+    entries?: Array<{
+      __typename?: "JournalEntry";
+      id: string;
+      entityType: JournalEntityTypeEnum;
+      creationDate: string;
+      updateDate: string;
+      userId: string;
+      petId: string;
+      connectionPoints: number;
+      behaviourPoints: number;
+      routineCheckPoints: number;
+      moodPoints: number;
+      totalPoints: number;
+      note?: string | null;
+      connection: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      behaviour: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      routineCheck: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      mood: {
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      };
+    }> | null;
+  };
+};
+
 export type UpdateEndOfLifeMutationVariables = Exact<{
   eolId?: InputMaybe<Scalars["String"]["input"]>;
   deviceId?: InputMaybe<Scalars["String"]["input"]>;
@@ -4717,6 +5118,111 @@ export type ReplacementMutationVariables = Exact<{
 export type ReplacementMutation = {
   __typename?: "Mutation";
   replacement: { __typename?: "ResponseReplacement"; code: string; message: string; translationCode?: string | null };
+};
+
+export type AddJournalEventTypeMutationVariables = Exact<{
+  input: AddJournalEventTypeInput;
+}>;
+
+export type AddJournalEventTypeMutation = {
+  __typename?: "Mutation";
+  addJournalEventType: {
+    __typename?: "ResponseJournalEventTypes";
+    code: string;
+    message: string;
+    eventTypes?: Array<{
+      __typename?: "JournalEventType";
+      id: string;
+      entityType: JournalEntityTypeEnum;
+      creationDate: string;
+      updateDate: string;
+      eventType: JournalEventTypeEnum;
+      points: number;
+      translationKey?: string | null;
+      sentimentType: EventSentimentEnum;
+      name?: string | null;
+      userId?: string | null;
+      icon?: string | null;
+    }> | null;
+  };
+};
+
+export type DeleteJournalEventTypeMutationVariables = Exact<{
+  input: DeleteJournalEventTypeInput;
+}>;
+
+export type DeleteJournalEventTypeMutation = {
+  __typename?: "Mutation";
+  deleteJournalEventType: { __typename?: "Response"; code: string; message: string };
+};
+
+export type AddJournalEntryMutationVariables = Exact<{
+  input: AddJournalEntryInput;
+}>;
+
+export type AddJournalEntryMutation = {
+  __typename?: "Mutation";
+  addJournalEntry: {
+    __typename?: "ResponseJournalEntry";
+    code: string;
+    message: string;
+    journalEntry?: {
+      __typename?: "JournalEntry";
+      id: string;
+      entityType: JournalEntityTypeEnum;
+      creationDate: string;
+      updateDate: string;
+      userId: string;
+      petId: string;
+      connectionPoints: number;
+      behaviourPoints: number;
+      routineCheckPoints: number;
+      moodPoints: number;
+      totalPoints: number;
+      note?: string | null;
+      connection: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      behaviour: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      routineCheck: Array<{
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      }>;
+      mood: {
+        __typename?: "JournalEventType";
+        id: string;
+        eventType: JournalEventTypeEnum;
+        points: number;
+        translationKey?: string | null;
+        sentimentType: EventSentimentEnum;
+        name?: string | null;
+        icon?: string | null;
+      };
+    } | null;
+    notifications?: Array<{ __typename?: "JournalNotificationExtra"; type: string; translationKey: string }> | null;
+  };
 };
 
 export type OnGpsMessagePositionSubscriptionVariables = Exact<{
@@ -7088,6 +7594,319 @@ export const ChangeForgotPasswordDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const GetJournalEventTypesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getJournalEventTypes" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "petId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getJournalEventTypes" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "petId" }, value: { kind: "Variable", name: { kind: "Name", value: "petId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "eventTypes" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                      { kind: "Field", name: { kind: "Name", value: "points" } },
+                      { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                      { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "icon" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetJournalEntryDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getJournalEntry" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "journalId" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getJournalEntry" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "journalId" },
+                value: { kind: "Variable", name: { kind: "Name", value: "journalId" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "journalEntry" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "connection" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "connectionPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "behaviour" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "behaviourPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "routineCheck" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "routineCheckPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "mood" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "moodPoints" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPoints" } },
+                      { kind: "Field", name: { kind: "Name", value: "note" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "notifications" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "type" } },
+                      { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetJournalEntriesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getJournalEntries" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "GetJournalEntriesInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getJournalEntries" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "entries" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "connection" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "connectionPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "behaviour" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "behaviourPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "routineCheck" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "routineCheckPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "mood" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "moodPoints" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPoints" } },
+                      { kind: "Field", name: { kind: "Name", value: "note" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const UpdateEndOfLifeDocument = {
   kind: "Document",
   definitions: [
@@ -8852,6 +9671,230 @@ export const ReplacementDocument = {
     },
   ],
 } as unknown as DocumentNode;
+export const AddJournalEventTypeDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "addJournalEventType" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AddJournalEventTypeInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "addJournalEventType" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "eventTypes" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                      { kind: "Field", name: { kind: "Name", value: "points" } },
+                      { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                      { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "icon" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const DeleteJournalEventTypeDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "deleteJournalEventType" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "DeleteJournalEventTypeInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "deleteJournalEventType" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const AddJournalEntryDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "addJournalEntry" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "input" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "AddJournalEntryInput" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "addJournalEntry" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "input" }, value: { kind: "Variable", name: { kind: "Name", value: "input" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "journalEntry" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "entityType" } },
+                      { kind: "Field", name: { kind: "Name", value: "creationDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "updateDate" } },
+                      { kind: "Field", name: { kind: "Name", value: "userId" } },
+                      { kind: "Field", name: { kind: "Name", value: "petId" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "connection" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "connectionPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "behaviour" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "behaviourPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "routineCheck" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "routineCheckPoints" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "mood" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "id" } },
+                            { kind: "Field", name: { kind: "Name", value: "eventType" } },
+                            { kind: "Field", name: { kind: "Name", value: "points" } },
+                            { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                            { kind: "Field", name: { kind: "Name", value: "sentimentType" } },
+                            { kind: "Field", name: { kind: "Name", value: "name" } },
+                            { kind: "Field", name: { kind: "Name", value: "icon" } },
+                          ],
+                        },
+                      },
+                      { kind: "Field", name: { kind: "Name", value: "moodPoints" } },
+                      { kind: "Field", name: { kind: "Name", value: "totalPoints" } },
+                      { kind: "Field", name: { kind: "Name", value: "note" } },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "notifications" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "type" } },
+                      { kind: "Field", name: { kind: "Name", value: "translationKey" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
 export const OnGpsMessagePositionDocument = {
   kind: "Document",
   definitions: [
@@ -9491,6 +10534,60 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
         variables,
       );
     },
+    getJournalEventTypes(
+      variables: GetJournalEventTypesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetJournalEventTypesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetJournalEventTypesQuery>({
+            document: GetJournalEventTypesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getJournalEventTypes",
+        "query",
+        variables,
+      );
+    },
+    getJournalEntry(
+      variables: GetJournalEntryQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetJournalEntryQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetJournalEntryQuery>({
+            document: GetJournalEntryDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getJournalEntry",
+        "query",
+        variables,
+      );
+    },
+    getJournalEntries(
+      variables: GetJournalEntriesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetJournalEntriesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetJournalEntriesQuery>({
+            document: GetJournalEntriesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getJournalEntries",
+        "query",
+        variables,
+      );
+    },
     updateEndOfLife(
       variables?: UpdateEndOfLifeMutationVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -9937,6 +11034,60 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "replacement",
+        "mutation",
+        variables,
+      );
+    },
+    addJournalEventType(
+      variables: AddJournalEventTypeMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<AddJournalEventTypeMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AddJournalEventTypeMutation>({
+            document: AddJournalEventTypeDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "addJournalEventType",
+        "mutation",
+        variables,
+      );
+    },
+    deleteJournalEventType(
+      variables: DeleteJournalEventTypeMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DeleteJournalEventTypeMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteJournalEventTypeMutation>({
+            document: DeleteJournalEventTypeDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "deleteJournalEventType",
+        "mutation",
+        variables,
+      );
+    },
+    addJournalEntry(
+      variables: AddJournalEntryMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<AddJournalEntryMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AddJournalEntryMutation>({
+            document: AddJournalEntryDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "addJournalEntry",
         "mutation",
         variables,
       );

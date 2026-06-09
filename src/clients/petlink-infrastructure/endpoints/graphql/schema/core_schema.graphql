@@ -2,9 +2,9 @@
 directive @defer on FIELD
 
 """
-Tells the service this field/object has access authorized by sigv4 signing.
+Tells the service this field/object has access authorized by an API key.
 """
-directive @aws_iam on OBJECT | FIELD_DEFINITION
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
 
 """Directs the schema to enforce authorization on a field"""
 directive @aws_auth(
@@ -13,9 +13,22 @@ directive @aws_auth(
 ) on FIELD_DEFINITION
 
 """
-Tells the service this field/object has access authorized by an API key.
+Tells the service this field/object has access authorized by an OIDC token.
 """
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by sigv4 signing.
+"""
+directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""Tells the service which mutation triggers this subscription."""
+directive @aws_subscribe(
+  """
+  List of mutations which will trigger this subscription when they are called.
+  """
+  mutations: [String]
+) on FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by an OIDC token.
@@ -41,12 +54,20 @@ directive @aws_cognito_user_pools(
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
 
-"""Tells the service which mutation triggers this subscription."""
-directive @aws_subscribe(
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service which subscriptions will be published to when this mutation is
+called. This directive is deprecated use @aws_susbscribe directive instead.
+"""
+directive @aws_publish(
   """
-  List of mutations which will trigger this subscription when they are called.
+  List of subscriptions which will be published to when this mutation is called.
   """
-  mutations: [String]
+  subscriptions: [String]
 ) on FIELD_DEFINITION
 
 """
@@ -135,6 +156,22 @@ type ActivityValueCat {
   goal: GoalRange!
 }
 
+input AddJournalEntryInput {
+  petId: String!
+  moodId: String!
+  connectionIds: [String!]!
+  behaviourIds: [String!]!
+  routineCheckIds: [String!]!
+  note: String
+}
+
+input AddJournalEventTypeInput {
+  petId: String!
+  eventType: JournalEventTypeEnum!
+  name: String!
+  sentimentType: EventSentimentEnum!
+}
+
 type AddonPricing {
   id: String!
   name: String!
@@ -149,6 +186,12 @@ type AddonPricing {
   trialPeriod: Int
   itemType: String
   trialPeriodUnit: String
+}
+
+type AddUserCardResponse {
+  code: String!
+  message: String!
+  paymentSourceId: String
 }
 
 enum AppBrand {
@@ -179,7 +222,6 @@ type BaseConfig {
   timeoutNoHighPrecision120s: Int!
   timeoutOnlyLowPrecision30s: Int!
   timeoutOnlyLowPrecision5Min: Int!
-  timeoutOptimization: Int!
 }
 
 type BillingInfo {
@@ -208,11 +250,6 @@ type BluetoothAddress {
   remoteUuid: String
 }
 
-type BrazeNotification {
-  title: String!
-  body: String!
-}
-
 type Breed {
   code: String!
   species: SpeciesEnum!
@@ -235,12 +272,16 @@ enum CancelReasonCodeEnum {
 }
 
 type Card {
+  paymentSourceId: String
+  status: String
   expiryMonth: Int
   expiryYear: Int
   maskedNumber: String
   type: String
   brand: String
   paymentMethod: String!
+  isPrimaryPaymentSource: Boolean
+  referenceId: String
 }
 
 type CareProtectionPlan {
@@ -339,6 +380,10 @@ type CurrentSubscription {
   status: SubscriptionStatusEnum!
   paymentStatus: PaymentStatusTypeEnum
   invoiceStatus: InvoiceStatusEnum
+}
+
+input DeleteJournalEventTypeInput {
+  id: String!
 }
 
 type Device {
@@ -459,6 +504,12 @@ input EszNotificationsInput {
   push: Boolean!
 }
 
+enum EventSentimentEnum {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -478,6 +529,12 @@ type Geofence {
 input GeofenceIn {
   name: String!
   position: [CoordinatesIn!]!
+}
+
+input GetJournalEntriesInput {
+  petId: String!
+  from: String!
+  to: String!
 }
 
 type GoalRange {
@@ -684,6 +741,57 @@ enum InvoiceStatusEnum {
   non_paying
 }
 
+enum JournalEntityTypeEnum {
+  JOURNAL_EVENT_TYPE
+  JOURNAL_CUSTOM_EVENT_TYPE
+  JOURNAL_ENTRY
+}
+
+type JournalEntry {
+  id: String!
+  entityType: JournalEntityTypeEnum!
+  creationDate: String!
+  updateDate: String!
+  userId: String!
+  petId: String!
+  connection: [JournalEventType!]!
+  connectionPoints: Int!
+  behaviour: [JournalEventType!]!
+  behaviourPoints: Int!
+  routineCheck: [JournalEventType!]!
+  routineCheckPoints: Int!
+  mood: JournalEventType!
+  moodPoints: Int!
+  totalPoints: Int!
+  note: String
+}
+
+type JournalEventType {
+  id: String!
+  entityType: JournalEntityTypeEnum!
+  creationDate: String!
+  updateDate: String!
+  eventType: JournalEventTypeEnum!
+  points: Int!
+  translationKey: String
+  sentimentType: EventSentimentEnum!
+  name: String
+  userId: String
+  icon: String
+}
+
+enum JournalEventTypeEnum {
+  CONNECTION
+  BEHAVIOURS
+  ROUTINE_CHECK
+  MOOD
+}
+
+type JournalNotificationExtra {
+  type: String!
+  translationKey: String!
+}
+
 enum LanguageId {
   IT
   EN
@@ -839,6 +947,12 @@ type Mutation {
   addGpsPromotion(deviceId: String!, promotion: PromotionInput!): Response
   acknowledgeCheckout(id: String!): Response!
   sendCustomerSuggestions(suggestion: String!, productId: String!): Response!
+  addUserCard(paymentIntentId: String!): AddUserCardResponse!
+  createPaymentIntent(currencyCode: String!, priceIds: [String!]!, couponIds: [String!], paymentMethodType: PaymentMethodTypeEnum!): ResponseCreatePaymentIntent!
+  updatePaymentIntent(paymentIntentId: String!, input: UpdatePaymentIntentInput!): ResponseUpdatePaymentIntent!
+  checkoutNewSubscriptionV2(productId: String!, priceIds: [String!]!, paymentIntentId: String, paymentSourceId: String): ResponseCheckoutNewSubscriptionV2!
+  setPrimaryPaymentSource(paymentSourceId: String!): Response!
+  deletePaymentSource(paymentSourceId: String!): Response!
 
   """  subscription publishers"""
   publishOnGpsMessagePosition(gpsPosition: GpsMessagePositionIn!): GpsMessagePosition!
@@ -859,6 +973,11 @@ type Mutation {
 
   """  test suite"""
   utilityIntegrationTest(input: UtilityIntegrationTestInput!): ResponseUtilityIntegrationTest!
+
+  """  journal"""
+  addJournalEventType(input: AddJournalEventTypeInput!): ResponseJournalEventTypes!
+  deleteJournalEventType(input: DeleteJournalEventTypeInput!): Response!
+  addJournalEntry(input: AddJournalEntryInput!): ResponseJournalEntry!
 }
 
 type NewFirmwareVersion {
@@ -888,7 +1007,8 @@ type NotificationSettings {
 }
 
 input NotificationSettingsIn {
-  energySavingZone: EszNotificationPreferencesIn!
+  push: Boolean
+  energySavingZone: EszNotificationPreferencesIn
 }
 
 enum OptimizationAttemptStatus {
@@ -930,12 +1050,39 @@ input PaginationInput {
   pageNumber: Int
 }
 
+type PaymentIntent {
+  id: String!
+  status: String!
+  amount: Int!
+  currencyCode: String
+  gatewayAccountId: String!
+  expiresAt: Int!
+  referenceId: String
+  paymentMethodType: String
+  successUrl: String
+  failureUrl: String
+  createdAt: Int!
+  modifiedAt: Int!
+  resourceVersion: Float
+  updatedAt: Int
+  customerId: String!
+  gateway: String
+  businessEntityId: String
+}
+
 enum PaymentMethodEnum {
   CARD
   PAYPAL
   DIRECT_DEBIT
   GOOGLE_PAY
   APPLE_PAY
+}
+
+enum PaymentMethodTypeEnum {
+  card
+  google_pay
+  apple_pay
+  paypal_express_checkout
 }
 
 type PaymentSource {
@@ -1041,6 +1188,7 @@ enum PetHistoryEventTypeEnum {
   DEVICE_OFFLINE
   BRAZE_CAMPAIGN
   OPTIMIZATION_COMPLETED
+  JOURNAL_NOTIFICATION
 }
 
 type PetHistoryExtra {
@@ -1048,7 +1196,7 @@ type PetHistoryExtra {
   contentMessage: ContentMessage
   serialNumber: String
   newSerialNumber: String
-  brazeNotification: BrazeNotification
+  journal: [JournalNotificationExtra]
 }
 
 input PetIn {
@@ -1352,6 +1500,7 @@ type PurchasedService {
 
 type Query {
   getUser: ResponseUser!
+  getUserCards: ResponseGetUserCards!
   getPet(id: String!): ResponsePet!
   getPetByQrTag(serialNumber: String!): ResponsePetByQrTag!
   getPets: ResponsePets!
@@ -1387,6 +1536,7 @@ type Query {
   getPurchasedServices(productId: String!): ResponseGetPurchasedServices!
   getSubscriptionByProductId(productId: String!): ResponseGetSubscriptionByProductId!
   getOrder(orderId: String!): ResponseGetOrder
+  getCoupon(couponId: String!): ResponseGetCoupon!
   getPetsAndProducts: ResponsePetsAndProducts!
   countPetHistoryUnread: ResponseCountPetHistoryUnread!
   getNotificationsHistory(from: String, to: String): ResponseNotificationsHistory!
@@ -1420,11 +1570,16 @@ type Query {
   getActivitiesCat(petId: String!, weekIndex: Int!, from: Int!, to: Int!): ResponseActivitiesCat!
   getActivitiesAverageCat(petId: String!, serialNumber: String, from: Int!, to: Int!): ResponseActivitiesAverageCat
   getActiveSubscriptions(subscriptionsIds: [String!]): ResponseActiveSubscriptions!
-  getPosts(languageId: LanguageId, pagination: PaginationInput, appBrand: AppBrand): ResponseGetPosts!
+  getPosts(languageId: String, pagination: PaginationInput): ResponseGetPosts!
 
   """ sso"""
   getSsoToken(id: String!): ResponseSsoToken!
   getBaseConfig(appBrand: String!): ResponseGetBaseConfig!
+
+  """ journal"""
+  getJournalEventTypes(petId: String!): ResponseJournalEventTypes!
+  getJournalEntry(journalId: String!): ResponseJournalEntry!
+  getJournalEntries(input: GetJournalEntriesInput!): ResponseJournalEntries!
 }
 
 type Response {
@@ -1532,6 +1687,12 @@ type ResponseCheckoutNewSubscription {
   checkoutId: String
 }
 
+type ResponseCheckoutNewSubscriptionV2 {
+  code: String!
+  message: String!
+  subscriptionId: String
+}
+
 type ResponseChurnDeflection {
   code: String!
   message: String!
@@ -1543,6 +1704,12 @@ type ResponseCountPetHistoryUnread {
   translationCode: String
   message: String!
   countPetHistoryUnread: Int
+}
+
+type ResponseCreatePaymentIntent {
+  code: String!
+  message: String!
+  paymentIntent: PaymentIntent
 }
 
 type ResponseCreatePetlinkGps {
@@ -1611,6 +1778,12 @@ type ResponseGetCountryState {
   items: [CountryState!]
 }
 
+type ResponseGetCoupon {
+  code: String!
+  message: String!
+  coupon: Coupon
+}
+
 type ResponseGetDictionary {
   code: String!
   translationCode: String
@@ -1637,7 +1810,6 @@ type ResponseGetLogUploadUrl {
   translationCode: String
   message: String!
   uploadData: UploadData
-  command: [String!]
 }
 
 type ResponseGetOrder {
@@ -1705,6 +1877,31 @@ type ResponseGetSubscriptions {
   translationCode: String
   subscriptions: [SubscriptionShortInfo!]
   currentSubscription: CurrentSubscription
+}
+
+type ResponseGetUserCards {
+  code: String!
+  message: String!
+  cards: [Card!]
+}
+
+type ResponseJournalEntries {
+  code: String!
+  message: String!
+  entries: [JournalEntry!]
+}
+
+type ResponseJournalEntry {
+  code: String!
+  message: String!
+  journalEntry: JournalEntry
+  notifications: [JournalNotificationExtra!]
+}
+
+type ResponseJournalEventTypes {
+  code: String!
+  message: String!
+  eventTypes: [JournalEventType!]
 }
 
 type ResponseManagePaymentSources {
@@ -1916,6 +2113,12 @@ type ResponseUpdateEndOfLife {
   endOfLife: EndOfLife
 }
 
+type ResponseUpdatePaymentIntent {
+  code: String!
+  message: String!
+  paymentIntent: PaymentIntent
+}
+
 type ResponseUpdatePaymentSources {
   code: String!
   message: String!
@@ -2015,6 +2218,7 @@ enum SettingTypeEnum {
   GEOFENCE
   ENERGY_SAVING_ZONE
   UPDATE_FREQUENCY
+  TOUR_RECORDING
 }
 
 type ShippingInfo {
@@ -2170,6 +2374,18 @@ input UpdateNotificationSettingsInput {
   energySavingZone: EszNotificationsInput!
 }
 
+enum UpdatePaymentIntentEnum {
+  SAVED_CARD
+  NEW_CARD
+}
+
+input UpdatePaymentIntentInput {
+  type: UpdatePaymentIntentEnum!
+  paymentSourceId: String
+  tmpToken: String
+  cardholderName: String
+}
+
 input UpdatePetIn {
   id: String!
   name: String
@@ -2298,9 +2514,6 @@ input UtilityIntegrationTestInput {
   isOnlyProtection: Boolean
   currencyCode: String
   card: UtilityIntegrationTestCardInput
-  subscriptionId: String
-  nextBillingDate: String
-  userId: String
 }
 
 enum UtilityTestTypeEnum {
@@ -2309,9 +2522,6 @@ enum UtilityTestTypeEnum {
   BUY_NEW_SUBSCRIPTION
   BUY_NEW_SUBSCRIPTION_PREPAID
   SIGN_UP
-  UPDATE_SUBSCRIPTION_NEXT_BILLING_DATE
-  CHANGE_SUBSCRIPTION_PLAN
-  UPDATE_PAYMENT_METHOD
 }
 
 enum ValidationStatusEnum {

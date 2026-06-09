@@ -876,6 +876,146 @@ mutation changeForgotPassword($otp: String!, $verificationId: String!, $password
     }
 }
 
+# ======================== JOURNAL ========================
+
+query getJournalEventTypes($petId: String!) {
+    getJournalEventTypes(petId: $petId) {
+        code
+        message
+        eventTypes {
+            id
+            entityType
+            creationDate
+            updateDate
+            eventType
+            points
+            translationKey
+            sentimentType
+            name
+            userId
+            icon
+        }
+    }
+}
+
+query getJournalEntry($journalId: String!) {
+    getJournalEntry(journalId: $journalId) {
+        code
+        message
+        journalEntry {
+            id
+            entityType
+            creationDate
+            updateDate
+            userId
+            petId
+            connection {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            connectionPoints
+            behaviour {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            behaviourPoints
+            routineCheck {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            routineCheckPoints
+            mood {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            moodPoints
+            totalPoints
+            note
+        }
+        notifications {
+            type
+            translationKey
+        }
+    }
+}
+
+query getJournalEntries($input: GetJournalEntriesInput!) {
+    getJournalEntries(input: $input) {
+        code
+        message
+        entries {
+            id
+            entityType
+            creationDate
+            updateDate
+            userId
+            petId
+            connection {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            connectionPoints
+            behaviour {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            behaviourPoints
+            routineCheck {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            routineCheckPoints
+            mood {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            moodPoints
+            totalPoints
+            note
+        }
+    }
+}
+
 ###################### MUTATION ######################
 mutation updateEndOfLife(
     $eolId: String
@@ -1482,6 +1622,97 @@ mutation replacement($productId: String!, $newSerialNumber: String!, $entityType
         translationCode
     }
 }
+
+# ======================== JOURNAL ========================
+
+mutation addJournalEventType($input: AddJournalEventTypeInput!) {
+    addJournalEventType(input: $input) {
+        code
+        message
+        eventTypes {
+            id
+            entityType
+            creationDate
+            updateDate
+            eventType
+            points
+            translationKey
+            sentimentType
+            name
+            userId
+            icon
+        }
+    }
+}
+
+mutation deleteJournalEventType($input: DeleteJournalEventTypeInput!) {
+    deleteJournalEventType(input: $input) {
+        code
+        message
+    }
+}
+
+mutation addJournalEntry($input: AddJournalEntryInput!) {
+    addJournalEntry(input: $input) {
+        code
+        message
+        journalEntry {
+            id
+            entityType
+            creationDate
+            updateDate
+            userId
+            petId
+            connection {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            connectionPoints
+            behaviour {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            behaviourPoints
+            routineCheck {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            routineCheckPoints
+            mood {
+                id
+                eventType
+                points
+                translationKey
+                sentimentType
+                name
+                icon
+            }
+            moodPoints
+            totalPoints
+            note
+        }
+        notifications {
+            type
+            translationKey
+        }
+    }
+}
+
 ###################### SUBSCRIPTION ######################
 
 subscription onGpsMessagePosition($id: String!) {
