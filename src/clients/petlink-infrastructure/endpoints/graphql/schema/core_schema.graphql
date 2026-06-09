@@ -2,6 +2,19 @@
 directive @defer on FIELD
 
 """
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Cognito User Pools token.
+"""
+directive @aws_cognito_user_pools(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on OBJECT | FIELD_DEFINITION
+
+"""
 Tells the service which subscriptions will be published to when this mutation is
 called. This directive is deprecated use @aws_susbscribe directive instead.
 """
@@ -12,35 +25,6 @@ directive @aws_publish(
   subscriptions: [String]
 ) on FIELD_DEFINITION
 
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an OIDC token.
-"""
-directive @aws_oidc on OBJECT | FIELD_DEFINITION
-
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by a Cognito User Pools token.
-"""
-directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on OBJECT | FIELD_DEFINITION
-
 """Tells the service which mutation triggers this subscription."""
 directive @aws_subscribe(
   """
@@ -50,9 +34,25 @@ directive @aws_subscribe(
 ) on FIELD_DEFINITION
 
 """
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""
 Tells the service this field/object has access authorized by sigv4 signing.
 """
 directive @aws_iam on OBJECT | FIELD_DEFINITION
+
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
 
 type Activities {
   serialNumber: String
@@ -564,6 +564,8 @@ type GpsSettings {
   enableGpsOnDefault: Boolean!
   optimizationDone: Boolean
   sentinelMigrationDone: Boolean
+  lastOptimizationAttempt: String
+  migrationWaitingForConnection: Boolean
 }
 
 input GpsSettingsIn {
@@ -787,6 +789,7 @@ type Mutation {
   replacement(productId: String!, newSerialNumber: String!, entityType: ProductTypeEnum!): ResponseReplacement!
   setPetIsLost(petId: String!, lostIn: LostIn!): ResponseSetPetIsLost!
   setOptimizationDone(productId: String!): Response!
+  createOptimizationAttempt(productId: String!, status: OptimizationAttemptStatus!, failureReason: String): Response!
   setDeviceUnhappyFlow(productId: String!): Response!
   setSentinelMigrationDone(productId: String!): Response!
   setSafetyTermsCat: Response!
@@ -886,6 +889,11 @@ type NotificationSettings {
 
 input NotificationSettingsIn {
   energySavingZone: EszNotificationPreferencesIn!
+}
+
+enum OptimizationAttemptStatus {
+  SUCCESS
+  FAIL
 }
 
 type Order {
@@ -1032,6 +1040,7 @@ enum PetHistoryEventTypeEnum {
   REPLACEMENT
   DEVICE_OFFLINE
   BRAZE_CAMPAIGN
+  OPTIMIZATION_COMPLETED
 }
 
 type PetHistoryExtra {

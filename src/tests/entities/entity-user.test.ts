@@ -391,7 +391,7 @@ describe("User", () => {
         });
 
         // Try login with new email
-        petlink.logoutUser();
+        petlink.core.logout();
         await petlink.core.loginWithEmail(newEmail, originalPassword);
         const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
         expect(
@@ -443,7 +443,7 @@ describe("User", () => {
         ).toBe("200");
 
         // STEP 5: Verify login with new password works
-        petlink.logoutUser();
+        petlink.core.logout();
         await petlink.core.loginWithPhone(newPhone, fxt.current.user.password);
         const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
         expect(
@@ -534,7 +534,7 @@ describe("User", () => {
         ).toBe("200");
 
         // STEP 5: Verify new password works
-        petlink.logoutUser();
+        petlink.core.logout();
         await petlink.core.loginWithPhone(setup.user!.phone, newPassword);
         const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
         expect(

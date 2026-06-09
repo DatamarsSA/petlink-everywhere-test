@@ -489,7 +489,7 @@ const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, a
 // === Services ===
 
 class CoreService {
-  public readonly jwtProvider: JwtAuthProvider;
+  private readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CoreSdk>;
   public readonly graphqlWS: GraphQLWSClient;
   public readonly rest: OrderRestClient;
@@ -560,15 +560,15 @@ class CoreService {
     return this.jwtProvider.authenticate(phone, password, "phone_number");
   }
 
-  // Cache cleanup: clears the JWT in memory. The next request via authJwt will throw
+  // Logout: clears the JWT in memory. The next request via authJwt will throw
   // until a new login fills the token. IAM / API_KEY clients use static creds and are unaffected.
-  clearCache() {
+  logout() {
     this.jwtProvider.clear();
   }
 }
 
 class CctService {
-  public readonly jwtProvider: JwtAuthProvider;
+  private readonly jwtProvider: JwtAuthProvider;
   public readonly graphqlHttp: GraphQLHttpClient<CctSdk>;
 
   constructor() {
@@ -625,7 +625,7 @@ class CctService {
     return this.jwtProvider.authenticate(email, password, "email");
   }
 
-  clearCache() {
+  logout() {
     this.jwtProvider.clear();
   }
 }
@@ -873,10 +873,8 @@ class PetLinkInfrastructure {
     this.sentinel = new SentinelService();
   }
 
-  logoutUser() {
-    this.core.clearCache();
-    this.cct.clearCache();
-  }
 }
 
 export const petlink = new PetLinkInfrastructure();
+
+

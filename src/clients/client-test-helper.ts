@@ -285,7 +285,8 @@ class TestHelper {
           errors.push({ operation: "CLEAN_UP_USER_CCT", error });
         }),
     ]);
-    petlink.logoutUser();
+    petlink.core.logout();
+    petlink.cct.logout();
 
     // Se QUALSIASI operazione è fallita, throw (skippa test)
     if (errors.length > 0) {
