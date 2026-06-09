@@ -37,7 +37,7 @@ describe("User", () => {
     });
 
     it("Verify phone number availability", async () => {
-      const response = await petlink.core.graphqlHttp.public.checkContact({
+      const response = await petlink.core.graphqlHttp.authApiKey.checkContact({
         contact: signUpPayload.phone,
         contactType: ContactType.Phone,
         appBrand: fxt.current.appBrand,
@@ -50,7 +50,7 @@ describe("User", () => {
     });
 
     it("Send OTP to phone", async () => {
-      const response = await petlink.core.graphqlHttp.public.sendOtp({
+      const response = await petlink.core.graphqlHttp.authApiKey.sendOtp({
         phone: signUpPayload.phone,
         languageId: signUpPayload.languageId,
       });
@@ -71,7 +71,7 @@ describe("User", () => {
     }, 70000);
 
     it("Verify phone number (sending received OTP)", async () => {
-      const response = await petlink.core.graphqlHttp.public.checkOtp({
+      const response = await petlink.core.graphqlHttp.authApiKey.checkOtp({
         verificationId,
         otp: receivedOtp!,
         contact: signUpPayload.phone,
@@ -84,7 +84,7 @@ describe("User", () => {
     });
 
     it("Register User", async () => {
-      const response = await petlink.core.graphqlHttp.public.signUpUser({
+      const response = await petlink.core.graphqlHttp.authApiKey.signUpUser({
         user: signUpPayload,
         otpData: {
           otp: receivedOtp!,
@@ -126,7 +126,7 @@ describe("User", () => {
     it("Verify Email (clicking on received link)", async () => {
       const params = extractParamsFromUrl(verificationLink!);
 
-      const response = await petlink.core.graphqlHttp.public.verifyEmail({
+      const response = await petlink.core.graphqlHttp.authApiKey.verifyEmail({
         uuid: params.uuid!,
         otp: params.otp!,
         verificationId: params.verificationId!,
@@ -171,12 +171,12 @@ describe("User", () => {
 
     it("Verify contacts (Phone & Email) are no longer available", async () => {
       const [phoneCheck, emailCheck] = await Promise.all([
-        petlink.core.graphqlHttp.public.checkContact({
+        petlink.core.graphqlHttp.authApiKey.checkContact({
           contact: signUpPayload.phone,
           contactType: ContactType.Phone,
           appBrand: fxt.current.appBrand,
         }),
-        petlink.core.graphqlHttp.public.checkContact({
+        petlink.core.graphqlHttp.authApiKey.checkContact({
           contact: signUpPayload.email,
           contactType: ContactType.Email,
           appBrand: fxt.current.appBrand,
@@ -384,7 +384,7 @@ describe("User", () => {
           timeoutError: "Verification email not received",
         });
         const params = extractParamsFromUrl(linkUrlToOpen!);
-        await petlink.core.graphqlHttp.public.verifyEmail({
+        await petlink.core.graphqlHttp.authApiKey.verifyEmail({
           uuid: params.uuid!,
           otp: params.otp!,
           verificationId: params.verificationId!,
@@ -406,7 +406,7 @@ describe("User", () => {
         const newPhone = fxt.current.user.phone; // Use the checkable fixture phone
 
         // STEP 1: Request OTP for new phone
-        const otpResponse = await petlink.core.graphqlHttp.public.sendOtp({
+        const otpResponse = await petlink.core.graphqlHttp.authApiKey.sendOtp({
           phone: newPhone,
           languageId: fxt.current.user.languageId,
         });
@@ -423,7 +423,7 @@ describe("User", () => {
         });
 
         // STEP 3: Verify OTP phone number (sending received OTP)
-        await petlink.core.graphqlHttp.public.checkOtp({
+        await petlink.core.graphqlHttp.authApiKey.checkOtp({
           verificationId: otpResponse.sendOtp.verificationId!,
           otp: otp!,
           contact: newPhone,
@@ -493,7 +493,7 @@ describe("User", () => {
         const setup = await testHelper.setupBuilder().withUser().build();
 
         // STEP 1: Request OTP (sent to phone) for password reset
-        const otpResponse = await petlink.core.graphqlHttp.public.sendOtpForgotPassword({
+        const otpResponse = await petlink.core.graphqlHttp.authApiKey.sendOtpForgotPassword({
           contact: setup.user!.phone,
           languageId: fxt.current.user.languageId,
           appBrand: fxt.current.appBrand,
@@ -513,7 +513,7 @@ describe("User", () => {
         logger.debug("Received OTP", { otp });
 
         // STEP 3: Verify OTP
-        await petlink.core.graphqlHttp.public.checkOtp({
+        await petlink.core.graphqlHttp.authApiKey.checkOtp({
           verificationId: otpResponse.sendOtpForgotPassword.verificationId!,
           otp: otp!,
           contact: setup.user!.phone,
@@ -521,7 +521,7 @@ describe("User", () => {
 
         // STEP 4: Change password using OTP
         const newPassword = "ResetPassword123!";
-        const changeResponse = await petlink.core.graphqlHttp.public.changeForgotPassword({
+        const changeResponse = await petlink.core.graphqlHttp.authApiKey.changeForgotPassword({
           otp: otp!,
           verificationId: otpResponse.sendOtpForgotPassword.verificationId!,
           password: newPassword,

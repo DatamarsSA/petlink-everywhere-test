@@ -854,7 +854,7 @@ describe("SUBS", () => {
       const orderId = createRes.subscription_url.match(/\/activate-order\/([^?]+)/)![1]; // UUID lives only in the redirect URL
 
       // Core created the order with a TEMPORARY serial (PREPAID-<itemId>), device not yet activated
-      const orderCreated = (await petlink.core.graphqlHttp.public.getOrder({ orderId })).getOrder!.order!;
+      const orderCreated = (await petlink.core.graphqlHttp.authApiKey.getOrder({ orderId })).getOrder!.order!;
       expect(orderCreated.devices[0].serialNumber).toMatch(/^PREPAID-/);
       expect(orderCreated.devices[0].activated).toBe(false);
       expect(orderCreated.devices[0].appBrand).toBe(fxt.current.appBrand);
@@ -926,7 +926,7 @@ describe("SUBS", () => {
       expect(sub.productId).toBe(registered.id);
 
       // Registering the device against an existing prepaid sub must activate the order device
-      const orderActivated = (await petlink.core.graphqlHttp.public.getOrder({ orderId })).getOrder!.order!;
+      const orderActivated = (await petlink.core.graphqlHttp.authApiKey.getOrder({ orderId })).getOrder!.order!;
       expect(orderActivated.devices[0].serialNumber).toBe(realSerial);
       expect(orderActivated.devices[0].activated).toBe(true);
     }
@@ -944,7 +944,7 @@ describe("SUBS", () => {
 
       // STEP 2: shipping tracking replaces the placeholder with the real inventory serial (matched by IMEI)
       await trackPrepaidOrder(order, device.imei);
-      const orderTracked = (await petlink.core.graphqlHttp.public.getOrder({ orderId: order.orderId })).getOrder!.order!;
+      const orderTracked = (await petlink.core.graphqlHttp.authApiKey.getOrder({ orderId: order.orderId })).getOrder!.order!;
       expect(orderTracked.devices[0].serialNumber).toBe(device.serialNumber);
       expect(orderTracked.devices[0].activated).toBe(false);
 

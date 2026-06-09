@@ -7,7 +7,7 @@ import winston from "winston";
 // Custom format for console output (colorful and readable)
 const consoleFormat = winston.format.combine(
   winston.format.colorize(),
-  winston.format.timestamp({ format: "HH:mm:ss.SSS" }),
+  winston.format.timestamp({ format: "HH:mm:ss" }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     let log = `[${timestamp}] ${level}: ${message}`;
 

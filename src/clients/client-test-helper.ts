@@ -284,6 +284,9 @@ class TestHelper {
         .catch((error) => {
           errors.push({ operation: "CLEAN_UP_USER_CCT", error });
         }),
+
+      // 5. Remove coupon from devices on Inventory
+      //TODO: add reqeust to remove coupon by devices
     ]);
     petlink.core.logout();
     petlink.cct.logout();

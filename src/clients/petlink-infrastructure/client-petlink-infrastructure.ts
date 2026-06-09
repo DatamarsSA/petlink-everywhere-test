@@ -65,7 +65,7 @@ type GraphQLWSClient = {
 type GraphQLHttpClient<TSdk extends object> = {
   authJwt: TSdk;
   authIam: TSdk;
-  public: TSdk;
+  authApiKey: TSdk;
 };
 
 enum ServiceType {
@@ -535,7 +535,7 @@ class CoreService {
     this.graphqlHttp = {
       authJwt: withLogging(getCoreSdk(jwtClient), service, AuthType.JWT),
       authIam: withLogging(getCoreSdk(iamClient), service, AuthType.IAM),
-      public: withLogging(getCoreSdk(apiKeyClient), service, AuthType.API_KEY),
+      authApiKey: withLogging(getCoreSdk(apiKeyClient), service, AuthType.API_KEY),
     };
 
     // WebSocket: single connection, per-auth facets that just bind authType
@@ -609,7 +609,7 @@ class CctService {
     this.graphqlHttp = {
       authJwt: withLogging(getCctSdk(jwtClient), service, AuthType.JWT),
       authIam: withLogging(getCctSdk(iamClient), service, AuthType.IAM),
-      public: withLogging(getCctSdk(apiKeyClient), service, AuthType.API_KEY),
+      authApiKey: withLogging(getCctSdk(apiKeyClient), service, AuthType.API_KEY),
     };
   }
 

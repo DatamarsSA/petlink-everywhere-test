@@ -96,9 +96,7 @@ describe("User Registration", () => {
   beforeAll(async () => {
     setup = await testHelper.setupBuilder()
       .withUser()
-      .withDog()
-      .withDogDevice()
-      .withSubscription()
+      .withDog({ withDevice: true, withSubscription: true })
       .build();
   });
 
@@ -145,7 +143,7 @@ Comprehensive documentation for the entire Petlink/Kippy system:
 ### Test Architecture
 
 ```
-await testHelper.setupBuilder().withUser().withDog().withDogDevice().withSubscription().build();
+await testHelper.setupBuilder().withUser().withDog({ withDevice: true, withSubscription: true }).build();
   ├─ Creates entities in correct order (User → Pet → Device → Subscription)
   └─ Returns TestSetup with all created entities
 

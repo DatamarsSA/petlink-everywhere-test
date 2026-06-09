@@ -43,10 +43,10 @@ describe("PetlinkGPS", () => {
 
       // STEP 1: Fetch checkGps for both devices in parallel
       const [dogCheckResponse, catCheckResponse] = await Promise.all([
-        petlink.core.graphqlHttp.public.checkGps({
+        petlink.core.graphqlHttp.authApiKey.checkGps({
           serialNumber: fxt.current.devices.DOG.serialNumber,
         }),
-        petlink.core.graphqlHttp.public.checkGps({
+        petlink.core.graphqlHttp.authApiKey.checkGps({
           serialNumber: fxt.current.devices.CAT.serialNumber,
         }),
       ]);
