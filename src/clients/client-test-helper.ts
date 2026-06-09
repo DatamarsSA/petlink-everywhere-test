@@ -246,6 +246,7 @@ class TestHelper {
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
+            email: fxt.current.user.email,
             utilityType: CoreUtilityTestTypeEnum.CleanUpUser,
           },
         })
@@ -454,7 +455,7 @@ class TestHelper {
 
     if (response.createPetlinkGps.code !== "200") {
       throw new Error(
-        `Failed to create device for ${deviceType}: ${response.createPetlinkGps.message}${(response.createPetlinkGps.translationCode && ` - ${response.createPetlinkGps.translationCode}`) ?? ""}`,
+        `Failed to create device for ${deviceType} (serial: ${devicePayload.serialNumber}): ${response.createPetlinkGps.message}${(response.createPetlinkGps.translationCode && ` - ${response.createPetlinkGps.translationCode}`) ?? ""}`,
       );
     }
 

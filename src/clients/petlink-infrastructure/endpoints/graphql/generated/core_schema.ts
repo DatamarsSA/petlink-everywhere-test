@@ -2987,6 +2987,7 @@ export interface UtilityIntegrationTestInput {
   appBrand?: InputMaybe<AppBrand>;
   card?: InputMaybe<UtilityIntegrationTestCardInput>;
   currencyCode?: InputMaybe<Scalars["String"]["input"]>;
+  email?: InputMaybe<Scalars["String"]["input"]>;
   isOnlyProtection?: InputMaybe<Scalars["Boolean"]["input"]>;
   nextBillingDate?: InputMaybe<Scalars["String"]["input"]>;
   orderId?: InputMaybe<Scalars["String"]["input"]>;
