@@ -305,12 +305,6 @@ export interface DeviceLastConnection {
   serialId: Scalars["String"]["output"];
 }
 
-export interface DeviceLog {
-  __typename?: "DeviceLog";
-  creationDate: Scalars["String"]["output"];
-  id: Scalars["String"]["output"];
-}
-
 export interface DeviceMap {
   __typename?: "DeviceMap";
   customerId: Scalars["String"]["output"];
@@ -357,6 +351,11 @@ export interface GetActivitiesResponse {
   message: Scalars["String"]["output"];
   pagination: Pagination;
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export enum GetConnectionsHistoryEventTypeEnum {
+  Position = "POSITION",
+  TourRecording = "TOUR_RECORDING",
 }
 
 export interface GetConnectionsHistoryInput {
@@ -415,23 +414,6 @@ export interface GetCustomersResponse {
   message: Scalars["String"]["output"];
   pagination: Pagination;
   translationCode?: Maybe<Scalars["String"]["output"]>;
-}
-
-export interface GetDeviceLogListResponse {
-  __typename?: "GetDeviceLogListResponse";
-  code: Scalars["String"]["output"];
-  items?: Maybe<Array<DeviceLog>>;
-  message: Scalars["String"]["output"];
-  pagination: Pagination;
-  translationCode?: Maybe<Scalars["String"]["output"]>;
-}
-
-export interface GetDeviceLogPresignedUrlResponse {
-  __typename?: "GetDeviceLogPresignedUrlResponse";
-  code: Scalars["String"]["output"];
-  message: Scalars["String"]["output"];
-  translationCode?: Maybe<Scalars["String"]["output"]>;
-  url?: Maybe<Scalars["String"]["output"]>;
 }
 
 export interface GetDeviceResponse {
@@ -874,7 +856,6 @@ export interface Mutation {
   __typename?: "Mutation";
   addFreePeriod: BaseResponse;
   addTicketToIssue: AddTicketToIssueResponse;
-  createDataExport: BaseResponse;
   createIssue: CreateIssueResponse;
   createSubscription: BaseResponse;
   createUser: CreateUserResponse;
@@ -911,11 +892,6 @@ export type MutationAddFreePeriodArgs = {
 export type MutationAddTicketToIssueArgs = {
   issueId: Scalars["String"]["input"];
   ticket?: InputMaybe<TicketInput>;
-};
-
-export type MutationCreateDataExportArgs = {
-  recipientEmail: Scalars["String"]["input"];
-  reportType: Scalars["String"]["input"];
 };
 
 export type MutationCreateIssueArgs = {
@@ -1311,8 +1287,6 @@ export interface Query {
   getCustomer: GetCustomerResponse;
   getCustomers: GetCustomersResponse;
   getDevice: GetDeviceResponse;
-  getDeviceLogList: GetDeviceLogListResponse;
-  getDeviceLogPresignedUrl: GetDeviceLogPresignedUrlResponse;
   getDeviceProtectionReplacements: ResponseGetDeviceProtectionReplacements;
   getDevices: GetDevicesResponse;
   getDevicesMap: GetDevicesMapResponse;
@@ -1360,6 +1334,7 @@ export type QueryGetColorsArgs = {
 };
 
 export type QueryGetConnectionsHistoryArgs = {
+  eventType?: InputMaybe<GetConnectionsHistoryEventTypeEnum>;
   filter?: InputMaybe<GetConnectionsHistoryInput>;
   order?: InputMaybe<OrderInput>;
   pagination?: InputMaybe<PaginationInput>;
@@ -1377,16 +1352,6 @@ export type QueryGetCustomersArgs = {
 };
 
 export type QueryGetDeviceArgs = {
-  serialId: Scalars["String"]["input"];
-};
-
-export type QueryGetDeviceLogListArgs = {
-  pagination?: InputMaybe<PaginationInput>;
-  serialId: Scalars["String"]["input"];
-};
-
-export type QueryGetDeviceLogPresignedUrlArgs = {
-  fileId: Scalars["String"]["input"];
   serialId: Scalars["String"]["input"];
 };
 

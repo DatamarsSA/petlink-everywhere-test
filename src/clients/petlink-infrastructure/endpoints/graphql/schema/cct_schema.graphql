@@ -1,20 +1,11 @@
 """This directive allows results to be deferred during execution"""
 directive @defer on FIELD
 
-"""
-Tells the service this field/object has access authorized by a Lambda Authorizer.
-"""
-directive @aws_lambda on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by sigv4 signing.
-"""
-directive @aws_iam on OBJECT | FIELD_DEFINITION
-
-"""
-Tells the service this field/object has access authorized by an API key.
-"""
-directive @aws_api_key on OBJECT | FIELD_DEFINITION
+"""Directs the schema to enforce authorization on a field"""
+directive @aws_auth(
+  """List of cognito user pool groups which have access on this field"""
+  cognito_groups: [String]
+) on FIELD_DEFINITION
 
 """
 Tells the service which subscriptions will be published to when this mutation is
@@ -43,11 +34,20 @@ directive @aws_subscribe(
   mutations: [String]
 ) on FIELD_DEFINITION
 
-"""Directs the schema to enforce authorization on a field"""
-directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
-  cognito_groups: [String]
-) on FIELD_DEFINITION
+"""
+Tells the service this field/object has access authorized by an OIDC token.
+"""
+directive @aws_oidc on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by an API key.
+"""
+directive @aws_api_key on OBJECT | FIELD_DEFINITION
+
+"""
+Tells the service this field/object has access authorized by a Lambda Authorizer.
+"""
+directive @aws_lambda on OBJECT | FIELD_DEFINITION
 
 """
 Tells the service this field/object has access authorized by an OIDC token.
@@ -327,11 +327,6 @@ type DeviceLastConnection {
   firmware: String
 }
 
-type DeviceLog {
-  id: String!
-  creationDate: String!
-}
-
 type DeviceMap {
   serialId: String!
   deviceId: String!
@@ -374,6 +369,11 @@ type GetActivitiesResponse {
   translationCode: String
   items: [Activity!]!
   pagination: Pagination!
+}
+
+enum GetConnectionsHistoryEventTypeEnum {
+  POSITION
+  TOUR_RECORDING
 }
 
 input GetConnectionsHistoryInput {
@@ -428,21 +428,6 @@ type GetCustomersResponse {
   translationCode: String
   items: [Customer!]!
   pagination: Pagination!
-}
-
-type GetDeviceLogListResponse {
-  code: String!
-  message: String!
-  translationCode: String
-  items: [DeviceLog!]
-  pagination: Pagination!
-}
-
-type GetDeviceLogPresignedUrlResponse {
-  code: String!
-  message: String!
-  translationCode: String
-  url: String
 }
 
 type GetDeviceResponse {
@@ -876,7 +861,6 @@ type Mutation {
   """
   updateUser(userInfo: UpdateUserInput!): UpdateUserResponse!
   createSubscription(customerId: String!, productId: String!, planChangeNotAllowed: Boolean): BaseResponse!
-  createDataExport(reportType: String!, recipientEmail: String!): BaseResponse!
   refundInvoice(invoiceId: String!, reason: String!, refunds: [RefundItemInput!]!): BaseResponse
   updateCurrentTermEnd(subscriptionId: String!, newTermEnd: String!): GetSubscriptionResponse!
   resetPetlinkGps(id: String!): BaseResponse!
@@ -1177,11 +1161,9 @@ type Query {
   getMyInfo: GetMyInfoResponse!
   getLastConnections(filter: GetLastConnectionsInput, pagination: PaginationInput, order: OrderInput): GetLastConnectionsResponse!
   getDevices(filter: GetDevicesInput, pagination: PaginationInput, order: OrderInput): GetDevicesResponse!
-  getDeviceLogList(serialId: String!, pagination: PaginationInput): GetDeviceLogListResponse!
-  getDeviceLogPresignedUrl(fileId: String!, serialId: String!): GetDeviceLogPresignedUrlResponse!
   getDevicesMap(filter: GetDevicesMapInput, pagination: PaginationInput): GetDevicesMapResponse!
   getDevice(serialId: String!): GetDeviceResponse!
-  getConnectionsHistory(serialId: String!, filter: GetConnectionsHistoryInput, pagination: PaginationInput, order: OrderInput): GetConnectionsHistoryResponse!
+  getConnectionsHistory(serialId: String!, eventType: GetConnectionsHistoryEventTypeEnum, filter: GetConnectionsHistoryInput, pagination: PaginationInput, order: OrderInput): GetConnectionsHistoryResponse!
   getInsuranceDevicesInfo(deviceList: [String!]!, pagination: PaginationInput): GetInsuranceDevicesInfoResponse!
   getCustomers(filter: GetCustomersInput, pagination: PaginationInput, order: OrderInput): GetCustomersResponse!
   getCustomer(customerId: String!): GetCustomerResponse!
