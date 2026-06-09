@@ -188,11 +188,26 @@ After the subscription exists in Chargebee, the rest of the flow is **identical*
 - `subscription_changed` webhook → realigns Mongo serial
 - `createPetlinkGps` → `checkDeviceSubscription` → `handlePrepaidSubscription` → links sub to device by real serial
 
-The only backend change needed is a new case in `utilityIntegrationTest` (Core) that:
-1. Reads the order by `orderId`
-2. Resolves `chargebeeId` from `order.customer.chargebeeId`
-3. Resolves `businessEntity` from `appBrand`
-4. Forwards to the SM's existing `BUY_NEW_SUBSCRIPTION` utility with `userId`, `serialNumber`, `priceIds`, `businessEntity`, `card`
+The only backend change is the `BUY_NEW_SUBSCRIPTION_PREPAID` case in `utilityIntegrationTest` (Core). Its input is intentionally minimal — the test passes only **identifiers**, the BE derives everything else from Mongo:
+
+```typescript
+// utilityTypes.ts
+BuyNewSubscriptionPrepaid = {
+  utilityType: "BUY_NEW_SUBSCRIPTION_PREPAID",
+  orderId: string,       // → reads Order, takes customer.chargebeeId + currency
+  orderItemId: string,   // → reads OrderLineItem (_id), takes serialNumber + appBrand
+  priceIds: string[],
+  card: { ... },
+}
+```
+
+The handler (`buyNewSubscriptionPrepaid.ts`):
+1. `findById<Order>(orderId)` → `chargebeeId = order.customer.chargebeeId`, `currencyCode = order.currency`
+2. `findById<OrderLineItem>(orderItemId)` → `serialNumber = orderItem.serialNumber`, `businessEntity` from `orderItem.appBrand`
+3. Forwards to the SM's existing `BUY_NEW_SUBSCRIPTION` utility with `userId` (chargebeeId), `serialNumber`, `priceIds`, `businessEntity`, `currencyCode`, `card`
+
+> **Note**: `orderItemId` is the **Mongo `_id`** of the `OrderLineItem` (`getOrder().devices[].itemId`), NOT the numeric `kippy_item_id` used by order-tracking.
+> The BE reads the serial *from the order item at call time*, so the same call covers both flows: it picks up the real serial in Flow A and the `PREPAID-{itemId}` placeholder in Flow B.
 
 No changes are needed in:
 - `subscriptionsWebhookConsumer`
