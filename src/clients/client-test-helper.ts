@@ -285,8 +285,25 @@ class TestHelper {
           errors.push({ operation: "CLEAN_UP_USER_CCT", error });
         }),
 
-      // 5. Remove coupon from devices on Inventory
-      //TODO: add reqeust to remove coupon by devices
+      // 5. Remove coupons from devices on Inventory
+      petlink.core.graphqlHttp.authIam
+        .utilityIntegrationTest({
+          input: {
+            utilityType: CoreUtilityTestTypeEnum.CleanUpCoupons,
+            serialNumbers: [
+              ...Object.values(fxt.KIPPY.devices).map((d: any) => d.serialNumber),
+              ...Object.values(fxt.PETLINK.devices).map((d: any) => d.serialNumber),
+            ],
+          },
+        })
+        .then((response) => {
+          if (response.utilityIntegrationTest.code !== "200") {
+            throw new Error(response.utilityIntegrationTest.message);
+          }
+        })
+        .catch((error) => {
+          errors.push({ operation: "CLEAN_UP_COUPONS", error });
+        }),
     ]);
     petlink.core.logout();
     petlink.cct.logout();

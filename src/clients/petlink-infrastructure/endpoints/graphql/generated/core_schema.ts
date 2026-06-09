@@ -558,6 +558,8 @@ export interface GpsSettings {
   __typename?: "GpsSettings";
   activityProfile?: Maybe<ActivityProfileEnum>;
   enableGpsOnDefault: Scalars["Boolean"]["output"];
+  lastOptimizationAttempt?: Maybe<Scalars["String"]["output"]>;
+  migrationWaitingForConnection?: Maybe<Scalars["Boolean"]["output"]>;
   optimizationDone?: Maybe<Scalars["Boolean"]["output"]>;
   sentinelMigrationDone?: Maybe<Scalars["Boolean"]["output"]>;
   updateFrequency: Scalars["Int"]["output"];
@@ -777,6 +779,7 @@ export interface Mutation {
    *  isActiveEnergySavingZone(id: String!, isActive: Boolean!): Response! @aws_cognito_user_pools @aws_iam
    */
   createGeofence: ResponseGeofence;
+  createOptimizationAttempt: Response;
   createPet: ResponsePet;
   createPetlinkGps: ResponseCreatePetlinkGps;
   createPetlinkMicrochip: ResponsePetlinkMicrochip;
@@ -887,6 +890,12 @@ export type MutationCheckOtpArgs = {
 
 export type MutationCreateGeofenceArgs = {
   geofence: GeofenceIn;
+};
+
+export type MutationCreateOptimizationAttemptArgs = {
+  failureReason?: InputMaybe<Scalars["String"]["input"]>;
+  productId: Scalars["String"]["input"];
+  status: OptimizationAttemptStatus;
 };
 
 export type MutationCreatePetArgs = {
@@ -1197,6 +1206,11 @@ export interface NotificationSettingsIn {
   energySavingZone: EszNotificationPreferencesIn;
 }
 
+export enum OptimizationAttemptStatus {
+  Fail = "FAIL",
+  Success = "SUCCESS",
+}
+
 export interface Order {
   __typename?: "Order";
   country: Scalars["String"]["output"];
@@ -1332,6 +1346,7 @@ export enum PetHistoryEventTypeEnum {
   LowTemperature = "LOW_TEMPERATURE",
   NoGpsSignal = "NO_GPS_SIGNAL",
   OffSubscription = "OFF_SUBSCRIPTION",
+  OptimizationCompleted = "OPTIMIZATION_COMPLETED",
   PetBorn = "PET_BORN",
   PetFound = "PET_FOUND",
   PetProfileCreated = "PET_PROFILE_CREATED",
@@ -2974,9 +2989,12 @@ export interface UtilityIntegrationTestInput {
   currencyCode?: InputMaybe<Scalars["String"]["input"]>;
   isOnlyProtection?: InputMaybe<Scalars["Boolean"]["input"]>;
   nextBillingDate?: InputMaybe<Scalars["String"]["input"]>;
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+  orderItemId?: InputMaybe<Scalars["String"]["input"]>;
   phone?: InputMaybe<Scalars["String"]["input"]>;
   priceIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
   productId?: InputMaybe<Scalars["String"]["input"]>;
+  serialNumbers?: InputMaybe<Array<Scalars["String"]["input"]>>;
   subscriptionId?: InputMaybe<Scalars["String"]["input"]>;
   userId?: InputMaybe<Scalars["String"]["input"]>;
   userIn?: InputMaybe<UserIn>;
@@ -2985,7 +3003,9 @@ export interface UtilityIntegrationTestInput {
 
 export enum UtilityTestTypeEnum {
   BuyNewSubscription = "BUY_NEW_SUBSCRIPTION",
+  BuyNewSubscriptionPrepaid = "BUY_NEW_SUBSCRIPTION_PREPAID",
   ChangeSubscriptionPlan = "CHANGE_SUBSCRIPTION_PLAN",
+  CleanUpCoupons = "CLEAN_UP_COUPONS",
   CleanUpUser = "CLEAN_UP_USER",
   SignUp = "SIGN_UP",
   UpdatePaymentMethod = "UPDATE_PAYMENT_METHOD",
