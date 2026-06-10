@@ -856,7 +856,6 @@ export interface Mutation {
   __typename?: "Mutation";
   addFreePeriod: BaseResponse;
   addTicketToIssue: AddTicketToIssueResponse;
-  createDataExport: BaseResponse;
   createIssue: CreateIssueResponse;
   createSubscription: BaseResponse;
   createUser: CreateUserResponse;
@@ -893,11 +892,6 @@ export type MutationAddFreePeriodArgs = {
 export type MutationAddTicketToIssueArgs = {
   issueId: Scalars["String"]["input"];
   ticket?: InputMaybe<TicketInput>;
-};
-
-export type MutationCreateDataExportArgs = {
-  recipientEmail: Scalars["String"]["input"];
-  reportType: Scalars["String"]["input"];
 };
 
 export type MutationCreateIssueArgs = {

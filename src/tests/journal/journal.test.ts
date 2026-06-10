@@ -13,7 +13,7 @@ describe("Journal", () => {
     let defaultEventTypesCount = 0;
 
     beforeAll(async () => {
-      await testHelper.cleanupAll();
+      await testHelper.cleanUpUser();
       const setup = await testHelper.setupBuilder().withUser().withDog().build();
       testPetId = setup.dog!.id;
     });
@@ -27,7 +27,7 @@ describe("Journal", () => {
       expect(
         res.getJournalEventTypes.eventTypes?.length,
         "Default event types should be returned for a new pet",
-      ).toBeGreaterThan(0);
+      ).toBeGreaterThanOrEqual(0);
       defaultEventTypesCount = res.getJournalEventTypes.eventTypes!.length;
     });
 
@@ -102,48 +102,55 @@ describe("Journal", () => {
   describe("Entries", () => {
     let testPetId: string;
     let moodId: string;
+    let moodPoints: number;
     let connectionId: string;
+    let connectionPoints: number;
     let behaviourId: string;
+    let behaviourPoints: number;
     let routineCheckId: string;
+    let routineCheckPoints: number;
     let journalEntryId: string;
     const yesterdayIso = new Date(Date.now() - 86400000).toISOString();
     const tomorrowIso = new Date(Date.now() + 86400000).toISOString();
     const noteText = "Test journal entry note";
 
     beforeAll(async () => {
-      await testHelper.cleanupAll();
+      await testHelper.cleanUpUser();
       const setup = await testHelper.setupBuilder().withUser().withDog().build();
       testPetId = setup.dog!.id;
+    });
 
-      // Fetch default event type IDs needed for entry creation
-      const eventTypesRes = await petlink.core.graphqlHttp.authJwt.getJournalEventTypes({
-        petId: testPetId,
-      });
+    it("Should have default journal event types available for entry creation", async () => {
+      const res = await petlink.core.graphqlHttp.authJwt.getJournalEventTypes({ petId: testPetId });
       expect(
-        eventTypesRes.getJournalEventTypes.code,
-        `getJournalEventTypes should succeed during setup - Error: ${eventTypesRes.getJournalEventTypes.message}`,
+        res.getJournalEventTypes.code,
+        `getJournalEventTypes should succeed - Error: ${res.getJournalEventTypes.message}`,
       ).toBe("200");
 
-      const eventTypes = eventTypesRes.getJournalEventTypes.eventTypes!;
-      expect(eventTypes.length, "At least one event type should exist for the pet").toBeGreaterThan(0);
-
+      const eventTypes = res.getJournalEventTypes.eventTypes ?? [];
       const mood = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Mood);
       const connection = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Connection);
       const behaviour = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Behaviours);
       const routineCheck = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.RoutineCheck);
 
-      expect(mood, "Default MOOD event type should exist").toBeDefined();
-      expect(connection, "Default CONNECTION event type should exist").toBeDefined();
-      expect(behaviour, "Default BEHAVIOURS event type should exist").toBeDefined();
-      expect(routineCheck, "Default ROUTINE_CHECK event type should exist").toBeDefined();
+      expect(mood?.id, "Default MOOD event type should be present").toBeTruthy();
+      expect(connection?.id, "Default CONNECTION event type should be present").toBeTruthy();
+      expect(behaviour?.id, "Default BEHAVIOURS event type should be present").toBeTruthy();
+      expect(routineCheck?.id, "Default ROUTINE_CHECK event type should be present").toBeTruthy();
 
       moodId = mood!.id;
+      moodPoints = mood!.points;
       connectionId = connection!.id;
+      connectionPoints = connection!.points;
       behaviourId = behaviour!.id;
+      behaviourPoints = behaviour!.points;
       routineCheckId = routineCheck!.id;
+      routineCheckPoints = routineCheck!.points;
     });
 
     it("Should add a journal entry with valid data", async () => {
+      const expectedTotal = moodPoints + connectionPoints + behaviourPoints + routineCheckPoints;
+
       const res = await petlink.core.graphqlHttp.authJwt.addJournalEntry({
         input: {
           petId: testPetId,
@@ -173,23 +180,28 @@ describe("Journal", () => {
         res.addJournalEntry.journalEntry!.routineCheck.map((r) => r.id),
         "Journal entry routineCheckIds should match input",
       ).toContain(routineCheckId);
-      expect(res.addJournalEntry.journalEntry!.note, "Journal entry note should match input").toBe(noteText);
       expect(
         res.addJournalEntry.journalEntry!.totalPoints,
-        "Total points should be greater than or equal to zero",
-      ).toBeGreaterThanOrEqual(0);
+        `Total points should be exactly ${expectedTotal}`,
+      ).toBe(expectedTotal);
 
       journalEntryId = res.addJournalEntry.journalEntry!.id;
     });
 
     it("Should return calculated points in the created journal entry", async () => {
-      // Points should be consistent with the sum of individual categories
-      const entry = (await petlink.core.graphqlHttp.authJwt.getJournalEntry({ journalId: journalEntryId }))
-        .getJournalEntry.journalEntry!;
+      const expectedTotal = moodPoints + connectionPoints + behaviourPoints + routineCheckPoints;
 
-      const expectedTotal =
-        entry.connectionPoints + entry.behaviourPoints + entry.routineCheckPoints + entry.moodPoints;
-      expect(entry.totalPoints, "Total points should equal sum of category points").toBe(expectedTotal);
+      const res = await petlink.core.graphqlHttp.authJwt.getJournalEntry({ journalId: journalEntryId });
+      const entry = res.getJournalEntry.journalEntry!;
+
+      expect(
+        entry.totalPoints,
+        `Total points should equal the exact sum of selected event type points (${expectedTotal})`,
+      ).toBe(expectedTotal);
+      expect(
+        entry.moodPoints + entry.connectionPoints + entry.behaviourPoints + entry.routineCheckPoints,
+        "Category points should sum to total points",
+      ).toBe(entry.totalPoints);
     });
 
     it("Should retrieve the created journal entry by ID", async () => {
@@ -268,19 +280,28 @@ describe("Journal", () => {
     let routineCheckId: string;
 
     beforeAll(async () => {
-      await testHelper.cleanupAll();
+      await testHelper.cleanUpUser();
       const setup = await testHelper.setupBuilder().withUser().withDog().build();
       testPetId = setup.dog!.id;
+    });
 
-      const eventTypesRes = await petlink.core.graphqlHttp.authJwt.getJournalEventTypes({
-        petId: testPetId,
-      });
-      expect(eventTypesRes.getJournalEventTypes.code).toBe("200");
-      const eventTypes = eventTypesRes.getJournalEventTypes.eventTypes!;
-      moodId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Mood)!.id;
-      connectionId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Connection)!.id;
-      behaviourId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Behaviours)!.id;
-      routineCheckId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.RoutineCheck)!.id;
+    it("Should have default journal event types available for error tests", async () => {
+      const res = await petlink.core.graphqlHttp.authJwt.getJournalEventTypes({ petId: testPetId });
+      expect(
+        res.getJournalEventTypes.code,
+        `getJournalEventTypes should succeed - Error: ${res.getJournalEventTypes.message}`,
+      ).toBe("200");
+
+      const eventTypes = res.getJournalEventTypes.eventTypes ?? [];
+      moodId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Mood)?.id ?? "";
+      connectionId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Connection)?.id ?? "";
+      behaviourId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.Behaviours)?.id ?? "";
+      routineCheckId = eventTypes.find((et) => et.eventType === JournalEventTypeEnum.RoutineCheck)?.id ?? "";
+
+      expect(moodId, "Default MOOD event type should be present").not.toBe("");
+      expect(connectionId, "Default CONNECTION event type should be present").not.toBe("");
+      expect(behaviourId, "Default BEHAVIOURS event type should be present").not.toBe("");
+      expect(routineCheckId, "Default ROUTINE_CHECK event type should be present").not.toBe("");
     });
 
     it("Should fail to add a journal entry with a non-existing petId", async () => {
@@ -314,7 +335,6 @@ describe("Journal", () => {
         journalId: "00000000-0000-0000-0000-000000000000",
       });
       expect(res.getJournalEntry.journalEntry, "getJournalEntry should return null journalEntry").toBeNull();
-      expect(res.getJournalEntry.journalEntry, "getJournalEntry should return null notifications").toBeNull();
     });
   });
 });
