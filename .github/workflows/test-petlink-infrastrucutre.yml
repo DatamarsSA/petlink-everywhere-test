@@ -1,10 +1,11 @@
 name: test-petlink-infrastrucutre
 
 on:
+  # Trigger 1: push on develop on this repo
   push:
     branches: [develop]
 
-  # CASO 2: Trigger Esterno (Da Core/Sentinel/ecc)
+  # Trigger 2: workflow_dispatch from external repo (Core/Sentinel/Submanager etc)
   workflow_dispatch:
     inputs:
       repo: { description: "Source Repo", required: true }
@@ -17,13 +18,12 @@ concurrency:
   # 1. If two runs start on 'develop', the second one is queued until the first completes.
   # 2. If runs start on different branches (e.g., 'develop' vs 'feature-x'), they run in parallel.
   group: ${{ github.workflow }}-${{ github.event.inputs.branch || github.ref_name || 'develop' }}
-  # false = Do not cancel the in-progress run, but queue the new one instead
-  # true = cancel the in-progress run (useful when some change need deploy of more microservices, deployed sequentially)
   cancel-in-progress: true
 
 env:
   DOCKER_IMAGE_NAME: petlink-everywhere-test
   DOCKER_IMAGE_ARTIFACT: petlink-test-image
+
 
 jobs:
   info-job:
@@ -37,7 +37,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             # --- EXTERNAL (by push on repos of architecture) ---
+             # --- EXTERNAL (workflow_dispatch from Core/Sentinel/ecc) ---
              REPO="${{ github.event.inputs.repo }}"
              BRANCH="${{ github.event.inputs.branch }}"
              SHA="${{ github.event.inputs.sha }}"
@@ -92,9 +92,6 @@ jobs:
     needs: build-image
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
-    # ENVIRONMENT DETERMINISTICO:
-    # Se workflow_dispatch -> Usa ESATTAMENTE inputs.branch (se non esiste env -> crash)
-    # Se push -> Usa ESATTAMENTE ref_name (il branch su cui hai pushato)
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
 
     env:
@@ -155,13 +152,8 @@ jobs:
 
     permissions:
       checks: write
-      pull-requests: write
-      contents: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
       - name: Download Docker image artifact
         uses: actions/download-artifact@v7
         with:
@@ -216,7 +208,6 @@ jobs:
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
             ${{ env.DOCKER_IMAGE_NAME }} yarn pipeline:$ENV
 
-      # Pubblica JUnit report per annotazioni su PR
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v6
         if: always()
@@ -225,12 +216,10 @@ jobs:
           check_name: "Report (test ${{ matrix.app_brand }} on ${{ env.ENV }})"
           fail_on_failure: true
           require_tests: true
-          # Summary (pagina "Summary" del run su Actions)
           job_summary: true
           detailed_summary: true
           verbose_summary: true
           group_suite: true
-          # Check (pagina dedicata del "Check" creato dall’action, visibile anche in PR)
 
 
 
