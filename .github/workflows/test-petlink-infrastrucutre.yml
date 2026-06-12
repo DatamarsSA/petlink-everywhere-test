@@ -247,7 +247,7 @@ jobs:
              TITLE="🚨 Pipeline Tests FAILED"
              COLOR=15158332 # Red
              DESCRIPTION="Some tests failed. Check the full report for details."
-             MENTION="${DISCORD_MENTION}"
+             MENTION=""
           fi
 
           # Build simple JSON payload

@@ -36,16 +36,26 @@ describe("User", () => {
       await testHelper.cleanupAll();
     });
 
-    it("Verify phone number availability", async () => {
-      const response = await petlink.core.graphqlHttp.authApiKey.checkContact({
+    it("Verify Phone & Email availability", async () => {
+      const phoneNumbAvailabilityResponse = await petlink.core.graphqlHttp.authApiKey.checkContact({
         contact: signUpPayload.phone,
         contactType: ContactType.Phone,
         appBrand: fxt.current.appBrand,
       });
 
       expect(
-        response.checkContact.code,
-        `checkContact should succeed - Error: ${response.checkContact.message}${response.checkContact.translationCode ? ` (${response.checkContact.translationCode})` : ""}`,
+        phoneNumbAvailabilityResponse.checkContact.code,
+        `Phone number should be available - Error: ${phoneNumbAvailabilityResponse.checkContact.message}${phoneNumbAvailabilityResponse.checkContact.translationCode ? ` (${phoneNumbAvailabilityResponse.checkContact.translationCode})` : ""}`,
+      ).toBe("200");
+
+      const emailAvailabilityResponse = await petlink.core.graphqlHttp.authApiKey.checkContact({
+        contact: signUpPayload.email,
+        contactType: ContactType.Email,
+        appBrand: fxt.current.appBrand,
+      });
+      expect(
+        emailAvailabilityResponse.checkContact.code,
+        `Email should be available - Error: ${emailAvailabilityResponse.checkContact.message}${emailAvailabilityResponse.checkContact.translationCode ? ` (${emailAvailabilityResponse.checkContact.translationCode})` : ""}`,
       ).toBe("200");
     });
 
