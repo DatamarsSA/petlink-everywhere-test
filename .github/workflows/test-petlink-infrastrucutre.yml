@@ -71,7 +71,7 @@ jobs:
     if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
 
       - name: Build Docker image
         run: docker build -t ${{ env.DOCKER_IMAGE_NAME }} .
@@ -81,7 +81,7 @@ jobs:
           docker save ${{ env.DOCKER_IMAGE_NAME }} -o ${{ env.DOCKER_IMAGE_ARTIFACT }}.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.DOCKER_IMAGE_ARTIFACT }}
           path: |
@@ -160,10 +160,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
 
       - name: Download Docker image artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.DOCKER_IMAGE_ARTIFACT }}
 
