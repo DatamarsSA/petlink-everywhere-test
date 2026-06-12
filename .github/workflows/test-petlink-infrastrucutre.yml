@@ -107,7 +107,6 @@ jobs:
       CCT_GRAPHQL_API_URL: ${{ secrets.CCT_GRAPHQL_API_URL }}
       CCT_GRAPHQL_API_KEY: ${{ secrets.CCT_GRAPHQL_API_KEY }}
       # AWS Cognito
-      COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
       COGNITO_CLIENT_ID_APP_USER: ${{ secrets.COGNITO_CLIENT_ID_APP_USER }}
       COGNITO_CLIENT_ID_FE_CCT: ${{ secrets.COGNITO_CLIENT_ID_FE_CCT }}
       # USER (app) credentials login
@@ -176,7 +175,6 @@ jobs:
             -e CORE_REST_BASIC_AUTH_PASSWORD \
             -e CCT_GRAPHQL_API_URL \
             -e CCT_GRAPHQL_API_KEY \
-            -e COGNITO_REGION \
             -e COGNITO_CLIENT_ID_APP_USER \
             -e COGNITO_CLIENT_ID_FE_CCT \
             -e USER_APP_NAME \
