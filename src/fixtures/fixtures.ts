@@ -25,7 +25,7 @@ const commonUser = {
   name: process.env.USER_APP_NAME,
   surname: process.env.USER_APP_SURNAME,
   password: process.env.USER_APP_PASSWORD,
-  email: process.env.GMAIL_USER_EMAIL,
+  email: process.env.MAIL_TM_EMAIL,
   phone: process.env.TWILIO_USER_PHONE_NUMBER,
 };
 

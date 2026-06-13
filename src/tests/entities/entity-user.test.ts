@@ -6,7 +6,7 @@ import { petlink } from "../../clients/petlink-infrastructure/client-petlink-inf
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { logger } from "../../config/logger.js";
-import { gmailClient } from "../../clients/gmail/client-gmail.js";
+import { mailTmClient } from "../../clients/mailtm/client-mailtm.js";
 import { extractParamsFromUrl, waitFor } from "../../helpers/utils.js";
 
 describe("User", () => {
@@ -120,7 +120,7 @@ describe("User", () => {
     });
 
     it("Wait to receive CONFIRMATION EMAIL", async () => {
-      const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
+      const linkUrlToOpen = await waitFor(() => mailTmClient.getVerificationLink(), {
         timeoutError: "Verification email not received",
       });
 
@@ -390,7 +390,7 @@ describe("User", () => {
         await expect(petlink.core.loginWithEmail(initialEmail, originalPassword)).rejects.toThrow();
 
         // verify new email
-        const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
+        const linkUrlToOpen = await waitFor(() => mailTmClient.getVerificationLink(), {
           timeoutError: "Verification email not received",
         });
         const params = extractParamsFromUrl(linkUrlToOpen!);

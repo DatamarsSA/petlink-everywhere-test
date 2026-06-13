@@ -330,7 +330,7 @@ describe("CCT Tool", () => {
     const newUserPayload = {
       name: "Mario".toLowerCase(),
       surname: "Rossi".toLowerCase(),
-      email: `mario.rossi.${Date.now()}@gmail.com`,
+      email: `mario.rossi.${Date.now()}@example.com`,
       phone: `+19617${Date.now().toString().slice(-6)}`,
       role: [RoleEnum.Superadmin],
       active: true,

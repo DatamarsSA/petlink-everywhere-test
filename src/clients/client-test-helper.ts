@@ -14,7 +14,7 @@ import {
 
 import { UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
-import { gmailClient } from "./gmail/client-gmail.js";
+import { mailTmClient } from "./mailtm/client-mailtm.js";
 import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
@@ -259,9 +259,9 @@ class TestHelper {
           errors.push({ operation: "CLEAN_UP_USER_CORE", error });
         }),
 
-      // 2. Gmail cleanup
-      gmailClient.deleteAllEmails().catch((error) => {
-        errors.push({ operation: "Gmail-deleteAllEmails()", error });
+      // 2. Mail.tm cleanup
+      mailTmClient.deleteAllMessages().catch((error) => {
+        errors.push({ operation: "MailTm-deleteAllMessages()", error });
       }),
 
       // 3. Twilio cleanup
