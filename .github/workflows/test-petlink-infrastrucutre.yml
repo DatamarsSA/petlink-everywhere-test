@@ -202,6 +202,14 @@ jobs:
             -v $(pwd)/test-reports-${{ matrix.app_brand }}:/app/test-reports \
             ${{ env.DOCKER_IMAGE_NAME }} yarn pipeline:$ENV
 
+      - name: Upload HTML test report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-report-html-${{ matrix.app_brand }}
+          path: test-reports-${{ matrix.app_brand }}/
+          retention-days: 5
+
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@v6
         if: always()
