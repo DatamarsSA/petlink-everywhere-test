@@ -41,7 +41,7 @@ export const environmentSchema = z.object({
   // App Brand
   APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
   // log level console
-  LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("debug"),
+  LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
   // Sentinel socket tcp
   SENTINEL_HOST: z.string().min(1, "SENTINEL_HOST è richiesto"),
   SENTINEL_PORT: z.string().min(4, "SENTINEL_PORT è richiesta"),

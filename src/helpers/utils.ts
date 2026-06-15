@@ -88,7 +88,7 @@ export async function waitFor<T>(
     }
   }
 
-  throw new Error(`${timeoutError} (${attempts} attempts)`);
+  throw new Error(`${timeoutError} (${attempts} attempts) in ${timeoutMs}ms`);
 }
 
 export function extractParamsFromUrl(url: string) {
