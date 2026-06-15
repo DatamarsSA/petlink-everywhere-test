@@ -761,7 +761,7 @@ describe("SUBS", () => {
         setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
       });
 
-      it("stop renew -> status still active + nextBillingAt null, term end unchanged", async () => {
+      it("stop renew -> status become non_renewing + nextBillingAt null, term end unchanged", async () => {
         const device = setup.dog!.device!;
         const plan = device.availablePlans![0].pricings[0];
         const sub = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
@@ -777,12 +777,12 @@ describe("SUBS", () => {
         const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
           isReady: (r) => {
             const s = r.getSubscriptions.subscriptions?.[0];
-            return s?.status === SubscriptionStatusEnum.Active && s?.nextBillingAt == null;
+            return s?.status === SubscriptionStatusEnum.NonRenewing && s?.nextBillingAt == null;
           },
-          timeoutError: "Timeout: subscription did not stop renewing",
+          timeoutError: "Timeout: subscription status din't become non_renewing",
         });
         const s = after.getSubscriptions.subscriptions![0]!;
-        expect(s.status).toBe(SubscriptionStatusEnum.Active);
+        expect(s.status).toBe(SubscriptionStatusEnum.NonRenewing);
         expect(s.nextBillingAt).toBeNull();
         expect(s.paymentStatus).toBe(PaymentStatusTypeEnum.Succeeded);
         expect(new Date(s.currentTermEnd!).getTime()).toBe(new Date(sub.currentTermEnd!).getTime());
