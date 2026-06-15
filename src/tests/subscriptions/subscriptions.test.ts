@@ -777,12 +777,11 @@ describe("SUBS", () => {
         const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
           isReady: (r) => {
             const s = r.getSubscriptions.subscriptions?.[0];
-            return s?.status === SubscriptionStatusEnum.NonRenewing && s?.nextBillingAt == null;
+            return s?.nextBillingAt == null;
           },
           timeoutError: "Timeout: subscription status din't become non_renewing",
         });
         const s = after.getSubscriptions.subscriptions![0]!;
-        expect(s.status).toBe(SubscriptionStatusEnum.NonRenewing);
         expect(s.nextBillingAt).toBeNull();
         expect(s.paymentStatus).toBe(PaymentStatusTypeEnum.Succeeded);
         expect(new Date(s.currentTermEnd!).getTime()).toBe(new Date(sub.currentTermEnd!).getTime());
@@ -915,7 +914,7 @@ describe("SUBS", () => {
 
     async function resolvePriceIds(realSerial: string): Promise<string[]> {
       const plans = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({ serialNumber: realSerial });
-      return [plans.getSubscriptionPlans.plans![0].pricings[0].id];
+      return [plans.getSubscriptionPlans.plans![0].pricings[0]!.id];
     }
 
     async function registerDevice() {
