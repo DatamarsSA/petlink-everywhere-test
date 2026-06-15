@@ -1,16 +1,8 @@
-# Build stage - install dependencies
-FROM node:24-alpine AS builder
-
-WORKDIR /app
-COPY package.json yarn.lock* ./
-RUN yarn install --frozen-lockfile && yarn cache clean
-
-# Runtime stage - minimal image
 FROM node:24-alpine
 
 WORKDIR /app
 
-# Copy only node_modules and source
-COPY --from=builder /app/node_modules ./node_modules
-COPY package.json ./
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile && yarn cache clean
+
 COPY . .

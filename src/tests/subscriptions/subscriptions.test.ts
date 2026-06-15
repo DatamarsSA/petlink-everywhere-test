@@ -506,7 +506,7 @@ describe("SUBS", () => {
       });
     });
 
-    describe("CHANGE (upgrade/downgrade)", () => {
+    describe("CHANGE PLAN (upgrade/downgrade)", () => {
       let setup: TestSetup = {} as TestSetup;
       let currentSubscription: SubscriptionShortInfo;
       let monthlyPlan: any;
@@ -558,7 +558,7 @@ describe("SUBS", () => {
         currentSubscription = state.currentSubscription;
       });
 
-      it("CHANGE sub: Buy MONTHLY → Buy YEARLY should creates schedule change", async () => {
+      it("Buy MONTHLY → Buy YEARLY -> should creates schedule change", async () => {
         // STEP 1: Trigger plan change to yearly
         const changeResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
           input: {
@@ -613,7 +613,7 @@ describe("SUBS", () => {
         expect(sub.scheduledChanges!.currentTermStart!).toBeWithinHoursOf(sub.currentTermEnd!, 0.5);
       });
 
-      it("CHANGE sub: a second change while one is already scheduled should fail", async () => {
+      it("A second change while one is already scheduled should fail", async () => {
         // STEP 1: First change → schedules YEARLY
         const firstChange = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
           input: {

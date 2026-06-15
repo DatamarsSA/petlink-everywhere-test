@@ -74,20 +74,13 @@ export async function waitFor<T>(
 
   const startTime = Date.now();
   let attempts = 0;
-  let lastError: Error | null = null;
 
   while (Date.now() - startTime < timeoutMs) {
     attempts++;
 
-    try {
-      const result = await fn();
-      if (isReady(result)) {
-        return result;
-      }
-    } catch (error) {
-      // Salva l'errore silenziosamente, senza loggarlo
-      lastError = error instanceof Error ? error : new Error(String(error));
-      // Continua a fare retry
+    const result = await fn();
+    if (isReady(result)) {
+      return result;
     }
 
     if (Date.now() - startTime + intervalMs < timeoutMs) {
@@ -95,9 +88,7 @@ export async function waitFor<T>(
     }
   }
 
-  // Lancia l'errore finale con i dettagli
-  const errorInfo = lastError ? `\nCaused by: ${lastError.message}` : "";
-  throw new Error(`${timeoutError} (${attempts} attempts)${errorInfo}`);
+  throw new Error(`${timeoutError} (${attempts} attempts)`);
 }
 
 export function extractParamsFromUrl(url: string) {
