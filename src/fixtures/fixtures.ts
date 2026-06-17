@@ -100,11 +100,11 @@ const baseFixtures = {
     appBrand: AppBrand.Kippy,
     user: { ...commonUser, city: "Milano", countryCode: "IT", zipCode: "20100", languageId: LanguageId.It, streetAddress: "Via Torino 10" } as UserIn,
     pet: { ...commonPet },
-    devices: {
-      CAT: { serialNumber: "UTEST01", countryCode: "IT", timezone: "Europe/Rome", imei: "000000000000001", iccid: "89880000000000000001", firmware: "11.1.50" },
+    gpsFixtures: {
       DOG: { serialNumber: "UTEST02", countryCode: "IT", timezone: "Europe/Rome", imei: "000000000000002", iccid: "89880000000000000002", firmware: "10.4.88" },
+      CAT: { serialNumber: "UTEST01", countryCode: "IT", timezone: "Europe/Rome", imei: "000000000000001", iccid: "89880000000000000001", firmware: "11.1.50" },
       EVO: { serialNumber: "UTEST03", countryCode: "IT", timezone: "Europe/Rome", imei: "000000000000003", iccid: "89880000000000000002", firmware: "9.1.50" },
-      //OLD devices
+      //OLD gpsFixtures
       VITA: { serialNumber: "VITA001", countryCode: "IT", timezone: "Europe/Rome", imei: "000000000000006", iccid: "89880000000000000003", firmware: "10.4.88" },
       FINDER: { serialNumber: "FINDER0", countryCode: "IT", timezone: "Europe/Rome", imei: "FINDER01", iccid: "FINDER01", firmware: "3.1.66" },
       EVO6: { serialNumber: "EVO0006", countryCode: "IT", timezone: "Europe/Rome", imei: "8988EVO6", iccid: "8988EVO6", firmware: "7.1.15" },
@@ -148,9 +148,9 @@ const baseFixtures = {
       streetAddress: "Fifth Avenue 350",
     } as UserIn,
     pet: { ...commonPet },
-    devices: {
-      CAT: { serialNumber: "UTEST04", countryCode: "US", timezone: "America/New_York", imei: "000000000000004", iccid: "89010000000000000001", firmware: "11.1.50" },
+    gpsFixtures: {
       DOG: { serialNumber: "UTEST05", countryCode: "US", timezone: "America/New_York", imei: "000000000000005", iccid: "89010000000000000002", firmware: "10.4.88" },
+      CAT: { serialNumber: "UTEST04", countryCode: "US", timezone: "America/New_York", imei: "000000000000004", iccid: "89010000000000000001", firmware: "11.1.50" },
     },
     card: commonCard,
     coupon: commonCoupon,

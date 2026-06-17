@@ -5,6 +5,9 @@ import {
   Pet,
   PetlinkGps,
   PetlinkGpsIn,
+  PetlinkMicrochip,
+  PetlinkQrTag,
+  PetlinkSubscription,
   SpeciesEnum,
   DeviceTypeEnum,
   UtilityTestTypeEnum as CoreUtilityTestTypeEnum,
@@ -18,23 +21,29 @@ import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { waitFor } from "../helpers/utils.js";
 
+
 type UserOptions = Partial<UserIn>;
 
-export type EnrichedDevice = PetlinkGps & {
+export type DeviceSetupGps = PetlinkGps & {
   imei: string;
   iccid: string;
   firmware: string;
   subscriptionPlan?: string;
-};
-
-export type DeviceSetup = EnrichedDevice & {
-  subscriptions?: any[];
+  subscription?: PetlinkSubscription;
   availablePlans?: any[];
   availablePetProtectionPlans?: any[];
 };
 
+export type DeviceSetupMicrochip = PetlinkMicrochip & {};
+
+export type DeviceSetupQrTag = PetlinkQrTag & {};
+
 export type PetSetup = Pet & {
-  device?: DeviceSetup;
+  devices: {
+    gps?: DeviceSetupGps;
+    microchip?: DeviceSetupMicrochip;
+    qrTag?: DeviceSetupQrTag;
+  };
 };
 
 export interface TestSetup {
@@ -48,9 +57,15 @@ export interface SubscriptionConfig {
   priceIds?: string[];
 }
 
-export interface PetConfig {
-  withDevice?: boolean;
+export interface GpsConfig {
+  model?: DeviceTypeEnum;
   withSubscription?: SubscriptionConfig | true;
+}
+
+export interface PetConfig {
+  gps?: GpsConfig;
+  microchip?: true;
+  qrTag?: true;
 }
 
 class TestSetupBuilder {
@@ -76,16 +91,13 @@ class TestSetupBuilder {
     return this;
   }
 
-  withDogForEvo(config: PetConfig = {}): this {
-    if (!fxt.isKippyRun) {
-      throw new Error("EVO device can only be created when appBrand is KIPPY");
-    }
-    this.petConfigs.dogForEvo = config;
+  withCat(config: PetConfig = {}): this {
+    this.petConfigs.cat = config;
     return this;
   }
 
-  withCat(config: PetConfig = {}): this {
-    this.petConfigs.cat = config;
+  withDogForEvo(config: PetConfig = {}): this {
+    this.petConfigs.dogForEvo = config;
     return this;
   }
 
@@ -100,7 +112,7 @@ class TestSetupBuilder {
 
     const createPetEntry = async (species: SpeciesEnum, key: 'dog' | 'cat' | 'dogForEvo') => {
       const pet = await this.helper.createPet(species);
-      this.setup[key] = pet as PetSetup;
+      this.setup[key] = { ...pet, devices: {} } as PetSetup;
     };
 
     if (this.petConfigs.dog) {
@@ -117,25 +129,28 @@ class TestSetupBuilder {
 
     await Promise.all(petPromises);
 
-    // 3. Create devices in parallel
+    // 3. Create GPS devices in parallel
     const devicePromises: Promise<void>[] = [];
 
-    const createDeviceEntry = async (key: 'dog' | 'cat' | 'dogForEvo', deviceType: DeviceTypeEnum) => {
+    const createGpsEntry = async (key: 'dog' | 'cat' | 'dogForEvo', model: DeviceTypeEnum) => {
       const pet = this.setup[key]!;
-      const device = await this.helper.createDeviceForPet(pet, deviceType);
-      this.setup[key]!.device = device;
+      const gps = await this.helper.createGpsForPet(pet, model);
+      this.setup[key]!.devices.gps = gps;
     };
 
-    if (this.petConfigs.dog?.withDevice) {
-      devicePromises.push(createDeviceEntry('dog', DeviceTypeEnum.Dog));
+    if (this.petConfigs.dog?.gps) {
+      const model = this.petConfigs.dog.gps.model ?? DeviceTypeEnum.Dog;
+      devicePromises.push(createGpsEntry('dog', model));
     }
 
-    if (this.petConfigs.cat?.withDevice) {
-      devicePromises.push(createDeviceEntry('cat', DeviceTypeEnum.Cat));
+    if (this.petConfigs.cat?.gps) {
+      const model = this.petConfigs.cat.gps.model ?? DeviceTypeEnum.Cat;
+      devicePromises.push(createGpsEntry('cat', model));
     }
 
-    if (this.petConfigs.dogForEvo?.withDevice) {
-      devicePromises.push(createDeviceEntry('dogForEvo', DeviceTypeEnum.Evo));
+    if (this.petConfigs.dogForEvo?.gps) {
+      const model = this.petConfigs.dogForEvo.gps.model ?? DeviceTypeEnum.Evo;
+      devicePromises.push(createGpsEntry('dogForEvo', model));
     }
 
     await Promise.all(devicePromises);
@@ -160,25 +175,25 @@ class TestSetupBuilder {
 
     const planPromises: Promise<void>[] = [];
 
-    const fetchPlansForDevice = async (key: 'dog' | 'cat' | 'dogForEvo') => {
-      const device = this.setup[key]!.device!;
+    const fetchPlansForGps = async (key: 'dog' | 'cat' | 'dogForEvo') => {
+      const gps = this.setup[key]!.devices.gps!;
       const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-        productId: device.id,
-        countryCode: device.countryCode,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        countryCode: gps.countryCode,
+        serialNumber: gps.serialNumber,
       });
-      this.setup[key]!.device!.availablePlans = plansResponse.getSubscriptionPlans.plans ?? [];
-      this.setup[key]!.device!.availablePetProtectionPlans = plansResponse.getSubscriptionPlans.careProtectionPlans ?? [];
+      this.setup[key]!.devices.gps!.availablePlans = plansResponse.getSubscriptionPlans.plans ?? [];
+      this.setup[key]!.devices.gps!.availablePetProtectionPlans = plansResponse.getSubscriptionPlans.careProtectionPlans ?? [];
     };
 
-    if (this.setup.dog?.device) {
-      planPromises.push(fetchPlansForDevice('dog'));
+    if (this.setup.dog?.devices.gps) {
+      planPromises.push(fetchPlansForGps('dog'));
     }
-    if (this.setup.cat?.device) {
-      planPromises.push(fetchPlansForDevice('cat'));
+    if (this.setup.cat?.devices.gps) {
+      planPromises.push(fetchPlansForGps('cat'));
     }
-    if (this.setup.dogForEvo?.device) {
-      planPromises.push(fetchPlansForDevice('dogForEvo'));
+    if (this.setup.dogForEvo?.devices.gps) {
+      planPromises.push(fetchPlansForGps('dogForEvo'));
     }
 
     await Promise.all([billingPromise, ...planPromises]);
@@ -187,16 +202,16 @@ class TestSetupBuilder {
     const subscriptionTargets: Array<{ key: 'dog' | 'cat' | 'dogForEvo'; priceIds: string[] }> = [];
 
     for (const [key, config] of Object.entries(this.petConfigs) as Array<['dog' | 'cat' | 'dogForEvo', PetConfig]>) {
-      if (config.withSubscription && this.setup[key]?.device) {
+      if (config.gps?.withSubscription && this.setup[key]?.devices.gps) {
         let priceIds: string[];
-        if (config.withSubscription === true || !config.withSubscription.priceIds || config.withSubscription.priceIds.length === 0) {
-          const firstPlan = this.setup[key]!.device!.availablePlans?.[0]?.pricings?.[0];
+        if (config.gps.withSubscription === true || !config.gps.withSubscription.priceIds || config.gps.withSubscription.priceIds.length === 0) {
+          const firstPlan = this.setup[key]!.devices.gps!.availablePlans?.[0]?.pricings?.[0];
           if (!firstPlan) {
             throw new Error(`[Setup] No available plans found for ${key}. Cannot auto-purchase subscription.`);
           }
           priceIds = [firstPlan.id];
         } else {
-          priceIds = config.withSubscription.priceIds;
+          priceIds = config.gps.withSubscription.priceIds;
         }
         subscriptionTargets.push({ key, priceIds });
       }
@@ -212,7 +227,7 @@ class TestSetupBuilder {
         subscriptionTargets.map(({ key, priceIds }) =>
           this.helper.purchaseSubscription(
             this.setup.user!,
-            this.setup[key]!.device!,
+            this.setup[key]!.devices.gps!,
             priceIds,
             options?.waitForSubscriptions ? { waitForActive: true } : undefined,
           ),
@@ -221,7 +236,7 @@ class TestSetupBuilder {
 
       if (options?.waitForSubscriptions) {
         subscriptionTargets.forEach(({ key }, i) => {
-          this.setup[key]!.device!.subscriptions = [subs[i]!];
+          this.setup[key]!.devices.gps!.subscription = subs[i]!;
         });
       }
     }
@@ -280,8 +295,8 @@ class TestHelper {
           input: {
             utilityType: CoreUtilityTestTypeEnum.CleanUpCoupons,
             serialNumbers: [
-              ...Object.values(fxt.KIPPY.devices).map((d: any) => d.serialNumber),
-              ...Object.values(fxt.PETLINK.devices).map((d: any) => d.serialNumber),
+              ...Object.values(fxt.KIPPY.gpsFixtures).map((d: any) => d.serialNumber),
+              ...Object.values(fxt.PETLINK.gpsFixtures).map((d: any) => d.serialNumber),
             ],
           },
         })
@@ -415,24 +430,20 @@ class TestHelper {
     return response.createPet.pet!;
   }
 
-  async createDeviceForPet(pet: Pet, deviceType: DeviceTypeEnum): Promise<EnrichedDevice> {
-    const deviceFixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : (fxt.current.devices as any)[deviceType];
+  async createGpsForPet(pet: Pet, model: DeviceTypeEnum): Promise<DeviceSetupGps> {
+    const fixture = model === DeviceTypeEnum.Evo ? fxt.KIPPY.gpsFixtures.EVO : (fxt.current.gpsFixtures as any)[model];
 
-    if (!deviceFixture) {
-      throw new Error(`Device fixture not found for brand ${fxt.current.appBrand} and type ${deviceType}`);
-    }
-
-    logger.debug(`→ Assigning device ${deviceType} (${deviceFixture.serialNumber}) to pet ${pet.name} (${pet.species}) with id ${pet.id}`);
+    logger.debug(`→ Assigning GPS model ${model} (${fixture.serialNumber}) to pet ${pet.name} (${pet.species}) with id ${pet.id}`);
 
     // Validate EVO can only be created with KIPPY brand
-    if (deviceType === DeviceTypeEnum.Evo && !fxt.isKippyRun) {
+    if (model === DeviceTypeEnum.Evo && !fxt.isKippyRun) {
       throw new Error("EVO device can only be created when appBrand is KIPPY");
     }
 
     const devicePayload: PetlinkGpsIn = {
-      serialNumber: deviceFixture.serialNumber,
-      countryCode: deviceFixture.countryCode,
-      timezone: deviceFixture.timezone,
+      serialNumber: fixture.serialNumber,
+      countryCode: fixture.countryCode,
+      timezone: fixture.timezone,
       petId: pet.id,
     };
 
@@ -443,30 +454,30 @@ class TestHelper {
 
     if (response.createPetlinkGps.code !== "200") {
       throw new Error(
-        `Failed to create device for ${deviceType} (serial: ${devicePayload.serialNumber}): ${response.createPetlinkGps.message}${(response.createPetlinkGps.translationCode && ` - ${response.createPetlinkGps.translationCode}`) ?? ""}`,
+        `Failed to create GPS for ${model} (serial: ${devicePayload.serialNumber}): ${response.createPetlinkGps.message}${(response.createPetlinkGps.translationCode && ` - ${response.createPetlinkGps.translationCode}`) ?? ""}`,
       );
     }
 
     const coreDevice = response.createPetlinkGps.petlinkGps!;
 
-    logger.debug("✓ Assigned Device", {
+    logger.debug("✓ Assigned GPS", {
       serialNumber: coreDevice.serialNumber,
-      deviceType,
+      model,
       petId: pet.id,
       id: coreDevice.id,
     });
 
     // Enrich with hardware data from fixtures
-    const fixture = deviceType === DeviceTypeEnum.Evo ? fxt.KIPPY.devices.EVO : (fxt.current.devices as any)[deviceType];
-    if (!fixture || !fixture.imei || !fixture.iccid || !fixture.firmware) {
-      throw new Error(`[Setup] CRITICAL: Missing hardware data in fixtures for device type ${deviceType}`);
+    const hwFixture = model === DeviceTypeEnum.Evo ? fxt.KIPPY.gpsFixtures.EVO : (fxt.current.gpsFixtures as any)[model];
+    if (!hwFixture || !hwFixture.imei || !hwFixture.iccid || !hwFixture.firmware) {
+      throw new Error(`[Setup] CRITICAL: Missing hardware data in fixtures for GPS model ${model}`);
     }
 
     return {
       ...coreDevice,
-      imei: fixture.imei,
-      iccid: fixture.iccid,
-      firmware: fixture.firmware,
+      imei: hwFixture.imei,
+      iccid: hwFixture.iccid,
+      firmware: hwFixture.firmware,
       subscriptionPlan: (response as any).createPetlinkGps?.subscriptionPlan,
     };
   }
@@ -496,17 +507,17 @@ class TestHelper {
    */
   async purchaseSubscription(
     user: User,
-    device: EnrichedDevice,
+    gps: DeviceSetupGps,
     priceIds: string[],
     options?: { waitForActive?: boolean },
   ): Promise<any> {
-    logger.debug("→ Purchasing subscription for device", { deviceId: device.id, priceIds });
+    logger.debug("→ Purchasing subscription for GPS", { deviceId: gps.id, priceIds });
 
     const purchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
       input: {
         utilityType: CoreUtilityTestTypeEnum.BuyNewSubscription,
         phone: user.phone,
-        productId: device.id,
+        productId: gps.id,
         priceIds,
         card: fxt.current.card.valid,
       },
@@ -516,11 +527,11 @@ class TestHelper {
       throw new Error(`Failed to purchase subscription: ${purchaseResponse.utilityIntegrationTest.message}`);
     }
 
-    logger.debug("✓ Subscription purchased", { deviceId: device.id, priceIds });
+    logger.debug("✓ Subscription purchased", { deviceId: gps.id, priceIds });
 
     if (options?.waitForActive) {
       const result = await waitFor(
-        async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }),
+        async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }),
         {
           isReady: (result) => {
             const subscription = result.getSubscriptions.subscriptions?.[0];
@@ -529,7 +540,7 @@ class TestHelper {
               subscription?.paymentStatus === PaymentStatusTypeEnum.Succeeded
             );
           },
-          timeoutError: `Timeout: Subscription did not become active for device ${device.id}`,
+          timeoutError: `Timeout: Subscription did not become active for GPS ${gps.id}`,
         },
       );
       return result.getSubscriptions.subscriptions![0]!;

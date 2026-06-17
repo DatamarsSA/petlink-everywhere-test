@@ -47,50 +47,47 @@ describe("SUBS", () => {
 
       beforeAll(async () => {
         await testHelper.cleanupAll();
-        const builder = testHelper.setupBuilder().withUser().withDog({ withDevice: true }).withCat({ withDevice: true });
-
-        // Add EVO device only for KIPPY brand
+        const builder = testHelper.setupBuilder().withUser().withDog({ gps: {} }).withCat({ gps: {} });
         if (fxt.isKippyRun) {
-          builder.withDogForEvo({ withDevice: true });
+          builder.withDogForEvo({ gps: {} });
         }
-
         setup = await builder.build();
       });
 
       it("Each device type should has at least 1 sub plan available", async () => {
-        const dogPlans = setup.dog!.device!.availablePlans!;
-        const catPlans = setup.cat!.device!.availablePlans!;
-        const evoPlans = setup.dogForEvo?.device?.availablePlans;
+        const dogPlans = setup.dog!.devices.gps!.availablePlans!;
+        const catPlans = setup.cat!.devices.gps!.availablePlans!;
+        const evoPlans = setup.dogForEvo?.devices.gps?.availablePlans;
 
-        expect(dogPlans, "Dog device should have subscription plans defined").toBeDefined();
+        expect(dogPlans, "Dog GPS should have subscription plans defined").toBeDefined();
         expect(Array.isArray(dogPlans), "Subscription plans should be returned as an array").toBe(true);
-        expect(dogPlans.length, "Dog device should have at least one subscription plan available").toBeGreaterThan(0);
+        expect(dogPlans.length, "Dog GPS should have at least one subscription plan available").toBeGreaterThan(0);
 
-        expect(catPlans, "Cat device should have subscription plans defined").toBeDefined();
+        expect(catPlans, "Cat GPS should have subscription plans defined").toBeDefined();
         expect(Array.isArray(catPlans), "Subscription plans should be returned as an array").toBe(true);
-        expect(catPlans.length, "Cat device should have at least one subscription plan available").toBeGreaterThan(0);
+        expect(catPlans.length, "Cat GPS should have at least one subscription plan available").toBeGreaterThan(0);
 
         if (fxt.isKippyRun && evoPlans) {
-          expect(evoPlans, "EVO device should have subscription plans defined").toBeDefined();
+          expect(evoPlans, "EVO GPS should have subscription plans defined").toBeDefined();
           expect(Array.isArray(evoPlans), "Subscription plans should be returned as an array").toBe(true);
-          expect(evoPlans.length, "EVO device should have at least one subscription plan available").toBeGreaterThan(0);
+          expect(evoPlans.length, "EVO GPS should have at least one subscription plan available").toBeGreaterThan(0);
         }
       });
 
       it("Should return the price adjusted to the user's billing currency", async () => {
-        const device = setup.dog!.device!;
+        const gps = setup.dog!.devices.gps!;
 
         const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-          productId: device.id,
-          countryCode: device.countryCode,
-          serialNumber: device.serialNumber,
+          productId: gps.id,
+          countryCode: gps.countryCode,
+          serialNumber: gps.serialNumber,
         });
         const choosenPlanBeforeConversion = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
         const planResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlanPricing({
           planPriceId: choosenPlanBeforeConversion.id,
           countryCode: "CH",
-          productId: device.id,
+          productId: gps.id,
         });
 
         const chosenPlanAfterConvesion = planResponse.getSubscriptionPlanPricing.pricing;
@@ -153,9 +150,9 @@ describe("SUBS", () => {
 
       beforeEach(async () => {
         await testHelper.cleanupAll();
-        setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).withCat({ withDevice: true }).build();
-        availablePlansForThisDevice = setup.dog!.device!.availablePlans!;
-        availablePetProtectionForThisPet = setup.dog!.device!.availablePetProtectionPlans!;
+        setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).withCat({ gps: {} }).build();
+        availablePlansForThisDevice = setup.dog!.devices.gps!.availablePlans!;
+        availablePetProtectionForThisPet = setup.dog!.devices.gps!.availablePetProtectionPlans!;
       });
 
       afterAll(() => {
@@ -164,7 +161,7 @@ describe("SUBS", () => {
 
       it("BUY sub and verify it becomes active", async () => {
         const choosenPlan = availablePlansForThisDevice![0].pricings[0]!;
-        const deviceId = setup.dog!.device!.id;
+        const deviceId = setup.dog!.devices.gps!.id;
 
         logger.info("Testing subscription purchase", {
           planId: choosenPlan.id,
@@ -208,7 +205,7 @@ describe("SUBS", () => {
 
         // Fetch final subscription details
         const subsDetails = await petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({
-          productId: setup.dog!.device!.id,
+          productId: setup.dog!.devices.gps!.id,
         });
         const subscription = subsDetails.getSubscriptionByProductId.subscription!;
 
@@ -247,7 +244,7 @@ describe("SUBS", () => {
           addonPrice: chosenPlan.addon.price,
         });
 
-        const subscription = await testHelper.purchaseSubscription(setup.user!, setup.dog!.device!, [chosenPlan.id, chosenPlan.addon.id], {
+        const subscription = await testHelper.purchaseSubscription(setup.user!, setup.dog!.devices.gps!, [chosenPlan.id, chosenPlan.addon.id], {
           waitForActive: true,
         });
 
@@ -289,7 +286,7 @@ describe("SUBS", () => {
         logger.info("Chosen plans for test", { chosenPlan, chosenPetProtection });
 
         const [sub, petProtectionResult] = await Promise.all([
-          testHelper.purchaseSubscription(setup.user!, setup.dog!.device!, [chosenPlan.id, chosenPetProtection.id], { waitForActive: true }),
+          testHelper.purchaseSubscription(setup.user!, setup.dog!.devices.gps!, [chosenPlan.id, chosenPetProtection.id], { waitForActive: true }),
           waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.dog!.id }), {
             isReady: (result) => result.getPet.pet!.petProtectionId != null,
             timeoutError: `Timeout: petProtectionId not assigned to pet`,
@@ -351,7 +348,7 @@ describe("SUBS", () => {
 
         // Wait for both subscription active and petProtection assignment
         const [subscription, petProtectionResult] = await Promise.all([
-          testHelper.purchaseSubscription(setup.user!, setup.dog!.device!, [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id], {
+          testHelper.purchaseSubscription(setup.user!, setup.dog!.devices.gps!, [chosenPlan.id, chosenPlan.addon.id, chosenPetProtection.id], {
             waitForActive: true,
           }),
           waitFor(async () => petlink.core.graphqlHttp.authJwt.getPet({ id: setup.dog!.id }), {
@@ -417,15 +414,15 @@ describe("SUBS", () => {
         const regularPlan = availablePlansForThisDevice![0].pricings[0]!;
 
         // STEP 2: Purchase a regular subscription first and wait for active
-        const activeSub = await testHelper.purchaseSubscription(setup.user!, setup.dog!.device!, [regularPlan.id], { waitForActive: true });
+        const activeSub = await testHelper.purchaseSubscription(setup.user!, setup.dog!.devices.gps!, [regularPlan.id], { waitForActive: true });
 
         // STEP 4: Purchase pet protection alone
-        logger.info(`bought PET-PROTECTION for device ${setup.dog!.device!.id}, start to wait to become active`);
+        logger.info(`bought PET-PROTECTION for device ${setup.dog!.devices.gps!.id}, start to wait to become active`);
         const petProtectionPurchaseResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
           input: {
             utilityType: UtilityTestTypeEnum.BuyNewSubscription,
             phone: setup.user!.phone,
-            productId: setup.dog!.device!.id,
+            productId: setup.dog!.devices.gps!.id,
             priceIds: [petProtectionPlan.id],
             card: fxt.current.card.valid,
             isOnlyProtection: true,
@@ -522,25 +519,25 @@ describe("SUBS", () => {
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           await testHelper.cleanupAll();
-          const built = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+          const built = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
 
-          const device = built.dog!.device!;
+          const gps = built.dog!.devices.gps!;
 
           // --- RILEVAZIONE PREPAID ORPHAN SUBSCRIPTION ---
-          const hasPrepaidHint = (device as any).subscriptionPlan === "prepaid";
+          const hasPrepaidHint = (gps as any).subscriptionPlan === "prepaid";
           if (hasPrepaidHint) {
-            logger.warn(`Stray subscription detected on ${device.serialNumber} (attempt ${attempt}/${maxRetries}), retrying cleanup...`);
+            logger.warn(`Stray subscription detected on ${gps.serialNumber} (attempt ${attempt}/${maxRetries}), retrying cleanup...`);
             continue;
           }
 
-          const allPricings = device.availablePlans!.flatMap((p: any) => p.pricings);
+          const allPricings = gps.availablePlans!.flatMap((p: any) => p.pricings);
           const m = allPricings.find((pr: any) => pr.periodUnit === "month");
           const y = allPricings.find((pr: any) => pr.periodUnit === "year");
           expect(m, "A MONTHLY pricing must be available").toBeDefined();
           expect(y, "A YEARLY pricing must be available").toBeDefined();
 
           // --- ACQUISTA MONTHLY ---
-          const sub = await testHelper.purchaseSubscription(built.user!, device, [m.id], { waitForActive: true });
+          const sub = await testHelper.purchaseSubscription(built.user!, gps, [m.id], { waitForActive: true });
           expect(sub.billingPeriodUnit, "Baseline sub should be MONTHLY").toBe("month");
           expect(sub.scheduledChanges, "Fresh sub should have no scheduled changes").toBeFalsy();
 
@@ -573,7 +570,7 @@ describe("SUBS", () => {
         ).toBe("200");
 
         // STEP 2: Wait for scheduledChanges to appear on the same sub (using getSubscriptions)
-        const updated = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.dog!.device!.id }), {
+        const updated = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.dog!.devices.gps!.id }), {
           isReady: (result) => {
             const subs = result.getSubscriptions.subscriptions;
             const sub = subs?.[0];
@@ -625,7 +622,7 @@ describe("SUBS", () => {
         expect(firstChange.utilityIntegrationTest.code, "First CHANGE should succeed").toBe("200");
 
         // Wait until scheduledChanges is actually persisted (using getSubscriptions)
-        await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.dog!.device!.id }), {
+        await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: setup.dog!.devices.gps!.id }), {
           isReady: (result) => result.getSubscriptions.subscriptions?.[0]?.scheduledChanges != null,
           timeoutError: `Timeout: first scheduledChanges did not appear`,
         });
@@ -645,7 +642,7 @@ describe("SUBS", () => {
 
         // STEP 3: Verify the original scheduledChange is still the yearly one (no overwrite)
         const stillScheduled = await petlink.core.graphqlHttp.authJwt.getSubscriptions({
-          productId: setup.dog!.device!.id,
+          productId: setup.dog!.devices.gps!.id,
         });
         const sub = stillScheduled.getSubscriptions.subscriptions![0]!;
         expect(sub.scheduledChanges, "scheduledChanges should still be present").toBeDefined();
@@ -659,16 +656,16 @@ describe("SUBS", () => {
 
       beforeEach(async () => {
         await testHelper.cleanupAll();
-        setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
       });
 
       // buy & wait active -> Force renew by moving nextBillingDate to now ->poll until (?)-> assert
       it("Succeeded - should renew subscription and create a paid invoice", async () => {
-        const device = setup.dog!.device!;
-        const plan = device.availablePlans![0].pricings[0];
+        const gps = setup.dog!.devices.gps!;
+        const plan = gps.availablePlans![0].pricings[0];
 
         // 1. Buy and wait active
-        const subBefore = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+        const subBefore = await testHelper.purchaseSubscription(setup.user!, gps, [plan.id], { waitForActive: true });
         const originalTermEnd = subBefore.currentTermEnd!;
 
         const originalInvoicesCount = subBefore.invoices.length;
@@ -684,7 +681,7 @@ describe("SUBS", () => {
         expect(travelResponse.utilityIntegrationTest.code).toBe("200");
 
         // 3. Poll until term shifts (renew is async)
-        const renewedResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        const renewedResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
           isReady: (res) => {
             const sub = res.getSubscriptions.subscriptions?.[0];
             if (!sub?.currentTermEnd) return false;
@@ -708,11 +705,11 @@ describe("SUBS", () => {
 
       //here: UtilityTestTypeEnum.UpdateSubscriptionNextBillingDate
       it("Dunning - should fail payment and enter dunning when card has no funds", async () => {
-        const device = setup.dog!.device!;
-        const plan = device.availablePlans![0].pricings[0];
+        const gps = setup.dog!.devices.gps!;
+        const plan = gps.availablePlans![0].pricings[0];
 
         // 1. Buy with valid card
-        const subBefore = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+        const subBefore = await testHelper.purchaseSubscription(setup.user!, gps, [plan.id], { waitForActive: true });
 
         // 2. Swap to no-funds card (assuming utilityIntegrationTest supports this)
         const updateCardResponse = await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
@@ -735,7 +732,7 @@ describe("SUBS", () => {
         expect(travelResponse.utilityIntegrationTest.code).toBe("200");
 
         // 4. Poll until dunning appears
-        const dunningResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        const dunningResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
           isReady: (res) => {
             const sub = res.getSubscriptions.subscriptions?.[0];
             return !!sub?.dunningStatus || !!(sub?.dunningAttempts && sub.dunningAttempts.length > 0);
@@ -758,13 +755,13 @@ describe("SUBS", () => {
       let setup: TestSetup = {} as TestSetup;
       beforeEach(async () => {
         await testHelper.cleanupAll();
-        setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
       });
 
       it("stop renew -> status become non_renewing + nextBillingAt null, term end unchanged", async () => {
-        const device = setup.dog!.device!;
-        const plan = device.availablePlans![0].pricings[0];
-        const sub = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+        const gps = setup.dog!.devices.gps!;
+        const plan = gps.availablePlans![0].pricings[0];
+        const sub = await testHelper.purchaseSubscription(setup.user!, gps, [plan.id], { waitForActive: true });
 
         const res = await petlink.core.graphqlHttp.authJwt.stopRenewingSubscription({
           subscriptionId: sub.id,
@@ -774,7 +771,7 @@ describe("SUBS", () => {
         });
         expect(res.stopRenewingSubscription?.code).toBe("200");
 
-        const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
           isReady: (r) => {
             const s = r.getSubscriptions.subscriptions?.[0];
             return s?.nextBillingAt == null;
@@ -792,13 +789,13 @@ describe("SUBS", () => {
       let setup: TestSetup = {} as TestSetup;
       beforeEach(async () => {
         await testHelper.cleanupAll();
-        setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+        setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
       });
 
       it("refund plan item -> sub cancelled immediately, no penale", async () => {
-        const device = setup.dog!.device!;
-        const plan = device.availablePlans![0].pricings[0];
-        const sub = await testHelper.purchaseSubscription(setup.user!, device, [plan.id], { waitForActive: true });
+        const gps = setup.dog!.devices.gps!;
+        const plan = gps.availablePlans![0].pricings[0];
+        const sub = await testHelper.purchaseSubscription(setup.user!, gps, [plan.id], { waitForActive: true });
 
         const invoice = sub.invoices![0];
         const planItem = invoice.items.find((i) => i.itemType === "plan_item_price")!;
@@ -810,7 +807,7 @@ describe("SUBS", () => {
         });
         expect(refundRes.refundInvoice?.code).toBe("200");
 
-        const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+        const after = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
           isReady: (r) => r.getSubscriptions.subscriptions?.[0]?.status === SubscriptionStatusEnum.Cancelled,
           timeoutError: "Timeout: sub did not become cancelled after refund",
         });
@@ -929,32 +926,32 @@ describe("SUBS", () => {
     }
 
     it("Flow A: order → tracking → buy → register → sub active", async () => {
-      const device = fxt.current.devices.DOG; // the physical device we will "ship": real serial + imei
+      const device = fxt.current.gpsFixtures.DOG; // the physical device we will "ship": real serial + imei
       const buyer = setup.user!;
 
       // STEP 1: external store creates the order (temporary PREPAID-<itemId> serial)
       const order = await createPrepaidOrder(buyer, fxt.current.prepaidOrder);
 
       // STEP 2: shipping tracking replaces the placeholder with the real inventory serial (matched by IMEI)
-      await trackPrepaidOrder(order, device.imei);
+      await trackPrepaidOrder(order, gps.imei);
       const orderTracked = (await petlink.core.graphqlHttp.authApiKey.getOrder({ orderId: order.orderId })).getOrder!.order!;
-      expect(orderTracked.devices[0].serialNumber).toBe(device.serialNumber);
+      expect(orderTracked.devices[0].serialNumber).toBe(gps.serialNumber);
       expect(orderTracked.devices[0].activated).toBe(false);
 
       // STEP 3: buy. The BE reads the order item serial, already REAL after tracking
-      const priceIds = await resolvePriceIds(device.serialNumber);
+      const priceIds = await resolvePriceIds(gps.serialNumber);
       await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
 
       // capture the chargebeeSubscriptionId created by the webhook for robust polling
       const subAfterBuy = await waitFor(() => getPrepaidSubByOrder(order.orderId), {
-        isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === device.serialNumber,
+        isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === gps.serialNumber,
         timeoutError: `prepaid subscription not created after buy for order ${order.orderId}`,
       });
       const chargebeeSubscriptionId = subAfterBuy!.chargebeeSubscriptionId!;
 
       // STEP 4: register the device (act)
       const registered = await registerDevice();
-      expect(registered.serialNumber).toBe(device.serialNumber);
+      expect(registered.serialNumber).toBe(gps.serialNumber);
 
       // STEP 5: sub links and becomes active (assert)
       await waitForPrepaidSub(
@@ -963,11 +960,11 @@ describe("SUBS", () => {
         (s) => s?.status === SubscriptionStatusEnum.Active && s?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
         `prepaid subscription did not become active for device ${registered.id}`,
       );
-      await assertOrderActivated(order.orderId, device.serialNumber);
+      await assertOrderActivated(order.orderId, gps.serialNumber);
     });
 
     it("Flow B: order → buy → tracking → register → sub active", async () => {
-      const device = fxt.current.devices.DOG;
+      const device = fxt.current.gpsFixtures.DOG;
       const buyer = setup.user!;
 
       // STEP 1: external store creates the order (temporary PREPAID-<itemId> serial)
@@ -987,7 +984,7 @@ describe("SUBS", () => {
       const chargebeeSubscriptionId = orphan!.chargebeeSubscriptionId!;
 
       // STEP 3: shipping tracking now updates the order item AND triggers the Chargebee serial realignment
-      await trackPrepaidOrder(order, device.imei);
+      await trackPrepaidOrder(order, gps.imei);
 
       // KEY ASSERTION: the subscription_changed webhook must realign the Mongo serial from PREPAID-<itemId> to the real one.
       // This is async (CB → SM queue → Core queue); registration must not happen before it completes or the link silently fails.
@@ -995,13 +992,13 @@ describe("SUBS", () => {
       await waitForPrepaidSub(
         buyer.email!,
         chargebeeSubscriptionId,
-        (s) => s?.serialNumber === device.serialNumber,
-        `prepaid subscription serial not realigned to ${device.serialNumber} for order ${order.orderId}`,
+        (s) => s?.serialNumber === gps.serialNumber,
+        `prepaid subscription serial not realigned to ${gps.serialNumber} for order ${order.orderId}`,
       );
 
       // STEP 4: register the device (act)
       const registered = await registerDevice();
-      expect(registered.serialNumber).toBe(device.serialNumber);
+      expect(registered.serialNumber).toBe(gps.serialNumber);
 
       // STEP 5: the (now real-serial) orphan sub links and becomes active (assert)
       await waitForPrepaidSub(
@@ -1010,7 +1007,7 @@ describe("SUBS", () => {
         (s) => s?.status === SubscriptionStatusEnum.Active && s?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
         `prepaid subscription did not become active for device ${registered.id}`,
       );
-      await assertOrderActivated(order.orderId, device.serialNumber);
+      await assertOrderActivated(order.orderId, gps.serialNumber);
     });
 
   });
@@ -1020,30 +1017,30 @@ describe("SUBS", () => {
 
     beforeEach(async () => {
       await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+      setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
     });
 
     it("Add Free period on device WITHOUT sub should create active non-paying sub", async () => {
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       const freePeriod = AddFreePeriod.Add_30Days;
       const daysOfFreePeriod = 30;
 
       logger.info("Testing addFreePeriod on device without subscription", {
-        serialNumber: device.serialNumber,
+        serialNumber: gps.serialNumber,
         freePeriod,
       });
 
       const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
         freePeriod,
-        productId: device.id,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        serialNumber: gps.serialNumber,
       });
 
       expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
         "200",
       );
 
-      const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: gps.id }), {
         isReady: (result) => result.getSubscriptionByProductId.subscription != null,
         timeoutError: `Timeout: Subscription not created after addFreePeriod in ${fxt.polling.timeoutMs}ms`,
       });
@@ -1056,14 +1053,14 @@ describe("SUBS", () => {
       expect({ start: coreSubscription.currentTermStart!, end: coreSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
 
       const cctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-        deviceId: device.id,
+        deviceId: gps.id,
       });
       expect(cctSubscriptionsResponse.getSubscriptions.code).toBe("200");
       const cctSubscription = cctSubscriptionsResponse.getSubscriptions.items![0];
       expect(cctSubscription).toMatchObject({
         userId: setup.user!.id,
-        productId: device.id,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        serialNumber: gps.serialNumber,
         status: SubscriptionStatusEnum.InTrial,
         addedFreePeriod: daysOfFreePeriod,
         billingPeriod: daysOfFreePeriod,
@@ -1074,31 +1071,31 @@ describe("SUBS", () => {
     });
 
     it("Add Free period on device WITH active sub should extend current subscription", async () => {
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       const daysOfFreePeriod = 14;
       const freePeriod = AddFreePeriod.Add_14Days;
 
-      const initialSubscription = await testHelper.purchaseSubscription(setup.user!, device, [device.availablePlans![0].pricings[0].id], {
+      const initialSubscription = await testHelper.purchaseSubscription(setup.user!, gps, [gps.availablePlans![0].pricings[0].id], {
         waitForActive: true,
       });
       const originalCurrentTermEnd = initialSubscription.currentTermEnd;
 
       const initialCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-        deviceId: device.id,
+        deviceId: gps.id,
       });
       const originalAddedFreePeriod = initialCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod || 0;
 
       const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
         freePeriod,
-        productId: device.id,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        serialNumber: gps.serialNumber,
       });
 
       expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
         "200",
       );
 
-      const updatedSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      const updatedSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: gps.id }), {
         isReady: (result) => {
           const sub = result.getSubscriptionByProductId.subscription;
           const newCurrentTermEnd = sub?.currentTermEnd;
@@ -1110,7 +1107,7 @@ describe("SUBS", () => {
       const updatedSubscription = updatedSubResult.getSubscriptionByProductId.subscription!;
 
       const updatedCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-        deviceId: device.id,
+        deviceId: gps.id,
       });
 
       expect(updatedSubscription.id, "Free period should extend the current subscription, not create a new one").toBe(initialSubscription.id);
@@ -1134,11 +1131,11 @@ describe("SUBS", () => {
 
     beforeEach(async () => {
       await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+      setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
     });
 
     it("Coupon pre-assigned to device applies discount on purchase", async () => {
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
 
       // STEP 1: Get available coupons
       const couponsResponse = await petlink.cct.graphqlHttp.authJwt.getCoupons();
@@ -1156,7 +1153,7 @@ describe("SUBS", () => {
 
       // STEP 2: Assign coupon to device
       const setCouponResponse = await petlink.cct.graphqlHttp.authJwt.setCoupon({
-        serialNumbers: [device.serialNumber],
+        serialNumbers: [gps.serialNumber],
         couponId: coupon.id,
         setMode: CouponSetMode.Apply,
       });
@@ -1164,21 +1161,21 @@ describe("SUBS", () => {
       expect(setCouponResponse.setCoupon.code, `setCoupon should succeed - Error: ${setCouponResponse.setCoupon.message}`).toBe("200");
 
       logger.info("Coupon assigned to device", {
-        serialNumber: device.serialNumber,
+        serialNumber: gps.serialNumber,
         couponId: coupon.id,
         failureList: setCouponResponse.setCoupon.failureList,
       });
 
       // STEP 3: Buy subscription
       const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-        productId: device.id,
-        countryCode: device.countryCode,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        countryCode: gps.countryCode,
+        serialNumber: gps.serialNumber,
       });
       const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
 
       // STEP 4: Purchase and wait for subscription to become active
-      const subscription = await testHelper.purchaseSubscription(setup.user!, device, [chosenPlan.id], { waitForActive: true });
+      const subscription = await testHelper.purchaseSubscription(setup.user!, gps, [chosenPlan.id], { waitForActive: true });
 
       logger.info("Subscription purchased with coupon", {
         subscriptionId: subscription.id,
@@ -1213,29 +1210,29 @@ describe("SUBS", () => {
 
     afterEach(async () => {
       await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-        serialNumbers: [fxt.current.devices.DOG.serialNumber],
+        serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
         planProfileId: PLanProfile.DEFAULT,
       });
     });
 
     it("Esselunga - 365d trial, choose updatePlan (only yearly plans), sub created, no invoices, nextBilling after trial end", async () => {
       await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-        serialNumbers: [fxt.current.devices.DOG.serialNumber],
+        serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
         planProfileId: PLanProfile.ESSELUNGA,
       });
 
-      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
-      const device = setup.dog!.device!;
+      const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+      const gps = setup.dog!.devices.gps!;
 
       // 1. Dopo registration NON c'è sub
-      const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+      const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
       expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
 
       // 2. Piani disponibili: SOLO yearly
       const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-        productId: device.id,
-        countryCode: device.countryCode,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        countryCode: gps.countryCode,
+        serialNumber: gps.serialNumber,
       });
       const plans = plansRes.getSubscriptionPlans.plans ?? [];
       expect(plans.length).toBeGreaterThan(0);
@@ -1250,14 +1247,14 @@ describe("SUBS", () => {
         input: {
           utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
-          productId: device.id,
+          productId: gps.id,
           priceIds: [chosenPlan.id],
           card: fxt.current.card.valid,
         },
       });
 
       // 4. Aspetta che Chargebee crei la sub in_trial
-      const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+      const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
         isReady: (data) => {
           const sub = data.getSubscriptions.subscriptions?.[0];
           return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
@@ -1287,22 +1284,22 @@ describe("SUBS", () => {
 
     it("Trial_1_month - 30d trial, choose updatePlan (any plans), sub created, no invoices, nextBilling after trial end", async () => {
       await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-        serialNumbers: [fxt.current.devices.DOG.serialNumber],
+        serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
         planProfileId: PLanProfile.TRIAL_1_MONTH,
       });
 
-      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
-      const device = setup.dog!.device!;
+      const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+      const gps = setup.dog!.devices.gps!;
 
       // 1. Dopo registration NON c'è sub
-      const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+      const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
       expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
 
       // 2. Piani disponibili: almeno monthly + yearly
       const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-        productId: device.id,
-        countryCode: device.countryCode,
-        serialNumber: device.serialNumber,
+        productId: gps.id,
+        countryCode: gps.countryCode,
+        serialNumber: gps.serialNumber,
       });
       const plans = plansRes.getSubscriptionPlans.plans ?? [];
       expect(plans.length).toBeGreaterThan(0);
@@ -1320,14 +1317,14 @@ describe("SUBS", () => {
         input: {
           utilityType: UtilityTestTypeEnum.BuyNewSubscription,
           phone: setup.user!.phone,
-          productId: device.id,
+          productId: gps.id,
           priceIds: [chosenPlan.id],
           card: fxt.current.card.valid,
         },
       });
 
       // 4. Aspetta sub in_trial
-      const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id }), {
+      const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
         isReady: (data) => {
           const sub = data.getSubscriptions.subscriptions?.[0];
           return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
@@ -1363,24 +1360,24 @@ describe("SUBS", () => {
 
     afterEach(async () => {
       await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-        serialNumbers: [fxt.current.devices.DOG.serialNumber],
+        serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
         planProfileId: PLanProfile.DEFAULT,
       });
     });
 
     it("Axa", async () => {
-      const serialNumber = fxt.current.devices.DOG.serialNumber;
+      const serialNumber = fxt.current.gpsFixtures.DOG.serialNumber;
 
       await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
         serialNumbers: [serialNumber],
         planProfileId: PLanProfile.AXA_12_YEARS,
       });
 
-      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
-      const device = setup.dog!.device!;
-      expect(device.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
+      const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+      const gps = setup.dog!.devices.gps!;
+      expect(gps.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
 
-      const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+      const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
       const subscriptions = subsRes.getSubscriptions.subscriptions!;
       expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
 
@@ -1393,18 +1390,18 @@ describe("SUBS", () => {
     });
 
     it("Europass", async () => {
-      const serialNumber = fxt.current.devices.DOG.serialNumber;
+      const serialNumber = fxt.current.gpsFixtures.DOG.serialNumber;
 
       await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
         serialNumbers: [serialNumber],
         planProfileId: PLanProfile.EuropAss,
       });
 
-      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
-      const device = setup.dog!.device!;
-      expect(device.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
+      const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+      const gps = setup.dog!.devices.gps!;
+      expect(gps.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
 
-      const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: device.id });
+      const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
       const subscriptions = subsRes.getSubscriptions.subscriptions!;
       expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
 

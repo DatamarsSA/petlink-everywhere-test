@@ -45,9 +45,9 @@ describe("Geofence", () => {
     setup = await testHelper
       .setupBuilder()
       .withUser()
-      .withDog({ withDevice: true, withSubscription: true })
+      .withDog({ gps: { withSubscription: true } })
       .build();
-    await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
+    await petlink.sentinel.connectAndHandshake(setup.dog!.devices.gps!);
   });
 
   afterAll(() => {
@@ -91,7 +91,7 @@ describe("Geofence", () => {
         operationType: SettingOperationEnum.Activate,
         settingType: SettingTypeEnum.Geofence,
         id: geofenceId,
-        deviceId: setup.dog!.device!.id,
+        deviceId: setup.dog!.devices.gps!.id,
         geofence: createGeofencePayload.position, // REQUIRED: Backend does not fetch from DB, must pass explicitly
       },
     });
@@ -121,7 +121,7 @@ describe("Geofence", () => {
   it("Device send INSIDE geofence -> notify app GraphQL Sub", async () => {
     logger.info("📍 Emula device inside geofence");
 
-    const device = setup.dog!.device!;
+    const gps = setup.dog!.devices.gps!;
     const insidePayload = {
       latitude: GEOFENCE_COORDINATES.inside.lat,
       longitude: GEOFENCE_COORDINATES.inside.lng,
@@ -133,12 +133,12 @@ describe("Geofence", () => {
     // Start listening for geofence active event with onReady callback
     const geofenceActiveEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
-      { id: setup.dog!.device!.id },
+      { id: setup.dog!.devices.gps!.id },
       `Notification inGeofence=true not arrived to app after ${fxt.socket.timeoutMs}ms`,
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === true,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat INSIDE GEOFENCE...");
-        await petlink.sentinel.simulator.heartbeat(device, insidePayload);
+        await petlink.sentinel.simulator.heartbeat(gps, insidePayload);
       },
     );
 
@@ -151,7 +151,7 @@ describe("Geofence", () => {
   it("Device send EXITS geofence -> notify app GraphQL Sub + auto-activate Live Tracking", async () => {
     logger.info("📍 Emula device exits geofence (critical!)");
 
-    const device = setup.dog!.device!;
+    const gps = setup.dog!.devices.gps!;
     const outsidePayload = {
       latitude: GEOFENCE_COORDINATES.outside.lat,
       longitude: GEOFENCE_COORDINATES.outside.lng,
@@ -168,12 +168,12 @@ describe("Geofence", () => {
     // Start listening for geofence exit event with onReady callback
     const geofenceExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
-      { id: setup.dog!.device!.id },
+      { id: setup.dog!.devices.gps!.id },
       "Device should notify inGeofence=false when outside",
       (data) => data?.onGpsMessageStatus?.status?.inGeofence === false,
       async () => {
         logger.info("⚡ Subscription ready -> Sending heartbeat OUTSIDE GEOFENCE...");
-        await petlink.sentinel.simulator.heartbeat(device, outsidePayload);
+        await petlink.sentinel.simulator.heartbeat(gps, outsidePayload);
       },
     );
 
@@ -199,7 +199,7 @@ describe("Geofence", () => {
         operationType: SettingOperationEnum.Deactivate,
         settingType: SettingTypeEnum.Geofence,
         id: geofenceId,
-        deviceId: setup.dog!.device!.id,
+        deviceId: setup.dog!.devices.gps!.id,
       },
     });
 

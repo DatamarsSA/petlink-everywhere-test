@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { testHelper, TestSetup, EnrichedDevice } from "../../clients/client-test-helper.js";
+import { testHelper, TestSetup, DeviceSetupGps } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { logger } from "../../config/logger.js";
 import { FilterEnum, LanguageId, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
@@ -16,16 +16,16 @@ describe("CCT Tool", () => {
   describe("Customers", () => {
     let user: any;
     let pet: any;
-    let device: EnrichedDevice;
+    let gps: DeviceSetupGps;
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+      const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
       user = setup.user!;
       pet = setup.dog!;
-      device = setup.dog!.device!;
+      gps = setup.dog!.devices.gps!;
 
-      logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: device.id });
+      logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: gps.id });
     });
 
     it("should allow CCT Admin to find a Customer in the list", async () => {
@@ -77,12 +77,12 @@ describe("CCT Tool", () => {
       expect(devicesResponse.getDevices.items).toBeDefined();
       expect(devicesResponse.getDevices.items?.length).toBeGreaterThan(0);
 
-      const targetDevice = devicesResponse.getDevices.items?.find((d) => d?.deviceId === device.id);
+      const targetDevice = devicesResponse.getDevices.items?.find((d) => d?.deviceId === gps.id);
       expect(targetDevice).toBeDefined();
-      expect(targetDevice?.deviceId).toBe(device.id);
+      expect(targetDevice?.deviceId).toBe(gps.id);
       expect(targetDevice?.petId).toBe(pet.id);
       expect(targetDevice?.customerId).toBe(user.id);
-      expect(targetDevice?.serialId).toBe(device.serialNumber);
+      expect(targetDevice?.serialId).toBe(gps.serialNumber);
     });
 
     it("should allow CCT Admin to UPDATE Customer", async () => {
@@ -143,22 +143,22 @@ describe("CCT Tool", () => {
   describe("Devices", () => {
     let user: any;
     let pet: any;
-    let device: EnrichedDevice;
+    let gps: DeviceSetupGps;
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
 
       // 1. Setup: Create User + Pet + Device via Core
-      const setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
+      const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
       user = setup.user!;
       pet = setup.dog!;
-      device = setup.dog!.device!;
+      gps = setup.dog!.devices.gps!;
 
       logger.info("Setup Device complete", {
         userId: user.id,
         petId: pet.id,
-        deviceId: device.id,
-        serial: device.serialNumber,
+        deviceId: gps.id,
+        serial: gps.serialNumber,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -170,26 +170,26 @@ describe("CCT Tool", () => {
       const listResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
         filter: {
           filterType: FilterEnum.And,
-          serialId: device.serialNumber,
+          serialId: gps.serialNumber,
         },
         pagination: { pageNumber: 0, pageSize: 10 },
       });
 
       expect(listResponse.getDevices.code).toBe("200");
-      const deviceInList = listResponse.getDevices.items?.find((d) => d?.serialId === device.serialNumber);
+      const deviceInList = listResponse.getDevices.items?.find((d) => d?.serialId === gps.serialNumber);
       expect(deviceInList).toBeDefined();
-      expect(deviceInList?.deviceId).toBe(device.id);
+      expect(deviceInList?.deviceId).toBe(gps.id);
     });
 
     it("should allow CCT Admin to view Device details", async () => {
       // 4. Test Detail: GetDevice
       logger.info("Fetching Device Detail...");
       const deviceDetailResponse = await petlink.cct.graphqlHttp.authJwt.getDevice({
-        serialId: device.serialNumber,
+        serialId: gps.serialNumber,
       });
       expect(deviceDetailResponse.getDevice.code).toBe("200");
-      expect(deviceDetailResponse.getDevice.device?.deviceId).toBe(device.id);
-      expect(deviceDetailResponse.getDevice.device?.serialId).toBe(device.serialNumber);
+      expect(deviceDetailResponse.getDevice.device?.deviceId).toBe(gps.id);
+      expect(deviceDetailResponse.getDevice.device?.serialId).toBe(gps.serialNumber);
       expect(deviceDetailResponse.getDevice.device?.customerId).toBe(user.id);
       expect(deviceDetailResponse.getDevice.device?.petId).toBe(pet.id);
     });
@@ -215,7 +215,7 @@ describe("CCT Tool", () => {
 
     it("should allow CCT Admin to view Device Subscriptions", async () => {
       const subResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-        deviceId: device.id,
+        deviceId: gps.id,
       });
       expect(subResponse.getSubscriptions.code).toBe("200");
       expect(subResponse.getSubscriptions.items).toBeDefined();
@@ -227,8 +227,8 @@ describe("CCT Tool", () => {
 
     beforeAll(async () => {
       await testHelper.cleanupAll();
-      setup = await testHelper.setupBuilder().withUser().withDog({ withDevice: true }).build();
-      await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
+      setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+      await petlink.sentinel.connectAndHandshake(setup.dog!.devices.gps!);
     });
 
     afterAll(async () => {
@@ -236,13 +236,13 @@ describe("CCT Tool", () => {
     });
 
     it("should show updated device connection timestamp in CCT list AFTER heartbeat is sent", async () => {
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       const user = setup.user!;
 
       // --- FASE 1: STATO INIZIALE ---
       // Recuperiamo la data di connessione attuale (se esiste) per confrontarla dopo
       const preResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
-        filter: { filterType: FilterEnum.And, serialId: device.serialNumber },
+        filter: { filterType: FilterEnum.And, serialId: gps.serialNumber },
       });
       const preDevice = preResponse.getDevices.items?.[0];
       const oldLastConnectionDate = preDevice?.lastConnectionDate ? new Date(preDevice.lastConnectionDate).getTime() : 0;
@@ -251,7 +251,7 @@ describe("CCT Tool", () => {
       const testLat = 45.04862;
       const testLng = 7.641921;
 
-      await petlink.sentinel.simulator.heartbeat(device, {
+      await petlink.sentinel.simulator.heartbeat(gps, {
         latitude: testLat,
         longitude: testLng,
         battery: 5800, // 5.8V (che il CCT trasforma in %)
@@ -271,7 +271,7 @@ describe("CCT Tool", () => {
         },
       });
 
-      const latest = postResponse.getDevices.items?.find((i) => i?.serialId === device.serialNumber);
+      const latest = postResponse.getDevices.items?.find((i) => i?.serialId === gps.serialNumber);
 
       expect(latest, "Device should appear on CCT list of devices.").toBeDefined();
 
@@ -281,8 +281,8 @@ describe("CCT Tool", () => {
       expect(Date.now() - lastConnDate).toBeLessThan(45000);
 
       // 2. Assert sui Dati Tecnici
-      expect(latest?.imei).toBe(device.imei);
-      expect(latest?.iccid).toBe(device.iccid);
+      expect(latest?.imei).toBe(gps.imei);
+      expect(latest?.iccid).toBe(gps.iccid);
       expect(latest?.lat).toBeCloseTo(testLat);
       expect(latest?.lng).toBeCloseTo(testLng);
 
@@ -293,9 +293,9 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to retrieve Connections History", async () => {
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       const response = await petlink.cct.graphqlHttp.authJwt.getConnectionsHistory({
-        serialId: device.serialNumber,
+        serialId: gps.serialNumber,
         filter: { filterType: FilterEnum.And },
         pagination: { pageNumber: 0, pageSize: 10 },
       });
@@ -307,11 +307,11 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to retrieve Last Connections via specific query", async () => {
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       const response = await petlink.cct.graphqlHttp.authJwt.getLastConnections({
         filter: {
           filterType: FilterEnum.And,
-          serialId: device.serialNumber,
+          serialId: gps.serialNumber,
         },
         pagination: { pageNumber: 0, pageSize: 10 },
       });
@@ -319,7 +319,7 @@ describe("CCT Tool", () => {
       expect(response.getLastConnections.code).toBe("200");
       expect(response.getLastConnections.items).toBeDefined();
       expect(response.getLastConnections.items.length).toBeGreaterThan(0);
-      expect(response.getLastConnections.items[0].serialId).toBe(device.serialNumber);
+      expect(response.getLastConnections.items[0].serialId).toBe(gps.serialNumber);
     });
   });
 

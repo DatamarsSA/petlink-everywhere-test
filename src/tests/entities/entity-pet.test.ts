@@ -253,9 +253,9 @@ describe("Pet", () => {
 
       // STEP 2: Associate a device to the PET (brand-agnostic: works for both PETLINK and KIPPY)
       const devicePayload = {
-        serialNumber: fxt.current.devices.DOG.serialNumber,
-        countryCode: fxt.current.devices.DOG.countryCode,
-        timezone: fxt.current.devices.DOG.timezone,
+        serialNumber: fxt.current.gpsFixtures.DOG.serialNumber,
+        countryCode: fxt.current.gpsFixtures.DOG.countryCode,
+        timezone: fxt.current.gpsFixtures.DOG.timezone,
         petId: petId,
       };
 

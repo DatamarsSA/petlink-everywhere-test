@@ -18,9 +18,9 @@ describe("Torch & Sound Commands", () => {
     setup = await testHelper
       .setupBuilder()
       .withUser()
-      .withDog({ withDevice: true, withSubscription: true })
+      .withDog({ gps: { withSubscription: true } })
       .build();
-    await petlink.sentinel.connectAndHandshake(setup.dog!.device!);
+    await petlink.sentinel.connectAndHandshake(setup.dog!.devices.gps!);
   });
 
   afterAll(() => {
@@ -32,7 +32,7 @@ describe("Torch & Sound Commands", () => {
     it("User ACTIVATE Torch (sendCommand duration=60) -> packet 0x10 should arrive to device AND app receives Torch Status ON", async () => {
       logger.info("🔦 User activates Torch");
 
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       let torchDurationSentByApp = 60;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
 
@@ -46,7 +46,7 @@ describe("Torch & Sound Commands", () => {
       // 2. Start listening from App
       const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
         OnGpsMessageStatusDocument,
-        { id: device.id },
+        { id: gps.id },
         "Should receive status update with flashlight=ON",
         (data) => data?.onGpsMessageStatus?.status?.flashlight === StatusState.On,
         async () => {
@@ -55,7 +55,7 @@ describe("Torch & Sound Commands", () => {
           const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
             command: {
               commandType: CommandEnum.Flashlight,
-              id: device.id,
+              id: gps.id,
               duration: torchDurationSentByApp,
               modeType: ModeType.Sentinel,
             },
@@ -71,10 +71,10 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Device received torch command");
 
       // 4. Device sends Packet 0x10 response to confirm state
-      await petlink.sentinel.simulator.torch(device, torchDurationReceivedByDevice);
+      await petlink.sentinel.simulator.torch(gps, torchDurationReceivedByDevice);
 
       // 5. Device sends heartbeat with status update
-      await petlink.sentinel.simulator.heartbeat(device, {
+      await petlink.sentinel.simulator.heartbeat(gps, {
         spare_c4: 80,
       });
 
@@ -88,7 +88,7 @@ describe("Torch & Sound Commands", () => {
     it("User DEACTIVATE Torch (sendCommand duration=0) -> packet 0x10 should arrive to device", async () => {
       logger.info("🔦 User deactivates Torch");
 
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       let torchDurationSentByApp = 0;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
 
@@ -100,7 +100,7 @@ describe("Torch & Sound Commands", () => {
       const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
         command: {
           commandType: CommandEnum.Flashlight,
-          id: device.id,
+          id: gps.id,
           duration: torchDurationSentByApp,
           modeType: ModeType.Sentinel,
         },
@@ -118,7 +118,7 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Torch deactivated");
 
       // Device sends Packet 0x10 response to confirm deactivation
-      await petlink.sentinel.simulator.torch(device, torchDurationReceivedByDevice);
+      await petlink.sentinel.simulator.torch(gps, torchDurationReceivedByDevice);
     });
   });
 
@@ -126,7 +126,7 @@ describe("Torch & Sound Commands", () => {
     it("User ACTIVATE Sound (sendCommand duration=30) -> packet 0x10 should arrive to device AND app receives Sound Status ON", async () => {
       logger.info("🔊 User activates Sound");
 
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       let soundDurationSentByApp = 30;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 
@@ -140,7 +140,7 @@ describe("Torch & Sound Commands", () => {
       // 2. Start listening from App WITH onReady callback
       const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
         OnGpsMessageStatusDocument,
-        { id: device.id },
+        { id: gps.id },
         "Should receive status update with sound=ON",
         (data) => data?.onGpsMessageStatus?.status?.sound === StatusState.On,
         async () => {
@@ -149,7 +149,7 @@ describe("Torch & Sound Commands", () => {
           const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
             command: {
               commandType: CommandEnum.Sound,
-              id: device.id,
+              id: gps.id,
               duration: soundDurationSentByApp,
               modeType: ModeType.Sentinel,
             },
@@ -166,10 +166,10 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Device received sound command");
 
       // 4. Device sends Packet 0x10 response to confirm state
-      await petlink.sentinel.simulator.sound(device, soundDurationReceivedByDevice);
+      await petlink.sentinel.simulator.sound(gps, soundDurationReceivedByDevice);
 
       // 5. Device sends heartbeat with status update
-      await petlink.sentinel.simulator.heartbeat(device, {
+      await petlink.sentinel.simulator.heartbeat(gps, {
         spare_c4: 75,
       });
 
@@ -183,7 +183,7 @@ describe("Torch & Sound Commands", () => {
     it("User MUTE Sound (sendCommand duration=0) -> packet 0x10 should arrive to device with sound_command=0", async () => {
       logger.info("🔊 User mutes Sound");
 
-      const device = setup.dog!.device!;
+      const gps = setup.dog!.devices.gps!;
       let soundDurationSentByApp = 0;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 
@@ -195,7 +195,7 @@ describe("Torch & Sound Commands", () => {
       const muteResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
         command: {
           commandType: CommandEnum.Sound,
-          id: device.id,
+          id: gps.id,
           duration: soundDurationSentByApp,
           modeType: ModeType.Sentinel,
         },
@@ -214,7 +214,7 @@ describe("Torch & Sound Commands", () => {
       logger.info("✓ Sound muted");
 
       // Device sends Packet 0x10 response to confirm mute
-      await petlink.sentinel.simulator.sound(device, soundDurationReceivedByDevice);
+      await petlink.sentinel.simulator.sound(gps, soundDurationReceivedByDevice);
     });
   });
 });
