@@ -23,6 +23,11 @@ Validates the critical cross-service flows that power the application: from user
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+- **Node.js**: version `24` (use `nvm use` if you have nvm installed).
+- **Package manager**: `yarn`.
+
 ### 1. Install dependencies
 
 ```bash
@@ -70,15 +75,16 @@ APP_BRAND=KIPPY  # or PETLINK
 ### 4. Run tests
 
 ```bash
-# Run all tests on develop environment
+# Run all tests on develop environment (uses Vitest)
 yarn test
 
 # Specific environment
 TEST_ENV=develop yarn test
 TEST_ENV=test yarn test
 
-# Full pipeline (fetch schemas + generate SDK + test) - all of them from/versus choosen environment (default=develop)
+# Full pipeline (fetch schemas + generate SDK + test) - all of them from/versus chosen environment (default=develop)
 yarn pipeline:develop
+yarn pipeline:test
 ```
 
 ---
@@ -95,9 +101,9 @@ describe("User Registration", () => {
 
   beforeAll(async () => {
     setup = await testHelper.setupBuilder()
-      .withUser()
-      .withDog({ withDevice: true, withSubscription: true })
-      .build();
+      .withUser({ name: "Mario" })
+      .withDog({ gps: { withSubscription: true } })
+      .build({ waitForSubscriptions: true });
   });
 
   it("should create user successfully", async () => {
@@ -107,6 +113,13 @@ describe("User Registration", () => {
   });
 });
 ```
+
+**Builder options**:
+- `.withUser({ name?, surname?, email?, phone?, ... })` — optional overrides for the default user fixture.
+- `.withDog({ gps?: { model?, withSubscription? } })` — creates a dog; `withSubscription: true` auto-purchases the first available plan.
+- `.withCat({ ... })` — creates a cat.
+- `.withDogForEvo({ ... })` — creates a dog with an EVO device (KIPPY only).
+- `.build({ waitForSubscriptions?: boolean })` — waits for subscriptions to reach `Active` state before returning.
 
 **Key principles**:
 - Use `testHelper.setupBuilder()` for entity creation
@@ -118,23 +131,7 @@ describe("User Registration", () => {
 
 ## 📚 Documentation
 
-Comprehensive documentation for the entire Petlink/Kippy system:
-
-### Core Concepts
-- **[🏗️ Architecture & AI Rules](AGENTS.md)** - System architecture, data flows, backend navigation, test rules
-
-### User Flows
-- **[👤 User Registration](docs/registration/registration-user.md)** - Sign-up with phone/email OTP verification
-- **[🐕 Pet Registration](docs/registration/registration-pet.md)** - Pet profile creation
-- **[📡 Device Registration](docs/registration/registration-petlinkGPS.md)** - Device setup and assignment
-- **[🔐 Credentials Management](docs/registration/user-credentials-management.md)** - Password reset, contact changes
-
-### Tracking Modes
-- **[📍 Live Tracking](docs/modes/mode-live-tracking.md)** - Real-time 5-second updates via WebSocket
-- **[🚧 Geofence](docs/modes/mode-geofence.md)** - Zone-based alerts (safe zones, danger zones)
-- **[🔋 Energy Saving](docs/modes/mode-energy-saving-zone.md)** - Battery optimization in known zones
-
-**👉 Start here**: Read [AGENTS.md](AGENTS.md) to understand the system architecture and test rules.
+System architecture, data flows and test rules: **[AGENTS.md](AGENTS.md)**.
 
 ---
 
@@ -160,6 +157,25 @@ Tests should call `cleanupAll()` explicitly in their `beforeAll` blocks (not `af
 - Ensure fresh state before each test file
 - Allow manual DB inspection after failures
 - Clean: MongoDB users/pets/devices, Gmail inbox, Twilio SMS, Sentinel DB
+
+---
+
+## 🔄 CI/CD Pipeline
+
+When tests run in the pipeline (GitHub Actions) the flow is:
+
+1. **Build** — A Docker image is built from the `Dockerfile` (`node:24-alpine`).
+2. **Environment selection** — The target environment is derived from the branch (`develop` or `test`).
+3. **Secrets injection** — All external credentials (API keys, Cognito, AWS, Twilio, Gmail, Sentinel) are passed as environment variables from GitHub Secrets into the container.
+4. **Matrix execution** — The test suite runs **twice** in parallel (max-parallel=1, one after the other):
+   - `APP_BRAND=PETLINK`
+   - `APP_BRAND=KIPPY`
+5. **Reports** — HTML and JUnit reports are extracted from the container and uploaded as artifacts.
+6. **Notifications** — On the `test` branch, a Discord notification is sent with the final result.
+
+The pipeline can be triggered in two ways:
+- **Internal** — Push on `develop` in this repo.
+- **External** — `workflow_dispatch` from upstream repos (Core, Sentinel, subscriptions-manager, etc.) to validate changes against the integration suite.
 
 ---
 
@@ -195,6 +211,6 @@ petlink-everywhere-test/
 │   ├── fixtures/          # Test data (brand-specific)
 │   ├── helpers/           # Utilities (performance tracking, waitFor)
 │   └── config/            # Setup/teardown, logger
-├── docs/                  # Architecture and flow documentation
-├── test-reports/          # Generated after test runs
+├── docs/                  # Additional flow documentation (not maintained in README)
+├── test-reports/          # Generated after test runs (HTML + JUnit)
 ```
