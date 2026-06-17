@@ -6,8 +6,8 @@ import { petlink } from "../../clients/petlink-infrastructure/client-petlink-inf
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
 import { logger } from "../../config/logger.js";
-import { mailTmClient } from "../../clients/mailtm/client-mailtm.js";
 import { extractParamsFromUrl, waitFor } from "../../helpers/utils.js";
+import { gmailClient } from "../../clients/gmail/client-gmail.js";
 
 describe("User", () => {
   describe("Registration", () => {
@@ -33,7 +33,11 @@ describe("User", () => {
     let userId: string;
 
     beforeAll(async () => {
-      await testHelper.cleanupAll();
+      await Promise.all([
+        testHelper.cleanupAll(),
+        gmailClient.deleteAllEmails(),
+        twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone),
+      ]);
     });
 
     it("Verify Phone & Email availability", async () => {
@@ -120,7 +124,7 @@ describe("User", () => {
     });
 
     it("Wait to receive CONFIRMATION EMAIL", async () => {
-      const linkUrlToOpen = await waitFor(() => mailTmClient.getVerificationLink(), {
+      const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
         timeoutError: "Verification email not received",
       });
 
@@ -242,7 +246,11 @@ describe("User", () => {
       const originalPassword = fxt.current.user.password;
 
       beforeAll(async () => {
-        await testHelper.cleanupAll();
+        await Promise.all([
+          testHelper.cleanupAll(),
+          twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone),
+          gmailClient.deleteAllEmails(),
+        ]);
       });
 
       beforeEach(async () => {
@@ -390,7 +398,7 @@ describe("User", () => {
         await expect(petlink.core.loginWithEmail(initialEmail, originalPassword)).rejects.toThrow();
 
         // verify new email
-        const linkUrlToOpen = await waitFor(() => mailTmClient.getVerificationLink(), {
+        const linkUrlToOpen = await waitFor(() => gmailClient.getVerificationLink(), {
           timeoutError: "Verification email not received",
         });
         const params = extractParamsFromUrl(linkUrlToOpen!);
@@ -496,7 +504,11 @@ describe("User", () => {
 
     describe("RECOVERY credentials (forgot -> public)", () => {
       beforeEach(async () => {
-        await testHelper.cleanupAll();
+
+        await Promise.all([
+          testHelper.cleanupAll(),
+          twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone)]
+        );
       });
 
       it("Reset PASSWORD (User forgot password) → OTP flow", async () => {

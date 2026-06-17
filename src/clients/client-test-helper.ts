@@ -14,8 +14,6 @@ import {
 
 import { UtilityTestTypeEnum as CctUtilityTestTypeEnum } from "./petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { petlink } from "./petlink-infrastructure/client-petlink-infrastructure.js";
-import { mailTmClient } from "./mailtm/client-mailtm.js";
-import { twilioClient } from "./twilio/client-twillio.js";
 import { fxt } from "../fixtures/fixtures.js";
 import { logger } from "../config/logger.js";
 import { waitFor } from "../helpers/utils.js";
@@ -259,17 +257,7 @@ class TestHelper {
           errors.push({ operation: "CLEAN_UP_USER_CORE", error });
         }),
 
-      // 2. Mail.tm cleanup
-      mailTmClient.deleteAllMessages().catch((error) => {
-        errors.push({ operation: "MailTm-deleteAllMessages()", error });
-      }),
-
-      // 3. Twilio cleanup
-      twilioClient.deleteAllMessagesSentoToNumber(fxt.current.user.phone).catch((error) => {
-        errors.push({ operation: "Twilio-deleteAllMessages()", error });
-      }),
-
-      // 4. CCT cleanup
+      // 2. CCT cleanup
       petlink.cct.graphqlHttp.authIam
         .utilityIntegrationTest({
           input: {
@@ -286,7 +274,7 @@ class TestHelper {
           errors.push({ operation: "CLEAN_UP_USER_CCT", error });
         }),
 
-      // 5. Remove coupons from devices on Inventory
+      // 3. Remove coupons from devices on Inventory
       petlink.core.graphqlHttp.authIam
         .utilityIntegrationTest({
           input: {

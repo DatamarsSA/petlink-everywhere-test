@@ -127,9 +127,11 @@ jobs:
       TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
       TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
       TWILIO_USER_PHONE_NUMBER: ${{ secrets.TWILIO_USER_PHONE_NUMBER }}
-      # Mail.tm
-      MAIL_TM_EMAIL: ${{ secrets.MAIL_TM_EMAIL }}
-      MAIL_TM_PASSWORD: ${{ secrets.MAIL_TM_PASSWORD }}
+      # Gmail
+      GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+      GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+      GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      GMAIL_USER_EMAIL: ${{ secrets.GMAIL_USER_EMAIL }}
       # App Brand
       APP_BRAND: ${{ matrix.app_brand }}
       # Sentinel socket tcp
@@ -189,8 +191,10 @@ jobs:
             -e TWILIO_ACCOUNT_SID \
             -e TWILIO_AUTH_TOKEN \
             -e TWILIO_USER_PHONE_NUMBER \
-            -e MAIL_TM_EMAIL \
-            -e MAIL_TM_PASSWORD \
+            -e GMAIL_CLIENT_ID \
+            -e GMAIL_CLIENT_SECRET \
+            -e GMAIL_REFRESH_TOKEN \
+            -e GMAIL_USER_EMAIL \
             -e APP_BRAND \
             -e SENTINEL_HOST \
             -e SENTINEL_PORT \

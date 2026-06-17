@@ -25,7 +25,7 @@ const commonUser = {
   name: process.env.USER_APP_NAME,
   surname: process.env.USER_APP_SURNAME,
   password: process.env.USER_APP_PASSWORD,
-  email: process.env.MAIL_TM_EMAIL,
+  email: process.env.GMAIL_USER_EMAIL,
   phone: process.env.TWILIO_USER_PHONE_NUMBER,
 };
 
@@ -195,7 +195,7 @@ export const fxt = {
   current: baseFixtures[currentAppBrand],
   polling: {
     timeoutMs: 120000,
-    intervalMs: 3000,
+    intervalMs: 4000,
   },
   socket: {
     timeoutMs: 120000,

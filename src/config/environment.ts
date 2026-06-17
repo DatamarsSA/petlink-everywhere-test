@@ -34,10 +34,11 @@ export const environmentSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().min(1, "TWILIO_ACCOUNT_SID è richiesto"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "TWILIO_AUTH_TOKEN è richiesto"),
   TWILIO_USER_PHONE_NUMBER: z.string().min(1, "TWILIO_USER_PHONE_NUMBER è richiesto"),
-  // Mail.tm
-  MAIL_TM_EMAIL: z.string().min(1, "MAIL_TM_EMAIL è richiesto"),
-  MAIL_TM_PASSWORD: z.string().min(1, "MAIL_TM_PASSWORD è richiesto"),
-
+  // Gmail
+  GMAIL_CLIENT_ID: z.string().min(1, "GMAIL_CLIENT_ID è richiesto"),
+  GMAIL_CLIENT_SECRET: z.string().min(1, "GMAIL_CLIENT_SECRET è richiesto"),
+  GMAIL_REFRESH_TOKEN: z.string().min(1, "GMAIL_REFRESH_TOKEN è richiesto"),
+  GMAIL_USER_EMAIL: z.string().min(1, "GMAIL_USER_EMAIL è richiesto"),
   // App Brand
   APP_BRAND: z.enum(["PETLINK", "KIPPY"]).optional().default("KIPPY"),
   // log level console
