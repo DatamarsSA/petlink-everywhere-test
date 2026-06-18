@@ -1223,7 +1223,7 @@ describe("PREPAID (purchase on external store)", () => {
     setup = await testHelper.setupBuilder().withUser().build();
   });
 
-  type CreatedOrder = { orderId: string; orderItemId: string; kippyOrderId: number; kippyItemId: number; prepaidSerial: string };
+  type CreatedOrder = { orderId: string; orderItemId: string; kippyOrderId: number; kippyItemId: number; prepaidSerial: string; country: string };
 
   async function createPrepaidOrder(user: User, orderData: typeof fxt.current.prepaidOrder): Promise<CreatedOrder> {
     const externalOrderId = Date.now();
@@ -1259,6 +1259,7 @@ describe("PREPAID (purchase on external store)", () => {
       kippyOrderId: createRes.kippy_order_id,
       kippyItemId: createRes.line_items[0].kippy_item_id, // numeric kippyId: used only by order-tracking
       prepaidSerial: orderCreated.devices[0].serialNumber,
+      country: orderCreated.country,
     };
   }
 
@@ -1306,8 +1307,11 @@ describe("PREPAID (purchase on external store)", () => {
     return sub!;
   }
 
-  async function resolvePriceIds(realSerial: string): Promise<string[]> {
-    const plans = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({ serialNumber: realSerial });
+  async function resolvePriceIds(country: string, serialNumber: string): Promise<string[]> {
+    const plans = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+      countryCode: country,
+      serialNumber: serialNumber,
+    });
     return [plans.getSubscriptionPlans.plans![0].pricings[0]!.id];
   }
 
@@ -1336,7 +1340,7 @@ describe("PREPAID (purchase on external store)", () => {
     expect(orderTracked.devices[0].activated).toBe(false);
 
     // STEP 3: buy. The BE reads the order item serial, already REAL after tracking
-    const priceIds = await resolvePriceIds(gps.serialNumber);
+    const priceIds = await resolvePriceIds(orderTracked.country, gps.serialNumber);
     await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
 
     // capture the chargebeeSubscriptionId created by the webhook for robust polling
@@ -1368,7 +1372,7 @@ describe("PREPAID (purchase on external store)", () => {
     const order = await createPrepaidOrder(buyer, fxt.current.prepaidOrder);
 
     // STEP 2: buy BEFORE tracking → the BE reads the order item serial, still the PREPAID placeholder
-    const priceIds = await resolvePriceIds(order.prepaidSerial);
+    const priceIds = await resolvePriceIds(order.country, order.prepaidSerial);
     await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
 
     // The subscription_created webhook persists an orphan prepaid sub (productId null) with the PREPAID serial
