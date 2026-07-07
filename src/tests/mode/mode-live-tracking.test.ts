@@ -137,7 +137,6 @@ describe("Live Tracking", () => {
         const packetPromise = petlink.sentinel.waitForPacket(
           PacketType.PACKET_0x01,
           (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-          500, // timeout di 500ms per il singolo ascolto
         );
 
         // Manda l'heartbeat per questa iterazione

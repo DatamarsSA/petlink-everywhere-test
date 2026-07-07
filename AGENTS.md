@@ -62,13 +62,14 @@ Backend / device:
 - **`petlink-everywhere-cct-core`** — Backend for Customer Care Tool. Reads Petlink DB, owns CCT DB.
 - **`subscriptions-manager`** — Chargebee webhooks, payments, subscription states.
 - **`petlink-everywhere-sentinel`** — Rust TCP server on EKS for GPS device connections.
+- **`petlink-data-migration`** — Data migration service. Migrates users, pets, devices, subscriptions, and historical data from legacy MySQL (Kippy EU / Petlink US) to Petlink Everywhere MongoDB. See `docs/migration/migration.md`.
 
 Clients:
 - **`petlink-everywhere-mobile`** — Flutter app (Petlink US / Kippy EU).
 - **`petlink-everywhere-web`** — React frontend for end users.
 - **`petlink-everywhere-cct`** — React frontend for support agents.
 
-Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `petlink-everywhere-bluetooth`, `petlink-everywhere-device-simulator`, `petlink-everywhere-databases`.
+Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `petlink-everywhere-bluetooth`, `petlink-everywhere-device-simulator`, `petlink-everywhere-databases`, `petlink-data-migration`.
 
 ---
 
@@ -140,6 +141,30 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 - **State + API**: `src/store/store.ts`; `src/store/api/` is split **per domain** (`customers/`, `devices/`, `pets/`, `subscriptions/`, `coupons/`, `logs/`, `orders/`, `shelters/`, `users/`, `petProtections/`, `planProfiles/`, `migrations/`, `preregFreePeriod/`, `profile/`).
 - **Routing**: `src/routing/appRouter.tsx` + `appPaths.ts` + `appRoutesId.ts` + `useAppMenuList.ts`.
 - Talks to **`cct-core`** GraphQL — never directly to Core.
+
+### 3.8 `petlink-data-migration` (Node/TS, Lambdas)
+- **Purpose**: Migrates users, pets, GPS devices, subscriptions, and historical data from legacy MySQL (Kippy EU / Petlink US) to Petlink Everywhere MongoDB.
+- **Layout**: `src/lambda_functions/{name}/handler.ts`; shared utils in `src/lib/`.
+- **Entrypoint**: `migrationOnDemand/handler.ts` — the orchestrator. Invoked directly (ON_DEMAND) or via SQS from `bulkMigrationConsumer`.
+- **Bulk path**: `bulkMigration/handler.ts` queries MySQL for non-migrated users → enqueues SQS → `bulkMigrationConsumer/handler.ts` invokes `migrationOnDemand` per user.
+- **Sub-migrations** (invoked synchronously via Lambda Invoke from `migrationOnDemand`):
+  - `petsAndProductsMigration` — pets + GPS devices + inventory update + Sentinel device registration
+  - `energySavingAreaMigration` — ESA zones + Sentinel settings push
+  - `geofenceMigration` — geofences
+  - `subscriptionMigration` — Chargebee subscriptions, invoices, credit notes, pet protections, included subscriptions
+- **Async SQS consumers** (fire-and-forget after main migration completes, triggered by `sendMessagesToMigrationQueues`):
+  - `positionHistoryMigration` — GPS position history from MySQL
+  - `activitiesMigration` — pet activity data
+  - `petNotificationMigration` — pet notification history
+  - `kippyRejectSubsMigration` — device resets & replacements
+- **Standalone migrations**:
+  - `inventoryMigration` — migrates device inventory to `petlinkGpsInventory` collection
+  - `orderMigration/bulk` — one-time bulk pre-order migration
+  - `orderMigration/scheduled` — cron-based incremental pre-order migration (6-min window)
+  - `userCleanup` — rolls back a migrated user (deletes from MongoDB + Cognito, resets `migrated=0` in MySQL)
+- **Legacy (ignore)**: `data-migration-queue-receiver/` and `data-migration-queue-sender/` are deprecated.
+- **Gotcha**: Each sub-migration collects stats in `migrationHistory` MongoDB collection (sessionId + migrationTarget). Rollback deletes all inserted docs on any sub-migration failure.
+- **Deep-dive**: `docs/migration/migration.md`
 
 ---
 
@@ -269,6 +294,69 @@ sequenceDiagram
     Note over CCTCore: Mutations proxy to Core/SubsMgr —<br/>queries read Core MongoDB directly
 ```
 
+### 4.6 Legacy Data Migration (petlink-data-migration)
+```mermaid
+sequenceDiagram
+    participant Trigger as Trigger<br/>(ON_DEMAND or BULK)
+    participant BulkMigration as bulkMigration
+    participant SQS as SQS<br/>bulkMigration
+    participant Consumer as bulkMigrationConsumer
+    participant OnDemand as migrationOnDemand<br/>(orchestrator)
+    participant MySQL as Legacy MySQL<br/>(US / EU)
+    participant MongoDB as Petlink MongoDB
+    participant Cognito as AWS Cognito
+    participant SubLambda as Sub-migration Lambdas
+    participant Sentinel as Sentinel
+    participant Chargebee as Chargebee
+    participant AsyncSQS as SQS<br/>(async history queues)
+    participant AsyncConsumers as Async SQS Consumers
+
+    alt ON_DEMAND
+        Trigger->>OnDemand: Invoke {contact, password, appBrand}
+    else BULK
+        Trigger->>BulkMigration: Start
+        BulkMigration->>MySQL: Query non-migrated users
+        MySQL-->>BulkMigration: User list
+        BulkMigration->>SQS: Enqueue per-user messages
+        SQS->>Consumer: Trigger
+        Consumer->>OnDemand: Invoke {contact, appBrand, source:BULK}
+    end
+
+    OnDemand->>MongoDB: Check if user already migrated
+    alt User exists
+        OnDemand-->>Trigger: 200 (already exists)
+    else User not found
+        OnDemand->>MySQL: Look up legacy user
+        MySQL-->>OnDemand: User data
+        OnDemand->>MongoDB: Insert new USER entity
+        OnDemand->>SubLambda: 1. petsAndProductsMigration
+        SubLambda->>MySQL: Fetch pets + products
+        SubLambda->>MongoDB: Insert PET + PETLINK_GPS
+        SubLambda->>Sentinel: Register device (newGpsDevices)
+        SubLambda-->>OnDemand: idsSaved
+        OnDemand->>SubLambda: 2. energySavingAreaMigration
+        SubLambda->>MongoDB: Insert ESA zones
+        SubLambda->>Sentinel: Push ESA settings
+        SubLambda-->>OnDemand: idsSaved
+        OnDemand->>SubLambda: 3. geofenceMigration
+        SubLambda->>MongoDB: Insert geofences
+        SubLambda-->>OnDemand: idsSaved
+        OnDemand->>SubLambda: 4. subscriptionMigration
+        SubLambda->>Chargebee: Fetch subs, invoices, credit notes
+        SubLambda->>MongoDB: Insert SUBSCRIPTION + INVOICE + CREDIT_NOTE
+        SubLambda-->>OnDemand: idsSaved
+        OnDemand->>Cognito: Create user account
+        OnDemand->>MySQL: SET migrated = 1
+        OnDemand->>AsyncSQS: Enqueue position history, activities, notifications, resets
+        OnDemand->>MongoDB: Create welcome posts
+        OnDemand-->>Trigger: 200 (success)
+        Note over AsyncSQS,AsyncConsumers: Fire-and-forget async migrations
+        AsyncSQS->>AsyncConsumers: Trigger
+        AsyncConsumers->>MySQL: Fetch historical data
+        AsyncConsumers->>MongoDB: Insert history records
+    end
+```
+
 ---
 
 ## 5. Subscriptions Domain
@@ -317,6 +405,7 @@ Read on demand when fine-grained business logic matters:
 - **Subscriptions deep-dive**: `docs/subscriptions/`
 - **Device modes & commands**: `docs/modes/`, `docs/commands/`
 - **End of life**: `docs/end-of-life/`
+- **Data migration**: `docs/migration/migration.md`
 - **API references**: `docs/api_core.md`, `docs/api_cct.md`
 
 ---
