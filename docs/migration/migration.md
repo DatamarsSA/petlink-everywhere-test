@@ -1,10 +1,49 @@
 # Data Migration — Flow & Architecture
 
-> Source of truth: code in `all-repo/petlink-data-migration/src/` and `all-repo/petlink-everywhere-core/src/`.
+> Source of truth: code in `all-repo/petlink-data-migration/src/` and `all-repo/petlink-everywhere-core/src/` (branch `develop`).
 
 Migrates users, pets, GPS devices, subscriptions, and historical data from legacy MySQL (Kippy EU / Petlink US) to Petlink Everywhere MongoDB.
 
+> **Note**: This document reflects the code on `develop` at July 2026. Some fixes (phone normalization in MongoDB queries) are described in `bugs/bug-migration-phone-number.md` as planned but **not yet applied** on disk.
+
 ---
+
+```shell
+1. APP → checkMigration (Core API)
+   "Esiste già questo utente in MongoDB (nuovo DB)?"
+   
+   ├── Sì → login normale, fine
+   └── No → "Esiste in MySQL (vecchio DB) e non è ancora migrato?"
+       ├── No → "user not found", fine
+       └── Sì → "user_can_be_migrated" → l'app mostra il form di login
+                 (l'utente inserisce la vecchia password)
+
+2. APP → startMigration (Core API)
+   "Avvia la migrazione per questo utente"
+   └── Chiama migrationOnDemand (Lambda nel repo data-migration)
+
+3. migrationOnDemand (Lambda orchestratore)
+   ├── 3a. Cerca utente in MongoDB → non deve esistere (già verificato)
+   ├── 3b. Cerca utente in MySQL → deve esistere con migrated=0
+   ├── 3c. SET migrated=1 in MySQL (lock — "sto migrando")
+   ├── 3d. createUser() → converte utente MySQL → entità MongoDB
+   ├── 3e. INSERT utente in MongoDB
+   │
+   ├── 3f. Chiama petsAndProductsMigration (Lambda separata)
+   │   ├── Cerca pets + products in MySQL
+   │   ├── CHECK: i seriali dei prodotti sono già in MongoDB?  ← punto critico
+   │   │   ├── Sì → 500 "products already present" ← QUI SI BLOCCA
+   │   │   └── No → inserisce pets + products in MongoDB
+   │   └── Return 200 o 500
+   │
+   ├── 3g. Se 3f fallisce → ROLLBACK:
+   │   ├── DELETE utente da MongoDB
+   │   ├── SET migrated=0 in MySQL
+   │   └── Invia email di errore al supporto
+   │
+   ├── 3h. Se 3f OK → continua con ESA, geofence, subscriptions, Cognito...
+   └── 3i. Se tutto OK → migrazione completata
+```
 
 ## Login/Migration Flow (App → Backend)
 
@@ -30,23 +69,25 @@ Migrates users, pets, GPS devices, subscriptions, and historical data from legac
 
 ### Fallback Flow: Cognito User Migration Trigger
 
-Se l'app salta `checkMigration` e chiama direttamente Cognito (o se Cognito non trova l'utente), viene attivato il trigger `UserMigration_Authentication`.
+Se l'app salpa `checkMigration` e chiama direttamente Cognito (o se Cognito non trova l'utente), viene attivato il trigger `UserMigration_Authentication`.
 
 **File**: `petlink-everywhere-core/src/lambda_functions/cognito/userMigration/handler.ts`
 
 ```
 Cognito UserMigration Trigger (triggerSource: UserMigration_Authentication)
 │
-├── 1. Query MongoDB: USER where email == userName OR phone == userName
+├── 1. Query MongoDB: USER where email == userName OR phone == userName (raw, NO normalization)
 │     └── Se trovato → usa user trovato → crea utente Cognito
 │
 ├── 2. Se non trovato in MongoDB → Lambda Invoke → migrationOnDemand
-│     └── Payload: { contact: userName, appBrand }
+│     └── Payload: { contact: userName, appBrand } — NO password, NO source
 │
-└── 3. Se migrationOnDemand fallisce → throw error → login fallisce
+└── 3. migrationOnDemand riceve source=ON_DEMAND (default), password=undefined
+      → return 400 "Password required for ON_DEMAND source"
+      → throw error → login fallisce
 ```
 
-Questo è un fallback edge case. Il flow principale rimane `checkMigration → startMigration → migrationOnDemand`.
+> **BUG**: Questo fallback è attualmente **rotto**. `migrationOnDemand` richiede password per `ON_DEMAND` ma `userMigration` non la invia. Il trigger può solo trovare utenti già in MongoDB (step 1), non migrarne di nuovi.
 
 ### Step 1: `checkMigration` (Core, query)
 
@@ -57,14 +98,17 @@ Chiamata dall'app ad **ogni tentativo di login**.
 ```
 checkMigration(contact, password, appBrand)
 │
-├── 1. Query MongoDB: USER where email == contact OR phone == contact
+├── 1. Query MongoDB: USER where email == contact OR phone == contact (RAW, no normalization)
 │     └── Se count == 1 → return success.user_exists
 │         (utente già su MongoDB → login normale, nessuna migrazione)
+│         ⚠️ BUG: se phone salvato come E.164 (+33666728100) ma contact è raw (+330666728100),
+│            non trova l'utente → passa allo step 2
 │
 ├── 2. Se non trovato in MongoDB → Query MySQL legacy (migrated = 0)
 │     ├── appBrand KIPPY  → EU connection
 │     ├── appBrand PETLINK → US connection
 │     └── Query: (registrationPhone + registrationPhoneCountry) OR email
+│        └── parsePhoneNumber(contact) per split nationalNumber/countryCallingCode
 │
 ├── 3. Se MySQL non trova nulla → return errors.user_not_found
 │
@@ -104,18 +148,21 @@ migrationOnDemand(contact, password, appBrand, source)
 │     ├── ON_DEMAND: password required → se manca → return 400
 │     └── BULK: auto-generate via generateBulkPassword()
 │
-├── 3. IDEMPOTENCY: Query MongoDB per email/phone
+├── 3. IDEMPOTENCY: Query MongoDB per email/phone (RAW contact, no normalization)
 │     └── Se utente già esiste → return 200 "already exists" (skip)
+│         ⚠️ BUG: se phone salvato come E.164 ma contact è raw, non trova → procede
 │
-├── 4. Query MySQL (getMysqlUser)
+├── 4. Query MySQL (getMysqlUser) — NO filtro su migrated
 │     └── Se non trovato → return 404
 │
 ├── 5. CLAIM ATOMICO: UPDATE user SET migrated = 1 WHERE id = ? AND migrated = 0
 │     └── Se affectedRows == 0 → return 409 (race condition, già in corso)
 │
 ├── 6. createUser() → mappa MySQL → MongoDB User schema
+│     ├── Phone assemblato da MySQL: +${registrationPhoneCountry}${registrationPhone}
+│     │   → E.164 compliant (MySQL non ha trunk prefix)
 │     ├── Download immagine profilo da legacy S3 → Petlink S3
-│     ├── Valida phone (E.164), setta forceSetPhoneNumber se invalido
+│     ├── Valida phone (isMobilePhoneStrict), setta forceSetPhoneNumber se invalido
 │     └── Se fallisce → rollback + email errore → return 500
 │
 ├── 7. Insert user in MongoDB (petlinkEverywhere)
@@ -150,6 +197,8 @@ migrationOnDemand(contact, password, appBrand, source)
 
 **Error notification**: `sendEmailMigrationError()` invia email via SendGrid con dettagli utente e motivo fallimento.
 
+> **Nota sul timeout**: se la Lambda va in timeout (killata da AWS a 29s), nessun `catch`/`finally` esegue il rollback. `migrated` resta 1, i dati parziali restano in MongoDB. L'utente è bloccato fino a reset manuale via `userCleanup`.
+
 ---
 
 ## Entry Points
@@ -157,6 +206,10 @@ migrationOnDemand(contact, password, appBrand, source)
 ### ON_DEMAND (login-driven)
 
 L'app chiama `checkMigration` → se `user_can_be_migrated` → l'utente accetta → l'app chiama `startMigration` → che invoca `migrationOnDemand` con `{ contact, password, appBrand, source: "ON_DEMAND" }`.
+
+### Cognito UserMigration (fallback, attualmente rotto)
+
+Se Cognito riceve credenziali non riconosciute, attiva il trigger `UserMigration_Authentication` → query MongoDB → se non trova, invoca `migrationOnDemand` **senza password** → `migrationOnDemand` returns 400. Questo path può solo confermare utenti già in MongoDB, non migrarne di nuovi.
 
 ### BULK (batch migration)
 
@@ -320,7 +373,7 @@ Same as bulk but queries only last 6 minutes (`updated_at >= NOW() - INTERVAL 6 
 
 **File**: `userCleanup/handler.ts` — Direct Lambda invoke with `{ userId }`
 
-Rolls back a migrated user completely:
+Rolls back a migrated user completely. È l'unico recovery manuale per migrazioni incomplete (es. dopo timeout Lambda):
 
 ```
 │

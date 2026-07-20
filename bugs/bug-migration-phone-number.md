@@ -115,7 +115,7 @@ This is the main backend API (AppSync + Lambdas). It handles GraphQL queries and
 - If not found in MongoDB, queries legacy MySQL for users with `migrated = 0`.
 - Returns `success.user_exists` (login), `success.user_can_be_migrated` (show dialog), or `errors.user_not_found`.
 - **BUG:** MongoDB query used raw `event.arguments.contact` without normalization.
-- **FIX APPLIED:** Now uses `parsePhoneNumber(event.arguments.contact).number` before querying MongoDB. Also reuses the parsed result for the MySQL query below (was calling `parsePhoneNumber` twice).
+- **FIX PLANNED but NOT applied on disk (develop):** The code on `develop` still uses raw `event.arguments.contact` in the MongoDB `$or` query. The `parsePhoneNumber` is only used for the MySQL query split (nationalNumber/countryCallingCode). The fix would add `{ phone: parsePhoneNumber(contact).number }` to the `$or`.
 
 **`src/lambda_functions/graphql/mutation/signUpUser/handler.ts`**
 - New user registration from the app.
@@ -150,7 +150,7 @@ This is the migration service that migrates legacy users from MySQL to MongoDB.
 - Checks if user already exists in MongoDB (idempotency check).
 - If not found, fetches legacy user from MySQL, creates new user in MongoDB, runs sub-migrations.
 - **BUG:** MongoDB idempotency query used raw `contact` without normalization.
-- **FIX APPLIED:** Now uses `parsePhoneNumber(contact).number` before querying MongoDB.
+- **FIX PLANNED but NOT applied on disk (develop):** The code on `develop` still uses raw `contact` in the MongoDB `$or` query: `{ $or: [{ email: contact }, { phone: contact }] }`. The fix would add `parsePhoneNumber(contact)?.number` to the `$or`.
 
 **`src/lambda_functions/migrationOnDemand/util.ts` → `createUser()`**
 - Creates the User document in MongoDB for migrated users.
@@ -182,38 +182,56 @@ This is the migration service that migrates legacy users from MySQL to MongoDB.
 
 Normalize the contact string before any MongoDB query that searches by phone.
 
-**Already applied:**
+**Planned (not yet on disk):**
 
 1. **`petlink-everywhere-core/src/lambda_functions/graphql/query/checkMigration/handler.ts`**
+   Current code on develop (raw, no normalization in MongoDB query):
    ```typescript
-   const phoneNumberParsed = parsePhoneNumber(event.arguments.contact);
-   const normalizedContact = phoneNumberParsed
-     ? phoneNumberParsed.number
-     : event.arguments.contact;
-
    const query: any = {
      entityType: EntityTypeEnum.Enum.USER,
      deleted: { $ne: true },
      $or: [
-       { email: normalizedContact },
-       { phone: normalizedContact },
+       { email: event.arguments.contact },
+       { phone: event.arguments.contact },
      ],
    };
    ```
-   Also removed the duplicate `parsePhoneNumber` call that was used for the MySQL query below — now reuses `phoneNumberParsed`.
+   Fix would be:
+   ```typescript
+   const phoneNumberParsed = parsePhoneNumber(event.arguments.contact);
+   const normalizedPhone = phoneNumberParsed?.number ?? event.arguments.contact;
+   const query: any = {
+     entityType: EntityTypeEnum.Enum.USER,
+     deleted: { $ne: true },
+     $or: [
+       { email: event.arguments.contact },
+       { phone: event.arguments.contact },
+       { phone: normalizedPhone },
+     ],
+   };
+   ```
 
 2. **`petlink-data-migration/src/lambda_functions/migrationOnDemand/handler.ts`**
+   Current code on develop (raw, no normalization in MongoDB query):
    ```typescript
-   import parsePhoneNumber from 'libphonenumber-js';
-   // ...
-   const parsedPhone = parsePhoneNumber(contact);
-   const normalizedContact = parsedPhone ? parsedPhone.number : contact;
-
    const findUserRes = await findItem<User>(
      mongoDbSecret,
      {
        entityType: EntityTypeEnum.Enum.USER,
-       $or: [{ email: normalizedContact }, { phone: normalizedContact }],
+       $or: [{ email: contact }, { phone: contact }],
+       deleted: { $ne: true },
+     },
+     PETLINK_EVERYWHERE_COLLECTION_NAME
+   );
+   ```
+   Fix would be:
+   ```typescript
+   const normalizedPhone = parsePhoneNumber(contact)?.number ?? contact;
+   const findUserRes = await findItem<User>(
+     mongoDbSecret,
+     {
+       entityType: EntityTypeEnum.Enum.USER,
+       $or: [{ email: contact }, { phone: contact }, { phone: normalizedPhone }],
        deleted: { $ne: true },
      },
      PETLINK_EVERYWHERE_COLLECTION_NAME
@@ -365,8 +383,8 @@ The migration code (`createUser` in `util.ts`) sets `forceSetPhoneNumber: true` 
 
 | File | Repo | Type | Status |
 |---|---|---|---|
-| `checkMigration/handler.ts` | core | Query normalization | ✅ Done |
-| `migrationOnDemand/handler.ts` | data-migration | Query normalization | ✅ Done |
+| `checkMigration/handler.ts` | core | Query normalization | ❌ Planned |
+| `migrationOnDemand/handler.ts` | data-migration | Query normalization | ❌ Planned |
 | `signUpUser/handler.ts` | core | Query normalization | ❌ Needed |
 | `updateUserContact/handler.ts` (CCT) | core | Query + Save normalization | ❌ Needed |
 | `deletePetlinkUser` in `user.ts` | core | Query normalization | ❌ Needed |
