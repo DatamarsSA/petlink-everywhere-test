@@ -39,408 +39,6 @@ enum PLanProfile {
 }
 
 
-describe.runIf(fxt.isKippyRun)("TRIAL (Esselunga or Trial_1_month), different duration trial, different nextPlans available", () => {
-  beforeEach(async () => {
-    await testHelper.cleanupAll();
-  });
-
-  afterEach(async () => {
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
-      planProfileId: PLanProfile.DEFAULT,
-    });
-  });
-
-  it("Esselunga - 365d trial, choose updatePlan (only yearly plans), sub created, no invoices, nextBilling after trial end", async () => {
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
-      planProfileId: PLanProfile.ESSELUNGA,
-    });
-
-    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
-    const gps = setup.dog!.devices.gps!;
-
-    // 1. Dopo registration NON c'è sub
-    const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
-    expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
-
-    // 2. Piani disponibili: SOLO yearly
-    const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-      productId: gps.id,
-      countryCode: gps.countryCode,
-      serialNumber: gps.serialNumber,
-    });
-    const plans = plansRes.getSubscriptionPlans.plans ?? [];
-    expect(plans.length).toBeGreaterThan(0);
-
-    const yearlyOnly = plans.every((p) => p.pricings?.[0]?.periodUnit === "year");
-    expect(yearlyOnly, "Esselunga should allow only yearly plans").toBe(true);
-
-    const chosenPlan = plans[0]!.pricings[0]!;
-
-    // 3. Bypass hosted page (simula checkout)
-    await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-        phone: setup.user!.phone,
-        productId: gps.id,
-        priceIds: [chosenPlan.id],
-        card: fxt.current.card.valid,
-      },
-    });
-
-    // 4. Aspetta che Chargebee crei la sub in_trial
-    const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
-      isReady: (data) => {
-        const sub = data.getSubscriptions.subscriptions?.[0];
-        return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
-      },
-      timeoutError: "Subscription did not become in_trial after bypass",
-    });
-
-    const sub = subsAfter.getSubscriptions.subscriptions![0];
-    expect(sub.status).toBe(SubscriptionStatusEnum.InTrial);
-
-    // 5. Verifica durata trial ~365 giorni
-    const trialEnd = new Date(sub.trialEnd!);
-    const diffDays = Math.round((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    expect(diffDays).toBeGreaterThanOrEqual(364);
-    expect(diffDays).toBeLessThanOrEqual(366);
-
-    // 6. Nessuna fattura = nessun pagamento immediato
-    expect(sub.invoices).toBeNull();
-
-    // 7. Il term corrente coincide con il periodo di trial
-    expect(sub.trialStart).toBe(sub.currentTermStart);
-    expect(sub.trialEnd).toBe(sub.currentTermEnd);
-
-    // 8. Il primo pagamento è programmato alla fine della trial
-    expect(sub.nextBillingAt!).toBeWithinHoursOf(sub.trialEnd!, 1);
-  });
-
-  it("Trial_1_month - 30d trial, choose updatePlan (any plans), sub created, no invoices, nextBilling after trial end", async () => {
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
-      planProfileId: PLanProfile.TRIAL_1_MONTH,
-    });
-
-    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
-    const gps = setup.dog!.devices.gps!;
-
-    // 1. Dopo registration NON c'è sub
-    const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
-    expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
-
-    // 2. Piani disponibili: almeno monthly + yearly
-    const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-      productId: gps.id,
-      countryCode: gps.countryCode,
-      serialNumber: gps.serialNumber,
-    });
-    const plans = plansRes.getSubscriptionPlans.plans ?? [];
-    expect(plans.length).toBeGreaterThan(0);
-
-    const hasMonthly = plans.some((p) => p.pricings?.[0]?.periodUnit === "month");
-    const hasYearly = plans.some((p) => p.pricings?.[0]?.periodUnit === "year");
-    expect(hasMonthly || hasYearly, "Trial_1_month should allow multiple plan types").toBe(true);
-
-    // Prendiamo un piano mensile se disponibile, altrimenti yearly
-    const targetPlan = (plans.find((p) => p.pricings?.[0]?.periodUnit === "month") ?? plans.find((p) => p.pricings?.[0]?.periodUnit === "year"))!;
-    const chosenPlan = targetPlan.pricings[0]!;
-
-    // 3. Bypass hosted page
-    await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
-      input: {
-        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
-        phone: setup.user!.phone,
-        productId: gps.id,
-        priceIds: [chosenPlan.id],
-        card: fxt.current.card.valid,
-      },
-    });
-
-    // 4. Aspetta sub in_trial
-    const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
-      isReady: (data) => {
-        const sub = data.getSubscriptions.subscriptions?.[0];
-        return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
-      },
-      timeoutError: "Subscription did not become in_trial after bypass",
-    });
-
-    const sub = subsAfter.getSubscriptions.subscriptions![0];
-    expect(sub.status).toBe(SubscriptionStatusEnum.InTrial);
-
-    // 5. Verifica durata trial ~30 giorni
-    const trialEnd = new Date(sub.trialEnd!);
-    const diffDays = Math.round((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    expect(diffDays).toBeGreaterThanOrEqual(29);
-    expect(diffDays).toBeLessThanOrEqual(31);
-
-    // 6. Nessuna fattura = nessun pagamento immediato
-    expect(sub.invoices).toBeNull();
-
-    // 7. Il term corrente coincide con il periodo di trial
-    expect(sub.trialStart).toBe(sub.currentTermStart);
-    expect(sub.trialEnd).toBe(sub.currentTermEnd);
-
-    // 8. Il primo pagamento è programmato alla fine della trial
-    expect(sub.nextBillingAt!).toBeWithinHoursOf(sub.trialEnd!, 1);
-  });
-});
-
-describe.runIf(fxt.isKippyRun)("PAID_EXTERNALLY (Axa, Europass) -> should create subs only on our db", () => {
-  beforeEach(async () => {
-    await testHelper.cleanupAll();
-  });
-
-  afterEach(async () => {
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
-      planProfileId: PLanProfile.DEFAULT,
-    });
-  });
-
-  it("Axa", async () => {
-    const serialNumber = fxt.current.gpsFixtures.DOG.serialNumber;
-
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [serialNumber],
-      planProfileId: PLanProfile.AXA_12_YEARS,
-    });
-
-    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
-    const gps = setup.dog!.devices.gps!;
-    expect(gps.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
-
-    const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
-    const subscriptions = subsRes.getSubscriptions.subscriptions!;
-    expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
-
-    const sub = subscriptions[0];
-    // expect(sub.status).toBe(SubscriptionStatusEnum.InTrial); FIXME: why InTrial and not PaidExternally
-    expect(sub.invoices![0].status).toBe(InvoiceStatusEnum.PaidExternally);
-    expect(sub.businessEntityId).toBe("DATAMARS");
-    expect(sub.billingPeriod).toBe(12);
-    expect(sub.billingPeriodUnit).toBe("years");
-  });
-
-  it("Europass", async () => {
-    const serialNumber = fxt.current.gpsFixtures.DOG.serialNumber;
-
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [serialNumber],
-      planProfileId: PLanProfile.EuropAss,
-    });
-
-    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
-    const gps = setup.dog!.devices.gps!;
-    expect(gps.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
-
-    const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
-    const subscriptions = subsRes.getSubscriptions.subscriptions!;
-    expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
-
-    const sub = subscriptions[0];
-    // expect(sub.status).toBe(SubscriptionStatusEnum.InTrial); FIXME: why InTrial and not PaidExternally
-    expect(sub.invoices![0].status).toBe(InvoiceStatusEnum.PaidExternally);
-    expect(sub.businessEntityId).toBe("DATAMARS");
-    expect(sub.billingPeriod).toBe(54);
-    expect(sub.billingPeriodUnit).toBe("weeks");
-  });
-});
-
-describe("NOT_PAYING", () => {
-  let setup: TestSetup = {} as TestSetup;
-
-  beforeEach(async () => {
-    await testHelper.cleanupAll();
-    setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
-  });
-
-  it("Add Free period on device WITHOUT sub should create active non-paying sub", async () => {
-    const gps = setup.dog!.devices.gps!;
-    const freePeriod = AddFreePeriod.Add_30Days;
-    const daysOfFreePeriod = 30;
-
-    logger.info("Testing addFreePeriod on device without subscription", {
-      serialNumber: gps.serialNumber,
-      freePeriod,
-    });
-
-    const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
-      freePeriod,
-      productId: gps.id,
-      serialNumber: gps.serialNumber,
-    });
-
-    expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
-      "200",
-    );
-
-    const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: gps.id }), {
-      isReady: (result) => result.getSubscriptionByProductId.subscription != null,
-      timeoutError: `Timeout: Subscription not created after addFreePeriod in ${fxt.polling.timeoutMs}ms`,
-    });
-    const coreSubscription = subscriptionResult.getSubscriptionByProductId.subscription!;
-    expect(coreSubscription).toMatchObject({
-      status: SubscriptionStatusEnum.InTrial,
-      billingPeriod: daysOfFreePeriod,
-      billingPeriodUnit: "days",
-    });
-    expect({ start: coreSubscription.currentTermStart!, end: coreSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
-
-    const cctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-      deviceId: gps.id,
-    });
-    expect(cctSubscriptionsResponse.getSubscriptions.code).toBe("200");
-    const cctSubscription = cctSubscriptionsResponse.getSubscriptions.items![0];
-    expect(cctSubscription).toMatchObject({
-      userId: setup.user!.id,
-      productId: gps.id,
-      serialNumber: gps.serialNumber,
-      status: SubscriptionStatusEnum.InTrial,
-      addedFreePeriod: daysOfFreePeriod,
-      billingPeriod: daysOfFreePeriod,
-      billingPeriodUnit: "days",
-      businessEntityId: "DATAMARS",
-    });
-    expect({ start: cctSubscription.currentTermStart!, end: cctSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
-  });
-
-  it("Add Free period on device WITH active sub should extend current subscription", async () => {
-    const gps = setup.dog!.devices.gps!;
-    const daysOfFreePeriod = 14;
-    const freePeriod = AddFreePeriod.Add_14Days;
-
-    const initialSubscription = await testHelper.purchaseSubscription(setup.user!, gps, [gps.availablePlans![0].pricings[0].id], {
-      waitForActive: true,
-    });
-    const originalCurrentTermEnd = initialSubscription.currentTermEnd;
-
-    const initialCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-      deviceId: gps.id,
-    });
-    const originalAddedFreePeriod = initialCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod || 0;
-
-    const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
-      freePeriod,
-      productId: gps.id,
-      serialNumber: gps.serialNumber,
-    });
-
-    expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
-      "200",
-    );
-
-    const updatedSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: gps.id }), {
-      isReady: (result) => {
-        const sub = result.getSubscriptionByProductId.subscription;
-        const newCurrentTermEnd = sub?.currentTermEnd;
-        return !!newCurrentTermEnd && new Date(newCurrentTermEnd).getTime() > new Date(originalCurrentTermEnd!).getTime();
-      },
-      timeoutError: `Timeout: currentTermEnd did not move forward after addFreePeriod`,
-    });
-
-    const updatedSubscription = updatedSubResult.getSubscriptionByProductId.subscription!;
-
-    const updatedCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
-      deviceId: gps.id,
-    });
-
-    expect(updatedSubscription.id, "Free period should extend the current subscription, not create a new one").toBe(initialSubscription.id);
-    expect(updatedSubscription.status, "Subscription should remain active").toBe(SubscriptionStatusEnum.Active);
-    expect(updatedSubscription.paymentStatus, "Subscription should remain paid").toBe(PaymentStatusTypeEnum.Succeeded);
-
-    expect(new Date(updatedSubscription.currentTermEnd!).getTime(), "currentTermEnd should move forward").toBeGreaterThan(
-      new Date(originalCurrentTermEnd!).getTime(),
-    );
-    expect(updatedCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod, "addedFreePeriod should accumulate").toBe(
-      originalAddedFreePeriod + daysOfFreePeriod,
-    );
-  });
-});
-
-describe("COUPON", () => {
-  /*
-  For test we use a precreate coupons TEST available forever, with 20% of discount from every prices
-   */
-  let setup: TestSetup = {} as TestSetup;
-
-  beforeEach(async () => {
-    await testHelper.cleanupAll();
-    setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
-  });
-
-  it("Coupon pre-assigned to device applies discount on purchase", async () => {
-    const gps = setup.dog!.devices.gps!;
-
-    // STEP 1: Get available coupons
-    const couponsResponse = await petlink.cct.graphqlHttp.authJwt.getCoupons();
-    expect(couponsResponse.getCoupons.code, `getCoupons should succeed - Error: ${couponsResponse.getCoupons.message}`).toBe("200");
-
-    const availableCoupons = couponsResponse.getCoupons.coupons;
-    expect(availableCoupons, "Should have at least one coupon available").toBeDefined();
-    expect(
-      availableCoupons!.length,
-      "Coupons array should not be empty (should have at least our coupon forever 20% for test suite)",
-    ).toBeGreaterThan(0);
-
-    const coupon = availableCoupons.find((coupon) => coupon.id === fxt.current.coupon.test20Percent.id)!;
-    logger.info("Selected coupon for test", { couponId: coupon.id, couponName: coupon.name });
-
-    // STEP 2: Assign coupon to device
-    const setCouponResponse = await petlink.cct.graphqlHttp.authJwt.setCoupon({
-      serialNumbers: [gps.serialNumber],
-      couponId: coupon.id,
-      setMode: CouponSetMode.Apply,
-    });
-
-    expect(setCouponResponse.setCoupon.code, `setCoupon should succeed - Error: ${setCouponResponse.setCoupon.message}`).toBe("200");
-
-    logger.info("Coupon assigned to device", {
-      serialNumber: gps.serialNumber,
-      couponId: coupon.id,
-      failureList: setCouponResponse.setCoupon.failureList,
-    });
-
-    // STEP 3: Buy subscription
-    const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
-      productId: gps.id,
-      countryCode: gps.countryCode,
-      serialNumber: gps.serialNumber,
-    });
-    const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
-
-    // STEP 4: Purchase and wait for subscription to become active
-    const subscription = await testHelper.purchaseSubscription(setup.user!, gps, [chosenPlan.id], { waitForActive: true });
-
-    logger.info("Subscription purchased with coupon", {
-      subscriptionId: subscription.id,
-      invoicesCount: subscription.invoices?.length,
-    });
-
-    // STEP 5: Verify discount in invoice
-    expect(subscription.invoices, "Subscription should have invoices").toBeDefined();
-    expect(subscription.invoices!.length, "Should have at least one invoice").toBeGreaterThan(0);
-
-    const firstInvoice = subscription.invoices![0];
-    expect(firstInvoice.discountItems, "Invoice should have discount items").toBeDefined();
-    expect(firstInvoice.discountItems!.length, "Should have at least one discount item").toBeGreaterThan(0);
-
-    const discountItem = firstInvoice.discountItems![0];
-    expect(discountItem.couponId, "Discount should be from the assigned coupon").toBe(coupon.id);
-    expect(discountItem.discountPercentage, "Discount percentage should be 20%").toBe(20);
-    expect(discountItem.amount, "Discount amount should be positive").toBeGreaterThan(0);
-
-    // Verify invoice math: total = plan amount - discount (±10 cents tolerance)
-    const planItem = firstInvoice.items.find((i: { itemType: string }) => i.itemType === "plan_item_price")!;
-    const expectedDiscount = planItem.amount * 0.2;
-    expect(Math.abs(discountItem.amount - expectedDiscount), "Discount within 10 cents of 20%").toBeLessThanOrEqual(10);
-    expect(firstInvoice.total, "Invoice total should equal plan amount minus discount").toBe(planItem.amount - discountItem.amount);
-  });
-});
-
 describe("DEFAULT (buy, change, renew, stop, refund)", () => {
   describe("SETUP & PREREQUISITES", () => {
     let setup: TestSetup = {} as TestSetup;
@@ -1215,6 +813,408 @@ describe("DEFAULT (buy, change, renew, stop, refund)", () => {
   });
 });
 
+describe.runIf(fxt.isKippyRun)("TRIAL (Esselunga or Trial_1_month), different duration trial, different nextPlans available", () => {
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+  });
+
+  afterEach(async () => {
+    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
+      planProfileId: PLanProfile.DEFAULT,
+    });
+  });
+
+  it("Esselunga - 365d trial, choose updatePlan (only yearly plans), sub created, no invoices, nextBilling after trial end", async () => {
+    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
+      planProfileId: PLanProfile.ESSELUNGA,
+    });
+
+    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+    const gps = setup.dog!.devices.gps!;
+
+    // 1. Dopo registration NON c'è sub
+    const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
+    expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
+
+    // 2. Piani disponibili: SOLO yearly
+    const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+      productId: gps.id,
+      countryCode: gps.countryCode,
+      serialNumber: gps.serialNumber,
+    });
+    const plans = plansRes.getSubscriptionPlans.plans ?? [];
+    expect(plans.length).toBeGreaterThan(0);
+
+    const yearlyOnly = plans.every((p) => p.pricings?.[0]?.periodUnit === "year");
+    expect(yearlyOnly, "Esselunga should allow only yearly plans").toBe(true);
+
+    const chosenPlan = plans[0]!.pricings[0]!;
+
+    // 3. Bypass hosted page (simula checkout)
+    await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+        phone: setup.user!.phone,
+        productId: gps.id,
+        priceIds: [chosenPlan.id],
+        card: fxt.current.card.valid,
+      },
+    });
+
+    // 4. Aspetta che Chargebee crei la sub in_trial
+    const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
+      isReady: (data) => {
+        const sub = data.getSubscriptions.subscriptions?.[0];
+        return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
+      },
+      timeoutError: "Subscription did not become in_trial after bypass",
+    });
+
+    const sub = subsAfter.getSubscriptions.subscriptions![0];
+    expect(sub.status).toBe(SubscriptionStatusEnum.InTrial);
+
+    // 5. Verifica durata trial ~365 giorni
+    const trialEnd = new Date(sub.trialEnd!);
+    const diffDays = Math.round((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    expect(diffDays).toBeGreaterThanOrEqual(364);
+    expect(diffDays).toBeLessThanOrEqual(366);
+
+    // 6. Nessuna fattura = nessun pagamento immediato
+    expect(sub.invoices).toBeNull();
+
+    // 7. Il term corrente coincide con il periodo di trial
+    expect(sub.trialStart).toBe(sub.currentTermStart);
+    expect(sub.trialEnd).toBe(sub.currentTermEnd);
+
+    // 8. Il primo pagamento è programmato alla fine della trial
+    expect(sub.nextBillingAt!).toBeWithinHoursOf(sub.trialEnd!, 1);
+  });
+
+  it("Trial_1_month - 30d trial, choose updatePlan (any plans), sub created, no invoices, nextBilling after trial end", async () => {
+    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
+      planProfileId: PLanProfile.TRIAL_1_MONTH,
+    });
+
+    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+    const gps = setup.dog!.devices.gps!;
+
+    // 1. Dopo registration NON c'è sub
+    const subsBefore = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
+    expect(subsBefore.getSubscriptions.subscriptions).toHaveLength(0);
+
+    // 2. Piani disponibili: almeno monthly + yearly
+    const plansRes = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+      productId: gps.id,
+      countryCode: gps.countryCode,
+      serialNumber: gps.serialNumber,
+    });
+    const plans = plansRes.getSubscriptionPlans.plans ?? [];
+    expect(plans.length).toBeGreaterThan(0);
+
+    const hasMonthly = plans.some((p) => p.pricings?.[0]?.periodUnit === "month");
+    const hasYearly = plans.some((p) => p.pricings?.[0]?.periodUnit === "year");
+    expect(hasMonthly || hasYearly, "Trial_1_month should allow multiple plan types").toBe(true);
+
+    // Prendiamo un piano mensile se disponibile, altrimenti yearly
+    const targetPlan = (plans.find((p) => p.pricings?.[0]?.periodUnit === "month") ?? plans.find((p) => p.pricings?.[0]?.periodUnit === "year"))!;
+    const chosenPlan = targetPlan.pricings[0]!;
+
+    // 3. Bypass hosted page
+    await petlink.core.graphqlHttp.authIam.utilityIntegrationTest({
+      input: {
+        utilityType: UtilityTestTypeEnum.BuyNewSubscription,
+        phone: setup.user!.phone,
+        productId: gps.id,
+        priceIds: [chosenPlan.id],
+        card: fxt.current.card.valid,
+      },
+    });
+
+    // 4. Aspetta sub in_trial
+    const subsAfter = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id }), {
+      isReady: (data) => {
+        const sub = data.getSubscriptions.subscriptions?.[0];
+        return sub?.status === SubscriptionStatusEnum.InTrial && !!sub?.trialEnd;
+      },
+      timeoutError: "Subscription did not become in_trial after bypass",
+    });
+
+    const sub = subsAfter.getSubscriptions.subscriptions![0];
+    expect(sub.status).toBe(SubscriptionStatusEnum.InTrial);
+
+    // 5. Verifica durata trial ~30 giorni
+    const trialEnd = new Date(sub.trialEnd!);
+    const diffDays = Math.round((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    expect(diffDays).toBeGreaterThanOrEqual(29);
+    expect(diffDays).toBeLessThanOrEqual(31);
+
+    // 6. Nessuna fattura = nessun pagamento immediato
+    expect(sub.invoices).toBeNull();
+
+    // 7. Il term corrente coincide con il periodo di trial
+    expect(sub.trialStart).toBe(sub.currentTermStart);
+    expect(sub.trialEnd).toBe(sub.currentTermEnd);
+
+    // 8. Il primo pagamento è programmato alla fine della trial
+    expect(sub.nextBillingAt!).toBeWithinHoursOf(sub.trialEnd!, 1);
+  });
+});
+
+describe.runIf(fxt.isKippyRun)("PAID_EXTERNALLY (Axa, Europass) -> should create subs only on our db", () => {
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+  });
+
+  afterEach(async () => {
+    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
+      planProfileId: PLanProfile.DEFAULT,
+    });
+  });
+
+  it("Axa", async () => {
+    const serialNumber = fxt.current.gpsFixtures.DOG.serialNumber;
+
+    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+      serialNumbers: [serialNumber],
+      planProfileId: PLanProfile.AXA_12_YEARS,
+    });
+
+    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+    const gps = setup.dog!.devices.gps!;
+    expect(gps.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
+
+    const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
+    const subscriptions = subsRes.getSubscriptions.subscriptions!;
+    expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
+
+    const sub = subscriptions[0];
+    // expect(sub.status).toBe(SubscriptionStatusEnum.InTrial); FIXME: why InTrial and not PaidExternally
+    expect(sub.invoices![0].status).toBe(InvoiceStatusEnum.PaidExternally);
+    expect(sub.businessEntityId).toBe("DATAMARS");
+    expect(sub.billingPeriod).toBe(12);
+    expect(sub.billingPeriodUnit).toBe("years");
+  });
+
+  it("Europass", async () => {
+    const serialNumber = fxt.current.gpsFixtures.DOG.serialNumber;
+
+    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
+      serialNumbers: [serialNumber],
+      planProfileId: PLanProfile.EuropAss,
+    });
+
+    const setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+    const gps = setup.dog!.devices.gps!;
+    expect(gps.subscriptionPlan).toBe(SubscriptionPlanEnum.Insurance);
+
+    const subsRes = await petlink.core.graphqlHttp.authJwt.getSubscriptions({ productId: gps.id });
+    const subscriptions = subsRes.getSubscriptions.subscriptions!;
+    expect(subscriptions, "Insurance subscription should be auto-created").toHaveLength(1);
+
+    const sub = subscriptions[0];
+    // expect(sub.status).toBe(SubscriptionStatusEnum.InTrial); FIXME: why InTrial and not PaidExternally
+    expect(sub.invoices![0].status).toBe(InvoiceStatusEnum.PaidExternally);
+    expect(sub.businessEntityId).toBe("DATAMARS");
+    expect(sub.billingPeriod).toBe(54);
+    expect(sub.billingPeriodUnit).toBe("weeks");
+  });
+});
+
+describe("NOT_PAYING", () => {
+  let setup: TestSetup = {} as TestSetup;
+
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+    setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+  });
+
+  it("Add Free period on device WITHOUT sub should create active non-paying sub", async () => {
+    const gps = setup.dog!.devices.gps!;
+    const freePeriod = AddFreePeriod.Add_30Days;
+    const daysOfFreePeriod = 30;
+
+    logger.info("Testing addFreePeriod on device without subscription", {
+      serialNumber: gps.serialNumber,
+      freePeriod,
+    });
+
+    const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
+      freePeriod,
+      productId: gps.id,
+      serialNumber: gps.serialNumber,
+    });
+
+    expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
+      "200",
+    );
+
+    const subscriptionResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: gps.id }), {
+      isReady: (result) => result.getSubscriptionByProductId.subscription != null,
+      timeoutError: `Timeout: Subscription not created after addFreePeriod in ${fxt.polling.timeoutMs}ms`,
+    });
+    const coreSubscription = subscriptionResult.getSubscriptionByProductId.subscription!;
+    expect(coreSubscription).toMatchObject({
+      status: SubscriptionStatusEnum.InTrial,
+      billingPeriod: daysOfFreePeriod,
+      billingPeriodUnit: "days",
+    });
+    expect({ start: coreSubscription.currentTermStart!, end: coreSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
+
+    const cctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
+      deviceId: gps.id,
+    });
+    expect(cctSubscriptionsResponse.getSubscriptions.code).toBe("200");
+    const cctSubscription = cctSubscriptionsResponse.getSubscriptions.items![0];
+    expect(cctSubscription).toMatchObject({
+      userId: setup.user!.id,
+      productId: gps.id,
+      serialNumber: gps.serialNumber,
+      status: SubscriptionStatusEnum.InTrial,
+      addedFreePeriod: daysOfFreePeriod,
+      billingPeriod: daysOfFreePeriod,
+      billingPeriodUnit: "days",
+      businessEntityId: "DATAMARS",
+    });
+    expect({ start: cctSubscription.currentTermStart!, end: cctSubscription.currentTermEnd! }).toHaveDaysDurationOf(daysOfFreePeriod);
+  });
+
+  it("Add Free period on device WITH active sub should extend current subscription", async () => {
+    const gps = setup.dog!.devices.gps!;
+    const daysOfFreePeriod = 14;
+    const freePeriod = AddFreePeriod.Add_14Days;
+
+    const initialSubscription = await testHelper.purchaseSubscription(setup.user!, gps, [gps.availablePlans![0].pricings[0].id], {
+      waitForActive: true,
+    });
+    const originalCurrentTermEnd = initialSubscription.currentTermEnd;
+
+    const initialCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
+      deviceId: gps.id,
+    });
+    const originalAddedFreePeriod = initialCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod || 0;
+
+    const addFreePeriodResponse = await petlink.cct.graphqlHttp.authJwt.addFreePeriod({
+      freePeriod,
+      productId: gps.id,
+      serialNumber: gps.serialNumber,
+    });
+
+    expect(addFreePeriodResponse.addFreePeriod.code, `addFreePeriod should succeed - Error: ${addFreePeriodResponse.addFreePeriod.message}`).toBe(
+      "200",
+    );
+
+    const updatedSubResult = await waitFor(async () => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: gps.id }), {
+      isReady: (result) => {
+        const sub = result.getSubscriptionByProductId.subscription;
+        const newCurrentTermEnd = sub?.currentTermEnd;
+        return !!newCurrentTermEnd && new Date(newCurrentTermEnd).getTime() > new Date(originalCurrentTermEnd!).getTime();
+      },
+      timeoutError: `Timeout: currentTermEnd did not move forward after addFreePeriod`,
+    });
+
+    const updatedSubscription = updatedSubResult.getSubscriptionByProductId.subscription!;
+
+    const updatedCctSubscriptionsResponse = await petlink.cct.graphqlHttp.authJwt.getSubscriptions({
+      deviceId: gps.id,
+    });
+
+    expect(updatedSubscription.id, "Free period should extend the current subscription, not create a new one").toBe(initialSubscription.id);
+    expect(updatedSubscription.status, "Subscription should remain active").toBe(SubscriptionStatusEnum.Active);
+    expect(updatedSubscription.paymentStatus, "Subscription should remain paid").toBe(PaymentStatusTypeEnum.Succeeded);
+
+    expect(new Date(updatedSubscription.currentTermEnd!).getTime(), "currentTermEnd should move forward").toBeGreaterThan(
+      new Date(originalCurrentTermEnd!).getTime(),
+    );
+    expect(updatedCctSubscriptionsResponse.getSubscriptions.items![0].addedFreePeriod, "addedFreePeriod should accumulate").toBe(
+      originalAddedFreePeriod + daysOfFreePeriod,
+    );
+  });
+});
+
+describe("COUPON", () => {
+  /*
+  For test we use a precreate coupons TEST available forever, with 20% of discount from every prices
+   */
+  let setup: TestSetup = {} as TestSetup;
+
+  beforeEach(async () => {
+    await testHelper.cleanupAll();
+    setup = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+  });
+
+  it("Coupon pre-assigned to device applies discount on purchase", async () => {
+    const gps = setup.dog!.devices.gps!;
+
+    // STEP 1: Get available coupons
+    const couponsResponse = await petlink.cct.graphqlHttp.authJwt.getCoupons();
+    expect(couponsResponse.getCoupons.code, `getCoupons should succeed - Error: ${couponsResponse.getCoupons.message}`).toBe("200");
+
+    const availableCoupons = couponsResponse.getCoupons.coupons;
+    expect(availableCoupons, "Should have at least one coupon available").toBeDefined();
+    expect(
+      availableCoupons!.length,
+      "Coupons array should not be empty (should have at least our coupon forever 20% for test suite)",
+    ).toBeGreaterThan(0);
+
+    const coupon = availableCoupons.find((coupon) => coupon.id === fxt.current.coupon.test20Percent.id)!;
+    logger.info("Selected coupon for test", { couponId: coupon.id, couponName: coupon.name });
+
+    // STEP 2: Assign coupon to device
+    const setCouponResponse = await petlink.cct.graphqlHttp.authJwt.setCoupon({
+      serialNumbers: [gps.serialNumber],
+      couponId: coupon.id,
+      setMode: CouponSetMode.Apply,
+    });
+
+    expect(setCouponResponse.setCoupon.code, `setCoupon should succeed - Error: ${setCouponResponse.setCoupon.message}`).toBe("200");
+
+    logger.info("Coupon assigned to device", {
+      serialNumber: gps.serialNumber,
+      couponId: coupon.id,
+      failureList: setCouponResponse.setCoupon.failureList,
+    });
+
+    // STEP 3: Buy subscription
+    const plansResponse = await petlink.core.graphqlHttp.authJwt.getSubscriptionPlans({
+      productId: gps.id,
+      countryCode: gps.countryCode,
+      serialNumber: gps.serialNumber,
+    });
+    const chosenPlan = plansResponse.getSubscriptionPlans.plans![0].pricings[0]!;
+
+    // STEP 4: Purchase and wait for subscription to become active
+    const subscription = await testHelper.purchaseSubscription(setup.user!, gps, [chosenPlan.id], { waitForActive: true });
+
+    logger.info("Subscription purchased with coupon", {
+      subscriptionId: subscription.id,
+      invoicesCount: subscription.invoices?.length,
+    });
+
+    // STEP 5: Verify discount in invoice
+    expect(subscription.invoices, "Subscription should have invoices").toBeDefined();
+    expect(subscription.invoices!.length, "Should have at least one invoice").toBeGreaterThan(0);
+
+    const firstInvoice = subscription.invoices![0];
+    expect(firstInvoice.discountItems, "Invoice should have discount items").toBeDefined();
+    expect(firstInvoice.discountItems!.length, "Should have at least one discount item").toBeGreaterThan(0);
+
+    const discountItem = firstInvoice.discountItems![0];
+    expect(discountItem.couponId, "Discount should be from the assigned coupon").toBe(coupon.id);
+    expect(discountItem.discountPercentage, "Discount percentage should be 20%").toBe(20);
+    expect(discountItem.amount, "Discount amount should be positive").toBeGreaterThan(0);
+
+    // Verify invoice math: total = plan amount - discount (±10 cents tolerance)
+    const planItem = firstInvoice.items.find((i: { itemType: string }) => i.itemType === "plan_item_price")!;
+    const expectedDiscount = planItem.amount * 0.2;
+    expect(Math.abs(discountItem.amount - expectedDiscount), "Discount within 10 cents of 20%").toBeLessThanOrEqual(10);
+    expect(firstInvoice.total, "Invoice total should equal plan amount minus discount").toBe(planItem.amount - discountItem.amount);
+  });
+});
+
 describe("PREPAID (purchase on external store)", () => {
   let setup: TestSetup = {} as TestSetup;
 
@@ -1411,3 +1411,88 @@ describe("PREPAID (purchase on external store)", () => {
     await assertOrderActivated(order.orderId, gps.serialNumber);
   });
 });
+
+
+/**
+ *
+ * 1. Device registrato → petlinkGpsInventory.planProfileId → recupera PLAN_PROFILE
+ *
+ * 2. App chiama getSubscriptionPlans(productId)
+ *    ├── legge planProfileId dall'inventario
+ *    ├── se device ha già sub attiva → mostra upgradePlans
+ *    └── se device non ha sub → mostra startingPlans
+ *    → ritorna lista di piani (da Chargebee item prices) filtrati per quei planIds
+ *
+ * 3. User sceglie un piano → checkout
+ *    ├── DEFAULT: hosted page Chargebee → sub su CB → webhook → SUBSCRIPTION + INVOICE su Mongo
+ *    ├── TRIAL: hosted page Chargebee → sub in_trial su CB → webhook → SUBSCRIPTION su Mongo (no invoice finché trial non finisce)
+ *    └── PAID_EXTERNALLY: handleInsuranceSubscription()
+ *        ├── crea SUBSCRIPTION su Mongo (businessEntityId: DATAMARS, isInsurance: true)
+ *        ├── crea INVOICE su Mongo (status: paid_externally, total: 0)
+ *        └── NON chiama Chargebee → nessun webhook → nessuna sub su CB
+ *
+ *
+ *
+ *  ═══════════════════════════════════════════════════════════════════
+ * MACROFLUSSI PAGAMENTO / SUBSCRIPTION
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 1. DEFAULT (checkout standard)
+ *    User → app → checkoutNewSubscription → Chargebee hosted page
+ *    → sub attiva, invoice al primo ciclo, rinnovi automatici
+ *    → tutto su Chargebee, sync async su Mongo via webhook
+ *
+ * 2. TRIAL (trial period poi paga)
+ *    User → app → checkoutNewSubscription → Chargebee (con trial_end)
+ *    → sub in_trial, NO invoice finché trial non finisce
+ *    → al trial end: primo pagamento → invoice → sub attiva
+ *    → tutto su Chargebee, sync async su Mongo via webhook
+ *
+ * 3. PAID_EXTERNALLY / INSURANCE (terzo paga)
+ *    CCT setPlanProfile → user registra device → auto-crea sub
+ *    → sub solo Mongo (DATAMARS), invoice paid_externally total=0
+ *    → NO Chargebee, NO webhook, NO pagamento
+ *
+ * 4. PREPAID (store esterno, prima compra poi registra)
+ *    Store → POST /order (ghost user, serial PREPAID-*)
+ *    User → checkoutPrepaid → Chargebee checkout (ghost user)
+ *    → sub orfana su CB (userId=ghost, productId=null)
+ *    Store → POST /order-tracking → serial reale, realign su CB
+ *    User → createPetlinkGps → adoption: linka sub a user+device
+ *    → sub su Chargebee (sempre), poi linkata a Mongo
+ *    → se buyer ≠ registrant: clone su CB, vecchia sub fermata
+ *
+ * 5. NON_PAYING / FREE PERIOD (operatore CCT regala giorni)
+ *    A) Device senza sub → crea sub Mongo only (DATAMARS, non_paying)
+ *    B) Device con sub esistente → estende currentTermEnd
+ *       ├── sub CB-managed → changeTermEnd su Chargebee
+ *       └── sub DATAMARS → upsert DB diretto
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * EVENTI POST-ACQUISTO (su sub esistenti)
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 6. RINNOVO (automatico, ogni ciclo)
+ *    Chargebee → payment_succeeded + subscription_renewed + invoice_generated
+ *    → Core: nuova INVOICE, currentTerm shiftato, paymentStatus=SUCCEEDED
+ *
+ * 7. CHANGE PLAN (upgrade/downgrade)
+ *    User → changeSubscriptionPlan → CB scheduled change (next term)
+ *    → al term end: vecchia sub fermata, nuova attivata
+ *
+ * 8. STOP RINNOVO (disdetta a fine termine)
+ *    User → stopRenewingSubscription
+ *    → calculateFee: se <4 mesi pagati → applyCharges (ETF) + changeTermEnd
+ *    → CB: cancelForItems(end_of_term)
+ *    → alla scadenza: subscription_cancelled
+ *
+ * 9. REFUND (rimborso da CCT)
+ *    CCT → refundInvoice → SM → CB credit note
+ *    → CREDIT_NOTE su Mongo, sub marcata isRefunded
+ *
+ * 10. DUNNING (rinnovo fallito)
+ *     Chargebee → payment_failed → retry automatici
+ *     → se tutti falliscono → subscription_cancelled
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ */

@@ -359,6 +359,11 @@ export interface GetActivitiesResponse {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export enum GetConnectionsHistoryEventTypeEnum {
+  Position = "POSITION",
+  TourRecording = "TOUR_RECORDING",
+}
+
 export interface GetConnectionsHistoryInput {
   connectionDate?: InputMaybe<DateFilterInput>;
   device?: InputMaybe<Scalars["String"]["input"]>;
@@ -1360,6 +1365,7 @@ export type QueryGetColorsArgs = {
 };
 
 export type QueryGetConnectionsHistoryArgs = {
+  eventType?: InputMaybe<GetConnectionsHistoryEventTypeEnum>;
   filter?: InputMaybe<GetConnectionsHistoryInput>;
   order?: InputMaybe<OrderInput>;
   pagination?: InputMaybe<PaginationInput>;

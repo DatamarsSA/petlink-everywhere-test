@@ -112,6 +112,29 @@ export interface ActivityValueCat {
   value: Scalars["Float"]["output"];
 }
 
+export interface AddJournalEntryInput {
+  behaviourIds: Array<Scalars["String"]["input"]>;
+  connectionIds: Array<Scalars["String"]["input"]>;
+  moodId: Scalars["String"]["input"];
+  note?: InputMaybe<Scalars["String"]["input"]>;
+  petId: Scalars["String"]["input"];
+  routineCheckIds: Array<Scalars["String"]["input"]>;
+}
+
+export interface AddJournalEventTypeInput {
+  eventType: JournalEventTypeEnum;
+  name: Scalars["String"]["input"];
+  petId: Scalars["String"]["input"];
+  sentimentType: EventSentimentEnum;
+}
+
+export interface AddUserCardResponse {
+  __typename?: "AddUserCardResponse";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentSourceId?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface AddonPricing {
   __typename?: "AddonPricing";
   currencyCode: Scalars["String"]["output"];
@@ -210,15 +233,70 @@ export interface Card {
   brand?: Maybe<Scalars["String"]["output"]>;
   expiryMonth?: Maybe<Scalars["Int"]["output"]>;
   expiryYear?: Maybe<Scalars["Int"]["output"]>;
+  isPrimaryPaymentSource?: Maybe<Scalars["Boolean"]["output"]>;
   maskedNumber?: Maybe<Scalars["String"]["output"]>;
   paymentMethod: Scalars["String"]["output"];
+  paymentSourceId?: Maybe<Scalars["String"]["output"]>;
+  preferredScheme?: Maybe<Scalars["String"]["output"]>;
+  referenceId?: Maybe<Scalars["String"]["output"]>;
+  status?: Maybe<Scalars["String"]["output"]>;
   type?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface CardScheme {
+  __typename?: "CardScheme";
+  schemaType: Scalars["String"]["output"];
+  supported: Scalars["Boolean"]["output"];
 }
 
 export interface CareProtectionPlan {
   __typename?: "CareProtectionPlan";
   itemId: Scalars["String"]["output"];
   pricings: Array<Maybe<Pricing>>;
+}
+
+export interface ChargebeeBankAccountDetails {
+  __typename?: "ChargebeeBankAccountDetails";
+  accountType?: Maybe<Scalars["String"]["output"]>;
+  bankName?: Maybe<Scalars["String"]["output"]>;
+  directDebitScheme?: Maybe<Scalars["String"]["output"]>;
+  last4?: Maybe<Scalars["String"]["output"]>;
+  nameOnAccount?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ChargebeeCardDetails {
+  __typename?: "ChargebeeCardDetails";
+  brand?: Maybe<Scalars["String"]["output"]>;
+  expiryMonth?: Maybe<Scalars["Int"]["output"]>;
+  expiryYear?: Maybe<Scalars["Int"]["output"]>;
+  fundingType?: Maybe<Scalars["String"]["output"]>;
+  last4?: Maybe<Scalars["String"]["output"]>;
+  maskedNumber?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ChargebeePaymentSource {
+  __typename?: "ChargebeePaymentSource";
+  bankAccount?: Maybe<ChargebeeBankAccountDetails>;
+  card?: Maybe<ChargebeeCardDetails>;
+  gateway?: Maybe<Scalars["String"]["output"]>;
+  isPrimaryPaymentSource?: Maybe<Scalars["Boolean"]["output"]>;
+  paymentMethod?: Maybe<PaymentMethodEnum>;
+  paymentSourceId?: Maybe<Scalars["String"]["output"]>;
+  paypal?: Maybe<ChargebeePaypalDetails>;
+  referenceId?: Maybe<Scalars["String"]["output"]>;
+  status?: Maybe<PaymentSourceStatus>;
+  type?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ChargebeePaypalDetails {
+  __typename?: "ChargebeePaypalDetails";
+  agreementId?: Maybe<Scalars["String"]["output"]>;
+  email?: Maybe<Scalars["String"]["output"]>;
+}
+
+export enum CheckoutTypeEnum {
+  Charge = "CHARGE",
+  Subscription = "SUBSCRIPTION",
 }
 
 export interface ClearCacheMessageStatus {
@@ -302,6 +380,7 @@ export interface CountryState {
   code: Scalars["String"]["output"];
   gpsOptimizationCommand?: Maybe<GpsOptimizationCommand>;
   name: Scalars["String"]["output"];
+  phonePrefix: Scalars["String"]["output"];
 }
 
 export interface Coupon {
@@ -321,6 +400,10 @@ export interface CurrentSubscription {
   invoiceStatus?: Maybe<InvoiceStatusEnum>;
   paymentStatus?: Maybe<PaymentStatusTypeEnum>;
   status: SubscriptionStatusEnum;
+}
+
+export interface DeleteJournalEventTypeInput {
+  id: Scalars["String"]["input"];
 }
 
 export interface Device {
@@ -435,6 +518,21 @@ export enum EntityTypeEnum {
   User = "USER",
 }
 
+export interface EstimatedDiscount {
+  __typename?: "EstimatedDiscount";
+  amount: Scalars["Int"]["output"];
+  id: Scalars["String"]["output"];
+}
+
+export interface EstimatedPrice {
+  __typename?: "EstimatedPrice";
+  amount: Scalars["Int"]["output"];
+  discountAmount: Scalars["Int"]["output"];
+  entityId: Scalars["String"]["output"];
+  entityType: Scalars["String"]["output"];
+  id: Scalars["String"]["output"];
+}
+
 export interface EszNotificationPreferences {
   __typename?: "EszNotificationPreferences";
   push: Scalars["Boolean"]["output"];
@@ -446,6 +544,12 @@ export interface EszNotificationPreferencesIn {
 
 export interface EszNotificationsInput {
   push: Scalars["Boolean"]["input"];
+}
+
+export enum EventSentimentEnum {
+  Negative = "NEGATIVE",
+  Neutral = "NEUTRAL",
+  Positive = "POSITIVE",
 }
 
 export enum Gender {
@@ -468,6 +572,26 @@ export interface Geofence {
 export interface GeofenceIn {
   name: Scalars["String"]["input"];
   position: Array<CoordinatesIn>;
+}
+
+export interface GetCardDetailsResponse {
+  __typename?: "GetCardDetailsResponse";
+  cardScheme?: Maybe<Array<CardScheme>>;
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+}
+
+export interface GetJournalEntriesInput {
+  from: Scalars["String"]["input"];
+  petId: Scalars["String"]["input"];
+  to: Scalars["String"]["input"];
+}
+
+export interface GetPaymentMethodsResponse {
+  __typename?: "GetPaymentMethodsResponse";
+  brands?: Maybe<Array<Scalars["String"]["output"]>>;
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
 }
 
 export interface GoalRange {
@@ -686,6 +810,64 @@ export enum InvoiceStatusEnum {
   Voided = "voided",
 }
 
+export enum JournalEntityTypeEnum {
+  JournalCustomEventType = "JOURNAL_CUSTOM_EVENT_TYPE",
+  JournalEntry = "JOURNAL_ENTRY",
+  JournalEventType = "JOURNAL_EVENT_TYPE",
+}
+
+export interface JournalEntry {
+  __typename?: "JournalEntry";
+  behaviour: Array<JournalEventType>;
+  behaviourPoints: Scalars["Int"]["output"];
+  connection: Array<JournalEventType>;
+  connectionPoints: Scalars["Int"]["output"];
+  creationDate: Scalars["String"]["output"];
+  entityType: JournalEntityTypeEnum;
+  id: Scalars["String"]["output"];
+  mood: JournalEventType;
+  moodPoints: Scalars["Int"]["output"];
+  note?: Maybe<Scalars["String"]["output"]>;
+  petId: Scalars["String"]["output"];
+  routineCheck: Array<JournalEventType>;
+  routineCheckPoints: Scalars["Int"]["output"];
+  totalPoints: Scalars["Int"]["output"];
+  updateDate: Scalars["String"]["output"];
+  userId: Scalars["String"]["output"];
+}
+
+export interface JournalEventType {
+  __typename?: "JournalEventType";
+  creationDate: Scalars["String"]["output"];
+  disableEventIds?: Maybe<Array<Scalars["String"]["output"]>>;
+  entityType: JournalEntityTypeEnum;
+  eventType: JournalEventTypeEnum;
+  icon?: Maybe<Scalars["String"]["output"]>;
+  id: Scalars["String"]["output"];
+  name?: Maybe<Scalars["String"]["output"]>;
+  points: Scalars["Int"]["output"];
+  sentimentType: EventSentimentEnum;
+  species?: Maybe<Scalars["String"]["output"]>;
+  translationKey?: Maybe<Scalars["String"]["output"]>;
+  updateDate: Scalars["String"]["output"];
+  userId?: Maybe<Scalars["String"]["output"]>;
+}
+
+export enum JournalEventTypeEnum {
+  Behaviours = "BEHAVIOURS",
+  Connection = "CONNECTION",
+  Mood = "MOOD",
+  RoutineCheck = "ROUTINE_CHECK",
+}
+
+export interface JournalNotificationExtra {
+  __typename?: "JournalNotificationExtra";
+  eventId?: Maybe<Scalars["String"]["output"]>;
+  eventType?: Maybe<JournalEventTypeEnum>;
+  translationKey: Scalars["String"]["output"];
+  type: Scalars["String"]["output"];
+}
+
 export enum LanguageId {
   De = "DE",
   En = "EN",
@@ -766,10 +948,17 @@ export interface Mutation {
    */
   activateDeviceInOrder?: Maybe<Response>;
   addGpsPromotion?: Maybe<Response>;
+  addJournalEntry: ResponseJournalEntry;
+  /**   journal */
+  addJournalEventType: ResponseJournalEventTypes;
+  addUserCard: AddUserCardResponse;
   appKeepAlive: Response;
   changeForgotPassword: Response;
   changePassword: Response;
   checkOtp: ResponseOtp;
+  checkoutCareProtectionV2: ResponseCheckoutCareProtectionV2;
+  checkoutNewSubscriptionV2: ResponseCheckoutNewSubscriptionV2;
+  checkoutPrepaidV2: ResponseCheckoutNewSubscriptionV2;
   /**
    *   createEnergySavingZone(energySavingZone: EnergySavingZoneIn!):
    * ResponseEnergySavingZone! @aws_cognito_user_pools @aws_iam
@@ -780,11 +969,14 @@ export interface Mutation {
    */
   createGeofence: ResponseGeofence;
   createOptimizationAttempt: Response;
+  createPaymentIntent: ResponseCreatePaymentIntent;
   createPet: ResponsePet;
   createPetlinkGps: ResponseCreatePetlinkGps;
   createPetlinkMicrochip: ResponsePetlinkMicrochip;
   createPetlinkQrTag: ResponsePetlinkQrTag;
   deleteGeofence: Response;
+  deleteJournalEventType: Response;
+  deletePaymentSource: Response;
   deletePet: Response;
   deleteRegistrationToken: Response;
   deleteUser: Response;
@@ -820,6 +1012,7 @@ export interface Mutation {
   setOptimizationDone: Response;
   setPetIsFound: ResponseSetPetIsFound;
   setPetIsLost: ResponseSetPetIsLost;
+  setPrimaryPaymentSource: Response;
   setReadPetHistory: Response;
   setReadPopupMigratedUser: Response;
   setSafetyTermsCat: Response;
@@ -837,6 +1030,7 @@ export interface Mutation {
   updateEndOfLife: ResponseUpdateEndOfLife;
   updateGeofence: ResponseGeofence;
   updateNotificationSettings: ResponseNotificationSettings;
+  updatePaymentIntent: ResponseUpdatePaymentIntent;
   updatePaymentSources: ResponseManagePaymentSources;
   updatePet: ResponsePet;
   updatePetProtectionData?: Maybe<ResponseUpdatePetProtectionData>;
@@ -867,6 +1061,20 @@ export type MutationAddGpsPromotionArgs = {
   promotion: PromotionInput;
 };
 
+export type MutationAddJournalEntryArgs = {
+  input: AddJournalEntryInput;
+};
+
+export type MutationAddJournalEventTypeArgs = {
+  input: AddJournalEventTypeInput;
+};
+
+export type MutationAddUserCardArgs = {
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+  paymentIntentId: Scalars["String"]["input"];
+  preferredScheme?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type MutationAppKeepAliveArgs = {
   productIds: Array<Scalars["String"]["input"]>;
 };
@@ -888,6 +1096,33 @@ export type MutationCheckOtpArgs = {
   verificationId: Scalars["String"]["input"];
 };
 
+export type MutationCheckoutCareProtectionV2Args = {
+  paymentIntentId: Scalars["String"]["input"];
+  paymentSourceId?: InputMaybe<Scalars["String"]["input"]>;
+  preferredScheme?: InputMaybe<Scalars["String"]["input"]>;
+  priceId: Scalars["String"]["input"];
+  productId: Scalars["String"]["input"];
+};
+
+export type MutationCheckoutNewSubscriptionV2Args = {
+  couponIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  paymentIntentId: Scalars["String"]["input"];
+  paymentSourceId?: InputMaybe<Scalars["String"]["input"]>;
+  preferredScheme?: InputMaybe<Scalars["String"]["input"]>;
+  priceIds: Array<Scalars["String"]["input"]>;
+  productId: Scalars["String"]["input"];
+};
+
+export type MutationCheckoutPrepaidV2Args = {
+  couponIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  orderId: Scalars["String"]["input"];
+  paymentIntentId: Scalars["String"]["input"];
+  paymentSourceId?: InputMaybe<Scalars["String"]["input"]>;
+  preferredScheme?: InputMaybe<Scalars["String"]["input"]>;
+  priceIds: Array<Scalars["String"]["input"]>;
+  serialNumber: Scalars["String"]["input"];
+};
+
 export type MutationCreateGeofenceArgs = {
   geofence: GeofenceIn;
 };
@@ -896,6 +1131,15 @@ export type MutationCreateOptimizationAttemptArgs = {
   failureReason?: InputMaybe<Scalars["String"]["input"]>;
   productId: Scalars["String"]["input"];
   status: OptimizationAttemptStatus;
+};
+
+export type MutationCreatePaymentIntentArgs = {
+  checkoutType: CheckoutTypeEnum;
+  couponIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  currencyCode: Scalars["String"]["input"];
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+  paymentMethodType: PaymentMethodTypeEnum;
+  priceIds: Array<Scalars["String"]["input"]>;
 };
 
 export type MutationCreatePetArgs = {
@@ -917,6 +1161,14 @@ export type MutationCreatePetlinkQrTagArgs = {
 
 export type MutationDeleteGeofenceArgs = {
   id: Scalars["String"]["input"];
+};
+
+export type MutationDeleteJournalEventTypeArgs = {
+  input: DeleteJournalEventTypeInput;
+};
+
+export type MutationDeletePaymentSourceArgs = {
+  paymentSourceId: Scalars["String"]["input"];
 };
 
 export type MutationDeletePetArgs = {
@@ -1052,6 +1304,11 @@ export type MutationSetPetIsLostArgs = {
   petId: Scalars["String"]["input"];
 };
 
+export type MutationSetPrimaryPaymentSourceArgs = {
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+  paymentSourceId: Scalars["String"]["input"];
+};
+
 export type MutationSetReadPetHistoryArgs = {
   notificationId: Array<InputMaybe<Scalars["String"]["input"]>>;
 };
@@ -1092,6 +1349,7 @@ export type MutationStopRenewingSubscriptionArgs = {
 };
 
 export type MutationUpdateBillingInfoArgs = {
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
   updateBillingInfoInput: UpdateBillingInfoInput;
 };
 
@@ -1113,6 +1371,15 @@ export type MutationUpdateGeofenceArgs = {
 
 export type MutationUpdateNotificationSettingsArgs = {
   notificationSettings: UpdateNotificationSettingsInput;
+};
+
+export type MutationUpdatePaymentIntentArgs = {
+  checkoutType: CheckoutTypeEnum;
+  couponIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  currencyCode: Scalars["String"]["input"];
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+  paymentIntentId: Scalars["String"]["input"];
+  priceIds: Array<Scalars["String"]["input"]>;
 };
 
 export type MutationUpdatePetArgs = {
@@ -1203,7 +1470,8 @@ export interface NotificationSettings {
 }
 
 export interface NotificationSettingsIn {
-  energySavingZone: EszNotificationPreferencesIn;
+  energySavingZone?: InputMaybe<EszNotificationPreferencesIn>;
+  push?: InputMaybe<Scalars["Boolean"]["input"]>;
 }
 
 export enum OptimizationAttemptStatus {
@@ -1247,12 +1515,40 @@ export interface PaginationInput {
   pageSize?: InputMaybe<Scalars["Int"]["input"]>;
 }
 
+export interface PaymentIntent {
+  __typename?: "PaymentIntent";
+  amount: Scalars["Int"]["output"];
+  businessEntityId?: Maybe<Scalars["String"]["output"]>;
+  createdAt: Scalars["Int"]["output"];
+  currencyCode?: Maybe<Scalars["String"]["output"]>;
+  customerId: Scalars["String"]["output"];
+  expiresAt: Scalars["Int"]["output"];
+  failureUrl?: Maybe<Scalars["String"]["output"]>;
+  gateway?: Maybe<Scalars["String"]["output"]>;
+  gatewayAccountId: Scalars["String"]["output"];
+  id: Scalars["String"]["output"];
+  modifiedAt: Scalars["Int"]["output"];
+  paymentMethodType?: Maybe<Scalars["String"]["output"]>;
+  referenceId?: Maybe<Scalars["String"]["output"]>;
+  resourceVersion?: Maybe<Scalars["Float"]["output"]>;
+  status: Scalars["String"]["output"];
+  successUrl?: Maybe<Scalars["String"]["output"]>;
+  updatedAt?: Maybe<Scalars["Int"]["output"]>;
+}
+
 export enum PaymentMethodEnum {
   ApplePay = "APPLE_PAY",
   Card = "CARD",
   DirectDebit = "DIRECT_DEBIT",
   GooglePay = "GOOGLE_PAY",
   Paypal = "PAYPAL",
+}
+
+export enum PaymentMethodTypeEnum {
+  ApplePay = "apple_pay",
+  Card = "card",
+  GooglePay = "google_pay",
+  PaypalExpressCheckout = "paypal_express_checkout",
 }
 
 export interface PaymentSource {
@@ -1343,6 +1639,7 @@ export enum PetHistoryEventTypeEnum {
   GeofenceOut = "GEOFENCE_OUT",
   GeofenceTimeout = "GEOFENCE_TIMEOUT",
   HighTemperature = "HIGH_TEMPERATURE",
+  JournalNotification = "JOURNAL_NOTIFICATION",
   LowTemperature = "LOW_TEMPERATURE",
   NoGpsSignal = "NO_GPS_SIGNAL",
   OffSubscription = "OFF_SUBSCRIPTION",
@@ -1369,7 +1666,11 @@ export interface PetHistoryExtra {
   address?: Maybe<Scalars["String"]["output"]>;
   brazeNotification?: Maybe<BrazeNotification>;
   contentMessage?: Maybe<ContentMessage>;
+  currentTermEndDate?: Maybe<Scalars["String"]["output"]>;
+  esaName?: Maybe<Scalars["String"]["output"]>;
+  journal?: Maybe<Array<Maybe<JournalNotificationExtra>>>;
   newSerialNumber?: Maybe<Scalars["String"]["output"]>;
+  safeAreaName?: Maybe<Scalars["String"]["output"]>;
   serialNumber?: Maybe<Scalars["String"]["output"]>;
 }
 
@@ -1699,6 +2000,7 @@ export interface Query {
   checkoutPrepaid: ResponseCheckoutNewSubscription;
   churnDeflection: ResponseChurnDeflection;
   countPetHistoryUnread: ResponseCountPetHistoryUnread;
+  estimateCheckoutTotal: ResponseEstimateCheckoutTotal;
   getActiveSubscriptions: ResponseActiveSubscriptions;
   getActivities: ResponseActivities;
   /**   TODO: rename in dog */
@@ -1711,8 +2013,10 @@ export interface Query {
   getBaseConfig: ResponseGetBaseConfig;
   getBillingInfo: ResponseBillingInfo;
   getBreed: ResponseGetBreed;
+  getCardDetails: GetCardDetailsResponse;
   getColors: ResponseGetColors;
   getCountryState: ResponseGetCountryState;
+  getCoupon: ResponseGetCoupon;
   getDictionary: ResponseGetDictionary;
   /**   end of life */
   getEndOfLifeStep: ResponseGetEndOfLifeStep;
@@ -1721,9 +2025,14 @@ export interface Query {
   /**   getGeofence(id: String!): ResponseGeofence! @aws_cognito_user_pools @aws_iam */
   getGeofences: ResponseGeofences;
   getGpsPromotions: ResponseGetGpsPromotions;
+  getJournalEntries: ResponseJournalEntries;
+  getJournalEntry: ResponseJournalEntry;
+  /**  journal */
+  getJournalEventTypes: ResponseJournalEventTypes;
   getLogUploadUrl: ResponseGetLogUploadUrl;
   getNotificationsHistory: ResponseNotificationsHistory;
   getOrder?: Maybe<ResponseGetOrder>;
+  getPaymentMethods: GetPaymentMethodsResponse;
   getPaymentSource: ResponseGetPaymentSource;
   getPet: ResponsePet;
   getPetByQrTag: ResponsePetByQrTag;
@@ -1754,6 +2063,7 @@ export interface Query {
   getSubscriptionPlans: ResponseSubscriptionPlans;
   getSubscriptions: ResponseGetSubscriptions;
   getUser: ResponseUser;
+  getUserPaymentSources: ResponseGetUserPaymentSources;
 }
 
 export type QueryChangeSubscriptionPlanArgs = {
@@ -1819,6 +2129,13 @@ export type QueryChurnDeflectionArgs = {
   subscriptionId: Scalars["String"]["input"];
 };
 
+export type QueryEstimateCheckoutTotalArgs = {
+  checkoutType: CheckoutTypeEnum;
+  couponIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+  priceIds: Array<Scalars["String"]["input"]>;
+};
+
 export type QueryGetActiveSubscriptionsArgs = {
   subscriptionsIds?: InputMaybe<Array<Scalars["String"]["input"]>>;
 };
@@ -1862,9 +2179,17 @@ export type QueryGetBaseConfigArgs = {
   appBrand: Scalars["String"]["input"];
 };
 
+export type QueryGetBillingInfoArgs = {
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type QueryGetBreedArgs = {
   languageId?: InputMaybe<LanguageId>;
   species: SpeciesEnum;
+};
+
+export type QueryGetCardDetailsArgs = {
+  cardNumber: Scalars["String"]["input"];
 };
 
 export type QueryGetColorsArgs = {
@@ -1875,6 +2200,10 @@ export type QueryGetColorsArgs = {
 export type QueryGetCountryStateArgs = {
   countryId?: InputMaybe<Scalars["String"]["input"]>;
   languageId?: InputMaybe<LanguageId>;
+};
+
+export type QueryGetCouponArgs = {
+  couponId: Scalars["String"]["input"];
 };
 
 export type QueryGetDictionaryArgs = {
@@ -1893,6 +2222,18 @@ export type QueryGetEnergySavingZoneArgs = {
 
 export type QueryGetGpsPromotionsArgs = {
   productId: Scalars["String"]["input"];
+};
+
+export type QueryGetJournalEntriesArgs = {
+  input: GetJournalEntriesInput;
+};
+
+export type QueryGetJournalEntryArgs = {
+  journalId: Scalars["String"]["input"];
+};
+
+export type QueryGetJournalEventTypesArgs = {
+  petId: Scalars["String"]["input"];
 };
 
 export type QueryGetLogUploadUrlArgs = {
@@ -2023,6 +2364,10 @@ export type QueryGetSubscriptionsArgs = {
   productId: Scalars["String"]["input"];
 };
 
+export type QueryGetUserPaymentSourcesArgs = {
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export interface Response {
   __typename?: "Response";
   code: Scalars["String"]["output"];
@@ -2127,6 +2472,13 @@ export interface ResponseCheckoutCareProtection {
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseCheckoutCareProtectionV2 {
+  __typename?: "ResponseCheckoutCareProtectionV2";
+  code: Scalars["String"]["output"];
+  invoiceId?: Maybe<Scalars["String"]["output"]>;
+  message: Scalars["String"]["output"];
+}
+
 export interface ResponseCheckoutEolNewDevice {
   __typename?: "ResponseCheckoutEOLNewDevice";
   code: Scalars["String"]["output"];
@@ -2142,6 +2494,13 @@ export interface ResponseCheckoutNewSubscription {
   url?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseCheckoutNewSubscriptionV2 {
+  __typename?: "ResponseCheckoutNewSubscriptionV2";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  subscriptionId?: Maybe<Scalars["String"]["output"]>;
+}
+
 export interface ResponseChurnDeflection {
   __typename?: "ResponseChurnDeflection";
   code: Scalars["String"]["output"];
@@ -2155,6 +2514,13 @@ export interface ResponseCountPetHistoryUnread {
   countPetHistoryUnread?: Maybe<Scalars["Int"]["output"]>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseCreatePaymentIntent {
+  __typename?: "ResponseCreatePaymentIntent";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentIntent?: Maybe<PaymentIntent>;
 }
 
 export interface ResponseCreatePetlinkGps {
@@ -2182,6 +2548,16 @@ export interface ResponseEnergySavingZones {
   energySavingZones?: Maybe<Array<EnergySavingZone>>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseEstimateCheckoutTotal {
+  __typename?: "ResponseEstimateCheckoutTotal";
+  code: Scalars["String"]["output"];
+  discounts?: Maybe<Array<EstimatedDiscount>>;
+  items?: Maybe<Array<Maybe<EstimatedPrice>>>;
+  message: Scalars["String"]["output"];
+  subTotal?: Maybe<Scalars["Int"]["output"]>;
+  total?: Maybe<Scalars["Int"]["output"]>;
 }
 
 export interface ResponseGeofence {
@@ -2230,6 +2606,13 @@ export interface ResponseGetCountryState {
   items?: Maybe<Array<CountryState>>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetCoupon {
+  __typename?: "ResponseGetCoupon";
+  code: Scalars["String"]["output"];
+  coupon?: Maybe<Coupon>;
+  message: Scalars["String"]["output"];
 }
 
 export interface ResponseGetDictionary {
@@ -2339,6 +2722,37 @@ export interface ResponseGetSubscriptions {
   message: Scalars["String"]["output"];
   subscriptions?: Maybe<Array<SubscriptionShortInfo>>;
   translationCode?: Maybe<Scalars["String"]["output"]>;
+}
+
+export interface ResponseGetUserPaymentSources {
+  __typename?: "ResponseGetUserPaymentSources";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentSources?: Maybe<Array<ChargebeePaymentSource>>;
+}
+
+export interface ResponseJournalEntries {
+  __typename?: "ResponseJournalEntries";
+  code: Scalars["String"]["output"];
+  entries?: Maybe<Array<JournalEntry>>;
+  message: Scalars["String"]["output"];
+  previousWeekWellbeingAverage?: Maybe<Scalars["Float"]["output"]>;
+  previousWeekWellbeingState?: Maybe<WellbeingStateEnum>;
+}
+
+export interface ResponseJournalEntry {
+  __typename?: "ResponseJournalEntry";
+  code: Scalars["String"]["output"];
+  journalEntry?: Maybe<JournalEntry>;
+  message: Scalars["String"]["output"];
+  notifications?: Maybe<Array<JournalNotificationExtra>>;
+}
+
+export interface ResponseJournalEventTypes {
+  __typename?: "ResponseJournalEventTypes";
+  code: Scalars["String"]["output"];
+  eventTypes?: Maybe<Array<JournalEventType>>;
+  message: Scalars["String"]["output"];
 }
 
 export interface ResponseManagePaymentSources {
@@ -2578,6 +2992,13 @@ export interface ResponseUpdateEndOfLife {
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
 
+export interface ResponseUpdatePaymentIntent {
+  __typename?: "ResponseUpdatePaymentIntent";
+  code: Scalars["String"]["output"];
+  message: Scalars["String"]["output"];
+  paymentIntent?: Maybe<PaymentIntent>;
+}
+
 export interface ResponseUpdatePaymentSources {
   __typename?: "ResponseUpdatePaymentSources";
   code: Scalars["String"]["output"];
@@ -2683,6 +3104,7 @@ export enum SettingOperationEnum {
 export enum SettingTypeEnum {
   EnergySavingZone = "ENERGY_SAVING_ZONE",
   Geofence = "GEOFENCE",
+  TourRecording = "TOUR_RECORDING",
   UpdateFrequency = "UPDATE_FREQUENCY",
 }
 
@@ -2865,6 +3287,12 @@ export interface UpdateNotificationSettingsInput {
   energySavingZone: EszNotificationsInput;
 }
 
+export enum UpdatePaymentIntentEnum {
+  NewCard = "NEW_CARD",
+  SavedCard = "SAVED_CARD",
+  UpdateAmount = "UPDATE_AMOUNT",
+}
+
 export interface UpdatePetIn {
   birthDate?: InputMaybe<Scalars["String"]["input"]>;
   breedType?: InputMaybe<BreedTypeEnum>;
@@ -3018,6 +3446,12 @@ export enum ValidationStatusEnum {
   NotValidated = "not_validated",
   PartiallyValid = "partially_valid",
   Valid = "valid",
+}
+
+export enum WellbeingStateEnum {
+  Beaming = "BEAMING",
+  DoingFine = "DOING_FINE",
+  NeedsLove = "NEEDS_LOVE",
 }
 
 export type GetEndOfLifeStepQueryVariables = Exact<{
@@ -3246,6 +3680,68 @@ export type CheckContactQueryVariables = Exact<{
 export type CheckContactQuery = {
   __typename?: "Query";
   checkContact: { __typename?: "Response"; code: string; translationCode?: string | null; message: string };
+};
+
+export type GetPaymentMethodsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetPaymentMethodsQuery = {
+  __typename?: "Query";
+  getPaymentMethods: { __typename?: "GetPaymentMethodsResponse"; code: string; message: string; brands?: Array<string> | null };
+};
+
+export type GetUserPaymentSourcesQueryVariables = Exact<{
+  orderId?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetUserPaymentSourcesQuery = {
+  __typename?: "Query";
+  getUserPaymentSources: {
+    __typename?: "ResponseGetUserPaymentSources";
+    code: string;
+    message: string;
+    paymentSources?: Array<{
+      __typename?: "ChargebeePaymentSource";
+      paymentSourceId?: string | null;
+      status?: PaymentSourceStatus | null;
+      paymentMethod?: PaymentMethodEnum | null;
+      isPrimaryPaymentSource?: boolean | null;
+      referenceId?: string | null;
+      gateway?: string | null;
+      type?: string | null;
+      card?: {
+        __typename?: "ChargebeeCardDetails";
+        brand?: string | null;
+        maskedNumber?: string | null;
+        expiryMonth?: number | null;
+        expiryYear?: number | null;
+        last4?: string | null;
+        fundingType?: string | null;
+      } | null;
+      paypal?: { __typename?: "ChargebeePaypalDetails"; email?: string | null; agreementId?: string | null } | null;
+      bankAccount?: {
+        __typename?: "ChargebeeBankAccountDetails";
+        last4?: string | null;
+        nameOnAccount?: string | null;
+        bankName?: string | null;
+        accountType?: string | null;
+        directDebitScheme?: string | null;
+      } | null;
+    }> | null;
+  };
+};
+
+export type GetCardDetailsQueryVariables = Exact<{
+  cardNumber: Scalars["String"]["input"];
+}>;
+
+export type GetCardDetailsQuery = {
+  __typename?: "Query";
+  getCardDetails: {
+    __typename?: "GetCardDetailsResponse";
+    code: string;
+    message: string;
+    cardScheme?: Array<{ __typename?: "CardScheme"; supported: boolean; schemaType: string }> | null;
+  };
 };
 
 export type GetPetQueryVariables = Exact<{
@@ -5328,6 +5824,176 @@ export const CheckContactDocument = {
                 { kind: "Field", name: { kind: "Name", value: "code" } },
                 { kind: "Field", name: { kind: "Name", value: "translationCode" } },
                 { kind: "Field", name: { kind: "Name", value: "message" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetPaymentMethodsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getPaymentMethods" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getPaymentMethods" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "brands" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetUserPaymentSourcesDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getUserPaymentSources" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "orderId" } },
+          type: { kind: "NamedType", name: { kind: "Name", value: "String" } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getUserPaymentSources" },
+            arguments: [
+              { kind: "Argument", name: { kind: "Name", value: "orderId" }, value: { kind: "Variable", name: { kind: "Name", value: "orderId" } } },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "paymentSources" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "paymentSourceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "status" } },
+                      { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
+                      { kind: "Field", name: { kind: "Name", value: "isPrimaryPaymentSource" } },
+                      { kind: "Field", name: { kind: "Name", value: "referenceId" } },
+                      { kind: "Field", name: { kind: "Name", value: "gateway" } },
+                      { kind: "Field", name: { kind: "Name", value: "type" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "card" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "brand" } },
+                            { kind: "Field", name: { kind: "Name", value: "maskedNumber" } },
+                            { kind: "Field", name: { kind: "Name", value: "expiryMonth" } },
+                            { kind: "Field", name: { kind: "Name", value: "expiryYear" } },
+                            { kind: "Field", name: { kind: "Name", value: "last4" } },
+                            { kind: "Field", name: { kind: "Name", value: "fundingType" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "paypal" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "email" } },
+                            { kind: "Field", name: { kind: "Name", value: "agreementId" } },
+                          ],
+                        },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "bankAccount" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            { kind: "Field", name: { kind: "Name", value: "last4" } },
+                            { kind: "Field", name: { kind: "Name", value: "nameOnAccount" } },
+                            { kind: "Field", name: { kind: "Name", value: "bankName" } },
+                            { kind: "Field", name: { kind: "Name", value: "accountType" } },
+                            { kind: "Field", name: { kind: "Name", value: "directDebitScheme" } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const GetCardDetailsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "getCardDetails" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "cardNumber" } },
+          type: { kind: "NonNullType", type: { kind: "NamedType", name: { kind: "Name", value: "String" } } },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "getCardDetails" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "cardNumber" },
+                value: { kind: "Variable", name: { kind: "Name", value: "cardNumber" } },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "code" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "cardScheme" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "supported" } },
+                      { kind: "Field", name: { kind: "Name", value: "schemaType" } },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -9118,6 +9784,60 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "checkContact",
+        "query",
+        variables,
+      );
+    },
+    getPaymentMethods(
+      variables?: GetPaymentMethodsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetPaymentMethodsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetPaymentMethodsQuery>({
+            document: GetPaymentMethodsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getPaymentMethods",
+        "query",
+        variables,
+      );
+    },
+    getUserPaymentSources(
+      variables?: GetUserPaymentSourcesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetUserPaymentSourcesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetUserPaymentSourcesQuery>({
+            document: GetUserPaymentSourcesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getUserPaymentSources",
+        "query",
+        variables,
+      );
+    },
+    getCardDetails(
+      variables: GetCardDetailsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCardDetailsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCardDetailsQuery>({
+            document: GetCardDetailsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "getCardDetails",
         "query",
         variables,
       );

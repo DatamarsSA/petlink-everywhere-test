@@ -218,6 +218,60 @@ query checkContact($contact: String!, $contactType: ContactType!, $appBrand: App
     }
 }
 
+query getPaymentMethods {
+    getPaymentMethods {
+        code
+        message
+        brands
+    }
+}
+
+query getUserPaymentSources($orderId: String) {
+    getUserPaymentSources(orderId: $orderId) {
+        code
+        message
+        paymentSources {
+            paymentSourceId
+            status
+            paymentMethod
+            isPrimaryPaymentSource
+            referenceId
+            gateway
+            type
+            card {
+                brand
+                maskedNumber
+                expiryMonth
+                expiryYear
+                last4
+                fundingType
+            }
+            paypal {
+                email
+                agreementId
+            }
+            bankAccount {
+                last4
+                nameOnAccount
+                bankName
+                accountType
+                directDebitScheme
+            }
+        }
+    }
+}
+
+query getCardDetails($cardNumber: String!) {
+    getCardDetails(cardNumber: $cardNumber) {
+        code
+        message
+        cardScheme {
+            supported
+            schemaType
+        }
+    }
+}
+
 query getPet($id: String!) {
     getPet(id: $id) {
         code
