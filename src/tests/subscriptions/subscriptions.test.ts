@@ -26,6 +26,90 @@ import {
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { waitFor } from "../../helpers/utils.js";
 
+/**
+ *
+ * 1. Device registrato → petlinkGpsInventory.planProfileId → recupera PLAN_PROFILE
+ *
+ * 2. App chiama getSubscriptionPlans(productId)
+ *    ├── legge planProfileId dall'inventario
+ *    ├── se device ha già sub attiva → mostra upgradePlans
+ *    └── se device non ha sub → mostra startingPlans
+ *    → ritorna lista di piani (da Chargebee item prices) filtrati per quei planIds
+ *
+ * 3. User sceglie un piano → checkout
+ *    ├── DEFAULT: hosted page Chargebee → sub su CB → webhook → SUBSCRIPTION + INVOICE su Mongo
+ *    ├── TRIAL: hosted page Chargebee → sub in_trial su CB → webhook → SUBSCRIPTION su Mongo (no invoice finché trial non finisce)
+ *    └── PAID_EXTERNALLY: handleInsuranceSubscription()
+ *        ├── crea SUBSCRIPTION su Mongo (businessEntityId: DATAMARS, isInsurance: true)
+ *        ├── crea INVOICE su Mongo (status: paid_externally, total: 0)
+ *        └── NON chiama Chargebee → nessun webhook → nessuna sub su CB
+ *
+ *
+ *
+ *  ═══════════════════════════════════════════════════════════════════
+ * MACROFLUSSI PAGAMENTO / SUBSCRIPTION
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 1. DEFAULT (checkout standard)
+ *    User → app → checkoutNewSubscription → Chargebee hosted page
+ *    → sub attiva, invoice al primo ciclo, rinnovi automatici
+ *    → tutto su Chargebee, sync async su Mongo via webhook
+ *
+ * 2. TRIAL (trial period poi paga)
+ *    User → app → checkoutNewSubscription → Chargebee (con trial_end)
+ *    → sub in_trial, NO invoice finché trial non finisce
+ *    → al trial end: primo pagamento → invoice → sub attiva
+ *    → tutto su Chargebee, sync async su Mongo via webhook
+ *
+ * 3. PAID_EXTERNALLY / INSURANCE (terzo paga)
+ *    CCT setPlanProfile → user registra device → auto-crea sub
+ *    → sub solo Mongo (DATAMARS), invoice paid_externally total=0
+ *    → NO Chargebee, NO webhook, NO pagamento
+ *
+ * 4. PREPAID (store esterno, prima compra poi registra)
+ *    Store → POST /order (ghost user, serial PREPAID-*)
+ *    User → checkoutPrepaid → Chargebee checkout (ghost user)
+ *    → sub orfana su CB (userId=ghost, productId=null)
+ *    Store → POST /order-tracking → serial reale, realign su CB
+ *    User → createPetlinkGps → adoption: linka sub a user+device
+ *    → sub su Chargebee (sempre), poi linkata a Mongo
+ *    → se buyer ≠ registrant: clone su CB, vecchia sub fermata
+ *
+ * 5. NON_PAYING / FREE PERIOD (operatore CCT regala giorni)
+ *    A) Device senza sub → crea sub Mongo only (DATAMARS, non_paying)
+ *    B) Device con sub esistente → estende currentTermEnd
+ *       ├── sub CB-managed → changeTermEnd su Chargebee
+ *       └── sub DATAMARS → upsert DB diretto
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * EVENTI POST-ACQUISTO (su sub esistenti)
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * 6. RINNOVO (automatico, ogni ciclo)
+ *    Chargebee → payment_succeeded + subscription_renewed + invoice_generated
+ *    → Core: nuova INVOICE, currentTerm shiftato, paymentStatus=SUCCEEDED
+ *
+ * 7. CHANGE PLAN (upgrade/downgrade)
+ *    User → changeSubscriptionPlan → CB scheduled change (next term)
+ *    → al term end: vecchia sub fermata, nuova attivata
+ *
+ * 8. STOP RINNOVO (disdetta a fine termine)
+ *    User → stopRenewingSubscription
+ *    → calculateFee: se <4 mesi pagati → applyCharges (ETF) + changeTermEnd
+ *    → CB: cancelForItems(end_of_term)
+ *    → alla scadenza: subscription_cancelled
+ *
+ * 9. REFUND (rimborso da CCT)
+ *    CCT → refundInvoice → SM → CB credit note
+ *    → CREDIT_NOTE su Mongo, sub marcata isRefunded
+ *
+ * 10. DUNNING (rinnovo fallito)
+ *     Chargebee → payment_failed → retry automatici
+ *     → se tutti falliscono → subscription_cancelled
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ */
+
 //FIXME: on cct set "planProfileId" as a Enum and not as a string, then we can use that codegn generated enum
 enum PLanProfile {
   //to reset to origin status
@@ -1287,12 +1371,12 @@ describe("PREPAID (purchase on external store)", () => {
     expect(buyRes.utilityIntegrationTest.code).toBe("200");
   }
 
-  async function getPrepaidSubByOrder(orderId: string) {
-    const res = await petlink.cct.graphqlHttp.authJwt.getSubscriptionsPrepaid({ filter: { orderId, filterType: FilterEnum.And } });
-    return res.getSubscriptionsPrepaid?.items?.[0];
+  async function getPrepaidSub(email: string, serialNumber: string) {
+    const res = await petlink.cct.graphqlHttp.authJwt.getSubscriptionsPrepaid({ filter: { email, filterType: FilterEnum.And } });
+    return res.getSubscriptionsPrepaid?.items?.find((i) => i.serialNumber === serialNumber);
   }
 
-  type PrepaidSub = Awaited<ReturnType<typeof getPrepaidSubByOrder>>;
+  type PrepaidSub = Awaited<ReturnType<typeof getPrepaidSub>>;
   async function waitForPrepaidSub(email: string, chargebeeSubscriptionId: string, isReady: (s: PrepaidSub) => boolean, timeoutError: string) {
     const sub = await waitFor(
       async () => {
@@ -1376,7 +1460,7 @@ describe("PREPAID (purchase on external store)", () => {
     await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
 
     // capture the chargebeeSubscriptionId created by the webhook for robust polling
-    const subAfterBuy = await waitFor(() => getPrepaidSubByOrder(order.orderId), {
+    const subAfterBuy = await waitFor(() => getPrepaidSub(buyer.email!, gps.serialNumber), {
       isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === gps.serialNumber,
       timeoutError: `prepaid subscription not created after buy for order ${order.orderId}`,
     });
@@ -1403,7 +1487,7 @@ describe("PREPAID (purchase on external store)", () => {
     await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
 
     // The subscription_created webhook persists an orphan prepaid sub (productId null) with the PREPAID serial
-    const orphan = await waitFor(() => getPrepaidSubByOrder(order.orderId), {
+    const orphan = await waitFor(() => getPrepaidSub(buyer.email!, order.prepaidSerial), {
       isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === order.prepaidSerial,
       timeoutError: `prepaid orphan subscription not created for order ${order.orderId}`,
     });
@@ -1433,7 +1517,7 @@ describe("PREPAID (purchase on external store)", () => {
     await assertOrderActivated(order.orderId, gps.serialNumber);
   });
 
-  it("Flow C: order → buy → register → tracking → sub active", async () => {
+  it("Flow D: order → buy → register → tracking → sub active (PRTSUP-767 scenario)", async () => {
     const gps = fxt.current.gpsFixtures.DOG;
     const buyer = setup.user!;
     const order = await createPrepaidOrder(buyer, fxt.current.prepaidOrder);
@@ -1441,7 +1525,7 @@ describe("PREPAID (purchase on external store)", () => {
 
     await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
 
-    const orphan = await waitFor(() => getPrepaidSubByOrder(order.orderId), {
+    const orphan = await waitFor(() => getPrepaidSub(buyer.email!, order.prepaidSerial), {
       isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === order.prepaidSerial && s?.productId == null,
       timeoutError: `prepaid orphan subscription not created for order ${order.orderId}`,
     });
@@ -1450,7 +1534,7 @@ describe("PREPAID (purchase on external store)", () => {
     const registered = await registerDevice();
     expect(registered.serialNumber).toBe(gps.serialNumber);
 
-    const orphanAfterRegistration = await getPrepaidSubByOrder(order.orderId);
+    const orphanAfterRegistration = await getPrepaidSub(buyer.email!, order.prepaidSerial);
     expect(orphanAfterRegistration).toMatchObject({
       chargebeeSubscriptionId,
       productId: null,
@@ -1464,86 +1548,4 @@ describe("PREPAID (purchase on external store)", () => {
   });
 });
 
-/**
- *
- * 1. Device registrato → petlinkGpsInventory.planProfileId → recupera PLAN_PROFILE
- *
- * 2. App chiama getSubscriptionPlans(productId)
- *    ├── legge planProfileId dall'inventario
- *    ├── se device ha già sub attiva → mostra upgradePlans
- *    └── se device non ha sub → mostra startingPlans
- *    → ritorna lista di piani (da Chargebee item prices) filtrati per quei planIds
- *
- * 3. User sceglie un piano → checkout
- *    ├── DEFAULT: hosted page Chargebee → sub su CB → webhook → SUBSCRIPTION + INVOICE su Mongo
- *    ├── TRIAL: hosted page Chargebee → sub in_trial su CB → webhook → SUBSCRIPTION su Mongo (no invoice finché trial non finisce)
- *    └── PAID_EXTERNALLY: handleInsuranceSubscription()
- *        ├── crea SUBSCRIPTION su Mongo (businessEntityId: DATAMARS, isInsurance: true)
- *        ├── crea INVOICE su Mongo (status: paid_externally, total: 0)
- *        └── NON chiama Chargebee → nessun webhook → nessuna sub su CB
- *
- *
- *
- *  ═══════════════════════════════════════════════════════════════════
- * MACROFLUSSI PAGAMENTO / SUBSCRIPTION
- * ═══════════════════════════════════════════════════════════════════
- *
- * 1. DEFAULT (checkout standard)
- *    User → app → checkoutNewSubscription → Chargebee hosted page
- *    → sub attiva, invoice al primo ciclo, rinnovi automatici
- *    → tutto su Chargebee, sync async su Mongo via webhook
- *
- * 2. TRIAL (trial period poi paga)
- *    User → app → checkoutNewSubscription → Chargebee (con trial_end)
- *    → sub in_trial, NO invoice finché trial non finisce
- *    → al trial end: primo pagamento → invoice → sub attiva
- *    → tutto su Chargebee, sync async su Mongo via webhook
- *
- * 3. PAID_EXTERNALLY / INSURANCE (terzo paga)
- *    CCT setPlanProfile → user registra device → auto-crea sub
- *    → sub solo Mongo (DATAMARS), invoice paid_externally total=0
- *    → NO Chargebee, NO webhook, NO pagamento
- *
- * 4. PREPAID (store esterno, prima compra poi registra)
- *    Store → POST /order (ghost user, serial PREPAID-*)
- *    User → checkoutPrepaid → Chargebee checkout (ghost user)
- *    → sub orfana su CB (userId=ghost, productId=null)
- *    Store → POST /order-tracking → serial reale, realign su CB
- *    User → createPetlinkGps → adoption: linka sub a user+device
- *    → sub su Chargebee (sempre), poi linkata a Mongo
- *    → se buyer ≠ registrant: clone su CB, vecchia sub fermata
- *
- * 5. NON_PAYING / FREE PERIOD (operatore CCT regala giorni)
- *    A) Device senza sub → crea sub Mongo only (DATAMARS, non_paying)
- *    B) Device con sub esistente → estende currentTermEnd
- *       ├── sub CB-managed → changeTermEnd su Chargebee
- *       └── sub DATAMARS → upsert DB diretto
- *
- * ═══════════════════════════════════════════════════════════════════
- * EVENTI POST-ACQUISTO (su sub esistenti)
- * ═══════════════════════════════════════════════════════════════════
- *
- * 6. RINNOVO (automatico, ogni ciclo)
- *    Chargebee → payment_succeeded + subscription_renewed + invoice_generated
- *    → Core: nuova INVOICE, currentTerm shiftato, paymentStatus=SUCCEEDED
- *
- * 7. CHANGE PLAN (upgrade/downgrade)
- *    User → changeSubscriptionPlan → CB scheduled change (next term)
- *    → al term end: vecchia sub fermata, nuova attivata
- *
- * 8. STOP RINNOVO (disdetta a fine termine)
- *    User → stopRenewingSubscription
- *    → calculateFee: se <4 mesi pagati → applyCharges (ETF) + changeTermEnd
- *    → CB: cancelForItems(end_of_term)
- *    → alla scadenza: subscription_cancelled
- *
- * 9. REFUND (rimborso da CCT)
- *    CCT → refundInvoice → SM → CB credit note
- *    → CREDIT_NOTE su Mongo, sub marcata isRefunded
- *
- * 10. DUNNING (rinnovo fallito)
- *     Chargebee → payment_failed → retry automatici
- *     → se tutti falliscono → subscription_cancelled
- * ═══════════════════════════════════════════════════════════════════
- *
- */
+

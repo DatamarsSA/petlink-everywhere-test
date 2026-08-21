@@ -121,7 +121,7 @@ Commit al ticket:
 
 Una precedente scheda locale, già eliminata nel working tree prima di questa indagine, associava erroneamente gli stessi dati a PRTSUP-752. Jira PRTSUP-752 è invece un ticket diverso (`[PROD]-[KIPPY]: MIGRATION ISSUE`, utente Giusy Di Modica). Non va considerato un known bug valido per questa classificazione.
 
-La documentazione `docs/subscriptions/sub-prepaid.md` copre order/buy/tracking/register, ma non l'ordine `order → buy → register → tracking/import`.
+La documentazione `docs/subscriptions/sub-prepaid.md` copre order/buy/tracking/register, ma non l'ordine `order → buy → register → tracking/import`. In quella doc "Flow C" indica già lo scenario buyer ≠ registrant (transfer/clone); lo scenario di questo bug è quindi denominato **Flow D** nei test per evitare collisione.
 
 ## Proposed Fix
 
@@ -145,23 +145,59 @@ L'operazione deve:
 
 ### Recovery per PRTSUP-767
 
-Operazione manuale da approvare separatamente:
+4 update MongoDB su `petlinkEverywhere` (prod). Goal: prepaid attiva e linkata, free period cancellato, nessun trial.
 
-1. collegare `KPY-HP-149097` al device e all'app user;
-2. aggiornare `PETLINK_GPS.subscriptionId` alla prepaid;
-3. riallineare l'invoice `1540021e-019a-44ec-b32b-315c7dae9779` all'app user;
-4. chiudere/supersedere il free period `963448e5-cf4d-43fc-9d63-cfb3fdda17c7`;
-5. verificare CCT e lo stato subscription inviato a Sentinel.
+```javascript
+// 1. Linkare la prepaid al device e all'app user
+db.petlinkEverywhere.updateOne(
+  { id: "a371f8c8-4438-4a50-a423-9b1bafd04656", entityType: "SUBSCRIPTION" },
+  { $set: {
+      productId: "b53add19-1783-49b0-85b3-9881a2801d6c",
+      userId: "df643a3b-2850-4725-be12-3f71a0dd630e",
+      updateDate: new Date().toISOString()
+  }}
+)
 
-Non aggiornare `USER.chargebeeId` a `KPY-PPD-826819`: il ghost customer è parte del modello prepaid.
+// 2. Ripuntare il device alla prepaid (attualmente punta al free period)
+db.petlinkEverywhere.updateOne(
+  { id: "b53add19-1783-49b0-85b3-9881a2801d6c", entityType: "PETLINK_GPS" },
+  { $set: {
+      subscriptionId: "a371f8c8-4438-4a50-a423-9b1bafd04656",
+      updateDate: new Date().toISOString()
+  }}
+)
+
+// 3. Riallineare l'invoice all'app user
+db.petlinkEverywhere.updateOne(
+  { id: "1540021e-019a-44ec-b32b-315c7dae9779", entityType: "INVOICE" },
+  { $set: {
+      userId: "df643a3b-2850-4725-be12-3f71a0dd630e",
+      updateDate: new Date().toISOString()
+  }}
+)
+
+// 4. Cancellare il free period manuale (già scaduto 2026-08-21)
+db.petlinkEverywhere.updateOne(
+  { id: "963448e5-cf4d-43fc-9d63-cfb3fdda17c7", entityType: "SUBSCRIPTION" },
+  { $set: {
+      status: "cancelled",
+      cancelledAt: new Date().toISOString(),
+      updateDate: new Date().toISOString()
+  }}
+)
+```
+
+Non toccare: `USER.chargebeeId` (il ghost customer è parte del modello prepaid), Chargebee (la sub è già attiva e pagata), ORDER_ITEM (già `activated: true` con serial corretto).
+
+Verifica post-recovery: CCT `getSubscriptions` per `ADN76EU` mostra solo la prepaid attiva; app `getSubscriptionByProductId` ritorna `currentTermEnd: 2027-08-13`; Sentinel riceve `subscription_active`.
 
 ## Testing Philosophy
 
 Aggiungere test di integrazione per:
 
-1. `order → tracking → buy → register`;
-2. `order → buy → tracking → register`;
-3. `order → buy → register → tracking/import`;
+1. Flow A — `order → tracking → buy → register`;
+2. Flow B — `order → buy → tracking → register`;
+3. Flow D — `order → buy → register → tracking/import` (scenario PRTSUP-767; denominato D per evitare collisione con il Flow C "buyer ≠ registrant" di `sub-prepaid.md`);
 4. retry/duplicazione di `orderScheduled` e `subscription_changed`;
 5. device con free period già presente.
 
