@@ -38,7 +38,6 @@ enum PLanProfile {
   EuropAss = "EuropAss",
 }
 
-
 describe("DEFAULT (buy, change, renew, stop, refund)", () => {
   describe("SETUP & PREREQUISITES", () => {
     let setup: TestSetup = {} as TestSetup;
@@ -1326,6 +1325,39 @@ describe("PREPAID (purchase on external store)", () => {
     expect(order.devices[0].activated).toBe(true);
   }
 
+  async function assertPrepaidSubscriptionLinked(
+    user: User,
+    device: { id: string; serialNumber: string },
+    chargebeeSubscriptionId: string,
+  ): Promise<void> {
+    const linked = await waitForPrepaidSub(
+      user.email!,
+      chargebeeSubscriptionId,
+      (s) =>
+        s?.productId === device.id &&
+        s?.userId === user.id &&
+        s?.serialNumber === device.serialNumber &&
+        s?.status === SubscriptionStatusEnum.Active &&
+        s?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
+      `prepaid subscription ${chargebeeSubscriptionId} was not linked to device ${device.id}`,
+    );
+
+    expect(linked).toMatchObject({
+      productId: device.id,
+      userId: user.id,
+      serialNumber: device.serialNumber,
+      status: SubscriptionStatusEnum.Active,
+      paymentStatus: PaymentStatusTypeEnum.Succeeded,
+    });
+
+    const subscriptionByProduct = await waitFor(() => petlink.core.graphqlHttp.authJwt.getSubscriptionByProductId({ productId: device.id }), {
+      isReady: (result) => result.getSubscriptionByProductId.subscription?.id === linked.id,
+      timeoutError: `device ${device.id} does not reference prepaid subscription ${linked.id}`,
+    });
+
+    expect(subscriptionByProduct.getSubscriptionByProductId.subscription?.id).toBe(linked.id);
+  }
+
   it("Flow A: order → tracking → buy → register → sub active", async () => {
     const gps = fxt.current.gpsFixtures.DOG; // the physical device we will "ship": real serial + imei
     const buyer = setup.user!;
@@ -1355,12 +1387,7 @@ describe("PREPAID (purchase on external store)", () => {
     expect(registered.serialNumber).toBe(gps.serialNumber);
 
     // STEP 5: sub links and becomes active (assert)
-    await waitForPrepaidSub(
-      buyer.email!,
-      chargebeeSubscriptionId,
-      (s) => s?.status === SubscriptionStatusEnum.Active && s?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
-      `prepaid subscription did not become active for device ${registered.id}`,
-    );
+    await assertPrepaidSubscriptionLinked(buyer, registered, chargebeeSubscriptionId);
     await assertOrderActivated(order.orderId, gps.serialNumber);
   });
 
@@ -1402,16 +1429,40 @@ describe("PREPAID (purchase on external store)", () => {
     expect(registered.serialNumber).toBe(gps.serialNumber);
 
     // STEP 5: the (now real-serial) orphan sub links and becomes active (assert)
-    await waitForPrepaidSub(
-      buyer.email!,
+    await assertPrepaidSubscriptionLinked(buyer, registered, chargebeeSubscriptionId);
+    await assertOrderActivated(order.orderId, gps.serialNumber);
+  });
+
+  it("Flow C: order → buy → register → tracking → sub active", async () => {
+    const gps = fxt.current.gpsFixtures.DOG;
+    const buyer = setup.user!;
+    const order = await createPrepaidOrder(buyer, fxt.current.prepaidOrder);
+    const priceIds = await resolvePriceIds(order.country, order.prepaidSerial);
+
+    await buyPrepaidSubscription(order.orderId, order.orderItemId, priceIds);
+
+    const orphan = await waitFor(() => getPrepaidSubByOrder(order.orderId), {
+      isReady: (s) => s?.status === SubscriptionStatusEnum.Active && s?.serialNumber === order.prepaidSerial && s?.productId == null,
+      timeoutError: `prepaid orphan subscription not created for order ${order.orderId}`,
+    });
+    const chargebeeSubscriptionId = orphan!.chargebeeSubscriptionId!;
+
+    const registered = await registerDevice();
+    expect(registered.serialNumber).toBe(gps.serialNumber);
+
+    const orphanAfterRegistration = await getPrepaidSubByOrder(order.orderId);
+    expect(orphanAfterRegistration).toMatchObject({
       chargebeeSubscriptionId,
-      (s) => s?.status === SubscriptionStatusEnum.Active && s?.paymentStatus === PaymentStatusTypeEnum.Succeeded,
-      `prepaid subscription did not become active for device ${registered.id}`,
-    );
+      productId: null,
+      serialNumber: order.prepaidSerial,
+    });
+
+    await trackPrepaidOrder(order, gps.imei);
+
+    await assertPrepaidSubscriptionLinked(buyer, registered, chargebeeSubscriptionId);
     await assertOrderActivated(order.orderId, gps.serialNumber);
   });
 });
-
 
 /**
  *
