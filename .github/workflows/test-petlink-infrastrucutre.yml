@@ -3,7 +3,7 @@ name: test-petlink-infrastrucutre
 on:
   # Trigger 1: push on develop on this repo
   push:
-    branches: [develop]
+    branches: [develop,test]
 
   # Trigger 2: workflow_dispatch from external repo (Core/Sentinel/Submanager etc)
   workflow_dispatch:
