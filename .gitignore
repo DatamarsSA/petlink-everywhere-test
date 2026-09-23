@@ -45,3 +45,6 @@ src/infrastructure/lib/generated
 
 # All repo of infrastructure
 all-repo/*
+
+# Bugs supports
+bugs/*
