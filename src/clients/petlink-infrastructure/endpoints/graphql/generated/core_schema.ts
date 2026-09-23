@@ -280,12 +280,11 @@ export interface ChargebeePaymentSource {
   card?: Maybe<ChargebeeCardDetails>;
   gateway?: Maybe<Scalars["String"]["output"]>;
   isPrimaryPaymentSource?: Maybe<Scalars["Boolean"]["output"]>;
-  paymentMethod?: Maybe<PaymentMethodEnum>;
   paymentSourceId?: Maybe<Scalars["String"]["output"]>;
   paypal?: Maybe<ChargebeePaypalDetails>;
   referenceId?: Maybe<Scalars["String"]["output"]>;
   status?: Maybe<PaymentSourceStatus>;
-  type?: Maybe<Scalars["String"]["output"]>;
+  type?: Maybe<PaymentMethodTypeEnum>;
 }
 
 export interface ChargebeePaypalDetails {
@@ -701,6 +700,7 @@ export interface GpsStatus {
   charging?: Maybe<Scalars["Boolean"]["output"]>;
   date: Scalars["String"]["output"];
   energySavingMode: StatusState;
+  failureReason?: Maybe<Scalars["String"]["output"]>;
   firmwareVersion: Scalars["String"]["output"];
   flashlight: StatusState;
   geofence: StatusState;
@@ -717,6 +717,7 @@ export interface GpsStatusIn {
   battery: Scalars["Int"]["input"];
   date: Scalars["String"]["input"];
   energySavingMode: StatusState;
+  failureReason?: InputMaybe<Scalars["String"]["input"]>;
   firmwareVersion: Scalars["String"]["input"];
   flashlight: StatusState;
   geofence: StatusState;
@@ -1664,6 +1665,7 @@ export enum PetHistoryEventTypeEnum {
 export interface PetHistoryExtra {
   __typename?: "PetHistoryExtra";
   address?: Maybe<Scalars["String"]["output"]>;
+  battery?: Maybe<Scalars["String"]["output"]>;
   brazeNotification?: Maybe<BrazeNotification>;
   contentMessage?: Maybe<ContentMessage>;
   currentTermEndDate?: Maybe<Scalars["String"]["output"]>;
@@ -2387,6 +2389,7 @@ export interface ResponseActivities {
   __typename?: "ResponseActivities";
   activityReport?: Maybe<ActivityReport>;
   code: Scalars["String"]["output"];
+  lastActivityAt?: Maybe<Scalars["String"]["output"]>;
   message: Scalars["String"]["output"];
   translationCode?: Maybe<Scalars["String"]["output"]>;
 }
@@ -3703,11 +3706,10 @@ export type GetUserPaymentSourcesQuery = {
       __typename?: "ChargebeePaymentSource";
       paymentSourceId?: string | null;
       status?: PaymentSourceStatus | null;
-      paymentMethod?: PaymentMethodEnum | null;
       isPrimaryPaymentSource?: boolean | null;
       referenceId?: string | null;
       gateway?: string | null;
-      type?: string | null;
+      type?: PaymentMethodTypeEnum | null;
       card?: {
         __typename?: "ChargebeeCardDetails";
         brand?: string | null;
@@ -5895,7 +5897,6 @@ export const GetUserPaymentSourcesDocument = {
                     selections: [
                       { kind: "Field", name: { kind: "Name", value: "paymentSourceId" } },
                       { kind: "Field", name: { kind: "Name", value: "status" } },
-                      { kind: "Field", name: { kind: "Name", value: "paymentMethod" } },
                       { kind: "Field", name: { kind: "Name", value: "isPrimaryPaymentSource" } },
                       { kind: "Field", name: { kind: "Name", value: "referenceId" } },
                       { kind: "Field", name: { kind: "Name", value: "gateway" } },

@@ -233,7 +233,6 @@ query getUserPaymentSources($orderId: String) {
         paymentSources {
             paymentSourceId
             status
-            paymentMethod
             isPrimaryPaymentSource
             referenceId
             gateway
