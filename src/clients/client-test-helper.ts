@@ -78,7 +78,7 @@ class TestSetupBuilder {
     dogForEvo?: PetConfig;
   } = {};
 
-  constructor(private helper: TestHelper) {}
+  constructor(private helper: TestHelper) { }
 
   withUser(options: UserOptions = {}): this {
     this.includeUser = true;
@@ -254,13 +254,17 @@ class TestHelper {
     const errors: Array<{ operation: string; error: any }> = [];
 
     await Promise.all([
-      // 1. Petlink user & related entity cleanup
+      // 1. Petlink user & related entity cleanup (incl. serial-scoped device sweep)
       petlink.core.graphqlHttp.authIam
         .utilityIntegrationTest({
           input: {
             phone: fxt.current.user.phone,
             email: fxt.current.user.email,
             utilityType: CoreUtilityTestTypeEnum.CleanUpUser,
+            serialNumbers: [
+              ...Object.values(fxt.KIPPY.gpsFixtures).map((d: any) => d.serialNumber),
+              ...Object.values(fxt.PETLINK.gpsFixtures).map((d: any) => d.serialNumber),
+            ],
           },
         })
         .then((response) => {
@@ -329,6 +333,10 @@ class TestHelper {
         input: {
           phone: userPhone ?? fxt.current.user.phone,
           utilityType: CoreUtilityTestTypeEnum.CleanUpUser,
+          serialNumbers: [
+            ...Object.values(fxt.KIPPY.gpsFixtures).map((d: any) => d.serialNumber),
+            ...Object.values(fxt.PETLINK.gpsFixtures).map((d: any) => d.serialNumber),
+          ],
         },
       });
 
