@@ -116,14 +116,15 @@ describe("Live Tracking", () => {
       `sendCommand should succeed - Error: ${deactivateResponse.sendCommand.message}${deactivateResponse.sendCommand.translationCode ? ` (${deactivateResponse.sendCommand.translationCode})` : ""}`,
     ).toBe("200");
 
-    // 2. Poll actively via heartbeats until we receive the correct status
+    // 2. Poll actively via heartbeats until we receive the correct status.
+    // No validator inside waitForPacket: a filtered wait never resolves on a non-matching
+    // response, which would stall the retry loop after the first heartbeat — Sentinel applies
+    // the deactivate asynchronously (the command lands on /send_packet ~ms later), so early
+    // responses can still carry the old status. Resolve ANY 0x01 and let isReady decide.
     const deactivationPacket = await waitFor(
       async () => {
         // Prepariamo l'ascolto per la singola iterazione
-        const packetPromise = petlink.sentinel.waitForPacket(
-          PacketType.PACKET_0x01,
-          (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
-        );
+        const packetPromise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, undefined, 3000);
 
         // Manda l'heartbeat per questa iterazione
         await petlink.sentinel.simulator.heartbeat(setup.dog!.devices.gps!, {
@@ -134,7 +135,7 @@ describe("Live Tracking", () => {
         return await packetPromise;
       },
       {
-        isReady: (packet) => packet !== undefined,
+        isReady: (packet) => packet.requested_operating_status === OperatingStatus.DEFAULT,
         timeoutMs: 10000, // Massimo 10 secondi totali per il test
         intervalMs: 100, // Pausa minima tra i tentativi
         timeoutError: "Live Tracking did not switch to DEFAULT within timeout",
