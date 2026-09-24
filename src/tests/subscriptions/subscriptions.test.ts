@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import { fxt } from "../../fixtures/fixtures.js";
@@ -849,13 +849,6 @@ describe.runIf(fxt.isKippyRun)("TRIAL (Esselunga or Trial_1_month), different du
     await testHelper.cleanupAll();
   });
 
-  afterEach(async () => {
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
-      planProfileId: PLanProfile.DEFAULT,
-    });
-  });
-
   it("Esselunga - 365d trial, choose updatePlan (only yearly plans), sub created, no invoices, nextBilling after trial end", async () => {
     await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
       serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
@@ -997,13 +990,6 @@ describe.runIf(fxt.isKippyRun)("TRIAL (Esselunga or Trial_1_month), different du
 describe.runIf(fxt.isKippyRun)("PAID_EXTERNALLY (Axa, Europass) -> should create subs only on our db", () => {
   beforeEach(async () => {
     await testHelper.cleanupAll();
-  });
-
-  afterEach(async () => {
-    await petlink.cct.graphqlHttp.authJwt.setPlanProfiles({
-      serialNumbers: [fxt.current.gpsFixtures.DOG.serialNumber],
-      planProfileId: PLanProfile.DEFAULT,
-    });
   });
 
   it("Axa", async () => {

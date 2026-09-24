@@ -377,6 +377,7 @@ describe("CCT Tool", () => {
 
       expect(response.getMyInfo.code).toBe("200");
       expect(response.getMyInfo.user).toBeDefined();
+      adminUser = response.getMyInfo.user;
       expect(response.getMyInfo.user, "GetMyInfo should return the currently logged-in Admin").toMatchObject({
         email: fxt.cctAdmin.email,
         phone: fxt.cctAdmin.phone,
@@ -384,7 +385,6 @@ describe("CCT Tool", () => {
         deviceVisibility: fxt.cctAdmin.deviceVisibility,
         vodafoneCountryVisibility: fxt.cctAdmin.vodafoneCountryVisibility,
       });
-      adminUser = response.getMyInfo.user;
     });
 
     it("should allow CCT Admin to UPDATE the created User", async () => {

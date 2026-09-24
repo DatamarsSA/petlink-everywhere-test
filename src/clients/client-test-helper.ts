@@ -312,6 +312,24 @@ class TestHelper {
         .catch((error) => {
           errors.push({ operation: "CLEAN_UP_COUPONS", error });
         }),
+
+      // 4. Reset plan profiles on Inventory: subscription tests move serials to AXA_12_YEARS/EuropAss/ESSELUNGA profiles whose startingPlans are empty.
+      petlink.cct.graphqlHttp.authJwt
+        .setPlanProfiles({
+          serialNumbers: [
+            ...Object.values(fxt.KIPPY.gpsFixtures).map((d: any) => d.serialNumber),
+            ...Object.values(fxt.PETLINK.gpsFixtures).map((d: any) => d.serialNumber),
+          ],
+          planProfileId: "DEFAULT",
+        })
+        .then((response) => {
+          if (response.setPlanProfiles.code !== "200") {
+            throw new Error(response.setPlanProfiles.message);
+          }
+        })
+        .catch((error) => {
+          errors.push({ operation: "RESET_PLAN_PROFILES", error });
+        }),
     ]);
     petlink.core.logout();
     petlink.cct.logout();
