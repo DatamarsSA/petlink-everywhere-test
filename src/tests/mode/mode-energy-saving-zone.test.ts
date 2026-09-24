@@ -60,13 +60,7 @@ describe("Energy Saving Zone", () => {
 
   // IT 2: Activate ESZ - Wait Packets (0x15 zones + 0x10 enable)
   it("User ACTIVATE ESZ (sendSetting ACTIVATE) -> assert Packet arrives to Device", async () => {
-    // 1. Prepare listeners BEFORE action
-    const packetsPromise = Promise.all([
-      petlink.sentinel.waitForPacket(PacketType.PACKET_0x15),
-      petlink.sentinel.waitForPacket(PacketType.PACKET_0x10),
-    ]);
-
-    // 2. Perform action
+    // 1. Perform action
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Activate,
@@ -81,8 +75,9 @@ describe("Energy Saving Zone", () => {
       `sendSetting ACTIVATE should succeed - Error: ${activateResponse.sendSetting.message}${activateResponse.sendSetting.translationCode ? ` (${activateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // 3. Wait for packets
-    const [packet15, packet10] = await packetsPromise;
+    // 2. Wait for packets (queued packets are scanned first — arrival order doesn't matter)
+    const packet15 = await petlink.sentinel.waitForPacket(PacketType.PACKET_0x15);
+    const packet10 = await petlink.sentinel.waitForPacket(PacketType.PACKET_0x10);
 
     expect(packet15, "Should receive 0x15 (Safe Places with zones)").toBeDefined();
     expect(packet10, "Should receive 0x10 (Evo Extra Data enable)").toBeDefined();
@@ -151,10 +146,7 @@ describe("Energy Saving Zone", () => {
 
   // IT 5: Deactivate - Assert 200 + Wait 0x10 Disable
   it("User DEACTIVATE ESZ (sendSetting DEACTIVATE) - API + Packet Assert", async () => {
-    // 1. Prepare listener
-    const packet10Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x10);
-
-    // 2. Perform action
+    // 1. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
@@ -169,8 +161,8 @@ describe("Energy Saving Zone", () => {
       `sendSetting DEACTIVATE should succeed - Error: ${deactivateResponse.sendSetting.message}${deactivateResponse.sendSetting.translationCode ? ` (${deactivateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // 3. Wait for packet  
-    const packet10 = await packet10Promise;
+    // 2. Wait for packet
+    const packet10 = await petlink.sentinel.waitForPacket(PacketType.PACKET_0x10);
     expect(packet10, "Should receive 0x10 (Disable ESZ)").toBeDefined();
     expect(packet10.energy_saving_area_enabled).toBe(0); // Disabled
 

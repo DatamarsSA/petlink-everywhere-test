@@ -30,13 +30,7 @@ describe("Live Tracking", () => {
   });
 
   it("User ACTIVATE Live Tracking (sendCommand duration=900) -> packet should arrives to device AND app receives LiveTracking Status ON", async () => {
-    // 1. Setup listener for device packet BEFORE triggering anything
-    const commandPacketPromise = petlink.sentinel.waitForPacket(
-      PacketType.PACKET_0x01,
-      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
-    );
-
-    // 2. Setup listener for App AND send command ONLY when App WebSocket is fully ready
+    // 1. Subscribe from App AND send command ONLY when App WebSocket is fully ready
     const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
       { id: setup.dog!.devices.gps!.id },
@@ -55,16 +49,19 @@ describe("Live Tracking", () => {
       },
     );
 
-    // 3. Wait for the TCP command to hit the simulated device
-    const commandPacket = await commandPacketPromise;
+    // 2. Wait for the TCP command to hit the simulated device
+    const commandPacket = await petlink.sentinel.waitForPacket(
+      PacketType.PACKET_0x01,
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
     expect(commandPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
 
-    // 4. Device acknowledges by sending his new FAST_TRACKING status back
+    // 3. Device acknowledges by sending his new FAST_TRACKING status back
     await petlink.sentinel.simulator.heartbeat(setup.dog!.devices.gps!, {
       curr_status: OperatingStatus.FAST_TRACKING,
     });
 
-    // 5. App receives correct new status of device via WebSocket
+    // 4. App receives correct new status of device via WebSocket
     const statusEvent = await statusUpdatePromise;
     expect(statusEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
   });
@@ -123,16 +120,12 @@ describe("Live Tracking", () => {
     // responses can still carry the old status. Resolve ANY 0x01 and let isReady decide.
     const deactivationPacket = await waitFor(
       async () => {
-        // Prepariamo l'ascolto per la singola iterazione
-        const packetPromise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, undefined, 3000);
-
-        // Manda l'heartbeat per questa iterazione
+        // Heartbeat triggers a fresh 0x01 response; waitForPacket resolves on it even
+        // if it lands in the receive queue before this call.
         await petlink.sentinel.simulator.heartbeat(setup.dog!.devices.gps!, {
           curr_status: OperatingStatus.FAST_TRACKING,
         });
-
-        // Ritorna il pacchetto (se va in timeout, lancerà errore e `waitFor` lo catturerà per riprovare)
-        return await packetPromise;
+        return petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, undefined, 3000);
       },
       {
         isReady: (packet) => packet.requested_operating_status === OperatingStatus.DEFAULT,

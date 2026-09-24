@@ -71,13 +71,7 @@ describe("Geofence", () => {
 
   // IT 2: Activate Geofence - Wait Packet 0x01 with coordinates
   it("User ACTIVATE Geofence (sendSetting ACTIVATE) -> assert Packet arrives to Device", async () => {
-    // 1. Prepare listener
-    const packet01Promise = petlink.sentinel.waitForPacket(
-      PacketType.PACKET_0x01,
-      (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
-    );
-
-    // 2. Perform action
+    // 1. Perform action
     const activateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Activate,
@@ -93,8 +87,11 @@ describe("Geofence", () => {
       `sendSetting ACTIVATE should succeed - Error: ${activateResponse.sendSetting.message}${activateResponse.sendSetting.translationCode ? ` (${activateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // 3. Wait packet
-    const packet01 = await packet01Promise;
+    // 2. Wait packet (queued packets are scanned first — arrival order doesn't matter)
+    const packet01 = await petlink.sentinel.waitForPacket(
+      PacketType.PACKET_0x01,
+      (p) => p.requested_operating_status === OperatingStatus.GEOFENCE_ON,
+    );
 
     expect(packet01, "Should receive 0x01 (Geofence activation)").toBeDefined();
 
@@ -144,11 +141,6 @@ describe("Geofence", () => {
       last_gps_time: Math.floor(Date.now() / 1000),
     };
 
-    const fastTrackingPacketPromise = petlink.sentinel.waitForPacket(
-      PacketType.PACKET_0x01,
-      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
-    );
-
     // Start listening for geofence exit event with onReady callback
     const geofenceExitEvent = await petlink.core.graphqlWS.authJwt.subscribeUntil(
       OnGpsMessageStatusDocument,
@@ -163,16 +155,16 @@ describe("Geofence", () => {
     expect(geofenceExitEvent.onGpsMessageStatus.status.inGeofence).toBe(false);
     expect(geofenceExitEvent.onGpsMessageStatus.status.liveTracking).toBe(StatusState.On);
 
-    const fastTrackingPacket = await fastTrackingPacketPromise;
+    const fastTrackingPacket = await petlink.sentinel.waitForPacket(
+      PacketType.PACKET_0x01,
+      (p) => p.requested_operating_status === OperatingStatus.FAST_TRACKING,
+    );
     expect(fastTrackingPacket.requested_operating_status).toBe(OperatingStatus.FAST_TRACKING);
   });
 
   // IT 5: Deactivate Geofence - Assert 200 + Wait 0x01 Default
   it("User DEACTIVATE Geofence (sendSetting DEACTIVATE) -> assert Packet arrives to Device", async () => {
-    // 1. Prepare listener
-    const packet01Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x01, (p) => p.requested_operating_status === OperatingStatus.DEFAULT);
-
-    // 2. Perform action
+    // 1. Perform action
     const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Deactivate,
@@ -187,8 +179,11 @@ describe("Geofence", () => {
       `sendSetting DEACTIVATE should succeed - Error: ${deactivateResponse.sendSetting.message}${deactivateResponse.sendSetting.translationCode ? ` (${deactivateResponse.sendSetting.translationCode})` : ""}`,
     ).toBe("200");
 
-    // 3. Wait packet
-    const packet01 = await packet01Promise;
+    // 2. Wait packet
+    const packet01 = await petlink.sentinel.waitForPacket(
+      PacketType.PACKET_0x01,
+      (p) => p.requested_operating_status === OperatingStatus.DEFAULT,
+    );
     expect(packet01, "Should receive 0x01 (Deactivate Geofence)").toBeDefined();
     expect(packet01.requested_operating_status).toBe(OperatingStatus.DEFAULT);
   });

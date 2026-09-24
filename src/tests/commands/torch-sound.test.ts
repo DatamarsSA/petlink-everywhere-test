@@ -33,20 +33,13 @@ describe("Torch & Sound Commands", () => {
       let torchDurationSentByApp = 60;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
 
-      // 1. Setup listener for device packet BEFORE sending command
-      const commandPacketPromise = petlink.sentinel.waitForPacket(
-        PacketType.PACKET_0x10,
-        (p) => p.torch_duration === torchDurationReceivedByDevice && (p.evo_tasks & 0x01) !== 0,
-      );
-
-      // 2. Start listening from App
+      // 1. Subscribe from App — the command is sent when the subscription is ready
       const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
         OnGpsMessageStatusDocument,
         { id: gps.id },
         "Should receive status update with flashlight=ON",
         (data) => data?.onGpsMessageStatus?.status?.flashlight === StatusState.On,
         async () => {
-          // Send command when subscription is ready
           const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
             command: {
               commandType: CommandEnum.Flashlight,
@@ -59,20 +52,23 @@ describe("Torch & Sound Commands", () => {
         },
       );
 
-      // 3. Device wait for packet
-      const commandPacket = await commandPacketPromise;
+      // 2. Device waits for the command packet
+      const commandPacket = await petlink.sentinel.waitForPacket(
+        PacketType.PACKET_0x10,
+        (p) => p.torch_duration === torchDurationReceivedByDevice && (p.evo_tasks & 0x01) !== 0,
+      );
       expect(commandPacket.torch_duration).toBe(torchDurationReceivedByDevice);
       expect(commandPacket.evo_tasks & 0x01).toBe(0x01);
 
-      // 4. Device sends Packet 0x10 response to confirm state
+      // 3. Device sends Packet 0x10 response to confirm state
       await petlink.sentinel.simulator.torch(gps, torchDurationReceivedByDevice);
 
-      // 5. Device sends heartbeat with status update
+      // 4. Device sends heartbeat with status update
       await petlink.sentinel.simulator.heartbeat(gps, {
         spare_c4: 80,
       });
 
-      // 6. App received correct new status of device
+      // 5. App received correct new status of device
       const statusEvent = await statusUpdatePromise;
       expect(statusEvent.onGpsMessageStatus.status.flashlight).toBe(StatusState.On);
     });
@@ -81,11 +77,6 @@ describe("Torch & Sound Commands", () => {
       const gps = setup.dog!.devices.gps!;
       let torchDurationSentByApp = 0;
       let torchDurationReceivedByDevice = torchDurationSentByApp / 60;
-
-      const deactivationPacketPromise = petlink.sentinel.waitForPacket(
-        PacketType.PACKET_0x10,
-        (p) => p.torch_duration === torchDurationReceivedByDevice && (p.evo_tasks & 0x01) !== 0,
-      );
 
       const deactivateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
         command: {
@@ -100,7 +91,10 @@ describe("Torch & Sound Commands", () => {
         `sendCommand should succeed - Error: ${deactivateResponse.sendCommand.message}${deactivateResponse.sendCommand.translationCode ? ` (${deactivateResponse.sendCommand.translationCode})` : ""}`,
       ).toBe("200");
 
-      const deactivationPacket = await deactivationPacketPromise;
+      const deactivationPacket = await petlink.sentinel.waitForPacket(
+        PacketType.PACKET_0x10,
+        (p) => p.torch_duration === torchDurationReceivedByDevice && (p.evo_tasks & 0x01) !== 0,
+      );
 
       expect(deactivationPacket.torch_duration).toBe(torchDurationReceivedByDevice);
       expect(deactivationPacket.evo_tasks & 0x01).toBe(0x01);
@@ -116,20 +110,13 @@ describe("Torch & Sound Commands", () => {
       let soundDurationSentByApp = 30;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 
-      // 1. Setup listener for device packet BEFORE sending command
-      const commandPacketPromise = petlink.sentinel.waitForPacket(
-        PacketType.PACKET_0x10,
-        (p) => p.sound_duration === soundDurationReceivedByDevice && p.sound_command === 1 && (p.evo_tasks & 0x04) !== 0,
-      );
-
-      // 2. Start listening from App WITH onReady callback
+      // 1. Subscribe from App — the command is sent when the subscription is ready
       const statusUpdatePromise = petlink.core.graphqlWS.authJwt.subscribeUntil(
         OnGpsMessageStatusDocument,
         { id: gps.id },
         "Should receive status update with sound=ON",
         (data) => data?.onGpsMessageStatus?.status?.sound === StatusState.On,
         async () => {
-          // ✅ FIX: Send command when subscription is ready
           const activateResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
             command: {
               commandType: CommandEnum.Sound,
@@ -142,8 +129,11 @@ describe("Torch & Sound Commands", () => {
         },
       );
 
-      // 3. Device wait for packet
-      const commandPacket = await commandPacketPromise;
+      // 2. Device waits for the command packet
+      const commandPacket = await petlink.sentinel.waitForPacket(
+        PacketType.PACKET_0x10,
+        (p) => p.sound_duration === soundDurationReceivedByDevice && p.sound_command === 1 && (p.evo_tasks & 0x04) !== 0,
+      );
       expect(commandPacket.sound_duration).toBe(soundDurationReceivedByDevice);
       expect(commandPacket.sound_command).toBe(1);
       expect(commandPacket.evo_tasks & 0x04).toBe(0x04);
@@ -166,11 +156,6 @@ describe("Torch & Sound Commands", () => {
       let soundDurationSentByApp = 0;
       let soundDurationReceivedByDevice = soundDurationSentByApp;
 
-      const mutePacketPromise = petlink.sentinel.waitForPacket(
-        PacketType.PACKET_0x10,
-        (p) => p.sound_duration === soundDurationReceivedByDevice && p.sound_command === 0 && (p.evo_tasks & 0x04) !== 0,
-      );
-
       const muteResponse = await petlink.core.graphqlHttp.authJwt.sendCommand({
         command: {
           commandType: CommandEnum.Sound,
@@ -184,7 +169,10 @@ describe("Torch & Sound Commands", () => {
         `sendCommand should succeed - Error: ${muteResponse.sendCommand.message}${muteResponse.sendCommand.translationCode ? ` (${muteResponse.sendCommand.translationCode})` : ""}`,
       ).toBe("200");
 
-      const mutePacket = await mutePacketPromise;
+      const mutePacket = await petlink.sentinel.waitForPacket(
+        PacketType.PACKET_0x10,
+        (p) => p.sound_duration === soundDurationReceivedByDevice && p.sound_command === 0 && (p.evo_tasks & 0x04) !== 0,
+      );
 
       expect(mutePacket.sound_duration).toBe(soundDurationReceivedByDevice);
       expect(mutePacket.sound_command).toBe(0);
