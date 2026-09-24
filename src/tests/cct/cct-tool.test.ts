@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { testHelper, TestSetup, DeviceSetupGps } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
-import { logger } from "../../config/logger.js";
 import { FilterEnum, LanguageId, OrderEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/cct_schema.js";
 import { OperatingStatus } from "../../clients/petlink-infrastructure/packets-sentinel/packets.js";
 import {
@@ -24,13 +23,10 @@ describe("CCT Tool", () => {
       user = setup.user!;
       pet = setup.dog!;
       gps = setup.dog!.devices.gps!;
-
-      logger.info("Setup Customer complete", { userId: user.id, email: user.email, deviceId: gps.id });
     });
 
     it("should allow CCT Admin to find a Customer in the list", async () => {
       // 3. Test List: GetCustomers filter by email
-      logger.info("Searching Customer in list...");
       const listResponse = await petlink.cct.graphqlHttp.authJwt.getCustomers({
         filter: {
           filterType: FilterEnum.And,
@@ -48,7 +44,6 @@ describe("CCT Tool", () => {
 
     it("should allow CCT Admin to view Customer details", async () => {
       // 4. Test Detail: GetCustomer
-      logger.info("Fetching Customer Detail...");
       const detailResponse = await petlink.cct.graphqlHttp.authJwt.getCustomer({
         customerId: user.id,
       });
@@ -65,7 +60,6 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to view Customer Devices and verify associations", async () => {
-      logger.info("Fetching Customer Devices...");
       const devicesResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
         filter: {
           filterType: FilterEnum.And,
@@ -86,8 +80,6 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to UPDATE Customer", async () => {
-      logger.info("Updating Customer...");
-
       const updatePayload = {
         email: "updated.customer@example.com",
         confermationEmail: true,
@@ -108,13 +100,9 @@ describe("CCT Tool", () => {
         email: updatePayload.email,
         language: updatePayload.language,
       });
-
-      logger.info("✓ Customer updated successfully");
     });
 
     it("should allow CCT Admin to DELETE Customer", async () => {
-      logger.info("Deleting Customer...");
-
       // 1. should not allow to delete customer with pet & gps associted
       const deleteCustomerWithPetResponse = await petlink.cct.graphqlHttp.authJwt.deleteCustomer({
         id: user.id,
@@ -135,8 +123,6 @@ describe("CCT Tool", () => {
         customerId: newUserWithoutPet.id,
       });
       expect(getResponse.getCustomer.code).toBe("404");
-
-      logger.info("✓ Customer deleted and verified");
     });
   });
 
@@ -154,19 +140,11 @@ describe("CCT Tool", () => {
       pet = setup.dog!;
       gps = setup.dog!.devices.gps!;
 
-      logger.info("Setup Device complete", {
-        userId: user.id,
-        petId: pet.id,
-        deviceId: gps.id,
-        serial: gps.serialNumber,
-      });
-
       await new Promise((resolve) => setTimeout(resolve, 2000));
     });
 
     it("should allow CCT Admin to find a Device in the list", async () => {
       // 3. Test List: GetDevices filter by Serial Number
-      logger.info("Searching Device in list...");
       const listResponse = await petlink.cct.graphqlHttp.authJwt.getDevices({
         filter: {
           filterType: FilterEnum.And,
@@ -183,7 +161,6 @@ describe("CCT Tool", () => {
 
     it("should allow CCT Admin to view Device details", async () => {
       // 4. Test Detail: GetDevice
-      logger.info("Fetching Device Detail...");
       const deviceDetailResponse = await petlink.cct.graphqlHttp.authJwt.getDevice({
         serialId: gps.serialNumber,
       });
@@ -288,8 +265,6 @@ describe("CCT Tool", () => {
 
       expect(latest?.customerEmail).toBe(user.email);
       expect(latest?.customerName).toBe(user.name);
-
-      logger.info("✅ Test Last Connections completed: heartbeat from device to Sentil arrived to CCT!");
     });
 
     it("should allow CCT Admin to retrieve Connections History", async () => {
@@ -349,8 +324,6 @@ describe("CCT Tool", () => {
     });
 
     it("should allow CCT Admin to CREATE a new Operator User", async () => {
-      logger.info("Creating new CCT User...", { email: newUserPayload.email });
-
       const response = await petlink.cct.graphqlHttp.authJwt.createUser({
         user: newUserPayload,
       });

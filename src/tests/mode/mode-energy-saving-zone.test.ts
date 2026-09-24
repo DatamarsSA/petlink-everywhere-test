@@ -8,7 +8,6 @@ import {
   SettingTypeEnum,
   StatusState,
 } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
-import { logger } from "../../config/logger.js";
 
 describe("Energy Saving Zone", () => {
   let setup: TestSetup = {} as TestSetup;
@@ -41,8 +40,6 @@ describe("Energy Saving Zone", () => {
 
   // IT 1: Create Zone (Core API only)
   it("User CREATE ESZ (sendSetting CREATE) - API Assert", async () => {
-    logger.info("📍 User creates ESZ zone");
-
     const createZoneResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
         operationType: SettingOperationEnum.Create,
@@ -59,16 +56,11 @@ describe("Energy Saving Zone", () => {
 
     // Salva ID per activation
     eszId = createZoneResponse.sendSetting.energySavingZone!.id;
-
-    logger.info("✓ ESZ zone created in DB");
   });
 
   // IT 2: Activate ESZ - Wait Packets (0x15 zones + 0x10 enable)
   it("User ACTIVATE ESZ (sendSetting ACTIVATE) -> assert Packet arrives to Device", async () => {
-    logger.info("📍 User activates ESZ");
-
     // 1. Prepare listeners BEFORE action
-    logger.info("⏳ Device waiting for 0x15 (zones) and 0x10 (enable)...");
     const packetsPromise = Promise.all([
       petlink.sentinel.waitForPacket(PacketType.PACKET_0x15),
       petlink.sentinel.waitForPacket(PacketType.PACKET_0x10),
@@ -105,14 +97,10 @@ describe("Energy Saving Zone", () => {
     });
     // Assert 0x10 (enabled feature)
     expect(packet10.energy_saving_area_enabled).toBe(1); // Enable
-
-    logger.info("✓ ESZ activated, packets with correct data");
   });
 
   // IT 3: Emula Enter - Send 0x01 + Assert Sub
   it("Device DETECT wifi (emula enter sending 0x01) -> notify app GraphQL Sub", async () => {
-    logger.info("📍 Emula device enters ESZ (WiFi detect)");
-
     const gps = setup.dog!.devices.gps!;
     const eszEnterPayload = {
       latitude: 44.5024,
@@ -128,21 +116,16 @@ describe("Energy Saving Zone", () => {
       "Device should detect WiFi and enter energy saving zone",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === true,
       async () => {
-        logger.info("⚡ Subscription ready -> Sending heartbeat ENTER ESZ...");
         await petlink.sentinel.simulator.heartbeat(gps, eszEnterPayload);
       },
     );
 
-    logger.info("onGpsMessageStatus:", eszEnterEvent);
     expect(eszEnterEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszEnterEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(true);
-    logger.info("✓ Enter emulato, sub received true");
   });
 
   // IT 4: Emula Exit - Send 0x01 + Assert Sub
   it("Device LEAVES wifi (emula exit sending 0x01) -> notify app GraphQL Sub", async () => {
-    logger.info("📍 Emula device leaves ESZ (WiFi lost)");
-
     const gps = setup.dog!.devices.gps!;
     const eszExitPayload = {
       latitude: 44.5024,
@@ -158,22 +141,17 @@ describe("Energy Saving Zone", () => {
       "Device should leave energy saving zone when WiFi is lost",
       (data) => data?.onGpsMessageStatus?.status?.inEnergySavingZone === false,
       async () => {
-        logger.info("⚡ Subscription ready -> Sending heartbeat EXIT ESZ...");
         await petlink.sentinel.simulator.heartbeat(gps, eszExitPayload);
       },
     );
 
     expect(eszExitEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.On);
     expect(eszExitEvent.onGpsMessageStatus.status.inEnergySavingZone).toBe(false);
-    logger.info("✓ Exit emulato, sub received false");
   });
 
   // IT 5: Deactivate - Assert 200 + Wait 0x10 Disable
   it("User DEACTIVATE ESZ (sendSetting DEACTIVATE) - API + Packet Assert", async () => {
-    logger.info("📍 User deactivates ESZ");
-
     // 1. Prepare listener
-    logger.info("⏳ Device waiting for 0x10 (disable)...");
     const packet10Promise = petlink.sentinel.waitForPacket(PacketType.PACKET_0x10);
 
     // 2. Perform action
@@ -202,7 +180,6 @@ describe("Energy Saving Zone", () => {
       "Device should notify energySavingMode=OFF after ESZ deactivation",
       (data) => data?.onGpsMessageStatus?.status?.energySavingMode === StatusState.Off,
       async () => {
-        logger.info("⚡ Subscription ready -> Sending heartbeat after ESZ disable...");
         await petlink.sentinel.simulator.heartbeat(setup.dog!.devices.gps!, {
           curr_status: OperatingStatus.DEFAULT,
           spare_c5: 0x00,
@@ -211,14 +188,10 @@ describe("Energy Saving Zone", () => {
     );
 
     expect(statusOffEvent.onGpsMessageStatus.status.energySavingMode).toBe(StatusState.Off);
-
-    logger.info("✓ ESZ deactivated, packet disable received");
   });
 
   // IT 6: Update ESZ - Assert 200 + Verify with getEnergySavingZone
   it("User UPDATE ESZ (sendSetting UPDATE) - API + Query Assert", async () => {
-    logger.info("📍 User updates ESZ");
-
     const updatePayload = {
       ...createZonePayload,
       id: eszId,
@@ -263,14 +236,10 @@ describe("Energy Saving Zone", () => {
       radius: updatePayload.radius,
       ssid: updatePayload.ssid,
     });
-
-    logger.info("✓ ESZ updated and verified with queries");
   });
 
   // IT 7: Delete ESZ - Assert 200 + Verify with getEnergySavingZone and getEnergySavingZones
   it("User DELETE ESZ (sendSetting DELETE) - API + Query Assert", async () => {
-    logger.info("📍 User deletes ESZ");
-
     // 1. Perform delete
     const deleteResponse = await petlink.core.graphqlHttp.authJwt.sendSetting({
       setting: {
@@ -301,12 +270,10 @@ describe("Energy Saving Zone", () => {
     expect(getAllZonesResponse.getEnergySavingZones.energySavingZones).toBeDefined();
 
     // Check that the deleted zone is not in the list (or is marked as deleted)
-    const deletedZone = getAllZonesResponse.getEnergySavingZones.energySavingZones.find((zone: any) => zone.id === eszId);
+    const deletedZone = getAllZonesResponse.getEnergySavingZones.energySavingZones?.find((zone: any) => zone.id === eszId);
 
     // If the API filters out deleted zones, it should not be found
     // If it returns deleted zones, we might need to check a 'deleted' flag
     expect(deletedZone).toBeUndefined();
-
-    logger.info("✓ ESZ deleted and verified with queries");
   });
 });

@@ -82,7 +82,7 @@ class JwtAuthProvider {
     private serviceLabel: string,
     private cognitoRegion: string,
     private cognitoClientId: string,
-  ) {}
+  ) { }
 
   /**
    * Authenticate via Cognito user pools and cache the ID token.
@@ -423,17 +423,17 @@ class WSClient {
       const authPayload =
         authType === AuthType.JWT
           ? {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-                operationName,
-                variables,
-                authToken: this.config.jwtProvider.getToken(),
-              }),
-            }
+            [HTTP_HEADERS.HOST]: host,
+            [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+              operationName,
+              variables,
+              authToken: this.config.jwtProvider.getToken(),
+            }),
+          }
           : {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.API_KEY]: this.config.apiKey,
-            };
+            [HTTP_HEADERS.HOST]: host,
+            [HTTP_HEADERS.API_KEY]: this.config.apiKey,
+          };
 
       const subscriptionPayload = {
         id: subId,
@@ -470,16 +470,17 @@ class WSClient {
 }
 
 const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, authType: AuthType): TSdk => {
-  const logPrefix = `[${serviceName}]`;
+  const logPrefix = `[${serviceName}/${authType}]`;
   return new Proxy(sdk, {
     get: (target, prop: string | symbol) => async (...args: any[]) => {
-      logger.info(`${logPrefix} GQL → ${String(prop)}`, args);
+      const startedAt = Date.now();
+      logger.info(`${logPrefix} GQL → ${String(prop)}`, { args });
       try {
         const response = await (target as any)[prop](...args);
-        logger.info(`${logPrefix} GQL ← ${String(prop)}`, response);
+        logger.info(`${logPrefix} GQL ← ${String(prop)} (${Date.now() - startedAt}ms)`, { response });
         return response;
       } catch (error: any) {
-        logger.error(`${logPrefix} GQL ← ${String(prop)}`, error);
+        logger.error(`${logPrefix} GQL ← ${String(prop)} FAILED (${Date.now() - startedAt}ms)`, error);
         throw error;
       }
     },
@@ -743,15 +744,13 @@ class SentinelService {
         if (packet.type === type) {
           const typedPacket = packet.payload as PacketTypeMap[T];
           if (!validator || validator(typedPacket)) {
-            // logger.info(`${this.logPrefix} INCOMING: packet ${typeHex} matched`);
+            logger.debug(`${this.logPrefix} INCOMING: packet ${typeHex} matched validator`);
             cleanup();
             resolve(typedPacket);
           } else {
-            // logger.warn(
-            //   `${this.logPrefix} INCOMING: packet ${typeHex} received but VALIDATOR FAILED\n` +
-            //     `  ├─ Received: ${JSON.stringify(typedPacket)}\n` +
-            //     `  └─ Status: Still waiting...`,
-            // );
+            logger.debug(`${this.logPrefix} INCOMING: packet ${typeHex} received but VALIDATOR FAILED, still waiting`, {
+              received: typedPacket,
+            });
           }
         }
       };

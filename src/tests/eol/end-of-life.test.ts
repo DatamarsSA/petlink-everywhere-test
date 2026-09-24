@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { User, ShippingInfoIn, LanguageId, DeviceTypeEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
+import { User, ShippingInfoIn, LanguageId, DeviceTypeEnum, LayoutPageEnum } from "../../clients/petlink-infrastructure/endpoints/graphql/generated/core_schema.js";
 import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { fxt } from "../../fixtures/fixtures.js";
@@ -347,18 +347,16 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         priceIds: [selectedPricing.id],
         hostedPageOptions: {
           redirectUrl: "https://test-petlink.com/thank-you",
-          layout: "full_page",
+          layout: LayoutPageEnum.FullPage,
         },
       });
 
       expect(
         checkoutRes.checkoutNewSubscription.code,
-        `checkoutNewSubscription should succeed - Error: ${checkoutRes.checkoutNewSubscription.message}${checkoutRes.checkoutNewSubscription.translationCode ? ` (${checkoutRes.checkoutNewSubscription.translationCode})` : ""}`,
+        `checkoutNewSubscription should succeed - Error: ${checkoutRes.checkoutNewSubscription.message}${(checkoutRes.checkoutNewSubscription as { translationCode?: string }).translationCode ? ` (${(checkoutRes.checkoutNewSubscription as { translationCode?: string }).translationCode})` : ""}`,
       ).toBe("200");
       expect(checkoutRes.checkoutNewSubscription.url).toBeDefined();
       expect(checkoutRes.checkoutNewSubscription.url).toContain("chargebee");
-
-      logger.info("✅ checkoutNewSubscription API test passed - URL generated successfully");
     });
 
     it("Step 5: Purchase Subscription (Simulated)", async () => {
@@ -376,7 +374,6 @@ describe.runIf(fxt.isKippyRun).skip("End of Life (EOL) Tests", () => {
         });
       } catch (error) {
         // Expected failure with mock ID, ignoring
-        logger.info("AcknowledgeCheckout failed as expected with mock ID");
       }
     });
 
