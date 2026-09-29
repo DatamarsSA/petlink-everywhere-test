@@ -43,6 +43,7 @@
   },
   "resolutions": {
     "whatwg-url": "^11.0.0",
-    "node-fetch": "^3.3.0"
+    "node-fetch": "^3.3.0",
+    "google-auth-library": "10.7.0"
   }
 }

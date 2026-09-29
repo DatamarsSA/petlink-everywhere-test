@@ -10,11 +10,9 @@ import { logger } from "../../config/logger.js";
 import { fxt } from "../../fixtures/fixtures.js";
 import WebSocket from "ws";
 import { createConnection, Socket } from "net";
-import { EventEmitter } from "events";
 import {
   DeviceIdentity,
   PacketEvoExtraData,
-  PacketGeofenceResponse,
   PacketType,
   PacketTypeMap,
   PacketWelcomeAck,
@@ -82,7 +80,7 @@ class JwtAuthProvider {
     private serviceLabel: string,
     private cognitoRegion: string,
     private cognitoClientId: string,
-  ) {}
+  ) { }
 
   /**
    * Authenticate via Cognito user pools and cache the ID token.
@@ -423,17 +421,17 @@ class WSClient {
       const authPayload =
         authType === AuthType.JWT
           ? {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
-                operationName,
-                variables,
-                authToken: this.config.jwtProvider.getToken(),
-              }),
-            }
+            [HTTP_HEADERS.HOST]: host,
+            [HTTP_HEADERS.AUTHORIZATION]: JSON.stringify({
+              operationName,
+              variables,
+              authToken: this.config.jwtProvider.getToken(),
+            }),
+          }
           : {
-              [HTTP_HEADERS.HOST]: host,
-              [HTTP_HEADERS.API_KEY]: this.config.apiKey,
-            };
+            [HTTP_HEADERS.HOST]: host,
+            [HTTP_HEADERS.API_KEY]: this.config.apiKey,
+          };
 
       const subscriptionPayload = {
         id: subId,
@@ -470,16 +468,17 @@ class WSClient {
 }
 
 const withLogging = <TSdk extends object>(sdk: TSdk, serviceName: ServiceType, authType: AuthType): TSdk => {
-  const logPrefix = `[${serviceName}]`;
+  const logPrefix = `[${serviceName}/${authType}]`;
   return new Proxy(sdk, {
     get: (target, prop: string | symbol) => async (...args: any[]) => {
-      logger.info(`${logPrefix} GQL → ${String(prop)}`, args);
+      const startedAt = Date.now();
+      logger.info(`${logPrefix} GQL → ${String(prop)}`, { args });
       try {
         const response = await (target as any)[prop](...args);
-        logger.info(`${logPrefix} GQL ← ${String(prop)}`, response);
+        logger.info(`${logPrefix} GQL ← ${String(prop)} (${Date.now() - startedAt}ms)`, { response });
         return response;
       } catch (error: any) {
-        logger.error(`${logPrefix} GQL ← ${String(prop)}`, error);
+        logger.error(`${logPrefix} GQL ← ${String(prop)} FAILED (${Date.now() - startedAt}ms)`, error);
         throw error;
       }
     },
@@ -630,11 +629,24 @@ class CctService {
   }
 }
 
+interface PendingPacketWaiter {
+  type: PacketType;
+  validator?: (packet: any) => boolean;
+  resolve: (packet: any) => void;
+  reject: (err: Error) => void;
+  timer: NodeJS.Timeout | null;
+}
+
 class SentinelService {
   private readonly logPrefix = "[SENTINEL]";
   private socket: Socket | null = null;
   private buffer: Buffer = Buffer.alloc(0);
-  private events = new EventEmitter();
+  private pendingWaiters = new Set<PendingPacketWaiter>();
+  // Per-type FIFO of received packets. A packet that arrives while nobody is waiting
+  // is queued instead of dropped, so waitForPacket can be called after the triggering
+  // action (sequential test code) without losing the packet.
+  private receivedPackets = new Map<number, ParsedPacket[]>();
+  private readonly maxQueuedPerType = 20;
   private readonly config = {
     host: process.env.SENTINEL_HOST!,
     port: parseInt(process.env.SENTINEL_PORT!, 10),
@@ -644,6 +656,10 @@ class SentinelService {
    * Connects to the Sentinel TCP server.
    */
   private async connect(): Promise<void> {
+    if (this.socket && !this.socket.destroyed) {
+      logger.debug(`${this.logPrefix} Already connected, reusing socket`);
+      return;
+    }
     return new Promise((resolve, reject) => {
       logger.debug(`${this.logPrefix} Connecting to ${this.config.host}:${this.config.port}`);
       this.socket = createConnection(this.config);
@@ -662,8 +678,15 @@ class SentinelService {
 
       this.socket.on("close", () => {
         logger.debug(`${this.logPrefix} Connection closed`);
+        // Fail pending waitForPacket calls instead of letting them hang until timeout —
+        // a dead socket must not masquerade as "packet never arrived".
+        this.rejectPendingWaiters(new Error("Sentinel socket closed while waiting for packets"));
       });
     });
+  }
+
+  private rejectPendingWaiters(err: Error) {
+    for (const waiter of [...this.pendingWaiters]) waiter.reject(err);
   }
 
   /**
@@ -703,12 +726,18 @@ class SentinelService {
 
     heartbeat: (device: DeviceIdentity, data?: any) => this.simulateAndSend(PacketWelcomeHeartBeat.toBuffer(device, data, PacketType.PACKET_0x06)),
 
-    geofenceResponse: (data: typeof PacketGeofenceResponse.Data) => this.simulateAndSend(PacketGeofenceResponse.toBuffer(data)),
-
+    // Reports the torch state applied by the device. Sentinel flips flashlight/sound to ON
+    // only when the reported duration matches the commanded one (*_duration_user ==
+    // *_duration_device), so `duration` must be the value received in the command packet.
+    // Ack | SocketAlwaysOn mirrors the real device reply and stops Sentinel from answering
+    // with an unsolicited 0x10.
     torch: (device: DeviceIdentity, duration: number) =>
       this.simulateAndSend(
         PacketEvoExtraData.toBuffer({
-          evo_tasks: 0x01 | 0x10,
+          evo_tasks:
+            PacketEvoExtraData.DeviceTaskFlags.Ack |
+            PacketEvoExtraData.DeviceTaskFlags.EvoSocketAlwaysOn |
+            PacketEvoExtraData.EvoTasksFlags.EvoFlashlight,
           torch_duration: duration,
         }),
       ),
@@ -716,7 +745,10 @@ class SentinelService {
     sound: (device: DeviceIdentity, duration: number) =>
       this.simulateAndSend(
         PacketEvoExtraData.toBuffer({
-          evo_tasks: 0x04 | 0x10,
+          evo_tasks:
+            PacketEvoExtraData.DeviceTaskFlags.Ack |
+            PacketEvoExtraData.DeviceTaskFlags.EvoSocketAlwaysOn |
+            PacketEvoExtraData.EvoTasksFlags.EvoSound,
           sound_command: duration > 0 ? 1 : 0,
           sound_duration: duration,
         }),
@@ -725,70 +757,108 @@ class SentinelService {
 
   /**
    * Waits for a specific packet type to arrive from the socket.
+   * Scans the per-type receive queue first, so it also resolves on packets that
+   * already arrived before this call — callers can write trigger-then-await code.
    */
   async waitForPacket<T extends keyof PacketTypeMap>(
     type: T,
     validator?: (p: PacketTypeMap[T]) => boolean,
     timeoutMs: number = fxt.socket.timeoutMs,
   ): Promise<PacketTypeMap[T]> {
+    const typeHex = `0x${type.toString(16).toUpperCase()}`;
     return new Promise((resolve, reject) => {
-      const typeHex = `0x${type.toString(16).toUpperCase()}`;
-
-      const timer = setTimeout(() => {
-        cleanup();
-        reject(new Error(`Device not received packet ${typeHex} from socket in ${timeoutMs}ms`));
-      }, timeoutMs);
-
-      const onPacket = (packet: ParsedPacket) => {
-        if (packet.type === type) {
-          const typedPacket = packet.payload as PacketTypeMap[T];
-          if (!validator || validator(typedPacket)) {
-            // logger.info(`${this.logPrefix} INCOMING: packet ${typeHex} matched`);
-            cleanup();
-            resolve(typedPacket);
-          } else {
-            // logger.warn(
-            //   `${this.logPrefix} INCOMING: packet ${typeHex} received but VALIDATOR FAILED\n` +
-            //     `  ├─ Received: ${JSON.stringify(typedPacket)}\n` +
-            //     `  └─ Status: Still waiting...`,
-            // );
-          }
-        }
+      const waiter: PendingPacketWaiter = {
+        type,
+        validator: validator as PendingPacketWaiter["validator"],
+        timer: null,
+        resolve: (packet) => {
+          clearTimeout(waiter.timer!);
+          this.pendingWaiters.delete(waiter);
+          logger.debug(`${this.logPrefix} INCOMING: packet ${typeHex} matched validator`);
+          resolve(packet);
+        },
+        reject: (err) => {
+          clearTimeout(waiter.timer!);
+          this.pendingWaiters.delete(waiter);
+          reject(err);
+        },
       };
-
-      const cleanup = () => {
-        clearTimeout(timer);
-        this.events.off("packet", onPacket);
-      };
-
-      this.events.on("packet", onPacket);
+      waiter.timer = setTimeout(
+        () => waiter.reject(new Error(`Device not received packet ${typeHex} from socket in ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+      this.pendingWaiters.add(waiter);
+      this.drainWaiters();
     });
   }
 
+  /**
+   * Matches queued packets against pending waiters, oldest first. Entries that fail
+   * a waiter's validator are dropped (same "ignore and keep waiting" semantics as
+   * before), so a wait always resolves on the next matching packet of its type.
+   */
+  private drainWaiters() {
+    for (const waiter of [...this.pendingWaiters]) {
+      if (!this.pendingWaiters.has(waiter)) continue;
+      const queue = this.receivedPackets.get(waiter.type);
+      if (!queue?.length) continue;
+      const typeHex = `0x${waiter.type.toString(16).toUpperCase()}`;
+      while (queue.length > 0 && this.pendingWaiters.has(waiter)) {
+        const packet = queue.shift()!;
+        if (!waiter.validator || waiter.validator(packet.payload)) {
+          waiter.resolve(packet.payload);
+        } else {
+          logger.debug(`${this.logPrefix} INCOMING: queued packet ${typeHex} dropped (validator failed)`, {
+            received: packet.payload,
+          });
+        }
+      }
+    }
+  }
+
+  private enqueueReceived(packet: ParsedPacket) {
+    const queue = this.receivedPackets.get(packet.type) ?? [];
+    if (queue.length >= this.maxQueuedPerType) queue.shift();
+    queue.push(packet);
+    this.receivedPackets.set(packet.type, queue);
+    this.drainWaiters();
+  }
+
+  /**
+   * Drops queued received packets (optionally only one type). Call between test
+   * phases if a stale packet could satisfy a future wait.
+   */
+  public drainReceived(type?: PacketType): void {
+    if (type === undefined) this.receivedPackets.clear();
+    else this.receivedPackets.delete(type);
+  }
+
   private logPacket(direction: "INCOMING" | "OUTGOING", rawSirfPacket: Buffer, parsedPayload?: any): void {
-    // Packet types that are too verbose to log (e.g., frequent heartbeats)
+    // Packet types that are too verbose to log at info level (frequent heartbeats, auto-acks,
+    // and known server→device packets we don't decode: firmware upload 0x03/0x04, ephemeris
+    // 0x08/0x09, activity 0x0B/0x19, disconnection 0x0F, gps request 0x11, stroll 0x14).
     const VERBOSE_PACKETS = [
-      PacketType.PACKET_0x06, // Heartbeat - comment to enable logging
+      PacketType.PACKET_0x06, // Heartbeat
       PacketType.PACKET_0x02, // Auto-ack
-      PacketType.PACKET_0x08, // Ephemeris
-      PacketType.PACKET_0x14, // Ephemeris
+      0x03, 0x04, 0x08, 0x09, 0x0b, 0x0f, 0x11, 0x14, 0x19,
     ];
 
     const type = rawSirfPacket[4];
     const typeHex = `0x${type.toString(16).padStart(2, "0").toUpperCase()}`;
 
-    // Skip verbose packets (e.g., frequent heartbeats)
-    if (!VERBOSE_PACKETS.includes(type)) {
+    if (VERBOSE_PACKETS.includes(type)) {
+      logger.verbose(`${this.logPrefix} ${direction} ${typeHex}`);
+    } else {
       logger.info(`${this.logPrefix} ${direction} ${typeHex}: ${JSON.stringify(parsedPayload)}`);
     }
   }
 
   /**
-   * Clears the internal buffer and removes all packet listeners.
+   * Clears the raw receive buffer and the queued packets.
    */
   public clearBuffer(): void {
     this.buffer = Buffer.alloc(0);
-    this.events.removeAllListeners("packet");
+    this.receivedPackets.clear();
   }
 
   /**
@@ -800,7 +870,9 @@ class SentinelService {
     while (this.buffer.length >= 8) {
       const headerIndex = this.buffer.indexOf(SIRF.HEADER);
       if (headerIndex === -1) {
-        this.buffer = Buffer.alloc(0);
+        // Keep a trailing 0xA0: it could be the first header byte split across TCP chunks.
+        const lastByte = this.buffer[this.buffer.length - 1];
+        this.buffer = lastByte === SIRF.HEADER[0] ? this.buffer.subarray(this.buffer.length - 1) : Buffer.alloc(0);
         break;
       }
 
@@ -811,6 +883,13 @@ class SentinelService {
       if (this.buffer.length < 4) break;
 
       const length = this.buffer.readUInt16BE(2);
+      // Valid SIRF payloads are always in [1, 1023] (encapsulate rejects >= 1024 on the
+      // send side). A length outside that range means we synced on a false header —
+      // skip it instead of stalling on a frame that can never complete.
+      if (length === 0 || length >= 1024) {
+        this.buffer = this.buffer.subarray(2);
+        continue;
+      }
       const totalPacketLength = length + 8;
 
       if (this.buffer.length < totalPacketLength) break;
@@ -821,6 +900,15 @@ class SentinelService {
       // Verify Footer
       const footer = rawPacket.subarray(totalPacketLength - 2);
       if (!footer.equals(SIRF.FOOTER)) {
+        this.buffer = this.buffer.subarray(2); // Skip bad header
+        continue;
+      }
+
+      // Verify CRC (15-bit sum of payload bytes, big endian) — same algorithm as Rust
+      let crc = 0;
+      for (const byte of payload) crc = (crc + byte) & 0x7fff;
+      if (crc !== rawPacket.readUInt16BE(4 + length)) {
+        logger.warn(`${this.logPrefix} INCOMING: CRC mismatch, dropping frame`);
         this.buffer = this.buffer.subarray(2); // Skip bad header
         continue;
       }
@@ -840,25 +928,74 @@ class SentinelService {
       // LOG INCOMING (Symmetric with simulator OUTGOING)
       this.logPacket("INCOMING", rawPacket, parsed.payload);
 
-      this.events.emit("packet", parsed);
+      this.enqueueReceived(parsed);
 
       this.buffer = this.buffer.subarray(totalPacketLength);
     }
   }
 
   /**
-   * Connects to Sentinel, sends a Welcome packet (0x01), and waits for the server's response (0x01).
-   * This ensures the device is fully registered in Sentinel's connection map before tests proceed.
+   * Connects to Sentinel, sends a Welcome packet (0x01), and waits for the server's
+   * response (0x01) plus the Safe Places push (0x15).
+   *
+   * Sentinel emits 0x15 on welcome only when `device_info.user_id` is set — i.e. the
+   * `sentinel` DB doc is the real device, not the placeholder created on the fly for
+   * unknown serials. On a placeholder session `device_uuid`/`user_id` stay null and
+   * every routed command is dropped, so a missing 0x15 means "not registered yet":
+   * resend the welcome (update_state reloads device_info on every 0x01, so the same
+   * socket self-heals once newGpsDevicesConsumer has written the doc).
+   * The same retry also covers welcome frames lost to TCP fragmentation: Sentinel's
+   * parser does not reassemble across reads, and duplicate welcomes are harmless —
+   * each one just re-registers the connection and re-sends the response.
    */
-  async connectAndHandshake(device: DeviceIdentity): Promise<void> {
+  async connectAndHandshake(
+    device: DeviceIdentity,
+    options?: { maxAttempts?: number; attemptTimeoutMs?: number; retryDelayMs?: number },
+  ): Promise<PacketTypeMap[PacketType.PACKET_0x01]> {
     await this.connect();
 
-    // Start waiting for response BEFORE sending welcome to avoid race conditions (fast networks)
-    const handshakePromise = this.waitForPacket(PacketType.PACKET_0x01, (p) => p.requested_operating_status !== undefined);
+    const maxAttempts = options?.maxAttempts ?? 6;
+    const attemptTimeoutMs = options?.attemptTimeoutMs ?? 5000;
+    const retryDelayMs = options?.retryDelayMs ?? 2000;
+    // The 0x15 push is emitted in the same handler burst as the 0x01 response, so
+    // once the response arrives it only needs a short extra grace.
+    const zonesGraceMs = 1500;
 
-    await this.simulator.welcome(device);
-    await handshakePromise;
-    logger.debug(`${this.logPrefix} Handshake completed: device registered`);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const responsePromise = this.waitForPacket(
+        PacketType.PACKET_0x01,
+        (p) => p.requested_operating_status !== undefined,
+        attemptTimeoutMs,
+      ).catch(() => null);
+      const registeredPromise = this.waitForPacket(PacketType.PACKET_0x15, undefined, attemptTimeoutMs)
+        .then(() => true)
+        .catch(() => false);
+
+      await this.simulator.welcome(device);
+
+      const response = await responsePromise;
+      const registered =
+        response !== null &&
+        (await Promise.race([registeredPromise, new Promise<boolean>((r) => setTimeout(() => r(false), zonesGraceMs))]));
+
+      if (response && registered) {
+        this.drainReceived(); // handshake leftovers (ephemeris, zones, ...) must not leak into tests
+        logger.debug(`${this.logPrefix} Handshake completed: device registered (attempt ${attempt})`);
+        return response;
+      }
+
+      if (attempt < maxAttempts) {
+        logger.warn(
+          `${this.logPrefix} Handshake attempt ${attempt}/${maxAttempts} incomplete ` +
+          `(response=${response !== null}, safePlaces=${registered}) — retrying welcome`,
+        );
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+      }
+    }
+
+    throw new Error(
+      `Sentinel handshake failed after ${maxAttempts} attempts: device doc may not be registered yet or welcome frames were lost`,
+    );
   }
 }
 

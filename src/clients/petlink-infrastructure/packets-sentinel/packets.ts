@@ -30,14 +30,20 @@ export enum OperatingStatus {
 }
 
 export enum PacketType {
-  PACKET_0x01 = 0x01,
-  PACKET_0x02 = 0x02,
-  PACKET_0x06 = 0x06,
-  PACKET_0x08 = 0x08,
-  PACKET_0x10 = 0x10,
-  PACKET_0x14 = 0x14,
-  PACKET_0x15 = 0x15,
+  PACKET_0x01 = 0x01, // Welcome (D→S) / Geofence & operating-status response (S→D)
+  PACKET_0x02 = 0x02, // Welcome ack (D→S)
+  PACKET_0x06 = 0x06, // Heartbeat (D→S)
+  PACKET_0x10 = 0x10, // Evo extra data — torch/sound/ESZ/tour (bidirectional)
+  PACKET_0x15 = 0x15, // Safe places WiFi — ESZ zones (S→D)
 }
+
+/**
+ * Known Sentinel → Device packet types we intentionally don't decode: no covered flow needs
+ * them, so they are parsed as opaque packets instead of hitting the unknown-type error path.
+ *   0x03/0x04 firmware upload · 0x08/0x09 ephemeris · 0x0B request activity data
+ *   0x0F disconnection · 0x11 gps data request · 0x14 stroll data · 0x19 activity data
+ */
+export const SERVER_ONLY_PACKET_TYPES = new Set([0x03, 0x04, 0x08, 0x09, 0x0b, 0x0f, 0x11, 0x14, 0x19]);
 
 // ================================ DIZIONARIO DEI TIPI ================================ //
 
@@ -182,7 +188,7 @@ export class PacketWelcomeHeartBeat {
     last_gps_time: 0 as number, // Unix timestamp dell'ultimo fix GPS
 
     // === Sensori ===
-    temperature: 20 as number, // Temperatura (°C * 10, es. 200 = 20.0°C)
+    temperature: 20 as number, // Temperatura (°C, raw — Sentinel compares it directly against -30..90)
     speed: 0 as number, // Velocità (km/h * 10)
     battery: 4200 as number, // Tensione batteria (mV, es. 4200 = 4.2V)
 
@@ -201,7 +207,7 @@ export class PacketWelcomeHeartBeat {
     gps_sat: 8 as number, // Numero satelliti GPS visibili
 
     // === Spare bytes (dati estesi) ===
-    spare_c4: 0 as number, // Byte esteso 4
+    spare_c4: 80 as number, // Battery percentage (0-100): drives battery notifications and reported battery — never leave at 0
     spare_c5: 0 as number, // Byte esteso 5 - Bitfield stati (usa PacketWelcomeHeartBeat.SpareC5.*)
     spare_c6: 0 as number, // Byte esteso 6
     spare_c7: 0 as number, // Byte esteso 7
@@ -220,11 +226,7 @@ export class PacketWelcomeHeartBeat {
     spare_s8: 0 as number, // Short esteso 8
 
     // === Info flags ===
-    info_flag: 0 as number, // Bitfield dati inclusi (usa Packet01.D2SWelcomeHeartBeat.InfoFlags.*)
-
-    // === Dati cellulari opzionali (se info_flag ha i bit corrispondenti) ===
-    wifi_cells: undefined as { bssid: string; rssi: number; channel: number }[] | undefined, // Celle WiFi rilevate
-    gsm_cells: undefined as { cid: number; lac: number; mcc: number; mnc: number; rxl: number }[] | undefined, // Celle GSM rilevate
+    info_flag: 0 as number, // Bitfield dati inclusi (usa PacketWelcomeHeartBeat.InfoFlags.*) — InfoFmwDisable is always forced by toBuffer
   };
 
   /**
@@ -251,7 +253,17 @@ export class PacketWelcomeHeartBeat {
     if (!data.serial_number || !data.imei || !data.iccid || !data.fw_version) {
       throw new Error(
         `[Sentinel Protocol] CRITICAL: Attempting to encode Packet 0x01/0x06 without Device Hardware Identity! ` +
-          `You must pass a valid Device object from the test setup.`,
+        `You must pass a valid Device object from the test setup.`,
+      );
+    }
+
+    // Sentinel derives the device id for the connection map and DB lookup from a 9-byte
+    // slice of this packet (payload[1..DEVICE_ID_LENGTH] in main.rs). A longer serial would
+    // be silently truncated server-side → commands would never reach this socket.
+    if (data.serial_number.length > 9) {
+      throw new Error(
+        `[Sentinel Protocol] serial_number "${data.serial_number}" exceeds 9 chars — Sentinel truncates the ` +
+        `device id to 9 bytes, so DB lookup and command routing would silently break.`,
       );
     }
 
@@ -287,7 +299,7 @@ export class PacketWelcomeHeartBeat {
     offset += 2;
     buffer.writeUInt32LE(data.last_gps_time || Math.floor(Date.now() / 1000), offset);
     offset += 4;
-    buffer.writeInt16LE(data.temperature * 10, offset); // Scale temperature
+    buffer.writeInt16LE(data.temperature, offset); // Raw °C
     offset += 2;
     buffer.writeInt16LE(data.speed, offset);
     offset += 2;
@@ -323,16 +335,12 @@ export class PacketWelcomeHeartBeat {
     buffer.writeInt16LE(data.spare_s8, offset);
     offset += 2;
 
-    // Combine convenience wifi/gsm flags into info_flag byte
-    const hasWiFi = data.wifi_cells && data.wifi_cells.length > 0;
-    const hasGSM = data.gsm_cells && data.gsm_cells.length > 0;
-    let info_flag = data.info_flag;
-    if (hasWiFi) info_flag |= PacketWelcomeHeartBeat.InfoFlags.InfoWifiCells;
-    if (hasGSM) info_flag |= PacketWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag;
+    // Info flag. InfoFmwDisable is always forced: firmware updates are never emulated and
+    // without it Sentinel schedules an UploadInit packet (0x03) on every welcome.
+    // Wifi/GSM cell flags are never set — cell payloads are not serialized (not needed by the
+    // tests, and advertising them without data would corrupt the packet layout Sentinel expects).
+    const info_flag = data.info_flag | PacketWelcomeHeartBeat.InfoFlags.InfoFmwDisable;
     buffer.writeUInt8(info_flag, offset++);
-
-    // Note: GSM/WiFi cell serialization is complex and not fully implemented
-    // This is sufficient for current tests but may need expansion.
 
     return buffer.subarray(0, offset);
   }
@@ -374,7 +382,7 @@ export class PacketWelcomeHeartBeat {
     offset += 2;
     const last_gps_time = payload.readUInt32LE(offset);
     offset += 4;
-    const temperature = payload.readInt16LE(offset) / 10;
+    const temperature = payload.readInt16LE(offset); // Raw °C
     offset += 2;
     const speed = payload.readInt16LE(offset);
     offset += 2;
@@ -411,10 +419,6 @@ export class PacketWelcomeHeartBeat {
     offset += 2;
     const info_flag = payload.readUInt8(offset++);
 
-    // Basic support for wifi/gsm, not fully parsed as it's complex and not needed yet.
-    const wifi_cells = (info_flag & PacketWelcomeHeartBeat.InfoFlags.InfoWifiCells) !== 0 ? [] : undefined;
-    const gsm_cells = (info_flag & PacketWelcomeHeartBeat.InfoFlags.InfoGsmCellsFlag) !== 0 ? [] : undefined;
-
     const data: typeof PacketWelcomeHeartBeat.Data = {
       serial_number,
       imei,
@@ -450,8 +454,6 @@ export class PacketWelcomeHeartBeat {
       spare_s7,
       spare_s8,
       info_flag,
-      wifi_cells,
-      gsm_cells,
     };
     return data;
   }
@@ -475,46 +477,6 @@ export class PacketGeofenceResponse {
     tx_every_check: 0 as number,
     lbs_current_radius: 0 as number,
   };
-
-  static toBuffer(data: typeof PacketGeofenceResponse.Data): Buffer {
-    const buffer = Buffer.alloc(71); // Fixed size
-    let offset = 0;
-
-    buffer[offset++] = PacketType.PACKET_0x01;
-
-    buffer.writeFloatLE(data.lbs_current_latitude, offset);
-    offset += 4;
-    buffer.writeFloatLE(data.lbs_current_longitude, offset);
-    offset += 4;
-    buffer[offset++] = data.server_position_source;
-
-    // Serialize up to 6 geofence points, pad with zeros
-    const geofences = data.geofence_latitude_longitude.slice(0, 6);
-    geofences.forEach(({ lat, lng }) => {
-      buffer.writeFloatLE(lat, offset);
-      offset += 4;
-      buffer.writeFloatLE(lng, offset);
-      offset += 4;
-    });
-    // Pad remaining to 48 bytes (6*8)
-    while (offset < 1 + 8 + 1 + 48) {
-      buffer.writeFloatLE(0, offset);
-      offset += 4;
-      buffer.writeFloatLE(0, offset);
-      offset += 4;
-    }
-
-    buffer[offset++] = data.requested_operating_status;
-    buffer.writeUInt16LE(data.update_frequency, offset);
-    offset += 2;
-    buffer.writeUInt32LE(data.utc_timestamp, offset);
-    offset += 4;
-    buffer.writeUInt16LE(data.tx_every_check, offset);
-    offset += 2;
-    buffer.writeUInt32LE(data.lbs_current_radius, offset);
-
-    return buffer;
-  }
 
   static fromBuffer(payload: Buffer): typeof PacketGeofenceResponse.Data {
     let offset = 0;
@@ -612,6 +574,17 @@ export class PacketEvoExtraData {
     EvoTimestamp: 0x0020, // Timestamp (optional, only if flag is set)
   } as const;
 
+  /**
+   * evo_tasks bits used in the Device → Sentinel direction (the Rust from_kippy enum is
+   * different from EvoTasksFlags above): the top bit marks the packet as the command
+   * acknowledgement and 0x10 advertises the socket as always-on. With Ack + SocketAlwaysOn
+   * set, Sentinel marks the command acknowledged and does not send a reply packet back.
+   */
+  static readonly DeviceTaskFlags = {
+    EvoSocketAlwaysOn: 0x10,
+    Ack: 0x80000000,
+  } as const;
+
   static Data = {
     evo_tasks: 0 as number,
     torch_duration: undefined as number | undefined,
@@ -628,7 +601,9 @@ export class PacketEvoExtraData {
 
     buffer[offset++] = PacketType.PACKET_0x10;
 
-    const evo_tasks = data.evo_tasks || 0;
+    // `>>> 0` coerces to uint32: with the Ack bit (0x80000000) set, `|` produces a negative
+    // int32 in JS and writeUInt32LE would throw.
+    const evo_tasks = (data.evo_tasks || 0) >>> 0;
     buffer.writeUInt32LE(evo_tasks, offset);
     offset += 4;
 
@@ -717,27 +692,6 @@ export class PacketSafePlacesWifi {
     zones: [] as { lat: number; lng: number; radius: number; bssid: string }[],
   };
 
-  static toBuffer(zones: { lat: number; lng: number; radius: number; bssid: string }[]): Buffer {
-    const buffer = Buffer.alloc(1 + zones.length * 18);
-    let offset = 0;
-
-    buffer[offset++] = 0x15;
-
-    zones.forEach(({ lat, lng, radius, bssid }) => {
-      buffer.writeFloatLE(lat, offset);
-      offset += 4;
-      buffer.writeFloatLE(lng, offset);
-      offset += 4;
-      buffer.writeFloatLE(radius, offset);
-      offset += 4;
-      const bssidBytes = Buffer.from(bssid.replace(/:/g, ""), "hex");
-      bssidBytes.copy(buffer, offset);
-      offset += 6;
-    });
-
-    return buffer;
-  }
-
   static fromBuffer(payload: Buffer): typeof PacketSafePlacesWifi.Data {
     const zones: { lat: number; lng: number; radius: number; bssid: string }[] = [];
     let offset = 1;
@@ -769,12 +723,13 @@ export class PacketSafePlacesWifi {
 export interface ParsedPacket {
   type: number;
   payload:
-    | typeof PacketWelcomeHeartBeat.Data
-    | typeof PacketGeofenceResponse.Data
-    | typeof PacketWelcomeAck.Data
-    | typeof PacketEvoExtraData.Data
-    | typeof PacketSafePlacesWifi.Data
-    | { error: string };
+  | typeof PacketWelcomeHeartBeat.Data
+  | typeof PacketGeofenceResponse.Data
+  | typeof PacketWelcomeAck.Data
+  | typeof PacketEvoExtraData.Data
+  | typeof PacketSafePlacesWifi.Data
+  | { skipped: true }
+  | { error: string };
   raw: Buffer;
 }
 
@@ -797,6 +752,10 @@ export function parsePacketByType(payload: Buffer): ParsedPacket {
       case PacketType.PACKET_0x15:
         return { type, payload: PacketSafePlacesWifi.fromBuffer(payload), raw: payload };
       default:
+        if (SERVER_ONLY_PACKET_TYPES.has(type)) {
+          // Known Sentinel → Device packet we don't decode — not an error.
+          return { type, payload: { skipped: true }, raw: payload };
+        }
         const errorMessage = `Parser for packet ${type.toString(16)} not found.`;
         return { type, payload: { error: errorMessage }, raw: payload };
     }

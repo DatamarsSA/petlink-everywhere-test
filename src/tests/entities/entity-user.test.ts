@@ -5,7 +5,6 @@ import { testHelper } from "../../clients/client-test-helper.js";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { twilioClient } from "../../clients/twilio/client-twillio.js";
-import { logger } from "../../config/logger.js";
 import { extractParamsFromUrl, waitFor } from "../../helpers/utils.js";
 import { gmailClient } from "../../clients/gmail/client-gmail.js";
 
@@ -299,8 +298,7 @@ describe("User", () => {
 
         expect(
           updateResponse.updateUser.code,
-          `updateUser should succeed - Error: ${updateResponse.updateUser.message}${
-            updateResponse.updateUser.translationCode ? ` (${updateResponse.updateUser.translationCode})` : ""
+          `updateUser should succeed - Error: ${updateResponse.updateUser.message}${updateResponse.updateUser.translationCode ? ` (${updateResponse.updateUser.translationCode})` : ""
           }`,
         ).toBe("200");
 
@@ -308,8 +306,7 @@ describe("User", () => {
         const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
         expect(
           userCheck.getUser.code,
-          `getUser should succeed - Error: ${userCheck.getUser.message}${
-            userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
+          `getUser should succeed - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
           }`,
         ).toBe("200");
 
@@ -343,8 +340,7 @@ describe("User", () => {
 
         expect(
           updateResponse.updateUser.code,
-          `updateUser should succeed - Error: ${updateResponse.updateUser.message}${
-            updateResponse.updateUser.translationCode ? ` (${updateResponse.updateUser.translationCode})` : ""
+          `updateUser should succeed - Error: ${updateResponse.updateUser.message}${updateResponse.updateUser.translationCode ? ` (${updateResponse.updateUser.translationCode})` : ""
           }`,
         ).toBe("200");
 
@@ -352,8 +348,7 @@ describe("User", () => {
         const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
         expect(
           userCheck.getUser.code,
-          `getUser should succeed - Error: ${userCheck.getUser.message}${
-            userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
+          `getUser should succeed - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
           }`,
         ).toBe("200");
 
@@ -387,8 +382,7 @@ describe("User", () => {
 
         expect(
           updateResponse.updateEmailUser.code,
-          `updateEmailUser should succeed - Error: ${updateResponse.updateEmailUser.message}${
-            updateResponse.updateEmailUser.translationCode ? ` (${updateResponse.updateEmailUser.translationCode})` : ""
+          `updateEmailUser should succeed - Error: ${updateResponse.updateEmailUser.message}${updateResponse.updateEmailUser.translationCode ? ` (${updateResponse.updateEmailUser.translationCode})` : ""
           }`,
         ).toBe("200");
         const checkUserUpdated = await petlink.core.graphqlHttp.authJwt.getUser();
@@ -414,8 +408,7 @@ describe("User", () => {
         const userCheck = await petlink.core.graphqlHttp.authJwt.getUser();
         expect(
           userCheck.getUser.code,
-          `Requests logged with new email should works - Error: ${userCheck.getUser.message}${
-            userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
+          `Requests logged with new email should works - Error: ${userCheck.getUser.message}${userCheck.getUser.translationCode ? ` (${userCheck.getUser.translationCode})` : ""
           }`,
         );
       });
@@ -484,8 +477,7 @@ describe("User", () => {
 
         expect(
           response.changePassword.code,
-          `changePassword should succeed - Error: ${response.changePassword.message}${
-            response.changePassword.translationCode ? ` (${response.changePassword.translationCode})` : ""
+          `changePassword should succeed - Error: ${response.changePassword.message}${response.changePassword.translationCode ? ` (${response.changePassword.translationCode})` : ""
           }`,
         ).toBe("200");
 
@@ -520,7 +512,6 @@ describe("User", () => {
           languageId: fxt.current.user.languageId,
           appBrand: fxt.current.appBrand,
         });
-        logger.debug("changeForgotPassword() response", { otpResponse });
 
         expect(
           otpResponse.sendOtpForgotPassword.code,
@@ -532,7 +523,6 @@ describe("User", () => {
         const otp = await waitFor(() => twilioClient.getOtpFromReceivedSms(setup.user!.phone), {
           timeoutError: `OTP not received for ${setup.user!.phone}`,
         });
-        logger.debug("Received OTP", { otp });
 
         // STEP 3: Verify OTP
         await petlink.core.graphqlHttp.authApiKey.checkOtp({
@@ -548,7 +538,6 @@ describe("User", () => {
           verificationId: otpResponse.sendOtpForgotPassword.verificationId!,
           password: newPassword,
         });
-        logger.debug("changeForgotPassword() response", { changeResponse });
 
         expect(
           changeResponse.changeForgotPassword.code,
