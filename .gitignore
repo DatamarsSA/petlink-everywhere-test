@@ -23,6 +23,7 @@ build/
 
 # IDE
 .vscode/
+.mcp.json
 *.swp
 *.swo
 .idea/*
