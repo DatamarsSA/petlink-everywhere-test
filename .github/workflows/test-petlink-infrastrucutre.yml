@@ -14,10 +14,10 @@ on:
       actor: { description: "Source Actor", required: true }
 
 concurrency:
-  # Create a unique concurrency group based on workflow name and target branch (environment)
-  # 1. If two runs start on 'develop', the second one is queued until the first completes.
-  # 2. If runs start on different branches (e.g., 'develop' vs 'feature-x'), they run in parallel.
-  group: ${{ github.workflow }}-${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+  # One single group for the whole workflow: test accounts/logins are shared
+  # across environments, so runs on 'develop' and 'test' must never overlap.
+  # A newer run cancels the in-progress one.
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 env:
@@ -227,11 +227,12 @@ jobs:
           verbose_summary: true
           group_suite: true
 
-
-
   notify-discord:
-    needs: [run-tests]
-    if: always() && github.event_name == 'workflow_dispatch' && github.event.inputs.branch == 'test' && needs.run-tests.result != 'skipped'
+    needs: [build-image, run-tests]
+    # Notify for: push on develop (this repo) OR external dispatch on 'test'.
+    # Skipped when: dispatch on branches != 'test' (build skipped) or run was
+    # cancelled by a newer one (concurrency group).
+    if: always() && (github.event_name == 'push' || github.event.inputs.branch == 'test') && needs.build-image.result != 'skipped' && needs.build-image.result != 'cancelled' && needs.run-tests.result != 'cancelled'
     runs-on: ubuntu-latest
     # Environment is required to access Secrets
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
@@ -244,7 +245,9 @@ jobs:
           WORKFLOW_STATUS: ${{ needs.run-tests.result }}
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          BRANCH="${{ github.ref_name }}"
+          REPO="${{ github.event.inputs.repo || github.repository }}"
+          BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
+          SHA="${{ github.event.inputs.sha || github.sha }}"
 
           if [ "$WORKFLOW_STATUS" == "success" ]; then
              TITLE="✅ Pipeline Tests PASSED"
@@ -255,7 +258,7 @@ jobs:
              TITLE="🚨 Pipeline Tests FAILED"
              COLOR=15158332 # Red
              DESCRIPTION="Some tests failed. Check the full report for details."
-             MENTION=""
+             MENTION="${DISCORD_MENTION:-}"
           fi
 
           # Build simple JSON payload
@@ -265,7 +268,9 @@ jobs:
             --arg desc "$DESCRIPTION" \
             --arg color "$COLOR" \
             --arg url "$RUN_URL" \
+            --arg repo "$REPO" \
             --arg branch "$BRANCH" \
+            --arg sha "$SHA" \
             '{
               content: $content,
               username: "Integration Test",
@@ -274,7 +279,9 @@ jobs:
                 description: $desc,
                 color: ($color | tonumber),
                 fields: [
+                  { name: "Repo", value: $repo, inline: true },
                   { name: "Branch", value: $branch, inline: true },
+                  { name: "Commit", value: ("[`" + $sha[0:7] + "`](https://github.com/" + $repo + "/commit/" + $sha + ")"), inline: true },
                   { name: "Report", value: ("[🔗 Open Summary](" + $url + ")"), inline: true }
                 ]
               }]

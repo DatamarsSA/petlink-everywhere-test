@@ -1,9 +1,15 @@
+---
+name: ticket-jira
+description: Investigate Jira support tickets by correlating logs, production data, and the code running at the time of the incident
+---
+
 You have access to:
 
 - Jira MCP → read the ticket and extract the affected user, timestamps, symptoms, and relevant context.
 - Grafana MCP → inspect logs for the affected user and incident time window.
 - MongoDB MCP → inspect the user's production database state when logs are incomplete or ambiguous. Only read-only queries are permitted.
-- Codebase → trace logs and observed behaviour back to the implementation (explore also fe/app mobile code if needed).
+- Codebase of new environment (all-repo/new-env) → trace logs and observed behaviour back to the implementation (explore also fe/app mobile code if needed).
+- Codebase of old environment (all-repo/old-env) → generally useless but when bugs are related to mix between portion of logic happend on old and new env, look also to the old environment codebas (start from all-repo/old-env/AGENTS.md to have an overview of old infrastrucutre)
 
 Always correlate evidence across these sources. For all MCP jira ticket of support are related to prod environment so use MCP-prod.
 
