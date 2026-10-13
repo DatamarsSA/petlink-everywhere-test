@@ -56,27 +56,33 @@ graph TB
   Core -.->|via consumers| Twilio[Twilio] & SendGrid[SendGrid] & Firebase[Firebase]
 ```
 
-## 2. Repositories (`all-repo/`)
+## 2. Repositories (`all-repo/new-env/`)
 Backend / device:
 - **`petlink-everywhere-core`** — Main backend API (AppSync + Lambdas). Users, pets, devices, SQS consumers.
 - **`petlink-everywhere-cct-core`** — Backend for Customer Care Tool. Reads Petlink DB, owns CCT DB.
 - **`subscriptions-manager`** — Chargebee webhooks, payments, subscription states.
 - **`petlink-everywhere-sentinel`** — Rust TCP server on EKS for GPS device connections.
-- **`petlink-data-migration`** — Data migration service. Migrates users, pets, devices, subscriptions, and historical data from legacy MySQL (Kippy EU / Petlink US) to Petlink Everywhere MongoDB. See `docs/migration/migration.md`.
+- **`petlink-data-migration`** — Data migration service (temporary — dropped after migration completes). Migrates users, pets, devices, subscriptions, historical data from legacy MySQL to MongoDB. See `docs/migration/migration.md`.
 
 Clients:
 - **`petlink-everywhere-mobile`** — Flutter app (Petlink US / Kippy EU).
 - **`petlink-everywhere-web`** — React frontend for end users.
 - **`petlink-everywhere-cct`** — React frontend for support agents.
 
-Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `petlink-everywhere-bluetooth`, `petlink-everywhere-device-simulator`, `petlink-everywhere-databases`, `petlink-data-migration`.
+Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `petlink-everywhere-bluetooth`, `petlink-everywhere-device-simulator`, `petlink-everywhere-databases`.
+
+### Legacy environment (`all-repo/old-env/`)
+Old PHP/MySQL stack the new env migrated *from* — still relevant for support tickets on non-migrated users and for migration debugging. Monoliths: `PID-KippyAPI-V2` (REST API + `kd2/` device ingestion), `PID-Kippy-Service` (subscriptions/checkout, Chargebee), `PID-Kippy-CustomerCareTool`, `PID-Kippy-Internal` (orders/replacements/DMOS), `PID-Kippy-Polymorphic` (C++ TCP server = old Sentinel), `PID-Kippy-Dispatcher` (push/mail router). Full per-repo minimaps, MySQL DB map and old↔new mapping table: `all-repo/old-env/AGENTS.md`. Quick equivalents: Polymorphic→Sentinel, API-V2→Core, Service→subscriptions-manager, MySQL `admin_db`→`petlinkGpsInventory`. Disposable post-migration, like `petlink-data-migration`.
 
 ---
 
 ## 3. Repo Minimaps
 > Goal: get the AI to the **right folder on first try**. Function names and exact lists are intentionally omitted — discover them on demand.
 
-### 3.1 `petlink-everywhere-core` (Node/TS, AppSync + Lambdas)
+### 3.1 `petlink-everywhere-test` (this repo — integration test suite)
+Node/TS + Vitest; `APP_BRAND` = `PETLINK` | `KIPPY`. Tests in `src/tests/{domain}/`, fixtures `src/fixtures/` (`fxt`), API/OTP clients in `src/clients/`. Conventions, builder pattern, cleanup, CI: `README.md`.
+
+### 3.2 `petlink-everywhere-core` (Node/TS, AppSync + Lambdas)
 - **GraphQL endpoints** (1 Lambda per op): `src/lambda_functions/graphql/{mutation|query}/{name}/handler.ts`
 - **Business logic** (most bugs live here): `src/lib/petlink/*.ts` (user, pet, petlinkGps, subscriptions, …)
 - **DB layer**: `src/lib/mongoDb/`
@@ -87,7 +93,7 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 - **Test-only**: `utilityIntegrationTest` mutation (IAM auth) for signup/cleanup/buy-subscription bypassing OTP/Chargebee.
 - **`publishOn*` mutations** don't write to DB — they only trigger AppSync WebSocket subscriptions.
 
-### 3.2 `petlink-everywhere-cct-core` (Node/TS, AppSync + Lambdas)
+### 3.3 `petlink-everywhere-cct-core` (Node/TS, AppSync + Lambdas)
 - **Layout**: same as Core — `src/lambda_functions/graphql/{mutation|query}/{name}/handler.ts`
 - **Dual MongoDB** via `MongoDbSingleton`:
   - `'PETLINK'` → reads Core's MongoDB directly (customers, devices, subscriptions, inventory)
@@ -95,13 +101,13 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 - **Read pattern**: `getCustomer`, `getDevices`, etc. read Petlink MongoDB **directly** — no proxy to Core. `getDevices` is an aggregation pipeline JOINing `petlinkEverywhere` (`entityType=PETLINK_GPS`) with `petlinkGpsInventory`.
 - **Write pattern**: mutations **proxy** to Core via `sdkCore` (e.g. delete customer, reset device, hide pet) and to subscriptions-manager via `sdkSM` (refunds, coupons), then log the action in CCT DB for audit.
 
-### 3.3 `subscriptions-manager` (Node/TS, Chargebee)
+### 3.4 `subscriptions-manager` (Node/TS, Chargebee)
 - **GraphQL mutations**: `src/lambdaFunctions/graphql/mutations/{name}/handler.ts`
 - **Chargebee webhook (REST)**: `src/lambdaFunctions/webhook/operations/post/webhook.ts` + per-event handlers in `webhookHandlers/`
 - **Flow**: Chargebee POST → `webhook.ts` routes by `event_type` → handler builds normalized payload → SQS `subscriptionsWebhook` → consumed by Core (`subscriptionsWebhookConsumer`).
 - **Cross-repo**: Core ↔ subscriptions-manager via GraphQL SDK (IAM); async side-effects via SQS.
 
-### 3.4 `petlink-everywhere-sentinel` (Rust, TCP server)
+### 3.5 `petlink-everywhere-sentinel` (Rust, TCP server)
 - TCP server on AWS EKS + Global Accelerator; parses **SiRF binary** from GPS devices.
 - **Gotcha**: Lambda consumers of the outbound queues live in **Core**, not here.
 - **SQS queue map** (all async flows pass through these):
@@ -116,7 +122,7 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 | `settings` | Core `sendSetting` | Sentinel Rust | Device configuration updates |
 | `subscriptionsWebhook` | subscriptions-manager | Core `subscriptionsWebhookConsumer` | Chargebee payment events |
 
-### 3.5 `petlink-everywhere-mobile` (Flutter, end-user app)
+### 3.6 `petlink-everywhere-mobile` (Flutter, end-user app)
 - **Stack**: Flutter + **GetX** (state/DI/routing) + `graphql_flutter` + AWS Cognito.
 - **Entrypoint**: `lib/main.dart`.
 - **Feature-driven clean arch** under `lib/features/{feature}/{binding,data,domain,presentation}/`. Key features: `auth`, `home`, `pet_profile`, `gps_settings`, `new_registration`, `products`, `lost_pet`, `activity_pets`, `history`, `settings`, `user_profile`, `menu`.
@@ -125,7 +131,7 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 - **Routing**: `lib/base/router/app_router.dart` + `app_routes.dart`.
 - Talks to **Core** GraphQL only (not to cct-core / subs-manager directly).
 
-### 3.6 `petlink-everywhere-web` (React, end-user web app)
+### 3.7 `petlink-everywhere-web` (React, end-user web app)
 - **Stack**: React + TypeScript + **Redux Toolkit + RTK Query** + TailwindCSS.
 - **Entrypoint**: `src/index.tsx` → `src/App.tsx`.
 - **UI**: pages in `src/components/pages/`, layout in `src/components/layout/`, reusable in `src/components/{common,shared}/`.
@@ -134,7 +140,7 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 - **Routing**: `src/routing/`. Custom hooks: `src/hooks/`. i18n: `src/locales/` + `src/i18n/`.
 - Talks to **Core** GraphQL only.
 
-### 3.7 `petlink-everywhere-cct` (React, Customer Care frontend)
+### 3.8 `petlink-everywhere-cct` (React, Customer Care frontend)
 - Same stack as web (React + TS + RTK Query + Tailwind), built with **Vite**.
 - **Entrypoint**: `src/index.tsx` → `src/components/App.tsx`.
 - **UI**: `src/components/{pages,layout,common,shared}/` (same convention as web).
@@ -142,224 +148,15 @@ Shared/support: `petlink-everywhere-types`, `petlink-everywhere-dictionary`, `pe
 - **Routing**: `src/routing/appRouter.tsx` + `appPaths.ts` + `appRoutesId.ts` + `useAppMenuList.ts`.
 - Talks to **`cct-core`** GraphQL — never directly to Core.
 
-### 3.8 `petlink-data-migration` (Node/TS, Lambdas)
-- **Purpose**: Migrates users, pets, GPS devices, subscriptions, and historical data from legacy MySQL (Kippy EU / Petlink US) to Petlink Everywhere MongoDB.
-- **Layout**: `src/lambda_functions/{name}/handler.ts`; shared utils in `src/lib/`.
-- **Entrypoint**: `migrationOnDemand/handler.ts` — the orchestrator. Invoked directly (ON_DEMAND) or via SQS from `bulkMigrationConsumer`.
-- **Bulk path**: `bulkMigration/handler.ts` queries MySQL for non-migrated users → enqueues SQS → `bulkMigrationConsumer/handler.ts` invokes `migrationOnDemand` per user.
-- **Sub-migrations** (invoked synchronously via Lambda Invoke from `migrationOnDemand`):
-  - `petsAndProductsMigration` — pets + GPS devices + inventory update + Sentinel device registration
-  - `energySavingAreaMigration` — ESA zones + Sentinel settings push
-  - `geofenceMigration` — geofences
-  - `subscriptionMigration` — Chargebee subscriptions, invoices, credit notes, pet protections, included subscriptions
-- **Async SQS consumers** (fire-and-forget after main migration completes, triggered by `sendMessagesToMigrationQueues`):
-  - `positionHistoryMigration` — GPS position history from MySQL
-  - `activitiesMigration` — pet activity data
-  - `petNotificationMigration` — pet notification history
-  - `kippyRejectSubsMigration` — device resets & replacements
-- **Standalone migrations**:
-  - `inventoryMigration` — migrates device inventory to `petlinkGpsInventory` collection
-  - `orderMigration/bulk` — one-time bulk pre-order migration
-  - `orderMigration/scheduled` — cron-based incremental pre-order migration (6-min window)
-  - `userCleanup` — rolls back a migrated user (deletes from MongoDB + Cognito, resets `migrated=0` in MySQL)
-- **Legacy (ignore)**: `data-migration-queue-receiver/` and `data-migration-queue-sender/` are deprecated.
-- **Gotcha**: Each sub-migration collects stats in `migrationHistory` MongoDB collection (sessionId + migrationTarget). Rollback deletes all inserted docs on any sub-migration failure.
+### 3.9 `petlink-data-migration` (Node/TS, Lambdas — temporary repo)
+- **Purpose**: migrates users, pets, GPS devices, subscriptions, history from legacy MySQL (`old-env`) to MongoDB.
+- **Entrypoint**: `migrationOnDemand/handler.ts` — orchestrator; invoked directly or via `bulkMigration` → SQS → `bulkMigrationConsumer` (one user per message). Sub-migrations (pets+devices, ESA, geofences, subscriptions) invoked synchronously via Lambda Invoke; history (positions, activities, notifications) via fire-and-forget SQS consumers.
+- **Gotcha**: stats in `migrationHistory` collection; rollback deletes all inserted docs on failure. `userCleanup` rolls back a migrated user (MongoDB + Cognito + `migrated=0` in MySQL).
 - **Deep-dive**: `docs/migration/migration.md`
 
 ---
 
-## 4. Data Flows
-The diagrams below are the canonical reference for how data moves through the system. They are stable architectural views (not implementation details).
-
-### 4.1 Device → User (Position Updates)
-```mermaid
-sequenceDiagram
-    participant Device as GPS Device
-    participant Sentinel as Sentinel<br/>(Rust TCP)
-    participant SQS as SQS<br/>gpsMessages
-    participant Consumer as gpsMessagesConsumer<br/>(in Core)
-    participant MongoDB as MongoDB
-    participant Core as Core API
-    participant AppSync as AppSync<br/>Subscription
-    participant Mobile as Mobile App
-
-    Device->>Sentinel: TCP packet (binary SiRF)
-    Sentinel->>Sentinel: Parse + extract position
-    Sentinel->>SQS: Send position message
-    SQS->>Consumer: Trigger Lambda
-    Consumer->>MongoDB: Update device position
-    Consumer->>Core: publishOnGpsMessagePosition
-    Core->>AppSync: Publish subscription event
-    AppSync->>Mobile: Real-time position update
-    Note over Consumer,Core: Geo-fence alerts<br/>queue notifications
-```
-
-### 4.2 User → Device (Send Command)
-```mermaid
-sequenceDiagram
-    participant Mobile as Mobile App
-    participant Core as Core API
-    participant MongoDB as MongoDB
-    participant SQS as SQS<br/>commands
-    participant Consumer as commandsConsumer
-    participant Sentinel as Sentinel<br/>(Rust TCP)
-    participant Device as GPS Device
-
-    Mobile->>Core: sendCommand mutation
-    Core->>MongoDB: Store command
-    Core->>SQS: Queue command
-    Core->>Mobile: Command queued
-    SQS->>Consumer: Trigger Lambda
-    Consumer->>Sentinel: HTTP POST /send_packet
-    Sentinel->>Device: TCP binary command
-    Device->>Sentinel: ACK
-    Sentinel->>SQS: Status update
-    Note over Core,Mobile: Status flows back via<br/>GraphQL subscription
-```
-
-### 4.3 Subscription Purchase
-```mermaid
-sequenceDiagram
-    participant User as User<br/>(Mobile/Web)
-    participant Core as Core API
-    participant SubsMgr as subscriptions-manager
-    participant Chargebee as Chargebee
-    participant SQS as SQS<br/>subscriptionsWebhook
-    participant Consumer as Webhook Consumer<br/>(in Core)
-    participant SentinelSQS as SQS<br/>newGpsDevices
-    participant Sentinel as Sentinel
-
-    User->>Core: Purchase subscription
-    Core->>SubsMgr: GraphQL createSubscription
-    SubsMgr->>Chargebee: Create subscription
-    Chargebee->>SubsMgr: Subscription created
-    SubsMgr->>Core: Hosted page URL
-    Core->>User: Redirect to payment
-    User->>Chargebee: Enter payment
-    Note over Chargebee,Consumer: Async webhook flow
-    Chargebee->>SubsMgr: subscription_created webhook
-    SubsMgr->>SQS: Queue normalized event
-    SQS->>Consumer: Trigger Lambda
-    Consumer->>Core: Update subscription status
-    Consumer->>SentinelSQS: Notify device update
-    SentinelSQS->>Sentinel: Update subscription_active
-```
-
-### 4.4 Device Registration
-```mermaid
-sequenceDiagram
-    participant User
-    participant Mobile as Mobile App
-    participant Core as Core API
-    participant Inventory as petlinkGpsInventory
-    participant SQS as SQS<br/>newGpsDevices
-    participant Sentinel
-
-    User->>Mobile: Scan QR / enter serial
-    Mobile->>Core: createPetlinkGps mutation
-    Core->>Inventory: Check serial whitelisted
-    alt Serial not in inventory
-      Inventory-->>Core: Not found
-      Core-->>Mobile: 428 error
-    else Serial OK
-      Core->>Core: Assign device to user/pet
-      Core->>SQS: New device message
-      Core->>Mobile: Registered
-      SQS->>Sentinel: New device notification
-      Sentinel->>Sentinel: Update mapping + WAKEUP
-    end
-```
-
-### 4.5 Customer Support (CCT)
-```mermaid
-sequenceDiagram
-    participant Support as Support Agent
-    participant CCT as CCT Frontend
-    participant CCTCore as cct-core
-    participant Core as Core API
-    participant SubsMgr as subscriptions-manager
-    participant CCTMongo as CCT MongoDB
-    participant CoreMongo as Core MongoDB
-
-    Support->>CCT: Search customer
-    CCT->>CCTCore: getCustomer / getDevices
-    CCTCore->>CoreMongo: Direct read (aggregation)
-    CoreMongo->>CCTCore: Customer + devices + pets
-    CCTCore->>CCT: Display
-    Support->>CCT: e.g. refundInvoice
-    CCT->>CCTCore: refundInvoice mutation
-    CCTCore->>SubsMgr: Proxy via sdkSM
-    CCTCore->>CCTMongo: Log support action (audit)
-    CCTCore->>CCT: Done
-    Note over CCTCore: Mutations proxy to Core/SubsMgr —<br/>queries read Core MongoDB directly
-```
-
-### 4.6 Legacy Data Migration (petlink-data-migration)
-```mermaid
-sequenceDiagram
-    participant Trigger as Trigger<br/>(ON_DEMAND or BULK)
-    participant BulkMigration as bulkMigration
-    participant SQS as SQS<br/>bulkMigration
-    participant Consumer as bulkMigrationConsumer
-    participant OnDemand as migrationOnDemand<br/>(orchestrator)
-    participant MySQL as Legacy MySQL<br/>(US / EU)
-    participant MongoDB as Petlink MongoDB
-    participant Cognito as AWS Cognito
-    participant SubLambda as Sub-migration Lambdas
-    participant Sentinel as Sentinel
-    participant Chargebee as Chargebee
-    participant AsyncSQS as SQS<br/>(async history queues)
-    participant AsyncConsumers as Async SQS Consumers
-
-    alt ON_DEMAND
-        Trigger->>OnDemand: Invoke {contact, password, appBrand}
-    else BULK
-        Trigger->>BulkMigration: Start
-        BulkMigration->>MySQL: Query non-migrated users
-        MySQL-->>BulkMigration: User list
-        BulkMigration->>SQS: Enqueue per-user messages
-        SQS->>Consumer: Trigger
-        Consumer->>OnDemand: Invoke {contact, appBrand, source:BULK}
-    end
-
-    OnDemand->>MongoDB: Check if user already migrated
-    alt User exists
-        OnDemand-->>Trigger: 200 (already exists)
-    else User not found
-        OnDemand->>MySQL: Look up legacy user
-        MySQL-->>OnDemand: User data
-        OnDemand->>MongoDB: Insert new USER entity
-        OnDemand->>SubLambda: 1. petsAndProductsMigration
-        SubLambda->>MySQL: Fetch pets + products
-        SubLambda->>MongoDB: Insert PET + PETLINK_GPS
-        SubLambda->>Sentinel: Register device (newGpsDevices)
-        SubLambda-->>OnDemand: idsSaved
-        OnDemand->>SubLambda: 2. energySavingAreaMigration
-        SubLambda->>MongoDB: Insert ESA zones
-        SubLambda->>Sentinel: Push ESA settings
-        SubLambda-->>OnDemand: idsSaved
-        OnDemand->>SubLambda: 3. geofenceMigration
-        SubLambda->>MongoDB: Insert geofences
-        SubLambda-->>OnDemand: idsSaved
-        OnDemand->>SubLambda: 4. subscriptionMigration
-        SubLambda->>Chargebee: Fetch subs, invoices, credit notes
-        SubLambda->>MongoDB: Insert SUBSCRIPTION + INVOICE + CREDIT_NOTE
-        SubLambda-->>OnDemand: idsSaved
-        OnDemand->>Cognito: Create user account
-        OnDemand->>MySQL: SET migrated = 1
-        OnDemand->>AsyncSQS: Enqueue position history, activities, notifications, resets
-        OnDemand->>MongoDB: Create welcome posts
-        OnDemand-->>Trigger: 200 (success)
-        Note over AsyncSQS,AsyncConsumers: Fire-and-forget async migrations
-        AsyncSQS->>AsyncConsumers: Trigger
-        AsyncConsumers->>MySQL: Fetch historical data
-        AsyncConsumers->>MongoDB: Insert history records
-    end
-```
-
----
-
-## 5. Subscriptions Domain
+## 4. Subscriptions Domain
 
 ### Brand differences
 - **Petlink (US)**: standard subscriptions only (Monthly / Yearly / Multi-year). No protection addons.
@@ -389,7 +186,7 @@ stateDiagram-v2
 
 ---
 
-## 6. External Integrations
+## 5. External Integrations
 - **AWS Cognito** — auth for mobile/web (end users) and CCT (separate user pool for support staff). Integrated via AWS Amplify.
 - **Chargebee** — payments + subscription lifecycle + addons + hosted pages + webhooks. SDK in `subscriptions-manager`.
 - **Firebase Cloud Messaging** — push notifications. Separate FCM projects per brand (Petlink / Kippy).
@@ -399,21 +196,24 @@ stateDiagram-v2
 
 ---
 
-## 7. Domain Knowledge (deep-dives in `docs/`)
+## 6. Domain Knowledge (deep-dives in `docs/`)
 Read on demand when fine-grained business logic matters:
+- **Data flows (canonical sequence diagrams)**: `docs/flows.md`
+- **Entity model**: `docs/entities-and-relations.md`
+- **Auth**: `docs/auth/` (signup/login, JWT revocation)
 - **Registration (user / pet / device)**: `docs/registration/`
 - **Subscriptions deep-dive**: `docs/subscriptions/`
 - **Device modes & commands**: `docs/modes/`, `docs/commands/`
 - **End of life**: `docs/end-of-life/`
 - **Data migration**: `docs/migration/migration.md`
-- **API references**: `docs/api_core.md`, `docs/api_cct.md`
 
 ---
 
-## 8. AI Agent Debugging & Troubleshooting Rules
+## 7. AI Agent Debugging & Troubleshooting Rules
 When an API call fails or a test breaks, **DO NOT make assumptions, guess the cause, or suggest blind fixes**. You must autonomously investigate by following these steps:
 
 1. **Inspect Backend Logic**: Locate and read the actual AWS Lambda resolver or backend service code (in `petlink-everywhere-core`, `petlink-everywhere-cct-core`, or `subscriptions-manager`) that handles the failing API. Analyze exactly how the payload is processed, validated, and where the error is thrown.
 2. **Verify Frontend/App Usage**: Search the frontend or mobile repositories (`petlink-everywhere-web`, `petlink-everywhere-mobile`, or `petlink-everywhere-cct`) to see how the user or CCT operator actually calls this endpoint in the real application flow.
 3. **Compare Flows**: Compare the exact GraphQL/REST request (payload, headers, sequence of operations) made by the real client with the one being made in the failing test suite. Identify any missing or malformed parameters.
 4. **Trace the Architecture**: If necessary, follow the data flow through AppSync, SQS queues, MongoDB or all of necessary microservices to understand the exact state of the system during the request.
+5. **Trce the Data and Logs**: If some test break in local, you have access to mcp of Dev & Test env of Grafana, Mongo and ChargeBee, inspect yourself logs, data on Dbs and on Chargebee data to understand clearly also what's really happened under the hood on the backend system.
