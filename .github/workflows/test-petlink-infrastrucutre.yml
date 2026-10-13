@@ -1,17 +1,24 @@
 name: test-petlink-infrastrucutre
 
 on:
-  # Trigger 1: push on develop on this repo
+  # Trigger 1: push on develop/test on this repo → env = pushed branch
   push:
     branches: [develop,test]
 
-  # Trigger 2: workflow_dispatch from external repo (Core/Sentinel/Submanager etc)
+  # Trigger 2: workflow_dispatch
+  #   - manual run from GitHub UI → pick 'environment' from the dropdown
+  #   - external repos (Core/Sentinel/Submanager etc) → fill the source_* inputs
   workflow_dispatch:
     inputs:
-      repo: { description: "Source Repo", required: true }
-      branch: { description: "Source Branch", required: true }
-      sha: { description: "Source SHA", required: true }
-      actor: { description: "Source Actor", required: true }
+      environment:
+        description: "Target environment (manual runs only)"
+        type: choice
+        required: false
+        options: [test, develop]
+      repo:   { description: "Source Repo (external triggers only)",   required: false }
+      branch: { description: "Source Branch (external triggers only)", required: false }
+      sha:    { description: "Source SHA (external triggers only)",    required: false }
+      actor:  { description: "Source Actor (external triggers only)",  required: false }
 
 concurrency:
   # One single group for the whole workflow: test accounts/logins are shared
@@ -26,9 +33,46 @@ env:
 
 
 jobs:
-  info-job:
+  # Single source of truth for the target environment.
+  # Three explicit cases: push / manual dispatch / external dispatch.
+  setup:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
+    outputs:
+      target_env: ${{ steps.resolve.outputs.target_env }}
+      should_run: ${{ steps.resolve.outputs.should_run }}
+    steps:
+      - name: Resolve target environment
+        id: resolve
+        run: |
+          case "${{ github.event_name }}" in
+
+            push)
+              # Push on this repo → env = pushed branch (develop or test)
+              echo "target_env=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+              echo "should_run=true"                   >> "$GITHUB_OUTPUT"
+              ;;
+
+            workflow_dispatch)
+              if [ -n "${{ github.event.inputs.environment }}" ]; then
+                # MANUAL run from GitHub UI → env = dropdown choice
+                echo "target_env=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+                echo "should_run=true" >> "$GITHUB_OUTPUT"
+              elif [ "${{ github.event.inputs.branch }}" = "test" ]; then
+                # EXTERNAL trigger (Core/Sentinel/etc) → only 'test' allowed
+                echo "target_env=test" >> "$GITHUB_OUTPUT"
+                echo "should_run=true" >> "$GITHUB_OUTPUT"
+              else
+                # EXTERNAL trigger on any other branch → skip everything
+                echo "target_env=none"  >> "$GITHUB_OUTPUT"
+                echo "should_run=false" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+          esac
+
+  info-job:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: needs.setup.outputs.should_run == 'true'
 
     steps:
       - name: Add Trigger Info to Summary
@@ -36,40 +80,39 @@ jobs:
           echo "## 🔔 Info Trigger Pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${{ github.event.inputs.environment }}" ]; then
              # --- EXTERNAL (workflow_dispatch from Core/Sentinel/ecc) ---
              REPO="${{ github.event.inputs.repo }}"
              BRANCH="${{ github.event.inputs.branch }}"
              SHA="${{ github.event.inputs.sha }}"
              ACTOR="${{ github.event.inputs.actor }}"
-
-             echo "**Triggered by:** 🚀 Push on External Repo" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
-             echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
-
-          elif [ "${{ github.event_name }}" = "push" ]; then
-             # --- INTERNAL (by push on test suite) ---
+             KIND="🚀 Push on External Repo"
+          else
+             # --- INTERNAL (push on test suite or manual run) ---
              REPO="${{ github.repository }}"
              BRANCH="${{ github.ref_name }}"
              SHA="${{ github.sha }}"
              ACTOR="${{ github.actor }}"
-
-             echo "**Trigger:** 📝 Push on Test Suite" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
-             echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Target Env Tests:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
-             echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
-             echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
+             if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                KIND="🖱️ Manual run"
+             else
+                KIND="📝 Push on Test Suite"
+             fi
           fi
+
+          echo "**Triggered by:** ${KIND}" >> $GITHUB_STEP_SUMMARY
+          echo "**Source Repo:** [\`${REPO}\`](https://github.com/${REPO})" >> $GITHUB_STEP_SUMMARY
+          echo "**Source Branch:** \`${BRANCH}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Env Tests:** \`${{ needs.setup.outputs.target_env }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** [\`${SHA:0:7}\`](https://github.com/${REPO}/commit/${SHA})" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
   
 
 
   build-image:
+    needs: setup
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
+    if: needs.setup.outputs.should_run == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -90,13 +133,13 @@ jobs:
           retention-days: 1
 
   run-tests:
-    needs: build-image
+    needs: [setup, build-image]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.inputs.branch == 'test' }}
-    environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+    if: needs.setup.outputs.should_run == 'true'
+    environment: ${{ needs.setup.outputs.target_env }}
 
     env:
-      ENV: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+      ENV: ${{ needs.setup.outputs.target_env }}
       # Core API
       CORE_GRAPHQL_API_URL: ${{ secrets.CORE_GRAPHQL_API_URL }}
       CORE_GRAPHQL_API_KEY: ${{ secrets.CORE_GRAPHQL_API_KEY }}
@@ -229,16 +272,15 @@ jobs:
           group_suite: true
 
   notify-discord:
-    needs: [build-image, run-tests]
+    needs: [setup, build-image, run-tests]
     # Notify whenever the pipeline actually ran to completion:
-    #   'skipped'   -> trigger guard rejected the run (external branch != 'test')
-    #   'cancelled' -> superseded by a newer run (concurrency group)
-    # The trigger guard needs no repeating: a rejected run already makes
-    # build-image 'skipped'. Build failures also notify (run-tests skipped -> red).
-    if: always() && needs.build-image.result != 'skipped' && needs.build-image.result != 'cancelled' && needs.run-tests.result != 'cancelled'
+    #   should_run=false -> trigger rejected by setup (external branch != 'test')
+    #   'cancelled'      -> superseded by a newer run (concurrency group)
+    # Build failures also notify (run-tests skipped -> red).
+    if: always() && needs.setup.outputs.should_run == 'true' && needs.build-image.result != 'skipped' && needs.build-image.result != 'cancelled' && needs.run-tests.result != 'cancelled'
     runs-on: ubuntu-latest
     # Environment is required to access Secrets
-    environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
+    environment: ${{ needs.setup.outputs.target_env }}
 
     steps:
       - name: Send Discord Notification
