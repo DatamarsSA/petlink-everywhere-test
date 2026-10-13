@@ -3,7 +3,7 @@ name: test-petlink-infrastrucutre
 on:
   # Trigger 1: push on develop on this repo
   push:
-    branches: [develop]
+    branches: [develop,test]
 
   # Trigger 2: workflow_dispatch from external repo (Core/Sentinel/Submanager etc)
   workflow_dispatch:
@@ -65,6 +65,7 @@ jobs:
              echo "**Author:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
           fi
   
+
 
   build-image:
     runs-on: ubuntu-latest
@@ -229,10 +230,12 @@ jobs:
 
   notify-discord:
     needs: [build-image, run-tests]
-    # Notify for: push on develop (this repo) OR external dispatch on 'test'.
-    # Skipped when: dispatch on branches != 'test' (build skipped) or run was
-    # cancelled by a newer one (concurrency group).
-    if: always() && (github.event_name == 'push' || github.event.inputs.branch == 'test') && needs.build-image.result != 'skipped' && needs.build-image.result != 'cancelled' && needs.run-tests.result != 'cancelled'
+    # Notify whenever the pipeline actually ran to completion:
+    #   'skipped'   -> trigger guard rejected the run (external branch != 'test')
+    #   'cancelled' -> superseded by a newer run (concurrency group)
+    # The trigger guard needs no repeating: a rejected run already makes
+    # build-image 'skipped'. Build failures also notify (run-tests skipped -> red).
+    if: always() && needs.build-image.result != 'skipped' && needs.build-image.result != 'cancelled' && needs.run-tests.result != 'cancelled'
     runs-on: ubuntu-latest
     # Environment is required to access Secrets
     environment: ${{ github.event.inputs.branch || github.ref_name || 'develop' }}
