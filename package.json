@@ -16,7 +16,7 @@
     "@graphql-codegen/typescript": "^4.0.6",
     "@graphql-codegen/typescript-graphql-request": "^6.2.0",
     "@graphql-codegen/typescript-operations": "^4.2.0",
-    "@types/node": "24.0.0",
+    "@types/node": "24.19.2",
     "@types/ws": "^8.18.1",
     "@vitest/ui": "^3.2.4",
     "dotenv": "^17.2.2",
@@ -39,7 +39,7 @@
     "twilio": "^5.10.3",
     "winston": "^3.18.3",
     "ws": "^8.18.3",
-    "zod": "^4.1.11"
+    "zod": "^4.6.7"
   },
   "resolutions": {
     "whatwg-url": "^11.0.0",
