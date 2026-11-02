@@ -11,6 +11,7 @@ You have access to:
 - Grafana MCP → inspect logs for the affected user and incident time window.
 - MongoDB MCP → inspect the user's production database state when logs are incomplete or ambiguous. Only read-only queries are permitted.
 - Legacy MySQL MCPs (`mysql-kippy-EU-akerue` = EU `admin_db`, `mysql-kippy-EU-kippy` = EU `kippy` subs, `mysql-kippy-EU-customerkippy` = EU `customerkippy` old CCT tickets, `mysql-petlink-USA` = all US schemas) → inspect the **pre-migration** state of migrated users/devices/subs: who the user was, which devices/subs/orders they had, whether the device was connecting on the old env. Read-only. DB map + join keys + per-scenario query recipes: `all-repo/old-env/AGENTS.md` §4 and `all-repo/old-env/docs/mysql-tables.md`. Most support tickets involve migrated data → checking the old-DB state is usually the fastest way to explain anomalies.
+- Chargebee prod MCPs -> cb is the source of truth for the subscription state and the user data, with all data of customer,sub,invoice,history event and payload, so use it to see how db differs and to understand better what it's happened. useful to check the state of the user and the subscription at the time of the incident.
 - Codebase of new environment (all-repo/new-env) → trace logs and observed behaviour back to the implementation (explore also fe/app mobile code if needed).
 - Codebase of old environment (all-repo/old-env) → generally useless but when bugs are related to mix between portion of logic happend on old and new env, look also to the old environment codebas (start from all-repo/old-env/AGENTS.md to have an overview of old infrastrucutre)
 
@@ -61,14 +62,14 @@ Only after the high-level explanation, provide a more detailed technical analysi
 - Evidence supporting the root cause
 - Any uncertainty or missing evidence
 
-Use precise references to files, functions, logs, timestamps, and database fields whenever available.
+Use ASCII schema to explain what it's happened in a more intuitive way.
 
 ## Known bugs
 
-Check whether the ticket matches one of the known bugs documented in the `bugs/` folder.
+Check whether the ticket matches one of the known bugs documented in the `bugs/` folder **at the repository root** (`petlink-everywhere-test/bugs/` — NOT inside the skill directory).
 
 - If it matches a known bug, do not create a new bug file. Reference the existing bug file in the response.
-- If it is a new issue, create a new file named `bug-{problem}.md`.
+- If it is a new issue, create a new file named `bugs/bug-{problem}.md` at the repository root.
 
 Each bug file must contain enough context to understand the issue later without reopening the entire investigation, including:
 
