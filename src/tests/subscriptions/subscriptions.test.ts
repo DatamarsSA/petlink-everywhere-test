@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { petlink } from "../../clients/petlink-infrastructure/client-petlink-infrastructure.js";
 import { testHelper, TestSetup } from "../../clients/client-test-helper.js";
 import { fxt } from "../../fixtures/fixtures.js";
-import { logger } from "../../config/logger.js";
+
 import {
   UtilityTestTypeEnum,
   LanguageId,
@@ -543,36 +543,23 @@ describe("DEFAULT (buy, change, renew, stop, refund)", () => {
       yearlyPlan: any;
       currentSubscription: SubscriptionShortInfo;
     }> {
-      const maxRetries = 5;
+      await testHelper.cleanupAll();
+      const built = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        await testHelper.cleanupAll();
-        const built = await testHelper.setupBuilder().withUser().withDog({ gps: {} }).build();
+      const gps = built.dog!.devices.gps!;
 
-        const gps = built.dog!.devices.gps!;
+      const allPricings = gps.availablePlans!.flatMap((p: any) => p.pricings);
+      const m = allPricings.find((pr: any) => pr.periodUnit === "month");
+      const y = allPricings.find((pr: any) => pr.periodUnit === "year");
+      expect(m, "A MONTHLY pricing must be available").toBeDefined();
+      expect(y, "A YEARLY pricing must be available").toBeDefined();
 
-        // --- RILEVAZIONE PREPAID ORPHAN SUBSCRIPTION ---
-        const hasPrepaidHint = (gps as any).subscriptionPlan === "prepaid";
-        if (hasPrepaidHint) {
-          logger.warn(`Stray subscription detected on ${gps.serialNumber} (attempt ${attempt}/${maxRetries}), retrying cleanup...`);
-          continue;
-        }
+      // --- ACQUISTA MONTHLY ---
+      const sub = await testHelper.purchaseSubscription(built.user!, gps, [m.id], { waitForActive: true });
+      expect(sub.billingPeriodUnit, "Baseline sub should be MONTHLY").toBe("month");
+      expect(sub.scheduledChanges, "Fresh sub should have no scheduled changes").toBeFalsy();
 
-        const allPricings = gps.availablePlans!.flatMap((p: any) => p.pricings);
-        const m = allPricings.find((pr: any) => pr.periodUnit === "month");
-        const y = allPricings.find((pr: any) => pr.periodUnit === "year");
-        expect(m, "A MONTHLY pricing must be available").toBeDefined();
-        expect(y, "A YEARLY pricing must be available").toBeDefined();
-
-        // --- ACQUISTA MONTHLY ---
-        const sub = await testHelper.purchaseSubscription(built.user!, gps, [m.id], { waitForActive: true });
-        expect(sub.billingPeriodUnit, "Baseline sub should be MONTHLY").toBe("month");
-        expect(sub.scheduledChanges, "Fresh sub should have no scheduled changes").toBeFalsy();
-
-        return { setup: built, monthlyPlan: m, yearlyPlan: y, currentSubscription: sub };
-      }
-
-      throw new Error(`Unable to get a clean device after ${maxRetries} cleanup attempts`);
+      return { setup: built, monthlyPlan: m, yearlyPlan: y, currentSubscription: sub };
     }
 
     beforeEach(async () => {

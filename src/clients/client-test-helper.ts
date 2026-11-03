@@ -102,58 +102,33 @@ class TestSetupBuilder {
   }
 
   async build(options?: { waitForSubscriptions?: boolean }): Promise<TestSetup> {
-    // 1. Create user
-    if (this.includeUser) {
-      this.setup.user = await this.helper.createUser(this.userOptions);
+    // Device registration may silently adopt a stray prepaid subscription
+    // re-created by delayed backend events after the last cleanup. Detect the
+    // adoption via subscriptionPlan and rebuild from a clean state.
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      this.setup = {};
+      await this.createUserPetsAndDevices();
+
+      const adoptedSerials = [this.setup.dog, this.setup.cat, this.setup.dogForEvo]
+        .map((pet) => pet?.devices?.gps)
+        .filter((gps): gps is DeviceSetupGps => gps?.subscriptionPlan === 'prepaid')
+        .map((gps) => gps.serialNumber);
+
+      if (adoptedSerials.length === 0) {
+        break;
+      }
+      if (attempt === MAX_ATTEMPTS) {
+        throw new Error(
+          `[Setup] Stray prepaid subscription adopted on serial(s) ${adoptedSerials.join(', ')} persists after ${MAX_ATTEMPTS} cleanup attempts`,
+        );
+      }
+
+      logger.warn(
+        `[Setup] Stray prepaid subscription adopted on ${adoptedSerials.join(', ')} — cleaning and retrying (${attempt}/${MAX_ATTEMPTS})`,
+      );
+      await this.helper.cleanupAll();
     }
-
-    // 2. Create pets in parallel
-    const petPromises: Promise<void>[] = [];
-
-    const createPetEntry = async (species: SpeciesEnum, key: 'dog' | 'cat' | 'dogForEvo') => {
-      const pet = await this.helper.createPet(species);
-      this.setup[key] = { ...pet, devices: {} } as PetSetup;
-    };
-
-    if (this.petConfigs.dog) {
-      petPromises.push(createPetEntry(SpeciesEnum.Dog, 'dog'));
-    }
-
-    if (this.petConfigs.cat) {
-      petPromises.push(createPetEntry(SpeciesEnum.Cat, 'cat'));
-    }
-
-    if (this.petConfigs.dogForEvo) {
-      petPromises.push(createPetEntry(SpeciesEnum.Dog, 'dogForEvo'));
-    }
-
-    await Promise.all(petPromises);
-
-    // 3. Create GPS devices in parallel
-    const devicePromises: Promise<void>[] = [];
-
-    const createGpsEntry = async (key: 'dog' | 'cat' | 'dogForEvo', model: DeviceTypeEnum) => {
-      const pet = this.setup[key]!;
-      const gps = await this.helper.createGpsForPet(pet, model);
-      this.setup[key]!.devices.gps = gps;
-    };
-
-    if (this.petConfigs.dog?.gps) {
-      const model = this.petConfigs.dog.gps.model ?? DeviceTypeEnum.Dog;
-      devicePromises.push(createGpsEntry('dog', model));
-    }
-
-    if (this.petConfigs.cat?.gps) {
-      const model = this.petConfigs.cat.gps.model ?? DeviceTypeEnum.Cat;
-      devicePromises.push(createGpsEntry('cat', model));
-    }
-
-    if (this.petConfigs.dogForEvo?.gps) {
-      const model = this.petConfigs.dogForEvo.gps.model ?? DeviceTypeEnum.Evo;
-      devicePromises.push(createGpsEntry('dogForEvo', model));
-    }
-
-    await Promise.all(devicePromises);
 
     // 4. Fetch subscription plans + update billing info in parallel
     const billingPromise = this.setup.user
@@ -242,6 +217,61 @@ class TestSetupBuilder {
     }
 
     return this.setup;
+  }
+
+  private async createUserPetsAndDevices(): Promise<void> {
+    // 1. Create user
+    if (this.includeUser) {
+      this.setup.user = await this.helper.createUser(this.userOptions);
+    }
+
+    // 2. Create pets in parallel
+    const petPromises: Promise<void>[] = [];
+
+    const createPetEntry = async (species: SpeciesEnum, key: 'dog' | 'cat' | 'dogForEvo') => {
+      const pet = await this.helper.createPet(species);
+      this.setup[key] = { ...pet, devices: {} } as PetSetup;
+    };
+
+    if (this.petConfigs.dog) {
+      petPromises.push(createPetEntry(SpeciesEnum.Dog, 'dog'));
+    }
+
+    if (this.petConfigs.cat) {
+      petPromises.push(createPetEntry(SpeciesEnum.Cat, 'cat'));
+    }
+
+    if (this.petConfigs.dogForEvo) {
+      petPromises.push(createPetEntry(SpeciesEnum.Dog, 'dogForEvo'));
+    }
+
+    await Promise.all(petPromises);
+
+    // 3. Create GPS devices in parallel
+    const devicePromises: Promise<void>[] = [];
+
+    const createGpsEntry = async (key: 'dog' | 'cat' | 'dogForEvo', model: DeviceTypeEnum) => {
+      const pet = this.setup[key]!;
+      const gps = await this.helper.createGpsForPet(pet, model);
+      this.setup[key]!.devices.gps = gps;
+    };
+
+    if (this.petConfigs.dog?.gps) {
+      const model = this.petConfigs.dog.gps.model ?? DeviceTypeEnum.Dog;
+      devicePromises.push(createGpsEntry('dog', model));
+    }
+
+    if (this.petConfigs.cat?.gps) {
+      const model = this.petConfigs.cat.gps.model ?? DeviceTypeEnum.Cat;
+      devicePromises.push(createGpsEntry('cat', model));
+    }
+
+    if (this.petConfigs.dogForEvo?.gps) {
+      const model = this.petConfigs.dogForEvo.gps.model ?? DeviceTypeEnum.Evo;
+      devicePromises.push(createGpsEntry('dogForEvo', model));
+    }
+
+    await Promise.all(devicePromises);
   }
 }
 
